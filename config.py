@@ -9,33 +9,6 @@ To customize for your environment:
 
 import os
 
-
-def _first_nonempty(*values: str) -> str:
-    for value in values:
-        if value:
-            return value
-    return ""
-
-
-try:
-    import config_local as _config_local  # type: ignore
-except Exception:
-    _config_local = None
-
-
-def _get_local(name: str) -> str:
-    if _config_local is None:
-        return ""
-    return str(getattr(_config_local, name, "") or "")
-
-
-def _get_env(*names: str) -> str:
-    for name in names:
-        value = os.getenv(name)
-        if value:
-            return value
-    return ""
-
 # =============================================================================
 # DATABASE CONFIGURATION
 # =============================================================================
@@ -43,18 +16,14 @@ def _get_env(*names: str) -> str:
 # For PythonAnywhere deployment, use these values:
 # DB_NAME = "basu001$default"
 # DB_USER = "basu001"
-# DB_PASSWORD = "your_pythonanywhere_db_password"
+# DB_PASSWORD = "sijofghdfbu134698"
 # DB_PORT = "3306"
 # DB_HOST = "basu001.mysql.pythonanywhere-services.com"
 
 # For local development:
 DB_NAME = "wordpadplusplus"
 DB_USER = "root"
-DB_PASSWORD = _first_nonempty(
-    _get_env("MIOHUB_DB_PASSWORD", "DB_PASSWORD"),
-    _get_local("DB_PASSWORD"),
-    "root",
-)
+DB_PASSWORD = "root_pass_dddoooggg"
 DB_PORT = "3306"
 DB_HOST = "localhost"
 
@@ -65,11 +34,7 @@ DB_HOST = "localhost"
 
 # Secret key for Flask sessions (must be consistent for persistent login)
 # Generate a new one with: python -c "import secrets; print(secrets.token_hex(24))"
-SECRET_KEY = _first_nonempty(
-    _get_env("MIOHUB_SECRET_KEY", "SECRET_KEY"),
-    _get_local("SECRET_KEY"),
-    "",
-)
+SECRET_KEY = "3cc0c61a05261554850149086eaf431b53cfeb41a612cb8b"
 
 
 # =============================================================================
@@ -80,17 +45,10 @@ SECRET_KEY = _first_nonempty(
 PROVIDER = "groq"
 
 # Groq API Configuration
-GROQ_API_KEY = _first_nonempty(
-    _get_env("GROQ_API_KEY", "MIOHUB_GROQ_API_KEY"),
-    _get_local("GROQ_API_KEY"),
-    "",
-)
+GROQ_API_KEY = "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"
 
 # Default model for main chat (Groq)
 DEFAULT_CHAT_MODEL = "llama-3.3-70b-versatile"
-
-# Backward-compat alias used by some older code paths.
-LLM_MODEL = DEFAULT_CHAT_MODEL
 
 # Available models for main chat (Groq models)
 AVAILABLE_CHAT_MODELS = [
@@ -139,11 +97,7 @@ MAX_INPUT_CHARS = 8000
 # =============================================================================
 
 # OpenRouter Configuration (used for summarization)
-OPENROUTER_API_KEY = _first_nonempty(
-    _get_env("OPENROUTER_API_KEY", "MIOHUB_OPENROUTER_API_KEY"),
-    _get_local("OPENROUTER_API_KEY"),
-    "",
-)
+OPENROUTER_API_KEY = "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"
 OR_SITE_URL = "http://localhost:5555"  # Your site URL for OpenRouter attribution
 OR_APP_NAME = "MioChat Memory Summarizer"  # Your app name shown in OpenRouter dashboard
 

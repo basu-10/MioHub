@@ -5,10 +5,9 @@
 __pycache__/
 *.pyc
 .venv
-config_local.py
-.env
 database_backups/
 other_tests/
 tests/
 start_project.bat
 static/uploads/images
+config.py
