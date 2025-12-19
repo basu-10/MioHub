@@ -1,0 +1,62 @@
+<!-- folder_view_sort_by_partial.html -->
+<div class="d-flex align-items-center gap-2" id="sort-by-partial">
+  <div class="dropdown">
+    <button class="btn btn-outline-primary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
+      <i class="material-icons" style="font-size: 16px; vertical-align: middle;">sort</i>
+      <span class="ms-1">Sort by {{ {'name': 'Name', 'created': 'Created', 'modified': 'Last Modified', 'size': 'Size'}.get(current_sort, 'Name') }}</span>
+    </button>
+
+    <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+      <li><a class="dropdown-item{% if current_sort == 'name' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='name') }}">Name</a></li>
+      <li><a class="dropdown-item{% if current_sort == 'created' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='created') }}">Created</a></li>
+      <li><a class="dropdown-item{% if current_sort == 'modified' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='modified') }}">Last Modified</a></li>
+      <li><a class="dropdown-item{% if current_sort == 'size' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='size') }}">Size</a></li>
+    </ul>
+  </div>
+</div>
+
+<style>
+  /* Scoped styles for the sort-by partial */
+  #sort-by-partial .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .7rem;
+  }
+
+  /* Slightly smaller icon for compactness */
+  #sort-by-partial .material-icons { font-size: 16px; }
+
+  /* Make sure dropdown-menu matches project theme (uses variables from global CSS) */
+  #sort-by-partial .dropdown-menu { min-width: 190px; }
+</style>
+
+<script>
+  // Small progressive-enhancement script for the sort dropdown. Keeps behavior identical
+  // but provides instant UI feedback and a convenient keyboard shortcut (Ctrl/⌘+S).
+  document.addEventListener('DOMContentLoaded', function () {
+    var container = document.getElementById('sort-by-partial');
+    if (!container) return;
+
+    var dropdownBtn = document.getElementById('sortDropdown');
+    var items = container.querySelectorAll('.dropdown-item');
+
+    // Add click handlers to provide instant active state feedback.
+    items.forEach(function (it) {
+      it.addEventListener('click', function () {
+        items.forEach(function (x) { x.classList.remove('active'); });
+        this.classList.add('active');
+        // Let the browser follow the link (server-side rendering will reapply active state)
+      });
+    });
+
+    // Keyboard shortcut: Ctrl+S (or ⌘+S) toggles the sort dropdown for quick access.
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        // Prevent default browser Save behavior
+        e.preventDefault();
+        if (dropdownBtn) dropdownBtn.click();
+      }
+    });
+  });
+</script>

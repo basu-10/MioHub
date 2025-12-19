@@ -1,0 +1,226 @@
+<!-- Floating Action Button (FAB) - Extracted Partial -->
+{# Hide floating create button on profile, user pages, and public note/board views #}
+{% if not (request.path == '/profile' or request.path.startswith('/users/') or request.path.startswith('/public/') or request.path.startswith('/assets')) %}
+<div class="fixed bottom-0 right-0 p-3" style="z-index: 900;">
+  <div class="relative dropdown">
+    <button id="createBtn" class="fab-button text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-300" style="background: var(--accent);">
+      <i class="material-icons">add</i>
+    </button>
+    <ul id="createDropdown" class="absolute right-0 bottom-full mb-2 w-48 hidden fab-dropdown">
+      <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); openCreateFolderModal()">
+        <i class="material-icons mr-2">folder</i>📁 Create Folder
+      </a></li>
+      
+      <!-- New File submenu (NEW UNIVERSAL FILE TYPES) -->
+      <li class="fab-submenu-item relative">
+        <a class="fab-dropdown-item" href="#" onclick="event.preventDefault()">
+          <i class="material-icons mr-2 text-sm">chevron_left</i>📄 New File <i class="material-icons ml-2">insert_drive_file</i>
+        </a>
+        <ul class="fab-submenu absolute right-full top-0 mr-1 w-48 hidden">
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewFile('markdown')">
+            <i class="material-icons mr-2">text_fields</i>📝 Markdown
+          </a></li>
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewFile('code')">
+            <i class="material-icons mr-2">code</i>💻 Code
+          </a></li>
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewFile('todo')">
+            <i class="material-icons mr-2">checklist</i>✅ Todo List
+          </a></li>
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewFile('diagram')">
+            <i class="material-icons mr-2">account_tree</i>🔷 Diagram
+          </a></li>
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewFile('table')">
+            <i class="material-icons mr-2">table_chart</i>📊 Table
+          </a></li>
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewFile('blocks')">
+            <i class="material-icons mr-2">view_week</i>🧱 Blocks
+          </a></li>
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewInfiniteBoard()">
+            <i class="material-icons mr-2">explore</i>🌌 Infinite Whiteboard
+          </a></li>
+          <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewFile('proprietary_graph')">
+            <i class="material-icons mr-2">device_hub</i>🕸️ Graph Workspace
+          </a></li>
+        </ul>
+      </li>
+      
+      <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewNote()">
+        <i class="material-icons mr-2">description</i>📝 New MioNote
+      </a></li>
+      <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewBoard()">
+        <i class="material-icons mr-2">dashboard</i>🎨 New MioDraw
+      </a></li>
+      <li><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); createNewCombined()">
+        <i class="material-icons mr-2">article</i>📄 New MioBook
+      </a></li>
+      <li id="fab-paste-item" class="hidden"><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); contextMenuPaste()">
+        <i class="material-icons mr-2">content_paste</i>📋 Paste
+      </a></li>
+      <li id="fab-clear-item" class="hidden"><a class="fab-dropdown-item" href="#" onclick="event.preventDefault(); contextMenuClearClipboard()">
+        <i class="material-icons mr-2">delete</i>🗑️ Clear Clipboard
+      </a></li>
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<style>
+/* Floating Action Button (FAB) Styles */
+.fab-button {
+  /* Default faded state - unobtrusive */
+  opacity: 0.4;
+  transform: scale(0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: none;
+  outline: none;
+  /* Smooth transitions for all properties */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fab-button:hover {
+  /* Hover state - glowing and prominent */
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 
+    0 8px 25px rgba(20,184,166,0.28),
+    0 0 30px rgba(20,184,166,0.22),
+    0 0 60px rgba(20,184,166,0.14);
+  background-color: var(--accent) !important; /* Teal accent on hover */
+}
+
+.fab-button:focus {
+  /* Focus state for accessibility */
+  opacity: 1;
+  transform: scale(1.02);
+  box-shadow: 
+    0 6px 20px rgba(20,184,166,0.22),
+    0 0 0 3px rgba(20,184,166,0.12);
+}
+
+.fab-button:active {
+  /* Pressed state */
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+}
+
+/* Icon animation inside the button */
+.fab-button .material-icons {
+  transition: transform 0.2s ease;
+}
+
+.fab-button:hover .material-icons {
+  transform: rotate(90deg);
+}
+
+/* FAB dropdown surface and items using Carbon Teal theme */
+.fab-dropdown {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+  padding: 6px 6px;
+}
+.fab-dropdown-item {
+  display: flex;
+  align-items: center;
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.fab-dropdown-item:hover {
+  background: var(--hover-overlay);
+}
+
+/* FAB Submenu Styles (NEW FILE types) */
+.fab-submenu-item {
+  position: relative;
+}
+.fab-submenu {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+  padding: 6px 6px;
+  /* Add transition for smooth show/hide */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.fab-submenu.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Increase hover area - add invisible padding on the left side */
+.fab-submenu::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -8px;
+  right: 100%;
+  bottom: 0;
+  width: 8px;
+}
+</style>
+
+<script>
+// Floating create button dropdown
+document.addEventListener('DOMContentLoaded', function() {
+  const createBtn = document.getElementById('createBtn');
+  const createDropdown = document.getElementById('createDropdown');
+  
+  if (createBtn && createDropdown) {
+    createBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      createDropdown.classList.toggle('hidden');
+      // Close other dropdowns (if closeAllDropdowns is defined in parent)
+      if (typeof closeAllDropdowns === 'function') {
+        closeAllDropdowns(['createDropdown']);
+      }
+    });
+  }
+  
+  // Enhanced submenu hover behavior with delay
+  let submenuTimeout;
+  const submenuItems = document.querySelectorAll('.fab-submenu-item');
+  
+  submenuItems.forEach(item => {
+    const submenu = item.querySelector('.fab-submenu');
+    
+    if (submenu) {
+      // Show submenu on hover
+      item.addEventListener('mouseenter', function() {
+        clearTimeout(submenuTimeout);
+        submenu.classList.remove('hidden');
+        submenu.classList.add('show');
+      });
+      
+      // Hide submenu with delay
+      item.addEventListener('mouseleave', function() {
+        submenuTimeout = setTimeout(() => {
+          submenu.classList.remove('show');
+          setTimeout(() => {
+            submenu.classList.add('hidden');
+          }, 150); // Match CSS transition duration
+        }, 300); // 300ms delay before hiding
+      });
+      
+      // Keep submenu open when hovering over it
+      submenu.addEventListener('mouseenter', function() {
+        clearTimeout(submenuTimeout);
+      });
+      
+      submenu.addEventListener('mouseleave', function() {
+        submenuTimeout = setTimeout(() => {
+          submenu.classList.remove('show');
+          setTimeout(() => {
+            submenu.classList.add('hidden');
+          }, 150);
+        }, 200); // Shorter delay when leaving submenu itself
+      });
+    }
+  });
+  
+  // Close dropdown when clicking outside (handled by parent's global click handler)
+});
+</script>

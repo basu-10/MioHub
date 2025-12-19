@@ -1,0 +1,41 @@
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}">
+    <div class="badge-container">
+      {% if file.is_public %}
+        <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+      {% endif %}
+      <span class="type-badge">{{ file.type }}</span>
+      {% if file.metadata_json and file.metadata_json.get('language') %}
+        <span class="subtype-badge">{{ file.metadata_json.get('language')|title }}</span>
+      {% endif %}
+    </div>
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title mb-2">
+        <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+      </h5>
+      {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+      <div class="file-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <span>{{ file.metadata_json.get('description') }}</span>
+      </div>
+      {% endif %}
+      
+      {% if file.type == 'todo' and display_prefs.show_previews and display_prefs.card_size in ['normal', 'large'] %}
+      {% set todo_items = file.content_json.get('items', []) if file.content_json else [] %}
+      {% if todo_items %}
+      <div class="content-preview todo-preview">
+        {% set completed = todo_items | selectattr('completed', 'equalto', true) | list | length %}
+        {% set total = todo_items | length %}
+        {% set percentage = ((completed / total * 100) | round | int) if total > 0 else 0 %}
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-secondary" style="font-size: 0.75rem;">{{ completed }}/{{ total }} done ({{ percentage }}%)</span>
+          <div class="flex-grow-1" style="height: 4px; background: var(--border-primary); border-radius: 999px; overflow: hidden;">
+            <div style="height: 100%; width: {{ percentage }}%; background: var(--accent); transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>

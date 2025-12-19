@@ -1,0 +1,185 @@
+<!-- Generic view for note, diagram, and other file types -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ file.title }} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+    
+    .file-container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .file-header {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .content-viewer {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 2rem;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="file-container">
+    <div class="file-header">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h1 class="mb-2">{{ file.title }}</h1>
+          <span class="badge" style="background: var(--accent); font-size: 0.875rem;">
+            {{ file.type }}
+          </span>
+        </div>
+        <div class="d-flex gap-2">
+          {% if public_view %}
+            <button class="btn btn-outline-secondary btn-sm btn-copy-public" data-file-id="{{ file.id }}" data-file-type="file">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">content_copy</i>
+              Copy to My Profile
+            </button>
+          {% endif %}
+          <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+            <i class="material-icons" style="font-size: 18px; vertical-align: middle;">arrow_back</i>
+            Back
+          </a>
+          {% if not public_view %}
+            <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm" style="background: var(--accent); color: var(--white);">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">edit</i>
+              Edit
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      
+      {% if file.metadata_json and file.metadata_json.get('description') %}
+        <p class="text-muted mb-0">{{ file.metadata_json.get('description') }}</p>
+      {% endif %}
+      
+      <div class="text-muted small mt-2">
+        Created: {{ file.created_at.strftime('%Y-%m-%d %H:%M') if file.created_at else 'N/A' }}
+        {% if file.last_modified %}
+          | Modified: {{ file.last_modified.strftime('%Y-%m-%d %H:%M') }}
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="content-viewer">
+      {% if file.content_json %}
+        <canvas id="diagram-canvas" width="800" height="600" style="border: 1px solid var(--border-primary); border-radius: 8px; background: var(--bg); max-width: 100%;"></canvas>
+        <script>
+          const diagramData = {{ file.content_json|tojson|safe }};
+          const canvas = document.getElementById('diagram-canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Clear canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          if (diagramData && diagramData.nodes) {
+            // Draw edges first
+            if (diagramData.edges) {
+              ctx.strokeStyle = '#14b8a6';
+              ctx.lineWidth = 2;
+              diagramData.edges.forEach(edge => {
+                const from = diagramData.nodes.find(n => n.id === edge.from);
+                const to = diagramData.nodes.find(n => n.id === edge.to);
+                if (from && to) {
+                  ctx.beginPath();
+                  ctx.moveTo(from.x + 50, from.y + 25);
+                  ctx.lineTo(to.x + 50, to.y + 25);
+                  ctx.stroke();
+                  
+                  // Draw label if exists
+                  if (edge.label) {
+                    ctx.fillStyle = '#9aa8ad';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(edge.label, (from.x + to.x) / 2 + 50, (from.y + to.y) / 2 + 20);
+                  }
+                }
+              });
+            }
+            
+            // Draw nodes
+            diagramData.nodes.forEach(node => {
+              const size = node.size || 50;
+              const radius = size / 2;
+              
+              // Node circle/rect
+              ctx.fillStyle = node.color || '#14b8a6';
+              ctx.beginPath();
+              ctx.roundRect(node.x, node.y, size * 2, size, 8);
+              ctx.fill();
+              
+              // Node label
+              ctx.fillStyle = '#ffffff';
+              ctx.font = 'bold 14px Arial';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(node.label, node.x + size, node.y + radius);
+            });
+          }
+        </script>
+      {% elif file.content_html %}
+        {{ file.content_html|safe }}
+      {% elif file.content_text %}
+        <pre>{{ file.content_text }}</pre>
+      {% else %}
+        <p class="text-muted">No content available</p>
+      {% endif %}
+    </div>
+    
+    <div class="text-center mt-4">
+      <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="material-icons" style="font-size: 18px; vertical-align: middle;">undo</i>
+        Back
+      </a>
+    </div>
+  </div>
+  
+  <script>
+    // Copy to profile functionality
+    document.querySelectorAll('.btn-copy-public').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const fileId = btn.dataset.fileId;
+        btn.disabled = true;
+        btn.textContent = 'Copying...';
+        
+        fetch('/folders/public/copy/file/' + fileId, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success && data.new_id) {
+              window.location.href = '/p2/files/' + data.new_id + '/edit';
+            } else {
+              alert('Copy failed: ' + (data.message || 'Unknown error'));
+              btn.disabled = false;
+              btn.innerHTML = '<i class="material-icons" style="font-size: 18px; vertical-align: middle;">content_copy</i> Copy to My Profile';
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Copy failed');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="material-icons" style="font-size: 18px; vertical-align: middle;">content_copy</i> Copy to My Profile';
+          });
+      });
+    });
+  </script>
+</body>
+</html>

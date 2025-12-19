@@ -1,0 +1,190 @@
+<!-- Partial: folder_view_rename_modal_partial.html -->
+<!-- Contains the Rename modal markup and the JS that initializes and handles it. -->
+<div class="modal fade" id="renameModal" tabindex="-1" aria-labelledby="renameModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="renameModalLabel">Rename Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="renameError" class="alert alert-danger" style="display: none;"></div>
+        <div class="mb-3">
+          <label for="itemName" class="form-label">Name</label>
+          <input type="text" class="form-control" id="itemName" placeholder="Enter new name" required minlength="1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="renameSubmitBtn" class="btn btn-primary">
+          <span class="spinner-border spinner-border-sm" id="renameSpinner" style="display: none;" role="status" aria-hidden="true"></span>
+          Rename
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Rename modal: initialize and wire up handlers. This script expects selection state
+// to be available on the global/window object: window.selected and window.renamingItem
+// and also the actionButtons available as window.actionButtons (set by the main script).
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize bootstrap modal instance if available
+  try {
+    const renameModalElement = document.getElementById('renameModal');
+    if (renameModalElement && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      window._p2_renameModal = new bootstrap.Modal(renameModalElement);
+    }
+  } catch (error) {
+    console.error('Error initializing rename modal (partial):', error);
+  }
+
+  // Helper to show modal using a fallback when bootstrap modal isn't available
+  function showModalFallback() {
+    const modalElement = document.getElementById('renameModal');
+    if (modalElement) {
+      modalElement.style.display = 'block';
+      modalElement.classList.add('show');
+      modalElement.setAttribute('aria-hidden', 'false');
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop fade show';
+      backdrop.id = 'rename-modal-backdrop';
+      document.body.appendChild(backdrop);
+      document.body.classList.add('modal-open');
+    }
+  }
+
+  function closeModalFallback() {
+    const modalElement = document.getElementById('renameModal');
+    const backdrop = document.getElementById('rename-modal-backdrop');
+    if (modalElement) {
+      modalElement.style.display = 'none';
+      modalElement.classList.remove('show');
+      modalElement.setAttribute('aria-hidden', 'true');
+    }
+    if (backdrop) backdrop.remove();
+    document.body.classList.remove('modal-open');
+  }
+
+  function hideRenameModal() {
+    if (window._p2_renameModal && typeof window._p2_renameModal.hide === 'function') {
+      try {
+        window._p2_renameModal.hide();
+      } catch (err) {
+        closeModalFallback();
+      }
+    } else {
+      closeModalFallback();
+    }
+  }
+
+  // Attach handler to any elements that dismiss a modal inside the rename modal
+  document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button => {
+    if (button.closest('#renameModal')) {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        hideRenameModal();
+      });
+    }
+  });
+
+  // Wire up rename submit button
+  const renameSubmitBtn = document.getElementById('renameSubmitBtn');
+  if (renameSubmitBtn) {
+    renameSubmitBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const renamingItem = window.renamingItem || null;
+      if (!renamingItem) return;
+
+      const newName = document.getElementById('itemName').value.trim();
+      if (!newName) {
+        document.getElementById('renameError').textContent = 'Name cannot be empty';
+        document.getElementById('renameError').style.display = 'block';
+        return;
+      }
+
+      const spinner = document.getElementById('renameSpinner');
+      const button = renameSubmitBtn;
+      spinner.style.display = 'inline-block';
+      button.disabled = true;
+
+      let url = '';
+      let paramName = '';
+      if (renamingItem.type === 'folder') {
+        url = `/folders/rename/${renamingItem.id}`;
+        paramName = 'name';
+      } else if (renamingItem.type === 'note') {
+        url = `/folders/rename_note/${renamingItem.id}`;
+        paramName = 'title';
+      } else if (renamingItem.type === 'board') {
+        url = `/folders/rename_board/${renamingItem.id}`;
+        paramName = 'title';
+      }
+
+      const formData = new FormData();
+      formData.append(paramName, newName);
+
+      fetch(url, { method: 'POST', body: formData })
+        .then(response => {
+          if (response.ok) {
+            // Update DOM based on type
+            const selectedCard = document.querySelector(`.item-card[data-type="${renamingItem.type}"][data-id="${renamingItem.id}"]`);
+            if (renamingItem.type === 'folder') {
+              const link = selectedCard ? selectedCard.querySelector('a.item-link') : null;
+              if (link) link.textContent = `📁 ${newName}`;
+            } else if (renamingItem.type === 'note' || renamingItem.type === 'board') {
+              const link = selectedCard ? selectedCard.querySelector('.card-title a.item-link') : null;
+              if (link) link.textContent = newName;
+            }
+
+            hideRenameModal();
+            // Clear selection UI if present
+            try { if (typeof window.clearSelection === 'function') window.clearSelection(); } catch(e){}
+            window.renamingItem = null;
+          } else {
+            throw new Error('Rename failed');
+          }
+        })
+        .catch(error => {
+          document.getElementById('renameError').textContent = 'Failed to rename item. Please try again.';
+          document.getElementById('renameError').style.display = 'block';
+          window.renamingItem = null;
+        })
+        .finally(() => {
+          spinner.style.display = 'none';
+          button.disabled = false;
+        });
+    });
+  }
+
+  // Allow pressing Enter in the input to submit
+  const itemNameInput = document.getElementById('itemName');
+  if (itemNameInput) {
+    itemNameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const btn = document.getElementById('renameSubmitBtn');
+        if (btn) btn.click();
+      }
+    });
+  }
+
+  // Expose helper to show the rename modal and prefill the name
+  window.p2_showRenameModal = function(currentName) {
+    const input = document.getElementById('itemName');
+    const err = document.getElementById('renameError');
+    if (input) input.value = currentName || '';
+    if (err) err.style.display = 'none';
+    if (window._p2_renameModal && typeof window._p2_renameModal.show === 'function') {
+      window._p2_renameModal.show();
+    } else {
+      showModalFallback();
+    }
+    setTimeout(() => {
+      const el = document.getElementById('itemName');
+      if (el) { el.focus(); el.select(); }
+    }, 250);
+  };
+});
+</script>

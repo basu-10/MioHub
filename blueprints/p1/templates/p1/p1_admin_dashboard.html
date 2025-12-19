@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="emerald">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            min-height: 100vh;
+        }
+
+        .admin-card {
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(55, 65, 81, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(110, 231, 183, 0.2);
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="min-h-screen">
+        <!-- Navigation Bar -->
+        <nav class="bg-gray-800 shadow-lg p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-green-400">🧮 Calculator Admin Dashboard</h1>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-300">Welcome, {{ current_user.username }}</span>
+                    <a href="{{ url_for('p2_bp.logout') }}" class="btn btn-outline btn-sm">Logout</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="container mx-auto mt-4 px-4">
+                    {% for message in messages %}
+                        <div class="alert alert-info mb-2">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Main Content -->
+        <div class="container mx-auto p-6">
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="admin-card rounded-xl p-6 text-center">
+                    <div class="text-3xl mb-2">🧮</div>
+                    <div class="text-2xl font-bold text-blue-400">{{ calculator_functions|length }}</div>
+                    <div class="text-gray-300">Available Functions</div>
+                </div>
+
+                <div class="admin-card rounded-xl p-6 text-center">
+                    <div class="text-3xl mb-2">📊</div>
+                    <div class="text-2xl font-bold text-green-400">Active</div>
+                    <div class="text-gray-300">Calculator Status</div>
+                </div>
+
+                <div class="admin-card rounded-xl p-6 text-center">
+                    <div class="text-3xl mb-2">🔧</div>
+                    <div class="text-2xl font-bold text-yellow-400">v1.0</div>
+                    <div class="text-gray-300">Version</div>
+                </div>
+            </div>
+
+            <!-- Calculator Functions -->
+            <div class="admin-card rounded-xl p-6 mb-8">
+                <h2 class="text-xl font-bold mb-4 text-green-400">Calculator Functions</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for func in calculator_functions %}
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-blue-400 mb-2">{{ func.name }}</h3>
+                        <p class="text-gray-300 text-sm">{{ func.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="admin-card rounded-xl p-6 mb-8">
+                <h2 class="text-xl font-bold mb-4 text-green-400">Quick Actions</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <a href="{{ url_for('p1_bp.product1') }}" class="btn btn-outline btn-primary">Test Calculator</a>
+                    <button class="btn btn-outline btn-info">View Usage Logs</button>
+                    <button class="btn btn-outline btn-warning">Calculator Settings</button>
+                    <button class="btn btn-outline btn-error">Reset Calculator</button>
+                </div>
+            </div>
+
+            <!-- Function Examples -->
+            <div class="admin-card rounded-xl p-6">
+                <h2 class="text-xl font-bold mb-4 text-green-400">Function Examples</h2>
+                <div class="space-y-4">
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-blue-400 mb-2">Basic Math</h3>
+                        <code class="text-green-400">2 + 3 * 4</code> → <span class="text-white">14</span>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-blue-400 mb-2">Power Operations</h3>
+                        <code class="text-green-400">2^3</code> → <span class="text-white">8</span>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-blue-400 mb-2">Business Functions</h3>
+                        <code class="text-green-400">profit(100, 120)</code> → <span class="text-white">0.2</span> (20% profit)
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-blue-400 mb-2">Math Functions</h3>
+                        <code class="text-green-400">sqrt(16)</code> → <span class="text-white">4</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="mt-8 text-center space-x-4">
+                <a href="{{ url_for('auth.admin_central') }}" class="btn btn-outline btn-accent">
+                    🏠 Back to Central Admin
+                </a>
+                <a href="{{ url_for('p2_bp.dashboard') }}" class="btn btn-outline btn-secondary">
+                    📝 Go to User Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

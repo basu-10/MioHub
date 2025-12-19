@@ -1,0 +1,226 @@
+/* Carbon Teal color variables extracted from folder_view.html
+   Purpose: centralize color variables so templates can share them.
+*/
+:root{
+    --bg:#0a0a0b;        /* page background (near-black) */
+    --card:#121516;      /* card / panel background */
+    --muted:#b4c0c5;     /* muted text / helper text - improved contrast from #9aa8ad */
+    --accent:#14b8a6;    /* button / link accent (teal) */
+    --accent-strong:#0d9488;
+    --white:#ECFFFF;     /* primary text color */
+
+    /* Carbon Teal non-conflicting variable names (ct- prefix) - safe fallback when
+       page :root variables override generic names (like --bg). Use these for
+       modal theming to avoid conflicts. */
+    --ct-bg: #0a0a0b;
+    --ct-card: #121516;
+    --ct-muted: #b4c0c5;
+    --ct-accent: #14b8a6;
+    --ct-accent-strong: #0d9488;
+    --ct-white: #ECFFFF;
+    --ct-bg-tertiary: rgba(18,21,22,0.98);
+    --ct-bg-quaternary: #0a171b;
+    --ct-border-primary: rgba(255,255,255,0.04);
+    --ct-border-secondary: rgba(255,255,255,0.02);
+    --ct-hover-overlay: rgba(20,184,166,0.06);
+    --ct-white-05: rgba(255,255,255,0.03);
+    --ct-white-10: rgba(255,255,255,0.06);
+    --ct-white-60: rgba(255,255,255,0.6);
+    --radius:10px;
+
+    /* Backwards-compatible aliases used throughout folder_view.html */
+    --bg-primary: var(--bg);
+    --bg-secondary: var(--card);
+    --bg-tertiary: rgba(18,21,22,0.98);
+    --bg-quaternary: #0a171b;
+
+    --text-primary: var(--white);
+    --text-secondary: var(--muted);
+    --text-muted: var(--muted);
+
+    --border-primary: rgba(255,255,255,0.04);
+    --border-secondary: rgba(255,255,255,0.02);
+    --border-hover: rgba(13,148,136,0.12);
+
+    /* map existing accent names used in file to the teal accent */
+    --accent-green: var(--accent);
+    --accent-green-hover: var(--accent-strong);
+    --accent-green-light: rgba(20,184,166,0.12);
+    --accent-green-dark: var(--accent-strong);
+
+    --accent-red: #dc2626;
+
+    --hover-overlay: rgba(20,184,166,0.06);
+    --hover-border: rgba(20,184,166,0.12);
+
+    --white-05: rgba(255,255,255,0.03);
+    --white-10: rgba(255,255,255,0.06);
+    --white-60: rgba(255,255,255,0.6);
+}
+
+/* Optional helper class to scope theme where desired */
+.theme-carbon-teal {
+    /* Scoped copies of theme variables so the theme can be applied in isolation
+       without overriding :root variables defined elsewhere (e.g. in other pages). */
+    --bg: #0a0a0b;
+    --card: #121516;
+    --muted: #b4c0c5;
+    --accent: #14b8a6;
+    --accent-strong: #0d9488;
+    --white: #ECFFFF;
+    --radius: 10px;
+
+    --bg-primary: var(--bg);
+    --bg-secondary: var(--card);
+    --bg-tertiary: rgba(18,21,22,0.98);
+    --bg-quaternary: #0a171b;
+
+    --text-primary: var(--white);
+    --text-secondary: var(--muted);
+    --text-muted: var(--muted);
+
+    --border-primary: rgba(255,255,255,0.04);
+    --border-secondary: rgba(255,255,255,0.02);
+    --border-hover: rgba(13,148,136,0.12);
+
+    --accent-green: var(--accent);
+    --accent-green-hover: var(--accent-strong);
+    --accent-green-light: rgba(20,184,166,0.12);
+    --accent-green-dark: var(--accent-strong);
+
+    --accent-red: #dc2626;
+
+    --hover-overlay: rgba(20,184,166,0.06);
+    --hover-border: rgba(20,184,166,0.12);
+
+    --white-05: rgba(255,255,255,0.03);
+    --white-10: rgba(255,255,255,0.06);
+    --white-60: rgba(255,255,255,0.6);
+
+    color: var(--text-primary);
+    background-color: var(--bg);
+}
+
+/* Also expose the Carbon Teal variables under the ct- prefix inside the class */
+.theme-carbon-teal {
+    --ct-bg: var(--bg);
+    --ct-card: var(--card);
+    --ct-muted: var(--muted);
+    --ct-accent: var(--accent);
+    --ct-accent-strong: var(--accent-strong);
+    --ct-white: var(--white);
+    --ct-bg-tertiary: var(--bg-tertiary);
+    --ct-bg-quaternary: var(--bg-quaternary);
+    --ct-border-primary: var(--border-primary);
+    --ct-border-secondary: var(--border-secondary);
+    --ct-hover-overlay: var(--hover-overlay);
+    --ct-white-05: var(--white-05);
+    --ct-white-10: var(--white-10);
+    --ct-white-60: var(--white-60);
+}
+
+/* Apply the Carbon Teal theme to Summernote modal components when the element
+   has the .theme-carbon-teal class. These rules are scoped so the theme can be
+   enabling selectively without changing page-wide variables. */
+.theme-carbon-teal .note-modal-content,
+.theme-carbon-teal .note-modal {
+    background: var(--ct-bg-tertiary);
+    color: var(--ct-white);
+    border: 1px solid var(--ct-border-primary);
+}
+.theme-carbon-teal .note-modal-header { border-bottom: 1px solid var(--ct-border-primary); }
+.theme-carbon-teal .note-modal-footer { border-top: 1px solid var(--ct-border-primary); }
+.theme-carbon-teal .note-modal-body { color: var(--ct-white); }
+.theme-carbon-teal .note-modal .close, .theme-carbon-teal .note-modal .btn-close { color: var(--ct-muted); }
+.theme-carbon-teal .note-modal .note-input, .theme-carbon-teal .note-modal .note-image-input, .theme-carbon-teal .note-modal input, .theme-carbon-teal .note-modal textarea, .theme-carbon-teal .note-modal .note-form-group select, .theme-carbon-teal .note-modal .form-control {
+    background: var(--ct-card);
+    color: var(--ct-white);
+    border: 1px solid var(--ct-border-primary);
+}
+.theme-carbon-teal .note-modal .note-btn-primary, .theme-carbon-teal .note-modal .btn-primary { background: var(--ct-accent); border-color: var(--ct-accent-strong); color: var(--ct-white); }
+.theme-carbon-teal .note-modal .note-btn-secondary, .theme-carbon-teal .note-modal .btn-secondary { background: var(--ct-bg-quaternary); border-color: var(--ct-border-primary); color: var(--ct-white); }
+.theme-carbon-teal .note-popover, .theme-carbon-teal .note-image-popover, .theme-carbon-teal .note-link-popover, .theme-carbon-teal .note-table-popover { 
+    background: var(--ct-card);
+    color: var(--ct-white);
+    border: 1px solid var(--ct-border-primary);
+    z-index: 2000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+.theme-carbon-teal .note-modal-backdrop { z-index: 1999; }
+.theme-carbon-teal .note-modal, .theme-carbon-teal .note-modal.open { z-index: 2000; }
+
+/* Ensure modal backdrops are above the navbar when the Carbon Teal stylesheet is loaded */
+.modal-backdrop { z-index: 1999 !important; }
+
+/* Global fallback rules: apply the Carbon Teal appearance for Summernote-generated
+   modal components regardless of whether .theme-carbon-teal has been applied. This
+   ensures the insert image modal and other Summernote dialogs always show the
+   Carbon Teal palette when the CSS file is loaded. */
+/* Fallback note modal uses Carbon Teal variable prefix to avoid collisions */
+.note-modal-content, .note-modal .modal-content, .note-modal, .note-modal .modal {
+     background: var(--ct-bg-tertiary, #121516) !important;
+     color: var(--ct-white, #ECFFFF) !important;
+     border: 1px solid var(--ct-border-primary, rgba(255,255,255,0.04)) !important;
+}
+.note-modal .modal-header { border-bottom: 1px solid var(--ct-border-primary, rgba(255,255,255,0.04)) !important; }
+.note-modal .modal-footer { border-top: 1px solid var(--ct-border-primary, rgba(255,255,255,0.04)) !important; }
+.note-modal .modal-body, .note-modal-body { color: var(--ct-white, #ECFFFF) !important; background: var(--ct-bg-tertiary, #121516) !important; }
+.note-modal .btn-close { color: var(--ct-muted, #9aa8ad) !important; }
+.note-modal .note-icon-close, .note-modal .note-icon, .note-modal .close { color: var(--ct-white) !important; opacity: 0.95 !important; }
+.note-modal .note-icon-close:hover, .note-modal .note-icon:hover, .note-modal .close:hover, .note-modal .btn-close:hover { color: var(--ct-accent) !important; }
+.note-modal svg { fill: var(--ct-white) !important; }
+.note-modal .btn-close { background: transparent !important; border: none; }
+.note-modal .form-control, .note-modal input, .note-modal textarea, .note-modal .form-select {
+    background: var(--ct-card) !important;
+    color: var(--ct-white) !important;
+    border: 1px solid var(--ct-border-primary) !important;
+}
+.note-modal .btn-primary {
+    background: var(--ct-accent) !important;
+    border-color: var(--ct-accent-strong) !important;
+    color: var(--ct-white) !important;
+}
+.note-modal .btn-secondary {
+    background: var(--ct-bg-quaternary, #0a171b) !important;
+    border-color: var(--ct-border-primary) !important;
+    color: var(--ct-white) !important;
+}
+.note-popover, .note-image-popover, .note-link-popover, .note-table-popover { 
+    background: var(--ct-card) !important;
+    color: var(--ct-white) !important;
+    border: 1px solid var(--ct-border-primary) !important;
+    z-index: 2000 !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
+}
+.note-modal, .note-modal.show { z-index: 2000 !important; }
+
+/* Utility classes for better text contrast in Carbon Teal theme */
+.text-secondary-light {
+    color: #b4c0c5 !important; /* lighter muted text for better readability */
+}
+
+.text-info-light {
+    color: #c8d5da !important; /* even lighter for subtle info text */
+}
+
+/* Override Bootstrap's text-muted to use better contrast color */
+.text-muted {
+    color: var(--muted, #b4c0c5) !important;
+}
+
+/* File type labels - use lighter color for readability */
+.file-type-label {
+    color: #c8d5da !important;
+    font-size: 0.875rem;
+}
+
+/* Small text readability enhancement */
+.small, small {
+    color: var(--muted, #b4c0c5);
+}
+
+/* Card text enhancement for file type descriptions */
+.card-text.text-muted {
+    color: #c8d5da !important;
+}
+

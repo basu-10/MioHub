@@ -1,0 +1,579 @@
+<!-- MioDraw Compact Toolbar Partial -->
+<!-- This toolbar is designed to be included in the main board template -->
+<div id="board-toolbar" class="bg-gradient-to-r from-gray-50 to-gray-100 backdrop-blur-md border-b border-gray-200 shadow-lg" style="position: fixed; top: 0; left: 0; right: 0; z-index: 10;">
+    <div class="px-3 py-2 overflow-x-auto">
+        <div class="flex items-center justify-between gap-2 min-w-fit">
+            <!-- Left Section: Document Info (Compact) -->
+            <div class="flex items-center gap-2">
+                <!-- Title & Description (Single Column) -->
+                <div class="flex items-center gap-1.5 bg-white rounded-lg px-2 py-1.5 border border-gray-200 shadow-sm min-w-[180px]">
+                    <i class="fas fa-edit text-gray-400 text-xs"></i>
+                    <div class="flex flex-col flex-1 min-w-0">
+                        <input type="text" id="board-title" placeholder="Title" 
+                               value="{{ board.title if board else 'Whiteboard' }}" 
+                               class="bg-transparent text-xs font-medium text-gray-700 focus:outline-none w-full">
+                        <input type="text" id="board-description" placeholder="Description" 
+                               value="{{ board.description if board else '' }}" 
+                               maxlength="500"
+                               class="bg-transparent text-[10px] text-gray-500 focus:outline-none w-full">
+                    </div>
+                </div>
+                
+                <div class="w-px h-8 bg-gray-300"></div>
+                
+                <!-- Tools Section -->
+                <div class="flex items-center gap-1.5">
+                    <!-- Selection Tools -->
+                    <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                        <button type="button" onclick="s('select')" data-value="select" aria-pressed="true" 
+                                class="tool-btn px-2 py-1.5 text-sm transition-all duration-200 bg-blue-50 text-blue-700 border-r border-gray-200 rounded-l-lg hover:bg-blue-100"
+                                title="Select">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </button>
+                        <button type="button" onclick="s('rect-select')" data-value="rect-select" aria-pressed="false" 
+                                class="tool-btn px-2 py-1.5 text-sm transition-all duration-200 text-gray-600 hover:bg-gray-50 rounded-r-lg"
+                                title="Rectangle select">
+                            <i class="fas fa-vector-square"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Drawing Tools -->
+                    <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                        <button type="button" onclick="s('pen')" data-value="pen" aria-pressed="false" 
+                                class="tool-btn px-2 py-1.5 text-sm transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200 rounded-l-lg"
+                                title="Pen">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button" onclick="s('marker')" data-value="marker" aria-pressed="false" 
+                                class="tool-btn px-2 py-1.5 text-sm transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200"
+                                title="Marker">
+                            <i class="fas fa-marker"></i>
+                        </button>
+                        <button type="button" onclick="s('highlighter')" data-value="highlighter" aria-pressed="false" 
+                                class="tool-btn px-2 py-1.5 text-sm transition-all duration-200 text-gray-600 hover:bg-gray-50 rounded-r-lg"
+                                title="Highlighter">
+                            <i class="fas fa-highlighter"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Shapes Dropdown -->
+                    <div class="relative">
+                        <button type="button" id="shapes-btn" 
+                                class="px-2 py-1.5 text-sm bg-white rounded-lg border border-gray-200 shadow-sm text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                                title="Shapes">
+                            <i class="fas fa-shapes"></i>
+                            <i class="fas fa-chevron-down text-[10px] ml-0.5"></i>
+                        </button>
+                        <div id="shapes-dropdown" class="hidden fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999] w-96 max-h-[600px] overflow-y-auto">
+                            <!-- Drawing Tools -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Drawing Tools
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-3">
+                                <button type="button" onclick="s('line')" data-value="line" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-minus w-4 text-gray-500"></i>
+                                    <span>Line</span>
+                                </button>
+                                <button type="button" onclick="s('doubleArrow')" data-value="doubleArrow" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-arrows-left-right w-4 text-gray-500"></i>
+                                    <span>Double Arrow</span>
+                                </button>
+                                <button type="button" onclick="s('arrow')" data-value="arrow" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-arrow-right w-4 text-gray-500"></i>
+                                    <span>Arrow</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Flowchart -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Flowchart
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-3">
+                                <button type="button" onclick="s('process')" data-value="process" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-square w-4 text-gray-500"></i>
+                                    <span>Process</span>
+                                </button>
+                                <button type="button" onclick="s('decision')" data-value="decision" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-diamond w-4 text-gray-500"></i>
+                                    <span>Decision</span>
+                                </button>
+                                <button type="button" onclick="s('inputOutput')" data-value="inputOutput" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-play w-4 text-gray-500"></i>
+                                    <span>Input/Output</span>
+                                </button>
+                                <button type="button" onclick="s('document')" data-value="document" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-file w-4 text-gray-500"></i>
+                                    <span>Document</span>
+                                </button>
+                                <button type="button" onclick="s('manualInput')" data-value="manualInput" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-keyboard w-4 text-gray-500"></i>
+                                    <span>Manual Input</span>
+                                </button>
+                                <button type="button" onclick="s('storedData')" data-value="storedData" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-database w-4 text-gray-500"></i>
+                                    <span>Stored Data</span>
+                                </button>
+                                <button type="button" onclick="s('display')" data-value="display" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-tv w-4 text-gray-500"></i>
+                                    <span>Display</span>
+                                </button>
+                                <button type="button" onclick="s('merge')" data-value="merge" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-caret-down w-4 text-gray-500"></i>
+                                    <span>Merge</span>
+                                </button>
+                                <button type="button" onclick="s('connector')" data-value="connector" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-circle w-4 text-gray-500"></i>
+                                    <span>Connector</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Basic Shapes -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Basic Shapes
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-2">
+                                <button type="button" onclick="s('rectangle')" data-value="rectangle" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-square w-4 text-gray-500"></i>
+                                    <span>Rectangle</span>
+                                </button>
+                                <button type="button" onclick="s('roundedRectangle')" data-value="roundedRectangle" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-square-rounded w-4 text-gray-500"></i>
+                                    <span>Rounded Rect</span>
+                                </button>
+                                <button type="button" onclick="s('circle')" data-value="circle" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-circle w-4 text-gray-500"></i>
+                                    <span>Circle</span>
+                                </button>
+                                <button type="button" onclick="s('ellipse')" data-value="ellipse" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-circle w-4 text-gray-500"></i>
+                                    <span>Ellipse</span>
+                                </button>
+                                <button type="button" onclick="s('triangle')" data-value="triangle" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-play w-4 text-gray-500"></i>
+                                    <span>Triangle</span>
+                                </button>
+                                <button type="button" onclick="s('pentagon')" data-value="pentagon" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-stop w-4 text-gray-500"></i>
+                                    <span>Pentagon</span>
+                                </button>
+                                <button type="button" onclick="s('hexagon')" data-value="hexagon" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-stop w-4 text-gray-500"></i>
+                                    <span>Hexagon</span>
+                                </button>
+                                <button type="button" onclick="s('star')" data-value="star" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-star w-4 text-gray-500"></i>
+                                    <span>Star</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Tech/Cloud Icons -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Tech/Cloud Icons
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-2">
+                                <button type="button" onclick="s('cloud')" data-value="cloud" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-cloud w-4 text-gray-500"></i>
+                                    <span>Cloud</span>
+                                </button>
+                                <button type="button" onclick="s('ai')" data-value="ai" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-brain w-4 text-gray-500"></i>
+                                    <span>AI</span>
+                                </button>
+                                <button type="button" onclick="s('robot')" data-value="robot" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-robot w-4 text-gray-500"></i>
+                                    <span>Robot</span>
+                                </button>
+                                <button type="button" onclick="s('iot')" data-value="iot" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-network-wired w-4 text-gray-500"></i>
+                                    <span>IoT</span>
+                                </button>
+                                <button type="button" onclick="s('user')" data-value="user" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-user w-4 text-gray-500"></i>
+                                    <span>User</span>
+                                </button>
+                                <button type="button" onclick="s('server')" data-value="server" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-server w-4 text-gray-500"></i>
+                                    <span>Server</span>
+                                </button>
+                                <button type="button" onclick="s('database')" data-value="database" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-database w-4 text-gray-500"></i>
+                                    <span>Database</span>
+                                </button>
+                                <button type="button" onclick="s('envelope')" data-value="envelope" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-envelope w-4 text-gray-500"></i>
+                                    <span>Envelope</span>
+                                </button>
+                                <button type="button" onclick="s('tower')" data-value="tower" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-broadcast-tower w-4 text-gray-500"></i>
+                                    <span>Tower</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Text Boxes Dropdown -->
+                    <div class="relative">
+                        <button type="button" id="textboxes-btn" 
+                                class="px-2 py-1.5 text-sm bg-white rounded-lg border border-gray-200 shadow-sm text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                                title="Text Boxes">
+                            <i class="fas fa-comment-alt"></i>
+                            <i class="fas fa-chevron-down text-[10px] ml-0.5"></i>
+                        </button>
+                        <div id="textboxes-dropdown" class="hidden fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999] w-96 max-h-[600px] overflow-y-auto">
+                            <!-- Drawing Tools -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Drawing Tools
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-3">
+                                <button type="button" onclick="promptCreateTextBox('line')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-minus w-4 text-gray-500"></i>
+                                    <span>Line</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('doubleArrow')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-arrows-left-right w-4 text-gray-500"></i>
+                                    <span>Double Arrow</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('arrow')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-arrow-right w-4 text-gray-500"></i>
+                                    <span>Arrow</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Flowchart -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Flowchart
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-3">
+                                <button type="button" onclick="promptCreateTextBox('process')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-square w-4 text-gray-500"></i>
+                                    <span>Process</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('decision')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-diamond w-4 text-gray-500"></i>
+                                    <span>Decision</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('inputOutput')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-play w-4 text-gray-500"></i>
+                                    <span>Input/Output</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('document')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-file w-4 text-gray-500"></i>
+                                    <span>Document</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('manualInput')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-keyboard w-4 text-gray-500"></i>
+                                    <span>Manual Input</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('storedData')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-database w-4 text-gray-500"></i>
+                                    <span>Stored Data</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('display')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-tv w-4 text-gray-500"></i>
+                                    <span>Display</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('merge')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-caret-down w-4 text-gray-500"></i>
+                                    <span>Merge</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('connector')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-circle w-4 text-gray-500"></i>
+                                    <span>Connector</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Basic Shapes -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Basic Shapes
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-2">
+                                <button type="button" onclick="promptCreateTextBox('rectangle')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-square w-4 text-gray-500"></i>
+                                    <span>Rectangle</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('roundedRectangle')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-square-rounded w-4 text-gray-500"></i>
+                                    <span>Rounded Rect</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('circle')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-circle w-4 text-gray-500"></i>
+                                    <span>Circle</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('ellipse')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-circle w-4 text-gray-500"></i>
+                                    <span>Ellipse</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('triangle')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-play w-4 text-gray-500"></i>
+                                    <span>Triangle</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('pentagon')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-stop w-4 text-gray-500"></i>
+                                    <span>Pentagon</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('hexagon')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-stop w-4 text-gray-500"></i>
+                                    <span>Hexagon</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('star')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-star w-4 text-gray-500"></i>
+                                    <span>Star</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Tech/Cloud Icons -->
+                            <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                Tech/Cloud Icons
+                            </div>
+                            <div class="grid grid-cols-2 gap-1 px-2 mb-2">
+                                <button type="button" onclick="promptCreateTextBox('cloud')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-cloud w-4 text-gray-500"></i>
+                                    <span>Cloud</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('ai')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-brain w-4 text-gray-500"></i>
+                                    <span>AI</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('robot')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-robot w-4 text-gray-500"></i>
+                                    <span>Robot</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('iot')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-network-wired w-4 text-gray-500"></i>
+                                    <span>IoT</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('user')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-user w-4 text-gray-500"></i>
+                                    <span>User</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('server')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-server w-4 text-gray-500"></i>
+                                    <span>Server</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('database')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-database w-4 text-gray-500"></i>
+                                    <span>Database</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('envelope')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-envelope w-4 text-gray-500"></i>
+                                    <span>Envelope</span>
+                                </button>
+                                <button type="button" onclick="promptCreateTextBox('tower')" 
+                                        class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <i class="fas fa-broadcast-tower w-4 text-gray-500"></i>
+                                    <span>Tower</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Text & Image -->
+                    <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                        <button type="button" onclick="s('text')" data-value="text" aria-pressed="false" 
+                                class="tool-btn px-2 py-1.5 text-sm transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200 rounded-l-lg"
+                                title="Text (Ctrl+T)">
+                            <i class="fas fa-font"></i>
+                        </button>
+                        <input type="file" id="image-upload" accept="image/*" class="hidden">
+                        <button onclick="document.getElementById('image-upload').click()" 
+                                class="tool-btn px-2 py-1.5 text-sm transition-all duration-200 text-gray-600 hover:bg-gray-50 rounded-r-lg"
+                                title="Image (Ctrl+I)">
+                            <i class="fas fa-image"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Center Section: Tool Properties -->
+            <div class="flex items-center gap-2">
+                <div class="w-px h-8 bg-gray-300"></div>
+                
+                <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm px-2 py-1 gap-2">
+                    <!-- Font Size -->
+                    <div class="flex items-center gap-1">
+                        <i class="fas fa-text-height text-gray-400 text-xs"></i>
+                        <input type="number" id="text-size" min="8" max="160" value="24" 
+                               class="w-12 px-1 py-0.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="w-px h-4 bg-gray-200"></div>
+                    
+                    <!-- Color -->
+                    <div class="flex items-center gap-1">
+                        <i class="fas fa-palette text-gray-400 text-xs"></i>
+                        <input type="color" id="color-picker" value="#000000" class="w-6 h-6 border border-gray-200 rounded cursor-pointer">
+                        <span id="current-tool-color" class="w-5 h-5 border border-gray-200 rounded shadow-sm" style="background-color: #000000;"></span>
+                    </div>
+                    
+                    <div class="w-px h-4 bg-gray-200"></div>
+                    
+                    <!-- Size -->
+                    <div class="flex items-center gap-1">
+                        <i class="fas fa-circle text-gray-400 text-[10px]"></i>
+                        <input type="range" id="size-range" min="1" max="50" value="2" 
+                               class="w-16 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <!-- Transparency (hidden by default) -->
+                    <div id="transparency-control" class="hidden flex items-center gap-1">
+                        <div class="w-px h-4 bg-gray-200"></div>
+                        <i class="fas fa-adjust text-gray-400 text-xs"></i>
+                        <input type="range" id="transparency-range" min="0.1" max="1" step="0.1" value="0.4" 
+                               class="w-16 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <span id="transparency-value" class="text-[10px] text-gray-600 min-w-[2rem]">40%</span>
+                    </div>
+                </div>
+                
+                <!-- Color Palette (hidden by default) -->
+                <div id="color-palette" class="hidden bg-white rounded-lg border border-gray-200 shadow-sm px-2 py-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-600 font-medium">Quick:</span>
+                        <div id="palette-colors" class="flex gap-1"></div>
+                    </div>
+                </div>
+                
+                <div class="w-px h-8 bg-gray-300"></div>
+            </div>
+            
+            <!-- Right Section: Actions -->
+            <div class="flex items-center gap-1.5">
+                <!-- Undo/Redo -->
+                <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <button id="undo-btn" class="px-2 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors duration-200 border-r border-gray-200 rounded-l-lg" title="Undo (Ctrl+Z)">
+                        <i class="fas fa-undo text-sm"></i>
+                    </button>
+                    <button id="redo-btn" class="px-2 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors duration-200 rounded-r-lg" title="Redo (Ctrl+Y)">
+                        <i class="fas fa-redo text-sm"></i>
+                    </button>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex items-center gap-1.5">
+                    <button id="paste-btn" class="px-2 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 text-sm shadow-sm"
+                            title="Paste">
+                        <i class="fas fa-paste"></i>
+                    </button>
+                    <button id="clear-btn" class="px-2 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors duration-200 text-sm shadow-sm"
+                            title="Clear page">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </div>
+                
+                <div class="w-px h-8 bg-gray-300"></div>
+                
+                <!-- Utility Buttons -->
+                <div class="flex items-center gap-1">
+                    <button id="info-btn" class="p-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 shadow-sm text-sm" title="Shortcuts">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                    <button id="settings-btn" class="p-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 shadow-sm text-sm" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button id="objects-btn" class="p-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 shadow-sm text-sm" title="Layers">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                </div>
+                
+                <!-- File Menu -->
+                <div class="relative" id="file-dropdown">
+                    <button id="file-menu-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-sm font-medium shadow-sm"
+                            title="File">
+                        <i class="fas fa-file-export text-sm"></i>
+                        <span class="hidden sm:inline">File</span>
+                        <i class="fas fa-chevron-down text-[10px]"></i>
+                    </button>
+                    <div id="file-menu" class="hidden fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999] w-48">
+                        <button id="save-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                title="Save (Ctrl+S)">
+                            <i class="fas fa-save w-4 text-green-600"></i>
+                            <span>Save</span>
+                        </button>
+                        <div class="border-t border-gray-200 my-1"></div>
+                        <button onclick="exportJSON()" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                title="Export as JSON">
+                            <i class="fas fa-download w-4 text-blue-600"></i>
+                            <span>Export JSON</span>
+                        </button>
+                        <button onclick="importJSON()" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                title="Import JSON">
+                            <i class="fas fa-upload w-4 text-purple-600"></i>
+                            <span>Import JSON</span>
+                        </button>
+                        <div class="border-t border-gray-200 my-1"></div>
+                        <button id="export-png" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                title="Export as PNG">
+                            <i class="fas fa-image w-4 text-orange-600"></i>
+                            <span>Export PNG</span>
+                        </button>
+                        <button id="print-pdf" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                title="Print as PDF">
+                            <i class="fas fa-print w-4 text-red-600"></i>
+                            <span>Print PDF</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tool-specific hidden inputs -->
+    <input type="hidden" id="tool-select" value="select">
+    <div id="tool-buttons" role="toolbar" aria-label="Tool selection" class="hidden"></div>
+</div>

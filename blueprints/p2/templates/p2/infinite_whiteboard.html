@@ -1,0 +1,4510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Whiteboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+
+<!-- Load Infinite Whiteboard Modules -->
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_core.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_drawing.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_minimap.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_tools.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_undo.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_layers.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_multiselect.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_image_transform.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_stroke_transform.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_toolbars.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_text.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_shapes.js') }}"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_zoom.js') }}"></script>
+
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    'sf': ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'sans-serif']
+                }
+            }
+        }
+    }
+</script>
+
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg, #0a0a0b);
+        color: var(--white, #ECFFFF);
+        font-family: 'sf', sans-serif;
+    }
+
+    #infinite-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        cursor: crosshair;
+        image-rendering: crisp-edges;
+    }
+
+    .toolbar {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--card, #121516);
+        border: 1px solid var(--accent, #14b8a6);
+        border-radius: 12px;
+        padding: 12px 20px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        z-index: 1000;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        max-width: 95vw;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .toolbar-divider {
+        width: 1px;
+        height: 32px;
+        background: rgba(20, 184, 166, 0.55); /* teal accent divider */
+        border-radius: 999px;
+        flex-shrink: 0;
+    }
+
+    .toolbar::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .toolbar::-webkit-scrollbar-track {
+        background: rgba(154, 168, 173, 0.1);
+        border-radius: 4px;
+    }
+
+    .toolbar::-webkit-scrollbar-thumb {
+        background: var(--accent, #14b8a6);
+        border-radius: 4px;
+    }
+
+    .toolbar::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-strong, #0d9488);
+    }
+
+    .tool-btn {
+        background: transparent;
+        border: 1px solid var(--muted, #9aa8ad);
+        color: var(--white, #ECFFFF);
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 14px;
+    }
+
+    .tool-btn:hover {
+        background: var(--accent, #14b8a6);
+        border-color: var(--accent, #14b8a6);
+        color: var(--bg, #0a0a0b);
+    }
+
+    .tool-btn.active {
+        background: var(--accent, #14b8a6);
+        border-color: var(--accent-strong, #0d9488);
+        color: var(--bg, #0a0a0b);
+    }
+
+    .color-picker {
+        width: 40px;
+        height: 40px;
+        border: 2px solid var(--muted, #9aa8ad);
+        border-radius: 6px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .size-slider {
+        width: 120px;
+        flex-shrink: 0;
+    }
+
+    .statusbar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--card, #121516);
+        border-top: 1px solid var(--accent, #14b8a6);
+        padding: 8px 16px;
+        font-size: 12px;
+        color: var(--muted, #9aa8ad);
+        z-index: 100;
+        text-align: center;
+    }
+
+    .zoom-controls {
+        position: fixed;
+        bottom: 60px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 1000;
+    }
+
+    .zoom-btn {
+        background: var(--card, #121516);
+        border: 1px solid var(--accent, #14b8a6);
+        color: var(--white, #ECFFFF);
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        transition: all 0.2s ease;
+    }
+
+    .zoom-btn:hover {
+        background: var(--accent, #14b8a6);
+        color: var(--bg, #0a0a0b);
+    }
+
+    .zoom-btn.active {
+        background: var(--accent, #14b8a6);
+        color: var(--bg, #0a0a0b);
+        box-shadow: 0 0 12px rgba(20, 184, 166, 0.6);
+    }
+
+    .minimap {
+        position: fixed;
+        bottom: 60px;
+        left: 20px;
+        width: 200px;
+        height: 150px;
+        background: var(--card, #121516);
+        border: 2px solid var(--accent, #14b8a6);
+        border-radius: 8px;
+        z-index: 1000;
+        overflow: hidden;
+    }
+
+    .minimap-canvas {
+        width: 100%;
+        height: 100%;
+    }
+
+    .viewport-indicator {
+        position: absolute;
+        border: 2px solid var(--accent-strong, #0d9488);
+        background: rgba(20, 184, 166, 0.1);
+        cursor: grab;
+        transition: background 0.2s ease;
+    }
+    
+    .viewport-indicator:hover {
+        background: rgba(20, 184, 166, 0.2);
+    }
+    
+    .viewport-indicator.dragging {
+        cursor: grabbing;
+        background: rgba(20, 184, 166, 0.3);
+    }
+
+    /* Layer Panel */
+    .layer-panel {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        width: 280px;
+        height: 100%;
+        background: var(--card, #121516);
+        border-right: 2px solid var(--accent, #14b8a6);
+        z-index: 2000;
+        transition: left 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .layer-panel.open {
+        left: 0;
+    }
+
+    .layer-panel-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--muted, #9aa8ad);
+        background: rgba(20, 184, 166, 0.1);
+    }
+
+    .layer-panel-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--accent, #14b8a6);
+        margin: 0;
+    }
+
+    .layer-panel-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+    }
+
+    .layer-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        margin-bottom: 6px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 13px;
+        color: var(--white, #ECFFFF);
+    }
+
+    .layer-item:hover {
+        background: rgba(20, 184, 166, 0.1);
+        border-color: var(--accent, #14b8a6);
+    }
+
+    .layer-item.selected {
+        background: rgba(20, 184, 166, 0.2);
+        border-color: var(--accent, #14b8a6);
+        box-shadow: 0 0 8px rgba(20, 184, 166, 0.3);
+    }
+
+    .layer-item-icon {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+    }
+
+    .layer-item-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .layer-item-primary {
+        font-weight: 500;
+        color: var(--white, #ECFFFF);
+    }
+
+    .layer-item-secondary {
+        font-size: 11px;
+        color: var(--muted, #9aa8ad);
+    }
+
+    .layer-toggle-btn {
+        position: fixed;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        background: var(--card, #121516);
+        border: 2px solid var(--accent, #14b8a6);
+        border-radius: 8px;
+        color: var(--white, #ECFFFF);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        z-index: 1500;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .layer-toggle-btn:hover {
+        background: var(--accent, #14b8a6);
+        color: var(--bg, #0a0a0b);
+    }
+
+    .layer-toggle-btn.panel-open {
+        left: 300px;
+    }
+
+    .layer-panel-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--muted, #9aa8ad);
+        font-size: 14px;
+    }
+
+    /* Layer Group Styles */
+    .layer-group {
+        margin-bottom: 8px;
+    }
+
+    .layer-group-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        background: rgba(20, 184, 166, 0.08);
+        border: 1px solid rgba(20, 184, 166, 0.2);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--accent, #14b8a6);
+        user-select: none;
+    }
+
+    .layer-group-header:hover {
+        background: rgba(20, 184, 166, 0.15);
+        border-color: var(--accent, #14b8a6);
+    }
+
+    .layer-group-icon {
+        width: 20px;
+        text-align: center;
+        color: var(--accent, #14b8a6);
+        cursor: pointer;
+    }
+
+    .layer-group-icon:hover {
+        color: var(--accent-strong, #0d9488);
+    }
+
+    .layer-group-title {
+        flex: 1;
+    }
+
+    .layer-group-count {
+        font-size: 11px;
+        color: var(--muted, #9aa8ad);
+        font-weight: 400;
+    }
+
+    .layer-group-toggle {
+        width: 16px;
+        text-align: center;
+        color: var(--muted, #9aa8ad);
+        transition: transform 0.2s ease;
+    }
+
+    .layer-group-toggle.collapsed {
+        transform: rotate(-90deg);
+    }
+
+    .layer-group-content {
+        max-height: 1000px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        transition: max-height 0.3s ease;
+        padding-left: 8px;
+        margin-top: 4px;
+    }
+
+    .layer-group-content.collapsed {
+        max-height: 0;
+        overflow: hidden;
+    }
+
+    .layer-item {
+        opacity: 1;
+        transition: opacity 0.2s ease;
+    }
+
+    .layer-item.hidden-layer {
+        opacity: 0.35;
+    }
+
+    .layer-item.hidden-layer .layer-item-icon {
+        filter: grayscale(100%);
+    }
+
+    /* Image Transform Toolbar */
+    .image-toolbar {
+        position: fixed;
+        top: 88px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, rgba(18, 21, 22, 0.98) 0%, rgba(20, 184, 166, 0.15) 100%);
+        border: 2px solid var(--accent, #14b8a6);
+        border-radius: 12px;
+        padding: 10px 16px;
+        display: none;
+        gap: 10px;
+        align-items: center;
+        z-index: 999;
+        box-shadow: 0 6px 24px rgba(20, 184, 166, 0.3), 0 0 40px rgba(20, 184, 166, 0.1);
+        animation: slideDown 0.3s ease-out;
+        max-width: 95vw;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .image-toolbar::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .image-toolbar::-webkit-scrollbar-track {
+        background: rgba(154, 168, 173, 0.1);
+        border-radius: 3px;
+    }
+
+    .image-toolbar::-webkit-scrollbar-thumb {
+        background: var(--accent, #14b8a6);
+        border-radius: 3px;
+    }
+
+    .image-toolbar::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-strong, #0d9488);
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+
+    .image-toolbar.visible {
+        display: flex;
+    }
+
+    .image-toolbar::before {
+        content: 'IMAGE TOOLS';
+        font-size: 10px;
+        font-weight: bold;
+        color: var(--accent, #14b8a6);
+        letter-spacing: 1px;
+        margin-right: 8px;
+        opacity: 0.8;
+    }
+
+    #stroke-toolbar::before {
+        content: 'STROKE TOOLS';
+    }
+
+    #shape-toolbar::before {
+        content: 'SHAPE TOOLS';
+    }
+
+    #multi-selection-toolbar::before {
+        content: 'SELECTION TOOLS';
+    }
+
+    #text-toolbar::before {
+        content: 'TEXT TOOLS';
+    }
+
+    .image-toolbar .tool-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+
+    .image-toolbar-divider {
+        width: 1px;
+        height: 24px;
+        background: var(--accent, #14b8a6);
+        opacity: 0.3;
+    }
+
+    /* Shapes Dropdown */
+    .shapes-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .shapes-dropdown-content {
+        display: none;
+        position: fixed;
+        background: var(--card, #121516);
+        border: 2px solid var(--accent, #14b8a6);
+        border-radius: 8px;
+        min-width: 250px;
+        max-width: 300px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+        z-index: 2100;
+        padding: 8px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .shapes-dropdown-content.show {
+        display: block;
+    }
+
+    .shapes-category {
+        margin-bottom: 12px;
+    }
+
+    .shapes-category.shapes-recent {
+        background: rgba(20, 184, 166, 0.08);
+        border-radius: 8px;
+        padding: 8px;
+        margin-bottom: 12px;
+        /* Remove sticky positioning to prevent overlap */
+    }
+
+    .shapes-category.shapes-recent .shapes-category-title {
+        color: #fbbf24; /* Gold color for star */
+        border-bottom-color: rgba(251, 191, 36, 0.5);
+    }
+
+    .shapes-category-title {
+        font-size: 11px;
+        font-weight: bold;
+        color: var(--accent, #14b8a6);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--accent, #14b8a6);
+        opacity: 0.8;
+    }
+
+    .shapes-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        padding: 4px;
+    }
+
+    .shape-option {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--muted, #9aa8ad);
+        color: var(--white, #ECFFFF);
+        padding: 10px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 12px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .shape-option:hover {
+        background: var(--accent, #14b8a6);
+        border-color: var(--accent-strong, #0d9488);
+        color: var(--bg, #0a0a0b);
+        transform: scale(1.05);
+    }
+
+    .shape-option-icon {
+        font-size: 18px;
+    }
+
+    .shape-option-name {
+        font-size: 10px;
+        opacity: 0.8;
+    }
+    
+    /* Rectangular selection box */
+    .rect-selection-overlay {
+        position: fixed;
+        border: 2px dashed var(--accent, #14b8a6);
+        background: rgba(20, 184, 166, 0.1);
+        pointer-events: none;
+        z-index: 999;
+        display: none;
+    }
+</style>
+</head>
+<body>
+    <!-- Layer Panel -->
+    <div class="layer-panel" id="layer-panel">
+        <div class="layer-panel-header">
+            <h3 class="layer-panel-title">Layers</h3>
+        </div>
+        <div class="layer-panel-content" id="layer-panel-content">
+            <div class="layer-panel-empty">No objects yet</div>
+        </div>
+    </div>
+
+    <!-- Layer Toggle Button -->
+    <button class="layer-toggle-btn" id="layer-toggle-btn" title="Toggle Layers Panel (L)">
+        <i class="fas fa-layer-group"></i>
+    </button>
+
+    <!-- Main Infinite Canvas -->
+    <canvas id="infinite-canvas"></canvas>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <!-- Title and Description at the very left -->
+        <input type="text" id="board-title-input" placeholder="Title"
+               style="width: 140px; padding: 6px 10px; border-radius: 4px; background: var(--card, #121516); 
+                      color: var(--white, #ECFFFF); border: 1px solid var(--muted, #9aa8ad); font-size: 12px; flex-shrink: 0;"
+               title="Board title">
+        
+        <input type="text" id="board-description-input" placeholder="Description"
+               style="width: 160px; padding: 6px 10px; border-radius: 4px; background: var(--card, #121516); 
+                      color: var(--white, #ECFFFF); border: 1px solid var(--muted, #9aa8ad); font-size: 12px; flex-shrink: 0;"
+               title="Board description">
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Drawing Tools -->
+        <button class="tool-btn active" data-tool="pen" title="Pen Tool (P)">
+            <i class="fas fa-pen"></i>
+        </button>
+        <button class="tool-btn" data-tool="marker" title="Marker (M)">
+            <i class="fas fa-marker"></i>
+        </button>
+        <button class="tool-btn" data-tool="highlighter" title="Highlighter (H)">
+            <i class="fas fa-highlighter"></i>
+        </button>
+        <button class="tool-btn" data-tool="eraser" title="Eraser (E)">
+            <i class="fas fa-eraser"></i>
+        </button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Selection Tools -->
+        <button class="tool-btn" data-tool="select" title="Select (V)">
+            <i class="fas fa-mouse-pointer"></i>
+        </button>
+        <button class="tool-btn" data-tool="rect-select" title="Rectangular Select (R)">
+            <i class="fas fa-vector-square"></i>
+        </button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Text and Shapes -->
+        <button class="tool-btn" data-tool="text" title="Text (T)">
+            <i class="fas fa-font"></i>
+        </button>
+        
+        <!-- Shapes Dropdown -->
+        <div class="shapes-dropdown">
+            <button class="tool-btn" id="shapes-btn" title="Shapes (S)">
+                <i class="fas fa-shapes"></i>
+            </button>
+            <div class="shapes-dropdown-content" id="shapes-dropdown">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Pan Tool -->
+        <button class="tool-btn" data-tool="pan" title="Pan (Space)">
+            <i class="fas fa-hand-paper"></i>
+        </button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Color and Size -->
+        <input type="color" class="color-picker" id="color-picker" value="#14b8a6" title="Color">
+        <input type="range" class="size-slider" id="size-slider" min="1" max="20" value="3" title="Size">
+        <span id="size-display" style="color: var(--white, #ECFFFF); min-width: 30px; flex-shrink: 0;">3px</span>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Undo/Redo/Clear -->
+        <button class="tool-btn" onclick="undo()" title="Undo (Ctrl+Z)">
+            <i class="fas fa-undo"></i>
+        </button>
+        <button class="tool-btn" onclick="redo()" title="Redo (Ctrl+Y)">
+            <i class="fas fa-redo"></i>
+        </button>
+        <button class="tool-btn" onclick="clearCanvas()" title="Clear All">
+            <i class="fas fa-trash"></i>
+        </button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Layer and Image -->
+        <input type="number" id="default-layer-input" value="0" min="0" 
+               style="width: 45px; padding: 4px; border-radius: 4px; background: var(--card, #121516); 
+                      color: var(--white, #ECFFFF); border: 1px solid var(--muted, #9aa8ad); text-align: center; font-size: 12px; flex-shrink: 0;"
+               onchange="setDefaultLayer(parseInt(this.value))" 
+               title="New at Layer (0 = bottom)">
+        
+        <button class="tool-btn" onclick="document.getElementById('image-upload').click()" title="Insert Image (Ctrl+I)">
+            <i class="fas fa-image"></i>
+        </button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Save -->
+        <button class="tool-btn" onclick="saveToServer()" title="Save (Ctrl+S)">
+            <i class="fas fa-save"></i>
+        </button>
+    </div>
+
+    <!-- Image Transform Toolbar (appears below main toolbar when single image selected) -->
+    <div class="image-toolbar" id="image-toolbar">
+        <button class="tool-btn" onclick="flipImageHorizontal()" title="Flip Horizontal (Shift+H)">
+            <i class="fas fa-arrows-alt-h"></i> Flip H
+        </button>
+        <button class="tool-btn" onclick="flipImageVertical()" title="Flip Vertical (Shift+V)">
+            <i class="fas fa-arrows-alt-v"></i> Flip V
+        </button>
+        <button class="tool-btn" onclick="rotateImage90()" title="Rotate 90° (Shift+])">
+            <i class="fas fa-redo"></i> 90°
+        </button>
+        <button class="tool-btn" onclick="rotateImageMinus90()" title="Rotate -90° (Shift+[)">
+            <i class="fas fa-undo"></i> -90°
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="duplicateImage()" title="Duplicate (Ctrl+D)">
+            <i class="fas fa-copy"></i> Duplicate
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="bringToFrontHandler()" title="Bring to Front (Ctrl+])">
+            <i class="fas fa-layer-group"></i> Front
+        </button>
+        <button class="tool-btn" onclick="sendToBackHandler()" title="Send to Back (Ctrl+[)">
+            <i class="fas fa-layer-group" style="opacity: 0.5;"></i> Back
+        </button>
+        <button class="tool-btn" onclick="moveUpHandler()" title="Move Up (])">
+            <i class="fas fa-arrow-up"></i> Up
+        </button>
+        <button class="tool-btn" onclick="moveDownHandler()" title="Move Down ([)">
+            <i class="fas fa-arrow-down"></i> Down
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="resetImageTransform()" title="Reset Transform (Shift+R)">
+            <i class="fas fa-sync-alt"></i> Reset
+        </button>
+        <button class="tool-btn" onclick="deleteSelectedImage()" title="Delete (Delete)" style="color: #ef4444;">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+    </div>
+
+    <!-- Stroke Toolbar (appears below main toolbar when stroke(s) selected) -->
+    <div class="image-toolbar" id="stroke-toolbar">
+        <button class="tool-btn" onclick="duplicateSelection()" title="Duplicate (Ctrl+D)">
+            <i class="fas fa-copy"></i> Duplicate
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+
+        <button class="tool-btn" onclick="flipSelectedDrawingHorizontal()" title="Flip Horizontal">
+            <i class="fas fa-arrows-alt-h"></i> Flip H
+        </button>
+        <button class="tool-btn" onclick="flipSelectedDrawingVertical()" title="Flip Vertical">
+            <i class="fas fa-arrows-alt-v"></i> Flip V
+        </button>
+        <button class="tool-btn" onclick="rotateSelectedDrawing90()" title="Rotate 90°">
+            <i class="fas fa-redo"></i> 90°
+        </button>
+        <button class="tool-btn" onclick="rotateSelectedDrawingMinus90()" title="Rotate -90°">
+            <i class="fas fa-undo"></i> -90°
+        </button>
+
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="bringToFrontHandler()" title="Bring to Front (Ctrl+])">
+            <i class="fas fa-layer-group"></i> Front
+        </button>
+        <button class="tool-btn" onclick="sendToBackHandler()" title="Send to Back (Ctrl+[)">
+            <i class="fas fa-layer-group" style="opacity: 0.5;"></i> Back
+        </button>
+        <button class="tool-btn" onclick="moveUpHandler()" title="Move Up (])">
+            <i class="fas fa-arrow-up"></i> Up
+        </button>
+        <button class="tool-btn" onclick="moveDownHandler()" title="Move Down ([)">
+            <i class="fas fa-arrow-down"></i> Down
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="deleteSelection()" title="Delete (Delete)" style="color: #ef4444;">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+    </div>
+
+    <!-- Shape Toolbar (appears below main toolbar when shape(s) selected) -->
+    <div class="image-toolbar" id="shape-toolbar">
+        <button class="tool-btn" onclick="duplicateSelection()" title="Duplicate (Ctrl+D)">
+            <i class="fas fa-copy"></i> Duplicate
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+
+        <button class="tool-btn" onclick="flipSelectedDrawingHorizontal()" title="Flip Horizontal">
+            <i class="fas fa-arrows-alt-h"></i> Flip H
+        </button>
+        <button class="tool-btn" onclick="flipSelectedDrawingVertical()" title="Flip Vertical">
+            <i class="fas fa-arrows-alt-v"></i> Flip V
+        </button>
+        <button class="tool-btn" onclick="rotateSelectedDrawing90()" title="Rotate 90°">
+            <i class="fas fa-redo"></i> 90°
+        </button>
+        <button class="tool-btn" onclick="rotateSelectedDrawingMinus90()" title="Rotate -90°">
+            <i class="fas fa-undo"></i> -90°
+        </button>
+
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="bringToFrontHandler()" title="Bring to Front (Ctrl+])">
+            <i class="fas fa-layer-group"></i> Front
+        </button>
+        <button class="tool-btn" onclick="sendToBackHandler()" title="Send to Back (Ctrl+[)">
+            <i class="fas fa-layer-group" style="opacity: 0.5;"></i> Back
+        </button>
+        <button class="tool-btn" onclick="moveUpHandler()" title="Move Up (])">
+            <i class="fas fa-arrow-up"></i> Up
+        </button>
+        <button class="tool-btn" onclick="moveDownHandler()" title="Move Down ([)">
+            <i class="fas fa-arrow-down"></i> Down
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="deleteSelection()" title="Delete (Delete)" style="color: #ef4444;">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+    </div>
+
+    <!-- Multi-Selection Toolbar (appears below main toolbar for mixed/multiple selections) -->
+    <div class="image-toolbar" id="multi-selection-toolbar">
+        <button class="tool-btn" onclick="duplicateSelection()" title="Duplicate (Ctrl+D)">
+            <i class="fas fa-copy"></i> Duplicate
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="bringToFrontHandler()" title="Bring to Front (Ctrl+])">
+            <i class="fas fa-layer-group"></i> Front
+        </button>
+        <button class="tool-btn" onclick="sendToBackHandler()" title="Send to Back (Ctrl+[)">
+            <i class="fas fa-layer-group" style="opacity: 0.5;"></i> Back
+        </button>
+        <button class="tool-btn" onclick="moveUpHandler()" title="Move Up (])">
+            <i class="fas fa-arrow-up"></i> Up
+        </button>
+        <button class="tool-btn" onclick="moveDownHandler()" title="Move Down ([)">
+            <i class="fas fa-arrow-down"></i> Down
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="deleteSelection()" title="Delete (Delete)" style="color: #ef4444;">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+    </div>
+
+    <!-- Text Toolbar (appears below main toolbar when text tool is active or text object selected) -->
+    <div class="image-toolbar" id="text-toolbar">
+        <select id="text-font-family" class="tool-btn" onchange="changeTextFontFamily(this.value)" title="Font Family" style="padding: 6px 8px; max-width: 140px;">
+            <option value="sf, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">SF Pro / System</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans</option>
+            <option value="Impact, fantasy">Impact</option>
+        </select>
+        
+        <select id="text-font-size" class="tool-btn" onchange="changeTextFontSize(parseInt(this.value))" title="Font Size" style="padding: 6px 8px; max-width: 80px;">
+            <option value="12">12px</option>
+            <option value="14">14px</option>
+            <option value="16">16px</option>
+            <option value="18" selected>18px</option>
+            <option value="24">24px</option>
+            <option value="32">32px</option>
+            <option value="48">48px</option>
+            <option value="64">64px</option>
+            <option value="96">96px</option>
+        </select>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" id="text-bold-btn" onclick="toggleTextBold()" title="Bold (Ctrl+B)">
+            <i class="fas fa-bold"></i>
+        </button>
+        <button class="tool-btn" id="text-italic-btn" onclick="toggleTextItalic()" title="Italic (Ctrl+I)">
+            <i class="fas fa-italic"></i>
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="setTextAlign('left')" title="Align Left">
+            <i class="fas fa-align-left"></i>
+        </button>
+        <button class="tool-btn" onclick="setTextAlign('center')" title="Align Center">
+            <i class="fas fa-align-center"></i>
+        </button>
+        <button class="tool-btn" onclick="setTextAlign('right')" title="Align Right">
+            <i class="fas fa-align-right"></i>
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="duplicateText()" title="Duplicate (Ctrl+D)">
+            <i class="fas fa-copy"></i> Duplicate
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="bringToFrontHandler()" title="Bring to Front (Ctrl+])">
+            <i class="fas fa-layer-group"></i> Front
+        </button>
+        <button class="tool-btn" onclick="sendToBackHandler()" title="Send to Back (Ctrl+[)">
+            <i class="fas fa-layer-group" style="opacity: 0.5;"></i> Back
+        </button>
+        <button class="tool-btn" onclick="moveUpHandler()" title="Move Up (])">
+            <i class="fas fa-arrow-up"></i> Up
+        </button>
+        <button class="tool-btn" onclick="moveDownHandler()" title="Move Down ([)">
+            <i class="fas fa-arrow-down"></i> Down
+        </button>
+        
+        <div class="image-toolbar-divider"></div>
+        
+        <button class="tool-btn" onclick="deleteText()" title="Delete (Delete)" style="color: #ef4444;">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+    </div>
+
+    <!-- Zoom Controls -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" id="zoom-in-btn" title="Zoom In (+)">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="zoom-btn" id="zoom-window-btn" title="Zoom Window (W) - Draw rectangle to zoom">
+            <i class="fas fa-search-plus"></i>
+        </button>
+        <button class="zoom-btn" id="zoom-all-btn" title="Zoom All (0)">
+            <i class="fas fa-compress-arrows-alt"></i>
+        </button>
+        <button class="zoom-btn" id="zoom-out-btn" title="Zoom Out (-)">
+            <i class="fas fa-minus"></i>
+        </button>
+    </div>
+
+    <!-- Minimap -->
+    <div class="minimap" id="minimap">
+        <canvas class="minimap-canvas" id="minimap-canvas"></canvas>
+        <div class="viewport-indicator" id="viewport-indicator"></div>
+    </div>
+
+    <!-- Statusbar -->
+    <div class="statusbar" id="statusbar">
+        Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%
+    </div>
+
+    <!-- Hidden file input for image upload -->
+    <input type="file" id="image-upload" accept="image/*" style="display: none;">
+
+<script>
+// ============================================================================
+// INFINITE WHITEBOARD - Using Dedicated Infinite Whiteboard Modules
+// ============================================================================
+
+// Canvas setup
+const canvas = document.getElementById('infinite-canvas');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap-canvas');
+const minimapCtx = minimapCanvas.getContext('2d');
+const toolbarEl = document.querySelector('.toolbar');
+
+// Use module namespace
+const IWB = window.InfiniteWhiteboard;
+
+// Objects storage (exposed globally for export functions)
+let objects = [];
+window.objects = objects; // Expose for external access
+
+// Horizontal scroll for toolbar when mouse is over it (does not affect canvas)
+if (toolbarEl) {
+    toolbarEl.addEventListener('wheel', (e) => {
+        // Only intercept when the pointer is on the toolbar
+        e.preventDefault();
+        toolbarEl.scrollLeft += e.deltaY;
+    }, { passive: false });
+}
+let nextObjectId = 1;
+let selectedObject = null;
+let isDragging = false;
+let dragStartPos = null;
+let dragStartPath = null;
+let defaultLayer = 0; // Layer where new objects are inserted (0 = bottom)
+let lastPointerWorld = { x: 0, y: 0 };
+let multiHandleMode = null;
+let multiHandleOriginals = null;
+let multiHandleCenter = null;
+let multiHandleStart = null;
+let multiHandleStartAngle = 0;
+let pendingImagePlacement = null; // Holds ghost data while user positions a new image
+let pendingImagePosition = null;  // World-space top-left for the placement preview
+
+// Rectangular selection state
+let isRectSelecting = false;
+let rectSelectStart = null;
+let rectSelectOverlay = null;
+
+if (IWB.initializeLayerMetadata) {
+    IWB.initializeLayerMetadata(objects);
+}
+
+const rotatePoint = (x, y, cx, cy, angle) => {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const dx = x - cx;
+    const dy = y - cy;
+    return {
+        x: cx + dx * cos - dy * sin,
+        y: cy + dx * sin + dy * cos
+    };
+};
+
+const findObjectById = (id) => {
+    const num = Number(id);
+    return objects.find(o => Number(o.id) === num);
+};
+
+const clonePath = (path = []) => path.map(pt => ({ x: pt.x, y: pt.y }));
+
+const cloneGeometry = (obj) => {
+    if (!obj) return null;
+    if (obj.type === 'stroke') {
+        return { type: 'stroke', path: clonePath(obj.path || []) };
+    }
+    if (obj.type === 'image') {
+        return {
+            type: 'image',
+            x: obj.x || 0,
+            y: obj.y || 0,
+            w: obj.w || 0,
+            h: obj.h || 0,
+            rotation: obj.rotation || 0,
+            flipH: !!obj.flipH,
+            flipV: !!obj.flipV
+        };
+    }
+    if (obj.type === 'text') {
+        return {
+            type: 'text',
+            x: obj.x || 0,
+            y: obj.y || 0,
+            w: (obj.width !== undefined ? obj.width : obj.w) || 100,
+            h: (obj.height !== undefined ? obj.height : obj.h) || 50,
+            rotation: obj.rotation || 0,
+            flipH: !!obj.flipH,
+            flipV: !!obj.flipV
+        };
+    }
+    if (obj.type === 'shape') {
+        return {
+            type: 'shape',
+            x: obj.x || 0,
+            y: obj.y || 0,
+            w: obj.w || 100,
+            h: obj.h || 100,
+            rotation: obj.rotation || 0,
+            flipH: !!obj.flipH,
+            flipV: !!obj.flipV,
+            startX: obj.startX,
+            startY: obj.startY,
+            endX: obj.endX,
+            endY: obj.endY
+        };
+    }
+    return null;
+};
+
+const captureSelectionOriginals = () => {
+    const selected = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : [];
+    return selected
+        .map(obj => ({ id: obj.id, geometry: cloneGeometry(obj) }))
+        .filter(item => item.geometry);
+};
+
+const applyTranslationToSelection = (originals, dx, dy) => {
+    if (!Array.isArray(originals)) return;
+    originals.forEach(item => {
+        const obj = findObjectById(item.id);
+        if (!obj) return;
+        if (item.geometry.type === 'stroke' && obj.path) {
+            obj.path = item.geometry.path.map(pt => ({ x: pt.x + dx, y: pt.y + dy }));
+        } else if (item.geometry.type === 'image') {
+            obj.x = item.geometry.x + dx;
+            obj.y = item.geometry.y + dy;
+        } else if (item.geometry.type === 'text') {
+            obj.x = item.geometry.x + dx;
+            obj.y = item.geometry.y + dy;
+        } else if (item.geometry.type === 'shape') {
+            obj.x = item.geometry.x + dx;
+            obj.y = item.geometry.y + dy;
+            // Also update connector coordinates if they exist
+            if (item.geometry.startX !== undefined) {
+                obj.startX = item.geometry.startX + dx;
+                obj.startY = item.geometry.startY + dy;
+                obj.endX = item.geometry.endX + dx;
+                obj.endY = item.geometry.endY + dy;
+            }
+        }
+    });
+};
+
+const applyRotationToSelection = (originals, delta, center) => {
+    if (!Array.isArray(originals) || !center) return;
+    originals.forEach(item => {
+        const obj = findObjectById(item.id);
+        if (!obj) return;
+        if (item.geometry.type === 'stroke' && obj.path) {
+            obj.path = item.geometry.path.map(pt => rotatePoint(pt.x, pt.y, center.x, center.y, delta));
+        } else if (item.geometry.type === 'image') {
+            const origCenter = {
+                x: item.geometry.x + item.geometry.w / 2,
+                y: item.geometry.y + item.geometry.h / 2
+            };
+            const rotatedCenter = rotatePoint(origCenter.x, origCenter.y, center.x, center.y, delta);
+            obj.x = rotatedCenter.x - item.geometry.w / 2;
+            obj.y = rotatedCenter.y - item.geometry.h / 2;
+            obj.rotation = (item.geometry.rotation || 0) + delta;
+        } else if (item.geometry.type === 'text') {
+            const origCenter = {
+                x: item.geometry.x + (item.geometry.w || 100) / 2,
+                y: item.geometry.y + (item.geometry.h || 50) / 2
+            };
+            const rotatedCenter = rotatePoint(origCenter.x, origCenter.y, center.x, center.y, delta);
+            obj.x = rotatedCenter.x - (item.geometry.w || 100) / 2;
+            obj.y = rotatedCenter.y - (item.geometry.h || 50) / 2;
+            obj.rotation = (item.geometry.rotation || 0) + delta;
+        } else if (item.geometry.type === 'shape') {
+            const origCenter = {
+                x: item.geometry.x + (item.geometry.w || 100) / 2,
+                y: item.geometry.y + (item.geometry.h || 100) / 2
+            };
+            const rotatedCenter = rotatePoint(origCenter.x, origCenter.y, center.x, center.y, delta);
+            obj.x = rotatedCenter.x - (item.geometry.w || 100) / 2;
+            obj.y = rotatedCenter.y - (item.geometry.h || 100) / 2;
+            obj.rotation = (item.geometry.rotation || 0) + delta;
+        }
+    });
+};
+
+const applyMirrorToSelection = (axis, center) => {
+    if (!center) return;
+    const originals = captureSelectionOriginals();
+    originals.forEach(item => {
+        const obj = findObjectById(item.id);
+        if (!obj) return;
+        if (item.geometry.type === 'stroke' && obj.path) {
+            obj.path = item.geometry.path.map(pt => {
+                if (axis === 'horizontal') {
+                    return { x: center.x * 2 - pt.x, y: pt.y };
+                }
+                return { x: pt.x, y: center.y * 2 - pt.y };
+            });
+        } else if (item.geometry.type === 'image') {
+            if (axis === 'horizontal') {
+                const dist = (item.geometry.x + item.geometry.w / 2) - center.x;
+                const newCenterX = center.x - dist;
+                obj.x = newCenterX - item.geometry.w / 2;
+                obj.flipH = !item.geometry.flipH;
+            } else {
+                const dist = (item.geometry.y + item.geometry.h / 2) - center.y;
+                const newCenterY = center.y - dist;
+                obj.y = newCenterY - item.geometry.h / 2;
+                obj.flipV = !item.geometry.flipV;
+            }
+        } else if (item.geometry.type === 'text' || item.geometry.type === 'shape') {
+            const w = item.geometry.w || 100;
+            const h = item.geometry.h || 100;
+            if (axis === 'horizontal') {
+                const dist = (item.geometry.x + w / 2) - center.x;
+                const newCenterX = center.x - dist;
+                obj.x = newCenterX - w / 2;
+                if (item.geometry.type === 'text') {
+                    obj.flipH = !item.geometry.flipH;
+                } else if (item.geometry.type === 'shape') {
+                    obj.flipH = !item.geometry.flipH;
+                }
+            } else {
+                const dist = (item.geometry.y + h / 2) - center.y;
+                const newCenterY = center.y - dist;
+                obj.y = newCenterY - h / 2;
+                if (item.geometry.type === 'text') {
+                    obj.flipV = !item.geometry.flipV;
+                } else if (item.geometry.type === 'shape') {
+                    obj.flipV = !item.geometry.flipV;
+                }
+            }
+        }
+    });
+    recordTransformUndo(originals);
+    render();
+};
+
+const recordTransformUndo = (originals) => {
+    if (!Array.isArray(originals) || typeof IWB.addToUndoStack !== 'function') return;
+    originals.forEach(item => {
+        const obj = findObjectById(item.id);
+        if (!obj) return;
+        const after = cloneGeometry(obj);
+        if (!after) return;
+        IWB.addToUndoStack({
+            type: 'transform',
+            objectId: obj.id,
+            before: item.geometry,
+            after
+        });
+    });
+};
+
+const getSelectedObjectsList = () => {
+    if (typeof IWB.getSelectedObjects === 'function') {
+        return IWB.getSelectedObjects(objects);
+    }
+    return selectedObject ? [selectedObject] : [];
+};
+
+const selectionIsStrokeOrShapeOnly = (selectedObjects) => {
+    return Array.isArray(selectedObjects) && selectedObjects.length > 0 &&
+        selectedObjects.every(obj => obj && (obj.type === 'stroke' || obj.type === 'shape'));
+};
+
+const computeSelectionBounds = (selectedObjects) => {
+    if (!Array.isArray(selectedObjects) || !selectedObjects.length || typeof IWB.getBounds !== 'function') {
+        return null;
+    }
+    let bounds = null;
+    selectedObjects.forEach(obj => {
+        const b = obj ? IWB.getBounds(obj) : null;
+        if (!b || b.w === undefined || b.h === undefined) return;
+        if (!bounds) {
+            bounds = { x: b.x, y: b.y, w: b.w, h: b.h };
+        } else {
+            const minX = Math.min(bounds.x, b.x);
+            const minY = Math.min(bounds.y, b.y);
+            const maxX = Math.max(bounds.x + bounds.w, b.x + b.w);
+            const maxY = Math.max(bounds.y + bounds.h, b.y + b.h);
+            bounds = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+        }
+    });
+    return bounds;
+};
+
+const getSelectionCenterPoint = () => {
+    const selection = getSelectedObjectsList();
+    const bounds = computeSelectionBounds(selection);
+    if (!bounds) return null;
+    return { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
+};
+
+const resetMultiHandleState = () => {
+    multiHandleMode = null;
+    multiHandleOriginals = null;
+    multiHandleCenter = null;
+    multiHandleStart = null;
+    multiHandleStartAngle = 0;
+};
+const getSelectionCount = () => {
+    if (typeof IWB.getSelectionCount === 'function') {
+        return IWB.getSelectionCount();
+    }
+    return selectedObject ? 1 : 0;
+};
+
+function refreshSelectedObject() {
+    if (typeof IWB.getPrimarySelectionId !== 'function') {
+        return;
+    }
+    const primaryId = IWB.getPrimarySelectionId();
+    if (primaryId === null || primaryId === undefined) {
+        selectedObject = null;
+        updateToolbars();
+        return;
+    }
+    selectedObject = objects.find(o => Number(o.id) === Number(primaryId)) || null;
+    if (!selectedObject && typeof IWB.removeFromSelection === 'function') {
+        IWB.removeFromSelection(primaryId);
+    }
+    updateToolbars();
+}
+
+function updateToolbars() {
+    const selectionCount = getSelectionCount();
+    const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : [];
+    
+    // Populate color picker with selected object's color
+    if (selectedObject && (selectedObject.type === 'stroke' || selectedObject.type === 'text' || selectedObject.type === 'shape')) {
+        const objectColor = selectedObject.color || '#14b8a6';
+        const colorPicker = document.getElementById('color-picker');
+        if (colorPicker && colorPicker.value !== objectColor) {
+            colorPicker.value = objectColor;
+            IWB.color = objectColor; // Update tool color to match
+        }
+    }
+    
+    // Populate size slider with selected stroke's or shape's width
+    if (selectedObject && (selectedObject.type === 'stroke' || selectedObject.type === 'shape')) {
+        const objectWidth = selectedObject.type === 'shape' 
+            ? (selectedObject.strokeWidth || 2) 
+            : (selectedObject.size || 3);
+        const sizeSlider = document.getElementById('size-slider');
+        const sizeDisplay = document.getElementById('size-display');
+        if (sizeSlider && parseInt(sizeSlider.value) !== objectWidth) {
+            sizeSlider.value = objectWidth;
+            if (sizeDisplay) {
+                sizeDisplay.textContent = objectWidth + 'px';
+            }
+            IWB.size = objectWidth; // Update tool size to match
+        }
+    }
+    
+    if (IWB.Toolbars && typeof IWB.Toolbars.updateForSelection === 'function') {
+        IWB.Toolbars.updateForSelection(selectedObject, selectionCount, selectedObjects);
+    }
+}
+
+// Apply color change to selected stroke or text objects
+window.applyColorToSelection = function(newColor) {
+    if (!selectedObject) return;
+    
+    const selectionCount = getSelectionCount();
+    
+    if (selectionCount === 1 && selectedObject) {
+        // Single object selected
+        if (selectedObject.type === 'stroke') {
+            const oldColor = selectedObject.color;
+            selectedObject.color = newColor;
+            
+            // Add to undo stack
+            if (typeof IWB.addToUndoStack === 'function') {
+                IWB.addToUndoStack({
+                    type: 'colorChange',
+                    objectId: selectedObject.id,
+                    oldColor: oldColor,
+                    newColor: newColor
+                });
+            }
+            
+            render();
+            console.log('[COLOR] Changed stroke color to', newColor);
+        } else if (selectedObject.type === 'text') {
+            const oldColor = selectedObject.color;
+            selectedObject.color = newColor;
+            
+            // Add to undo stack
+            if (typeof IWB.addToUndoStack === 'function') {
+                IWB.addToUndoStack({
+                    type: 'colorChange',
+                    objectId: selectedObject.id,
+                    oldColor: oldColor,
+                    newColor: newColor
+                });
+            }
+            
+            // Also update if text editing is active
+            if (typeof IWB.setTextColor === 'function') {
+                IWB.setTextColor(newColor);
+            }
+            
+            render();
+            console.log('[COLOR] Changed text color to', newColor);
+        } else if (selectedObject.type === 'shape') {
+            const oldColor = selectedObject.color;
+            selectedObject.color = newColor;
+            
+            // Add to undo stack
+            if (typeof IWB.addToUndoStack === 'function') {
+                IWB.addToUndoStack({
+                    type: 'colorChange',
+                    objectId: selectedObject.id,
+                    oldColor: oldColor,
+                    newColor: newColor
+                });
+            }
+            
+            render();
+            console.log('[COLOR] Changed shape color to', newColor);
+        }
+    } else if (selectionCount > 1) {
+        // Multiple objects selected
+        const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+            ? IWB.getSelectedObjects(objects)
+            : [];
+        
+        selectedObjects.forEach(obj => {
+            if (obj.type === 'stroke' || obj.type === 'text' || obj.type === 'shape') {
+                const oldColor = obj.color;
+                obj.color = newColor;
+                
+                // Add to undo stack
+                if (typeof IWB.addToUndoStack === 'function') {
+                    IWB.addToUndoStack({
+                        type: 'colorChange',
+                        objectId: obj.id,
+                        oldColor: oldColor,
+                        newColor: newColor
+                    });
+                }
+            }
+        });
+        
+        render();
+        console.log('[COLOR] Changed', selectedObjects.length, 'object colors to', newColor);
+    }
+};
+
+// Apply stroke width change to selected stroke objects
+window.applyWidthToSelection = function(newWidth) {
+    if (!selectedObject) return;
+    
+    const selectionCount = getSelectionCount();
+    
+    if (selectionCount === 1 && selectedObject) {
+        // Single object selected
+        if (selectedObject.type === 'stroke') {
+            const oldWidth = selectedObject.size;
+            selectedObject.size = newWidth;
+            
+            // Add to undo stack
+            if (typeof IWB.addToUndoStack === 'function') {
+                IWB.addToUndoStack({
+                    type: 'widthChange',
+                    objectId: selectedObject.id,
+                    oldWidth: oldWidth,
+                    newWidth: newWidth
+                });
+            }
+            
+            render();
+            console.log('[WIDTH] Changed stroke width to', newWidth);
+        } else if (selectedObject.type === 'shape') {
+            const oldWidth = selectedObject.strokeWidth;
+            selectedObject.strokeWidth = newWidth;
+            
+            // Add to undo stack
+            if (typeof IWB.addToUndoStack === 'function') {
+                IWB.addToUndoStack({
+                    type: 'widthChange',
+                    objectId: selectedObject.id,
+                    oldWidth: oldWidth,
+                    newWidth: newWidth
+                });
+            }
+            
+            render();
+            console.log('[WIDTH] Changed shape stroke width to', newWidth);
+        }
+    } else if (selectionCount > 1) {
+        // Multiple objects selected
+        const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+            ? IWB.getSelectedObjects(objects)
+            : [];
+        
+        selectedObjects.forEach(obj => {
+            if (obj.type === 'stroke') {
+                const oldWidth = obj.size;
+                obj.size = newWidth;
+                
+                // Add to undo stack
+                if (typeof IWB.addToUndoStack === 'function') {
+                    IWB.addToUndoStack({
+                        type: 'widthChange',
+                        objectId: obj.id,
+                        oldWidth: oldWidth,
+                        newWidth: newWidth
+                    });
+                }
+            } else if (obj.type === 'shape') {
+                const oldWidth = obj.strokeWidth;
+                obj.strokeWidth = newWidth;
+                
+                // Add to undo stack
+                if (typeof IWB.addToUndoStack === 'function') {
+                    IWB.addToUndoStack({
+                        type: 'widthChange',
+                        objectId: obj.id,
+                        oldWidth: oldWidth,
+                        newWidth: newWidth
+                    });
+                }
+            }
+        });
+        
+        render();
+        console.log('[WIDTH] Changed', selectedObjects.length, 'object widths to', newWidth);
+    }
+};
+
+if (typeof IWB.clearSelection === 'function') {
+    IWB.clearSelection();
+}
+
+// Initialize canvas to full window size
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    minimapCanvas.width = 200;
+    minimapCanvas.height = 150;
+    render();
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Initialize minimap drag handlers
+if (typeof IWB.initMinimapDrag === 'function') {
+    IWB.initMinimapDrag(canvas);
+}
+
+// Initialize zoom controls
+if (typeof IWB.initZoomControls === 'function') {
+    IWB.initZoomControls(canvas, render, function() { return objects; });
+}
+
+// ============================================================================
+// RENDER LOOP FOR TEXT CURSOR ANIMATION
+// ============================================================================
+
+let lastRenderTime = 0;
+function animationLoop() {
+    const now = Date.now();
+    
+    // Only re-render if text editing is active (for cursor blink)
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        // Re-render every 500ms for cursor blink
+        if (now - lastRenderTime > 500) {
+            render();
+            lastRenderTime = now;
+        }
+    }
+    
+    requestAnimationFrame(animationLoop);
+}
+
+// Start animation loop
+animationLoop();
+
+// ============================================================================
+// RENDER FUNCTION
+// ============================================================================
+
+function render() {
+    try {
+        // Clear entire canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const orderedObjects = typeof IWB.getObjectsInLayerOrder === 'function'
+            ? IWB.getObjectsInLayerOrder(objects)
+            : objects;
+        
+        console.log('[DEBUG] Rendering:', {
+            objects: orderedObjects.length,
+            selected: selectedObject ? selectedObject.id : null,
+            tool: IWB.currentTool
+        });
+        
+        // Apply viewport transform
+        IWB.applyTransform(ctx);
+        
+        // Draw grid
+        IWB.drawGrid(ctx, canvas);
+    
+    // Draw all objects (images, shapes, strokes, text)
+    // renderObjects handles visibility checks internally
+    IWB.renderObjects(ctx, orderedObjects);
+
+    // Draw image placement ghost if user is positioning a newly inserted image (cursor anchors bottom-right)
+    if (pendingImagePlacement && pendingImagePlacement.imageElement) {
+        const baseWorld = pendingImagePosition || lastPointerWorld || IWB.screenToWorld(canvas.width / 2, canvas.height / 2);
+        const ghostX = baseWorld.x;
+        const ghostY = baseWorld.y;
+        ctx.save();
+        ctx.globalAlpha = 0.65;
+        ctx.drawImage(pendingImagePlacement.imageElement, ghostX, ghostY, pendingImagePlacement.w, pendingImagePlacement.h);
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = '#14b8a6';
+        ctx.lineWidth = 2 / IWB.zoom;
+        ctx.strokeRect(ghostX, ghostY, pendingImagePlacement.w, pendingImagePlacement.h);
+        ctx.restore();
+    }
+    
+    // Draw current shape if drawing
+    if (IWB.currentShape && IWB.currentShapeType) {
+        IWB.drawCurrentShape(ctx, IWB.color, IWB.size);
+    }
+    
+    // Draw selection highlight and transform handles
+    if (selectedObject && IWB.currentTool === 'select') {
+        if (selectedObject.type === 'image') {
+            // Draw transform handles for images
+            if (typeof IWB.drawImageTransformHandles === 'function') {
+                IWB.drawImageTransformHandles(ctx, selectedObject);
+            }
+            
+            // Draw bounding box (use rotated bounds for better visual)
+            const bounds = typeof IWB.getRotatedImageBounds === 'function' 
+                ? IWB.getRotatedImageBounds(selectedObject)
+                : IWB.getBounds(selectedObject);
+            ctx.save();
+            ctx.strokeStyle = '#14b8a6';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(bounds.x - 2, bounds.y - 2, bounds.w + 4, bounds.h + 4);
+            ctx.restore();
+        } else if (selectedObject.type === 'stroke' || selectedObject.type === 'shape') {
+            // Draw transform handles for strokes and shapes
+            if (typeof IWB.drawStrokeTransformHandles === 'function') {
+                IWB.drawStrokeTransformHandles(ctx, selectedObject);
+            }
+        } else {
+            // Draw regular selection for other types
+            const bounds = IWB.getBounds(selectedObject);
+            ctx.save();
+            ctx.strokeStyle = '#14b8a6';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.w + 10, bounds.h + 10);
+            ctx.restore();
+        }
+    }
+
+    if (typeof IWB.drawMultiSelection === 'function') {
+        IWB.drawMultiSelection(ctx, orderedObjects);
+    }
+    
+    // Draw current stroke if drawing
+    if (IWB.drawing && IWB.currentStroke) {
+        IWB.drawCurrentStroke(ctx, IWB.color, IWB.size, IWB.currentTool);
+    }
+    
+    // Draw text editing cursor if in text mode
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        if (typeof IWB.drawTextCursor === 'function') {
+            IWB.drawTextCursor(ctx);
+        }
+    }
+    
+    // Reset transform for screen-space UI elements
+    ctx.restore(); // End world coordinates
+    
+    // Update layer panel instead of drawing on canvas
+    if (typeof IWB.updateLayerPanel === 'function') {
+        const selectedIds = typeof IWB.getSelectionIds === 'function' ? IWB.getSelectionIds() : null;
+        IWB.updateLayerPanel(objects, selectedObject, selectedIds);
+    }
+    
+    // Update minimap
+    IWB.updateMinimap(minimapCanvas, minimapCtx, canvas, orderedObjects, IWB.color);
+    
+    // Update status
+    IWB.updateStatus(canvas, orderedObjects.length, selectedObject, objects);
+    
+    } catch (error) {
+        console.error('[ERROR] Render failed:', error);
+        console.error('[ERROR] Stack trace:', error.stack);
+    }
+}
+
+IWB.requestRender = render;
+
+// ============================================================================
+// MOUSE EVENTS
+// ============================================================================
+
+canvas.addEventListener('mousedown', (e) => {
+    const worldPos = IWB.screenToWorld(e.clientX, e.clientY);
+    if (typeof IWB.setPointerPosition === 'function') {
+        IWB.setPointerPosition(worldPos);
+    }
+    console.log('[DEBUG] Mouse down at', worldPos, 'tool:', IWB.currentTool);
+
+    // Place pending image if we're in placement mode (space to pan still works)
+    if (pendingImagePlacement) {
+        if (IWB.shouldPan()) {
+            IWB.startPan(e.clientX, e.clientY, canvas);
+            return;
+        }
+        placePendingImage(worldPos);
+        return;
+    }
+    
+    // Check for zoom window mode first
+    if (typeof IWB.isZoomWindowActive === 'function' && IWB.isZoomWindowActive()) {
+        IWB.startZoomWindow(e.clientX, e.clientY);
+        return;
+    }
+    
+    // If text editing is active, finish it first
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        const finishedTextObj = IWB.finishTextEditing();
+        if (finishedTextObj && !objects.find(o => o.id === finishedTextObj.id)) {
+            // New text object - add to objects array
+            finishedTextObj.id = nextObjectId++;
+            if (typeof IWB.assignLayerMetadata === 'function') {
+                IWB.assignLayerMetadata(finishedTextObj, defaultLayer);
+            } else {
+                finishedTextObj.layer = defaultLayer;
+            }
+            objects.push(finishedTextObj);
+            if (IWB.sortObjectsByLayerInPlace) {
+                IWB.sortObjectsByLayerInPlace(objects);
+            }
+            IWB.addToUndoStack({ type: 'add', object: finishedTextObj });
+            console.log('[TEXT] Added new text object', finishedTextObj.id);
+        }
+        render();
+        
+        // If we're still in text mode and clicking somewhere, start new text
+        if (IWB.currentTool === 'text') {
+            // Continue to text mode handling below
+        } else {
+            // Switched tools, don't create new text
+            return;
+        }
+    }
+    
+    // Pan mode (space key or pan tool)
+    if (IWB.shouldPan()) {
+        IWB.startPan(e.clientX, e.clientY, canvas);
+        return;
+    }
+    
+    // Rectangular selection mode
+    if (IWB.currentTool === 'rect-select') {
+        const additiveSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+        if (!additiveSelect && typeof IWB.clearSelection === 'function') {
+            IWB.clearSelection();
+            selectedObject = null;
+        }
+        isRectSelecting = true;
+        rectSelectStart = { x: e.clientX, y: e.clientY, worldX: worldPos.x, worldY: worldPos.y };
+        
+        // Create overlay element
+        if (!rectSelectOverlay) {
+            rectSelectOverlay = document.createElement('div');
+            rectSelectOverlay.className = 'rect-selection-overlay';
+            document.body.appendChild(rectSelectOverlay);
+        }
+        rectSelectOverlay.style.display = 'block';
+        rectSelectOverlay.style.left = rectSelectStart.x + 'px';
+        rectSelectOverlay.style.top = rectSelectStart.y + 'px';
+        rectSelectOverlay.style.width = '0px';
+        rectSelectOverlay.style.height = '0px';
+        render();
+        return;
+    }
+    
+    // Selection mode
+    if (IWB.currentTool === 'select') {
+        const selectionCount = getSelectionCount();
+        
+        // Check for image transform handles first (single image selected)
+        if (selectionCount === 1 && selectedObject && selectedObject.type === 'image') {
+            const handle = IWB.findImageHandleAtPoint(worldPos.x, worldPos.y, selectedObject);
+            if (handle) {
+                if (handle.type === 'rotate') {
+                    IWB.startImageRotation(selectedObject, worldPos);
+                } else {
+                    IWB.startImageResize(selectedObject, handle.type, worldPos);
+                }
+                return;
+            }
+        }
+        
+        // Check for stroke/shape transform handles (single stroke or shape selected)
+        if (selectionCount === 1 && selectedObject && 
+            (selectedObject.type === 'stroke' || selectedObject.type === 'shape')) {
+            if (typeof IWB.findStrokeHandleAtPoint === 'function') {
+                const handle = IWB.findStrokeHandleAtPoint(worldPos.x, worldPos.y, selectedObject);
+                if (handle && typeof IWB.startStrokeResize === 'function') {
+                    IWB.startStrokeResize(selectedObject, handle.type, worldPos);
+                    return;
+                }
+            }
+        }
+        
+        // Check for multi-selection handles
+        if (selectionCount > 1 && typeof IWB.getMultiSelectionHandles === 'function') {
+            const handles = IWB.getMultiSelectionHandles();
+            const handleHit = handles.find(h => worldPos.x >= h.x && worldPos.x <= h.x + h.w && worldPos.y >= h.y && worldPos.y <= h.y + h.h);
+            if (handleHit) {
+                const bounds = typeof IWB.getMultiSelectionBounds === 'function' ? IWB.getMultiSelectionBounds() : null;
+                multiHandleCenter = bounds ? { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 } : null;
+                if (handleHit.type === 'mirror-h' || handleHit.type === 'mirror-v') {
+                    if (multiHandleCenter) {
+                        applyMirrorToSelection(handleHit.type === 'mirror-h' ? 'horizontal' : 'vertical', multiHandleCenter);
+                    }
+                    return;
+                }
+                multiHandleMode = handleHit.type;
+                multiHandleOriginals = captureSelectionOriginals();
+                multiHandleStart = worldPos;
+                if (multiHandleMode === 'rotate' && multiHandleCenter) {
+                    multiHandleStartAngle = Math.atan2(worldPos.y - multiHandleCenter.y, worldPos.x - multiHandleCenter.x);
+                }
+                return;
+            }
+        }
+        
+        const clickedObj = IWB.findObjectAtPoint(worldPos.x, worldPos.y, objects);
+        console.log('[DEBUG] Clicked object:', clickedObj ? clickedObj.id : 'none');
+        const additiveSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+        
+        if (clickedObj) {
+            const wasSelected = typeof IWB.getSelectionIds === 'function' && IWB.getSelectionIds().has(Number(clickedObj.id));
+            
+            if (additiveSelect && typeof IWB.toggleSelection === 'function') {
+                IWB.toggleSelection(clickedObj.id);
+            } else if (!wasSelected && typeof IWB.selectSingle === 'function') {
+                IWB.selectSingle(clickedObj.id);
+            } else if (!wasSelected) {
+                selectedObject = clickedObj;
+            }
+            refreshSelectedObject();
+            const selectionCount = getSelectionCount();
+
+            if (selectionCount === 1 && selectedObject) {
+                isDragging = true;
+                dragStartPos = worldPos;
+                console.log('[DEBUG] Selected object', selectedObject.id);
+                if (selectedObject.type === 'stroke' && selectedObject.path) {
+                    dragStartPath = JSON.parse(JSON.stringify(selectedObject.path));
+                } else if (selectedObject.type === 'image') {
+                    dragStartPath = { x: selectedObject.x, y: selectedObject.y };
+                } else if (selectedObject.type === 'text') {
+                    dragStartPath = { x: selectedObject.x, y: selectedObject.y };
+                } else if (selectedObject.type === 'shape') {
+                    dragStartPath = { 
+                        x: selectedObject.x, 
+                        y: selectedObject.y,
+                        startX: selectedObject.startX,
+                        startY: selectedObject.startY,
+                        endX: selectedObject.endX,
+                        endY: selectedObject.endY
+                    };
+                }
+            } else if (selectionCount > 1) {
+                isDragging = true;
+                dragStartPos = worldPos;
+                multiHandleOriginals = captureSelectionOriginals();
+                console.log('[DEBUG] Multi-select drag started with', selectionCount, 'objects');
+            } else {
+                isDragging = false;
+                dragStartPos = null;
+                dragStartPath = null;
+            }
+        } else {
+            console.log('[DEBUG] Deselected object');
+            if (!additiveSelect && typeof IWB.clearSelection === 'function') {
+                IWB.clearSelection();
+            }
+            selectedObject = null;
+            updateToolbars();
+        }
+        
+        render();
+        return;
+    }
+    
+    // Text mode
+    if (IWB.currentTool === 'text') {
+        // Check if clicking on existing text to edit it
+        const clickedObj = IWB.findObjectAtPoint(worldPos.x, worldPos.y, objects);
+        
+        if (clickedObj && clickedObj.type === 'text') {
+            // Edit existing text
+            console.log('[TEXT] Editing existing text object', clickedObj.id);
+            IWB.startTextEditing(worldPos.x, worldPos.y, clickedObj);
+            selectedObject = clickedObj;
+            render();
+        } else {
+            // Create new text at click position
+            console.log('[TEXT] Creating new text at', worldPos);
+            IWB.startTextEditing(worldPos.x, worldPos.y);
+            render();
+        }
+        return;
+    }
+    
+    // Shape mode
+    if (IWB.isShapeTool()) {
+        IWB.startShape(worldPos.x, worldPos.y, IWB.currentTool);
+        return;
+    }
+    
+    // Drawing mode
+    if (IWB.isDrawingTool()) {
+        IWB.startStroke(worldPos.x, worldPos.y);
+    }
+});
+
+// ============================================================================
+// DOUBLE-CLICK EVENT FOR TEXT EDITING
+// ============================================================================
+
+canvas.addEventListener('dblclick', (e) => {
+    const worldPos = IWB.screenToWorld(e.clientX, e.clientY);
+    
+    // Check if double-clicking on a text object
+    const clickedObj = IWB.findObjectAtPoint(worldPos.x, worldPos.y, objects);
+    
+    if (clickedObj && clickedObj.type === 'text') {
+        // Text changes are tracked via addToUndoStack in finishTextEditing
+        console.log('[TEXT] Double-click - editing text object', clickedObj.id);
+        
+        // Finish any active text editing first
+        if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+            const finishedTextObj = IWB.finishTextEditing();
+            if (finishedTextObj && !objects.find(o => o.id === finishedTextObj.id)) {
+                // New text object - add to objects array
+                finishedTextObj.id = nextObjectId++;
+                if (typeof IWB.assignLayerMetadata === 'function') {
+                    IWB.assignLayerMetadata(finishedTextObj, defaultLayer);
+                } else {
+                    finishedTextObj.layer = defaultLayer;
+                }
+                objects.push(finishedTextObj);
+                if (IWB.sortObjectsByLayerInPlace) {
+                    IWB.sortObjectsByLayerInPlace(objects);
+                }
+                IWB.addToUndoStack({ type: 'add', object: finishedTextObj });
+            }
+        }
+        
+        // Switch to text tool
+        IWB.setTool('text', canvas);
+        
+        // Start editing the clicked text
+        IWB.startTextEditing(clickedObj.x, clickedObj.y, clickedObj);
+        selectedObject = clickedObj;
+        
+        // Update toolbar to show text toolbar
+        if (IWB.Toolbars && typeof IWB.Toolbars.showTextToolbar === 'function') {
+            IWB.Toolbars.showTextToolbar();
+        }
+        
+        render();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const worldPos = IWB.screenToWorld(e.clientX, e.clientY);
+    lastPointerWorld = worldPos;
+    if (typeof IWB.setPointerPosition === 'function') {
+        IWB.setPointerPosition(worldPos);
+    }
+
+    // Update ghost position while user is choosing where to drop the image
+    if (pendingImagePlacement) {
+        pendingImagePosition = {
+            x: worldPos.x - pendingImagePlacement.w,
+            y: worldPos.y - pendingImagePlacement.h
+        };
+    }
+
+    // Handle zoom window drag
+    if (typeof IWB.isDrawingZoomWindow === 'function' && IWB.isDrawingZoomWindow()) {
+        IWB.updateZoomWindow(e.clientX, e.clientY);
+        return;
+    }
+
+    // Handle rectangular selection drag
+    if (isRectSelecting && rectSelectStart && rectSelectOverlay) {
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+        const left = Math.min(rectSelectStart.x, currentX);
+        const top = Math.min(rectSelectStart.y, currentY);
+        const width = Math.abs(currentX - rectSelectStart.x);
+        const height = Math.abs(currentY - rectSelectStart.y);
+        
+        rectSelectOverlay.style.left = left + 'px';
+        rectSelectOverlay.style.top = top + 'px';
+        rectSelectOverlay.style.width = width + 'px';
+        rectSelectOverlay.style.height = height + 'px';
+        return;
+    }
+
+    // Handle image resize
+    if (typeof IWB.isImageTransformActive === 'function' && IWB.isImageTransformActive() && selectedObject) {
+        if (typeof IWB.updateImageResize === 'function' && IWB.updateImageResize(selectedObject, worldPos, e.shiftKey)) {
+            render();
+            return;
+        }
+        if (typeof IWB.updateImageRotation === 'function' && IWB.updateImageRotation(selectedObject, worldPos, e.shiftKey)) {
+            render();
+            return;
+        }
+    }
+
+    // Handle stroke/shape resize
+    if (typeof IWB.isStrokeTransformActive === 'function' && IWB.isStrokeTransformActive() && selectedObject) {
+        if (typeof IWB.updateStrokeResize === 'function' && IWB.updateStrokeResize(selectedObject, worldPos)) {
+            render();
+            return;
+        }
+    }
+
+    if (multiHandleMode && multiHandleOriginals) {
+        if (multiHandleMode === 'move' && multiHandleStart) {
+            const dx = worldPos.x - multiHandleStart.x;
+            const dy = worldPos.y - multiHandleStart.y;
+            applyTranslationToSelection(multiHandleOriginals, dx, dy);
+            render();
+            return;
+        }
+        if (multiHandleMode === 'rotate' && multiHandleCenter) {
+            const angle = Math.atan2(worldPos.y - multiHandleCenter.y, worldPos.x - multiHandleCenter.x);
+            const delta = angle - multiHandleStartAngle;
+            applyRotationToSelection(multiHandleOriginals, delta, multiHandleCenter);
+            render();
+            return;
+        }
+    }
+    
+    // Pan
+    if (IWB.updatePan(e.clientX, e.clientY)) {
+        if (pendingImagePlacement) {
+            const adjustedWorld = IWB.screenToWorld(e.clientX, e.clientY);
+            pendingImagePosition = {
+                x: adjustedWorld.x - pendingImagePlacement.w,
+                y: adjustedWorld.y - pendingImagePlacement.h
+            };
+            lastPointerWorld = adjustedWorld;
+        }
+        render();
+        return;
+    }
+
+    // During placement mode we only need cursor updates and panning
+    if (pendingImagePlacement) {
+        render();
+        return;
+    }
+    
+    // Update shape while drawing
+    if (IWB.currentShape && IWB.currentShapeType) {
+        if (IWB.updateShape(worldPos.x, worldPos.y, e.shiftKey)) {
+            render();
+            return;
+        }
+    }
+    
+    // Drag selected object(s) - only if not actively transforming handles
+    if (isDragging && IWB.currentTool === 'select' && 
+        !(typeof IWB.isImageTransformActive === 'function' && IWB.isImageTransformActive()) &&
+        !(typeof IWB.isStrokeTransformActive === 'function' && IWB.isStrokeTransformActive())) {
+        const dx = worldPos.x - dragStartPos.x;
+        const dy = worldPos.y - dragStartPos.y;
+        
+        const selectionCount = getSelectionCount();
+        
+        if (selectionCount > 1 && multiHandleOriginals) {
+            applyTranslationToSelection(multiHandleOriginals, dx, dy);
+            canvas.style.cursor = 'grabbing';
+            render();
+            return;
+        } else if (selectionCount === 1 && selectedObject) {
+            if (selectedObject.type === 'stroke' && selectedObject.path && dragStartPath) {
+                selectedObject.path = dragStartPath.map(p => ({
+                    x: p.x + dx,
+                    y: p.y + dy
+                }));
+            } else if (selectedObject.type === 'image' && dragStartPath) {
+                selectedObject.x = dragStartPath.x + dx;
+                selectedObject.y = dragStartPath.y + dy;
+            } else if (selectedObject.type === 'text' && dragStartPath) {
+                selectedObject.x = dragStartPath.x + dx;
+                selectedObject.y = dragStartPath.y + dy;
+            } else if (selectedObject.type === 'shape' && dragStartPath) {
+                selectedObject.x = dragStartPath.x + dx;
+                selectedObject.y = dragStartPath.y + dy;
+                // Also update connector start/end coordinates if they exist
+                if (dragStartPath.startX !== undefined) {
+                    selectedObject.startX = dragStartPath.startX + dx;
+                    selectedObject.startY = dragStartPath.startY + dy;
+                    selectedObject.endX = dragStartPath.endX + dx;
+                    selectedObject.endY = dragStartPath.endY + dy;
+                }
+            }
+            
+            canvas.style.cursor = 'grabbing';
+            render();
+            return;
+        }
+    }
+    
+    // Update cursor for select tool when hovering over objects or handles
+    if (IWB.currentTool === 'select' && !isDragging && 
+        !(typeof IWB.isImageTransformActive === 'function' && IWB.isImageTransformActive()) && 
+        !(typeof IWB.isStrokeTransformActive === 'function' && IWB.isStrokeTransformActive())) {
+        // Check for image handles first if single image is selected
+        if (selectedObject && selectedObject.type === 'image' && typeof IWB.findImageHandleAtPoint === 'function') {
+            const handle = IWB.findImageHandleAtPoint(worldPos.x, worldPos.y, selectedObject);
+            if (handle && typeof IWB.getCursorForHandle === 'function') {
+                canvas.style.cursor = IWB.getCursorForHandle(handle.type);
+                return;
+            }
+        }
+        
+        // Check for stroke/shape handles if single stroke or shape is selected
+        if (selectedObject && (selectedObject.type === 'stroke' || selectedObject.type === 'shape') && 
+            typeof IWB.findStrokeHandleAtPoint === 'function') {
+            const handle = IWB.findStrokeHandleAtPoint(worldPos.x, worldPos.y, selectedObject);
+            if (handle && typeof IWB.getCursorForStrokeHandle === 'function') {
+                canvas.style.cursor = IWB.getCursorForStrokeHandle(handle.type);
+                return;
+            }
+        }
+        
+        const hoveredObj = IWB.findObjectAtPoint(worldPos.x, worldPos.y, objects);
+        canvas.style.cursor = hoveredObj ? 'grab' : 'default';
+    }
+    
+    // Draw
+    if (IWB.addToStroke(worldPos.x, worldPos.y)) {
+        render();
+    }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    // Complete zoom window
+    if (typeof IWB.isDrawingZoomWindow === 'function' && IWB.isDrawingZoomWindow()) {
+        IWB.completeZoomWindow(e.clientX, e.clientY);
+        return;
+    }
+    
+    // End rectangular selection
+    if (isRectSelecting && rectSelectStart) {
+        const worldPos = IWB.screenToWorld(e.clientX, e.clientY);
+        const minX = Math.min(rectSelectStart.worldX, worldPos.x);
+        const minY = Math.min(rectSelectStart.worldY, worldPos.y);
+        const maxX = Math.max(rectSelectStart.worldX, worldPos.x);
+        const maxY = Math.max(rectSelectStart.worldY, worldPos.y);
+        
+        // Find all objects within the rectangle
+        const additiveSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+        let selectedCount = 0;
+        
+        objects.forEach(obj => {
+            if (typeof IWB.getBounds !== 'function') return;
+            const bounds = IWB.getBounds(obj);
+            if (!bounds) return;
+            
+            // Check if object's bounds intersect with selection rectangle
+            const objCenterX = bounds.x + bounds.w / 2;
+            const objCenterY = bounds.y + bounds.h / 2;
+            
+            if (objCenterX >= minX && objCenterX <= maxX && 
+                objCenterY >= minY && objCenterY <= maxY) {
+                if (typeof IWB.addToSelection === 'function') {
+                    IWB.addToSelection(obj.id);
+                    selectedCount++;
+                }
+            }
+        });
+        
+        // Update selected object reference
+        if (selectedCount === 1) {
+            const primaryId = typeof IWB.getPrimarySelectionId === 'function' ? IWB.getPrimarySelectionId() : null;
+            if (primaryId !== null) {
+                selectedObject = objects.find(o => Number(o.id) === Number(primaryId)) || null;
+            }
+        } else if (selectedCount > 1) {
+            selectedObject = null;
+        }
+        
+        // Clean up
+        isRectSelecting = false;
+        rectSelectStart = null;
+        if (rectSelectOverlay) {
+            rectSelectOverlay.style.display = 'none';
+        }
+        
+        // Switch to regular select tool so user can drag the selected objects
+        if (selectedCount > 0) {
+            IWB.setTool('select', canvas);
+        }
+        
+        updateToolbars();
+        render();
+        return;
+    }
+    
+    // End image transform operations
+    if (IWB.isImageTransformActive && IWB.isImageTransformActive()) {
+        if (IWB.endImageResize) {
+            const resizeResult = IWB.endImageResize();
+            if (resizeResult && selectedObject) {
+                IWB.addToUndoStack({
+                    type: 'imageResize',
+                    objectId: selectedObject.id,
+                    oldBounds: resizeResult.oldBounds,
+                    newBounds: { x: selectedObject.x, y: selectedObject.y, w: selectedObject.w, h: selectedObject.h }
+                });
+            }
+        }
+        if (IWB.endImageRotation) {
+            const rotateResult = IWB.endImageRotation();
+            if (rotateResult && selectedObject) {
+                IWB.addToUndoStack({
+                    type: 'imageRotate',
+                    objectId: selectedObject.id,
+                    oldRotation: rotateResult.oldRotation,
+                    newRotation: selectedObject.rotation
+                });
+            }
+        }
+        render();
+        return;
+    }
+
+    // End stroke/shape transform operations
+    if (typeof IWB.isStrokeTransformActive === 'function' && IWB.isStrokeTransformActive()) {
+        if (typeof IWB.endStrokeResize === 'function') {
+            const resizeResult = IWB.endStrokeResize();
+            if (resizeResult && selectedObject) {
+                if (selectedObject.type === 'stroke') {
+                    IWB.addToUndoStack({
+                        type: 'strokeResize',
+                        objectId: selectedObject.id,
+                        oldPath: resizeResult.originalPath,
+                        newPath: JSON.parse(JSON.stringify(selectedObject.path))
+                    });
+                } else if (selectedObject.type === 'shape') {
+                    IWB.addToUndoStack({
+                        type: 'shapeResize',
+                        objectId: selectedObject.id,
+                        oldData: resizeResult.originalShapeData,
+                        newData: {
+                            x: selectedObject.x,
+                            y: selectedObject.y,
+                            w: selectedObject.w,
+                            h: selectedObject.h,
+                            startX: selectedObject.startX,
+                            startY: selectedObject.startY,
+                            endX: selectedObject.endX,
+                            endY: selectedObject.endY
+                        }
+                    });
+                }
+            }
+        }
+        render();
+        return;
+    }
+
+    if (multiHandleMode && multiHandleOriginals) {
+        recordTransformUndo(multiHandleOriginals);
+        resetMultiHandleState();
+        render();
+        return;
+    }
+    // End pan
+    if (IWB.isPanning) {
+        IWB.endPan(canvas, IWB.currentTool);
+    }
+    
+    // End dragging
+    if (isDragging) {
+        const selectionCount = getSelectionCount();
+        
+        if (selectionCount > 1 && multiHandleOriginals) {
+            recordTransformUndo(multiHandleOriginals);
+            multiHandleOriginals = null;
+            console.log('[DEBUG] Multi-select drag ended');
+        } else if (selectedObject) {
+            if (selectedObject.type === 'stroke' && dragStartPath) {
+                IWB.addToUndoStack({
+                    type: 'move',
+                    objectId: selectedObject.id,
+                    oldPath: dragStartPath,
+                    newPath: JSON.parse(JSON.stringify(selectedObject.path))
+                });
+            } else if (selectedObject.type === 'image' && dragStartPath) {
+                IWB.addToUndoStack({
+                    type: 'moveImage',
+                    objectId: selectedObject.id,
+                    oldPos: dragStartPath,
+                    newPos: { x: selectedObject.x, y: selectedObject.y }
+                });
+            } else if (selectedObject.type === 'text' && dragStartPath) {
+                IWB.addToUndoStack({
+                    type: 'moveText',
+                    objectId: selectedObject.id,
+                    oldPos: dragStartPath,
+                    newPos: { x: selectedObject.x, y: selectedObject.y }
+                });
+            } else if (selectedObject.type === 'shape' && dragStartPath) {
+                IWB.addToUndoStack({
+                    type: 'moveShape',
+                    objectId: selectedObject.id,
+                    oldPos: dragStartPath,
+                    newPos: { x: selectedObject.x, y: selectedObject.y }
+                });
+            }
+        }
+        
+        isDragging = false;
+        dragStartPos = null;
+        dragStartPath = null;
+        return;
+    }
+    
+    // End shape drawing
+    if (IWB.currentShape && IWB.currentShapeType) {
+        const newObj = IWB.endShape(IWB.color, IWB.size, nextObjectId);
+        if (newObj) {
+            nextObjectId++;
+            if (typeof IWB.assignLayerMetadata === 'function') {
+                IWB.assignLayerMetadata(newObj, defaultLayer);
+            } else {
+                newObj.layer = defaultLayer;
+            }
+            objects.push(newObj);
+            if (IWB.sortObjectsByLayerInPlace) {
+                IWB.sortObjectsByLayerInPlace(objects);
+            }
+            IWB.addToUndoStack({ type: 'add', object: newObj });
+            console.log('[SHAPE] Created', newObj.shapeType, 'shape with id', newObj.id);
+        }
+        render();
+        return;
+    }
+    
+    // End drawing
+    if (IWB.currentTool === 'eraser' && IWB.currentStroke) {
+        // Handle eraser - remove intersecting objects
+        const result = IWB.handleEraser(IWB.currentStroke, objects);
+        if (result.erased.length > 0) {
+            // Add erased objects to undo stack for potential undo
+            result.erased.forEach(obj => {
+                IWB.addToUndoStack({ type: 'delete', object: obj });
+            });
+            objects = result.objects;
+        }
+        IWB.drawing = false;
+        IWB.currentStroke = null;
+        render();
+    } else {
+        const newObj = IWB.endStroke(IWB.currentTool, IWB.color, IWB.size, nextObjectId);
+        if (newObj) {
+            if (typeof IWB.assignLayerMetadata === 'function') {
+                IWB.assignLayerMetadata(newObj, defaultLayer);
+            } else {
+                newObj.layer = defaultLayer;
+            }
+            objects.push(newObj);
+            if (IWB.sortObjectsByLayerInPlace) {
+                IWB.sortObjectsByLayerInPlace(objects);
+            }
+            console.log('[DEBUG] Added new stroke at layer', newObj.layer, '(default insertion)');
+            IWB.addToUndoStack({ type: 'add', object: newObj });
+            nextObjectId++;
+            render();
+        }
+    }
+});
+
+// Mouse wheel zoom
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    
+    if (e.ctrlKey) {
+        // Zoom with Ctrl + Wheel
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        IWB.zoomAt(e.clientX, e.clientY, factor);
+        render();
+    } else {
+        // Pan with wheel
+        IWB.viewportX += e.deltaX;
+        IWB.viewportY += e.deltaY;
+        render();
+    }
+}, { passive: false });
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Handle text editing first (if active)
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        if (typeof IWB.handleTextKeydown === 'function') {
+            const handled = IWB.handleTextKeydown(e);
+            if (handled) {
+                // Text module handled it (e.g., Escape to cancel)
+                render();
+                return;
+            }
+        }
+        // Don't handle other shortcuts while editing text
+        // (let text input element handle them)
+        return;
+    }
+
+    // Skip canvas hotkeys while typing in inputs/contenteditable fields
+    if (IWB.shouldIgnoreHotkeys && IWB.shouldIgnoreHotkeys(e)) {
+        return;
+    }
+    
+    if (e.code === 'Space' && !IWB.spacePressed) {
+        e.preventDefault();
+        IWB.spacePressed = true;
+        if (!IWB.drawing) {
+            canvas.style.cursor = 'grab';
+        }
+    }
+
+    if (e.key === 'Delete') {
+        e.preventDefault();
+        let removedCount = 0;
+        if (typeof IWB.deleteSelection === 'function') {
+            removedCount = IWB.deleteSelection(objects);
+        }
+        if (removedCount > 0) {
+            selectedObject = null;
+            render();
+            return;
+        }
+        if (selectedObject) {
+            const index = objects.findIndex(o => o.id === selectedObject.id);
+            if (index !== -1) {
+                const removed = objects.splice(index, 1)[0];
+                IWB.addToUndoStack({ type: 'delete', object: removed });
+                selectedObject = null;
+                render();
+                return;
+            }
+        }
+    }
+
+    const lowerKey = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+
+    if (e.ctrlKey && lowerKey === 'a') {
+        e.preventDefault();
+        if (typeof IWB.selectAll === 'function') {
+            const count = IWB.selectAll(objects);
+            if (count > 0) {
+                refreshSelectedObject();
+                render();
+            }
+        }
+        return;
+    }
+
+    if (e.ctrlKey && lowerKey === 'c') {
+        if (typeof IWB.copySelection === 'function') {
+            const copied = IWB.copySelection(objects);
+            if (copied > 0) {
+                e.preventDefault();
+                return;
+            }
+        }
+    }
+
+    if (e.ctrlKey && lowerKey === 'x') {
+        if (typeof IWB.cutSelection === 'function') {
+            const result = IWB.cutSelection(objects);
+            if (result.removed > 0) {
+                e.preventDefault();
+                refreshSelectedObject();
+                render();
+                return;
+            }
+        }
+    }
+
+    if (e.ctrlKey && lowerKey === 'v') {
+        e.preventDefault();
+        let pastedCount = 0;
+        if (typeof IWB.pasteClipboard === 'function' && typeof IWB.hasClipboardSelection === 'function' && IWB.hasClipboardSelection()) {
+            const pointer = typeof IWB.getPointerPosition === 'function' ? IWB.getPointerPosition() : null;
+            const pasteResult = IWB.pasteClipboard(
+                objects,
+                () => nextObjectId++,
+                pointer ? { anchor: pointer } : {}
+            );
+            pastedCount = pasteResult.added?.length || 0;
+        }
+        if (pastedCount > 0) {
+            refreshSelectedObject();
+            render();
+        } else {
+            pasteFromClipboard();
+        }
+        return;
+    }
+
+    if (e.ctrlKey && lowerKey === 'i') {
+        e.preventDefault();
+        document.getElementById('image-upload').click();
+        return;
+    }
+
+    if (e.key === 'Escape') {
+        if (pendingImagePlacement) {
+            cancelImagePlacement();
+            return;
+        }
+        if (typeof IWB.clearSelection === 'function') {
+            IWB.clearSelection();
+        }
+        selectedObject = null;
+        updateToolbars();
+        render();
+        return;
+    }
+
+    // Toggle layer panel with 'L' key
+    if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        toggleLayerPanel();
+        return;
+    }
+    
+    // Shapes shortcut with 'S' key (not Ctrl+S which is save)
+    if ((e.key === 's' || e.key === 'S') && !e.ctrlKey) {
+        e.preventDefault();
+        const shapesBtn = document.getElementById('shapes-btn');
+        if (shapesBtn) shapesBtn.click();
+        return;
+    }
+    
+    // Image transform shortcuts (Shift + key for images)
+    if (e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+        e.preventDefault();
+        flipImageHorizontal();
+        return;
+    }
+    if (e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+        e.preventDefault();
+        flipImageVertical();
+        return;
+    }
+    if (e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+        e.preventDefault();
+        resetImageTransform();
+        return;
+    }
+    if (e.shiftKey && e.key === ']') {
+        e.preventDefault();
+        rotateImage90();
+        return;
+    }
+    if (e.shiftKey && e.key === '[') {
+        e.preventDefault();
+        rotateImageMinus90();
+        return;
+    }
+    
+    // Duplicate shortcut (Ctrl+D for any selection)
+    if (e.ctrlKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        duplicateSelection();
+        return;
+    }
+    
+    // Text formatting shortcuts (when text is selected or being edited)
+    if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+        if ((selectedObject && selectedObject.type === 'text') || 
+            (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing())) {
+            e.preventDefault();
+            toggleTextBold();
+            return;
+        }
+    }
+    
+    // Note: Ctrl+I is already used for image upload, so text italic uses a different check
+    // Only trigger italic if we're actively working with text
+    if (e.ctrlKey && (e.key === 'i' || e.key === 'I')) {
+        if (selectedObject && selectedObject.type === 'text') {
+            e.preventDefault();
+            toggleTextItalic();
+            return;
+        }
+        // Otherwise let it trigger image upload
+    }
+    
+    // Tool shortcuts
+    if (e.key === 'p') IWB.setTool('pen', canvas);
+    if (e.key === 'm') IWB.setTool('marker', canvas);
+    if (e.key === 'h') IWB.setTool('highlighter', canvas);
+    if (e.key === 'e') IWB.setTool('eraser', canvas);
+    if (e.key === 'v') IWB.setTool('select', canvas);
+    if (e.key === 'r') IWB.setTool('rect-select', canvas);
+    if (e.key === 't') IWB.setTool('text', canvas);
+    
+    // Zoom shortcuts
+    if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        zoomIn();
+    }
+    if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        zoomOut();
+    }
+    if (e.key === '0') {
+        e.preventDefault();
+        zoomAll();
+    }
+    
+});
+
+document.addEventListener('keyup', (e) => {
+    if (IWB.shouldIgnoreHotkeys && IWB.shouldIgnoreHotkeys(e)) return;
+
+    if (e.code === 'Space') {
+        IWB.spacePressed = false;
+        if (!IWB.isPanning && IWB.currentTool !== 'pan') {
+            canvas.style.cursor = 'crosshair';
+        }
+    }
+});
+
+// ============================================================================
+// TOOLBAR CONTROLS
+// ============================================================================
+
+// Initialize toolbar
+IWB.initToolbar(canvas, render);
+
+// Verify shapes module loaded
+console.log('[INIT] Checking shapes module...');
+if (IWB.SHAPE_CATEGORIES) {
+    console.log('[INIT] Shapes module loaded successfully with', Object.keys(IWB.SHAPE_CATEGORIES).length, 'categories');
+} else {
+    console.error('[INIT] Shapes module NOT loaded - IWB.SHAPE_CATEGORIES is undefined');
+}
+
+// ============================================================================
+// SHAPES DROPDOWN
+// ============================================================================
+
+function populateShapesDropdown() {
+    const dropdown = document.getElementById('shapes-dropdown');
+    if (!dropdown) {
+        console.error('[SHAPES] Dropdown element not found');
+        return;
+    }
+    
+    if (!IWB.SHAPE_CATEGORIES) {
+        console.error('[SHAPES] IWB.SHAPE_CATEGORIES not defined - shapes module may not be loaded');
+        return;
+    }
+    
+    console.log('[SHAPES] Populating dropdown with categories:', Object.keys(IWB.SHAPE_CATEGORIES));
+    dropdown.innerHTML = '';
+    
+    // Add Recently Used section at the top (if any)
+    const recentShapes = IWB.getRecentShapes ? IWB.getRecentShapes() : [];
+    if (recentShapes.length > 0) {
+        const recentDiv = document.createElement('div');
+        recentDiv.className = 'shapes-category shapes-recent';
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'shapes-category-title';
+        titleDiv.innerHTML = '⭐ Recently Used';
+        recentDiv.appendChild(titleDiv);
+        
+        const gridDiv = document.createElement('div');
+        gridDiv.className = 'shapes-grid';
+        
+        recentShapes.forEach(shapeType => {
+            const shapeInfo = IWB.getShapeInfo ? IWB.getShapeInfo(shapeType) : null;
+            if (!shapeInfo) return; // Skip if shape no longer exists
+            
+            const shapeBtn = document.createElement('button');
+            shapeBtn.className = 'shape-option';
+            shapeBtn.dataset.shapeType = shapeType;
+            shapeBtn.title = shapeInfo.name + ' (Recent)';
+            
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'shape-option-icon';
+            iconSpan.textContent = shapeInfo.icon;
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'shape-option-name';
+            nameSpan.textContent = shapeInfo.name;
+            
+            shapeBtn.appendChild(iconSpan);
+            shapeBtn.appendChild(nameSpan);
+            
+            shapeBtn.addEventListener('click', () => {
+                IWB.setTool(shapeType, canvas);
+                dropdown.classList.remove('show');
+                console.log('[SHAPES] Selected recent shape:', shapeType);
+                render();
+            });
+            
+            gridDiv.appendChild(shapeBtn);
+        });
+        
+        recentDiv.appendChild(gridDiv);
+        dropdown.appendChild(recentDiv);
+        
+        // Add separator
+        const separator = document.createElement('div');
+        separator.style.cssText = 'border-top: 2px solid var(--accent, #14b8a6); margin: 12px 4px; opacity: 0.3;';
+        dropdown.appendChild(separator);
+    }
+    
+    // Add all category sections
+    for (const categoryKey in IWB.SHAPE_CATEGORIES) {
+        const category = IWB.SHAPE_CATEGORIES[categoryKey];
+        
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'shapes-category';
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'shapes-category-title';
+        titleDiv.textContent = category.name;
+        categoryDiv.appendChild(titleDiv);
+        
+        const gridDiv = document.createElement('div');
+        gridDiv.className = 'shapes-grid';
+        
+        for (const shapeKey in category.shapes) {
+            const shape = category.shapes[shapeKey];
+            
+            const shapeBtn = document.createElement('button');
+            shapeBtn.className = 'shape-option';
+            shapeBtn.dataset.shapeType = shapeKey;
+            shapeBtn.title = shape.name;
+            
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'shape-option-icon';
+            iconSpan.textContent = shape.icon;
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'shape-option-name';
+            nameSpan.textContent = shape.name;
+            
+            shapeBtn.appendChild(iconSpan);
+            shapeBtn.appendChild(nameSpan);
+            
+            shapeBtn.addEventListener('click', () => {
+                IWB.setTool(shapeKey, canvas);
+                dropdown.classList.remove('show');
+                console.log('[SHAPES] Selected shape:', shapeKey);
+                render();
+            });
+            
+            gridDiv.appendChild(shapeBtn);
+        }
+        
+        categoryDiv.appendChild(gridDiv);
+        dropdown.appendChild(categoryDiv);
+    }
+    
+    console.log('[SHAPES] Dropdown populated successfully');
+}
+
+// Toggle shapes dropdown
+const shapesBtn = document.getElementById('shapes-btn');
+const shapesDropdown = document.getElementById('shapes-dropdown');
+
+if (shapesBtn && shapesDropdown) {
+    // Move dropdown to body to escape toolbar stacking context created by transforms
+    if (shapesDropdown.parentElement !== document.body) {
+        document.body.appendChild(shapesDropdown);
+    }
+
+    shapesBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('[SHAPES] Button clicked, toggling dropdown');
+        
+        // Position dropdown relative to button
+        const rect = shapesBtn.getBoundingClientRect();
+        shapesDropdown.style.top = (rect.bottom + 8) + 'px';
+        shapesDropdown.style.left = rect.left + 'px';
+        
+        shapesDropdown.classList.toggle('show');
+        
+        // Always repopulate on show to update recently used section
+        if (shapesDropdown.classList.contains('show')) {
+            console.log('[SHAPES] Repopulating dropdown to show recent shapes...');
+            populateShapesDropdown();
+        }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!shapesBtn.contains(e.target) && !shapesDropdown.contains(e.target)) {
+            shapesDropdown.classList.remove('show');
+        }
+    });
+} else {
+    console.error('[SHAPES] Button or dropdown element not found in DOM');
+}
+
+// ============================================================================
+// UNDO/REDO
+// ============================================================================
+
+function undo() {
+    objects = IWB.undo(objects);
+    refreshSelectedObject();
+    render();
+}
+
+function redo() {
+    objects = IWB.redo(objects);
+    refreshSelectedObject();
+    render();
+}
+
+function clearCanvas() {
+    objects = IWB.clearAll(objects);
+    render();
+}
+
+// ============================================================================
+// LAYER OPERATIONS
+// ============================================================================
+
+function bringToFrontHandler() {
+    console.log('[DEBUG] bringToFrontHandler called');
+    const selectionCount = getSelectionCount();
+    
+    if (selectionCount === 0) {
+        console.log('[LAYERS] No object selected');
+        return;
+    }
+    
+    const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : (selectedObject ? [selectedObject] : []);
+    
+    if (selectedObjects.length === 0) return;
+    
+    // Get max layer value across all objects
+    const maxLayer = Math.max(...objects.map(obj => Number.isFinite(obj.layer) ? obj.layer : 0));
+    
+    // Set all selected objects to max layer + 1
+    selectedObjects.forEach(obj => {
+        const beforeState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        obj.layer = maxLayer + 1;
+        const afterState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        IWB.addToUndoStack(IWB.createLayerUndoAction('bringToFront', obj, beforeState, afterState));
+        console.log(`[LAYERS] Brought object ${obj.id} to front (layer ${obj.layer})`);
+    });
+    
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    render();
+}
+
+function sendToBackHandler() {
+    console.log('[DEBUG] sendToBackHandler called');
+    const selectionCount = getSelectionCount();
+    
+    if (selectionCount === 0) {
+        console.log('[LAYERS] No object selected');
+        return;
+    }
+    
+    const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : (selectedObject ? [selectedObject] : []);
+    
+    if (selectedObjects.length === 0) return;
+    
+    // Get min layer value across all objects
+    const minLayer = Math.min(...objects.map(obj => Number.isFinite(obj.layer) ? obj.layer : 0));
+    
+    // Set all selected objects to min layer - 1
+    selectedObjects.forEach(obj => {
+        const beforeState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        obj.layer = minLayer - 1;
+        const afterState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        IWB.addToUndoStack(IWB.createLayerUndoAction('sendToBack', obj, beforeState, afterState));
+        console.log(`[LAYERS] Sent object ${obj.id} to back (layer ${obj.layer})`);
+    });
+    
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    render();
+}
+
+function moveUpHandler() {
+    console.log('[DEBUG] moveUpHandler called');
+    const selectionCount = getSelectionCount();
+    
+    if (selectionCount === 0) {
+        console.log('[LAYERS] No object selected');
+        return;
+    }
+    
+    const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : (selectedObject ? [selectedObject] : []);
+    
+    if (selectedObjects.length === 0) return;
+    
+    // Increment each object's layer independently
+    selectedObjects.forEach(obj => {
+        const beforeState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        obj.layer = (Number.isFinite(obj.layer) ? obj.layer : 0) + 1;
+        const afterState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        IWB.addToUndoStack(IWB.createLayerUndoAction('moveUp', obj, beforeState, afterState));
+        console.log(`[LAYERS] Moved object ${obj.id} up to layer ${obj.layer}`);
+    });
+    
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    render();
+}
+
+function moveDownHandler() {
+    console.log('[DEBUG] moveDownHandler called');
+    const selectionCount = getSelectionCount();
+    
+    if (selectionCount === 0) {
+        console.log('[LAYERS] No object selected');
+        return;
+    }
+    
+    const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : (selectedObject ? [selectedObject] : []);
+    
+    if (selectedObjects.length === 0) return;
+    
+    // Decrement each object's layer independently
+    selectedObjects.forEach(obj => {
+        const beforeState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        obj.layer = (Number.isFinite(obj.layer) ? obj.layer : 0) - 1;
+        const afterState = IWB.captureLayerSnapshot ? IWB.captureLayerSnapshot(obj) : null;
+        IWB.addToUndoStack(IWB.createLayerUndoAction('moveDown', obj, beforeState, afterState));
+        console.log(`[LAYERS] Moved object ${obj.id} down to layer ${obj.layer}`);
+    });
+    
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    render();
+}
+
+function setDefaultLayer(layer) {
+    if (isNaN(layer) || layer < 0) {
+        layer = 0;
+        document.getElementById('default-layer-input').value = 0;
+    }
+    
+    defaultLayer = layer;
+    console.log('[LAYERS] Default layer set to', defaultLayer);
+    document.getElementById('statusbar').textContent = `New objects will be placed at Layer ${defaultLayer} (0=bottom, higher=front)`;
+    setTimeout(() => {
+        IWB.updateStatus(canvas, objects.length, selectedObject, objects);
+    }, 3000);
+}
+
+// ============================================================================
+// DRAWING TRANSFORM OPERATIONS (STROKE/SHAPE)
+// ============================================================================
+
+function flipSelectedDrawing(axis) {
+    const selectedObjects = getSelectedObjectsList();
+    if (!selectionIsStrokeOrShapeOnly(selectedObjects)) {
+        console.log('[TRANSFORM] Flip skipped: select stroke/shape items');
+        return;
+    }
+
+    const center = getSelectionCenterPoint();
+    if (!center) {
+        console.log('[TRANSFORM] Flip skipped: no selection center');
+        return;
+    }
+
+    const normalizedAxis = axis === 'vertical' ? 'vertical' : 'horizontal';
+    applyMirrorToSelection(normalizedAxis, center);
+}
+
+function flipSelectedDrawingHorizontal() {
+    flipSelectedDrawing('horizontal');
+}
+
+function flipSelectedDrawingVertical() {
+    flipSelectedDrawing('vertical');
+}
+
+function rotateSelectedDrawing(deltaRadians) {
+    const selectedObjects = getSelectedObjectsList();
+    if (!selectionIsStrokeOrShapeOnly(selectedObjects)) {
+        console.log('[TRANSFORM] Rotate skipped: select stroke/shape items');
+        return;
+    }
+
+    const center = getSelectionCenterPoint();
+    if (!center) {
+        console.log('[TRANSFORM] Rotate skipped: no selection center');
+        return;
+    }
+
+    const originals = captureSelectionOriginals();
+    if (!originals || !originals.length) {
+        console.log('[TRANSFORM] Rotate skipped: nothing to rotate');
+        return;
+    }
+
+    applyRotationToSelection(originals, deltaRadians, center);
+    recordTransformUndo(originals);
+    render();
+}
+
+function rotateSelectedDrawing90() {
+    rotateSelectedDrawing(Math.PI / 2);
+}
+
+function rotateSelectedDrawingMinus90() {
+    rotateSelectedDrawing(-Math.PI / 2);
+}
+
+// ============================================================================
+// IMAGE TRANSFORM OPERATIONS
+// ============================================================================
+
+function flipImageHorizontal() {
+    if (!selectedObject || selectedObject.type !== 'image') {
+        console.log('[IMAGE_TRANSFORM] No image selected');
+        return;
+    }
+    
+    const oldFlip = selectedObject.flipH;
+    if (IWB.flipImageHorizontal && IWB.flipImageHorizontal(selectedObject)) {
+        IWB.addToUndoStack({
+            type: 'imageFlip',
+            objectId: selectedObject.id,
+            axis: 'horizontal',
+            oldFlip: oldFlip,
+            newFlip: selectedObject.flipH
+        });
+        render();
+    }
+}
+
+function flipImageVertical() {
+    if (!selectedObject || selectedObject.type !== 'image') {
+        console.log('[IMAGE_TRANSFORM] No image selected');
+        return;
+    }
+    
+    const oldFlip = selectedObject.flipV;
+    if (IWB.flipImageVertical && IWB.flipImageVertical(selectedObject)) {
+        IWB.addToUndoStack({
+            type: 'imageFlip',
+            objectId: selectedObject.id,
+            axis: 'vertical',
+            oldFlip: oldFlip,
+            newFlip: selectedObject.flipV
+        });
+        render();
+    }
+}
+
+// ============================================================================
+// TEXT FORMATTING OPERATIONS
+// ============================================================================
+
+function changeTextFontFamily(fontFamily) {
+    console.log('[TEXT] Changing font family to', fontFamily);
+    
+    // Check if we're currently editing text
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        const textObj = typeof IWB.getTextEditingObject === 'function' 
+            ? IWB.getTextEditingObject() 
+            : null;
+        if (textObj) {
+            const oldFont = textObj.fontFamily;
+            textObj.fontFamily = fontFamily;
+            // Update dimensions for new font
+            if (typeof IWB.updateTextDimensions === 'function') {
+                IWB.updateTextDimensions(textObj);
+            }
+            render();
+        }
+    }
+    // Or check if text object is selected
+    else if (selectedObject && selectedObject.type === 'text') {
+        const oldFont = selectedObject.fontFamily;
+        selectedObject.fontFamily = fontFamily;
+        // Update dimensions for new font
+        if (typeof IWB.updateTextDimensions === 'function') {
+            IWB.updateTextDimensions(selectedObject);
+        }
+        IWB.addToUndoStack({
+            type: 'textFormat',
+            objectId: selectedObject.id,
+            property: 'fontFamily',
+            oldValue: oldFont,
+            newValue: fontFamily
+        });
+        render();
+    }
+}
+
+function changeTextFontSize(fontSize) {
+    console.log('[TEXT] Changing font size to', fontSize);
+    
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        const textObj = typeof IWB.getTextEditingObject === 'function' 
+            ? IWB.getTextEditingObject() 
+            : null;
+        if (textObj) {
+            const oldSize = textObj.fontSize;
+            textObj.fontSize = fontSize;
+            if (typeof IWB.updateTextDimensions === 'function') {
+                IWB.updateTextDimensions(textObj);
+            }
+            render();
+        }
+    }
+    else if (selectedObject && selectedObject.type === 'text') {
+        const oldSize = selectedObject.fontSize;
+        selectedObject.fontSize = fontSize;
+        if (typeof IWB.updateTextDimensions === 'function') {
+            IWB.updateTextDimensions(selectedObject);
+        }
+        IWB.addToUndoStack({
+            type: 'textFormat',
+            objectId: selectedObject.id,
+            property: 'fontSize',
+            oldValue: oldSize,
+            newValue: fontSize
+        });
+        render();
+    }
+}
+
+function toggleTextBold() {
+    console.log('[TEXT] Toggling bold');
+    
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        const textObj = typeof IWB.getTextEditingObject === 'function' 
+            ? IWB.getTextEditingObject() 
+            : null;
+        if (textObj) {
+            textObj.bold = !textObj.bold;
+            if (typeof IWB.updateTextDimensions === 'function') {
+                IWB.updateTextDimensions(textObj);
+            }
+            updateTextToolbarState();
+            render();
+        }
+    }
+    else if (selectedObject && selectedObject.type === 'text') {
+        const oldBold = selectedObject.bold || false;
+        selectedObject.bold = !oldBold;
+        if (typeof IWB.updateTextDimensions === 'function') {
+            IWB.updateTextDimensions(selectedObject);
+        }
+        IWB.addToUndoStack({
+            type: 'textFormat',
+            objectId: selectedObject.id,
+            property: 'bold',
+            oldValue: oldBold,
+            newValue: selectedObject.bold
+        });
+        updateTextToolbarState();
+        render();
+    }
+}
+
+function toggleTextItalic() {
+    console.log('[TEXT] Toggling italic');
+    
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        const textObj = typeof IWB.getTextEditingObject === 'function' 
+            ? IWB.getTextEditingObject() 
+            : null;
+        if (textObj) {
+            textObj.italic = !textObj.italic;
+            if (typeof IWB.updateTextDimensions === 'function') {
+                IWB.updateTextDimensions(textObj);
+            }
+            updateTextToolbarState();
+            render();
+        }
+    }
+    else if (selectedObject && selectedObject.type === 'text') {
+        const oldItalic = selectedObject.italic || false;
+        selectedObject.italic = !oldItalic;
+        if (typeof IWB.updateTextDimensions === 'function') {
+            IWB.updateTextDimensions(selectedObject);
+        }
+        IWB.addToUndoStack({
+            type: 'textFormat',
+            objectId: selectedObject.id,
+            property: 'italic',
+            oldValue: oldItalic,
+            newValue: selectedObject.italic
+        });
+        updateTextToolbarState();
+        render();
+    }
+}
+
+function setTextAlign(alignment) {
+    console.log('[TEXT] Setting alignment to', alignment);
+    
+    if (typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()) {
+        const textObj = typeof IWB.getTextEditingObject === 'function' 
+            ? IWB.getTextEditingObject() 
+            : null;
+        if (textObj) {
+            textObj.align = alignment;
+            render();
+        }
+    }
+    else if (selectedObject && selectedObject.type === 'text') {
+        const oldAlign = selectedObject.align || 'left';
+        selectedObject.align = alignment;
+        IWB.addToUndoStack({
+            type: 'textFormat',
+            objectId: selectedObject.id,
+            property: 'align',
+            oldValue: oldAlign,
+            newValue: alignment
+        });
+        render();
+    }
+}
+
+function updateTextToolbarState() {
+    const textObj = typeof IWB.isTextEditing === 'function' && IWB.isTextEditing()
+        ? (typeof IWB.getTextEditingObject === 'function' ? IWB.getTextEditingObject() : null)
+        : (selectedObject && selectedObject.type === 'text' ? selectedObject : null);
+    
+    if (!textObj) return;
+    
+    // Update bold/italic button states
+    const boldBtn = document.getElementById('text-bold-btn');
+    const italicBtn = document.getElementById('text-italic-btn');
+    const fontFamilySelect = document.getElementById('text-font-family');
+    const fontSizeSelect = document.getElementById('text-font-size');
+    
+    if (boldBtn) {
+        if (textObj.bold) {
+            boldBtn.classList.add('active');
+        } else {
+            boldBtn.classList.remove('active');
+        }
+    }
+    
+    if (italicBtn) {
+        if (textObj.italic) {
+            italicBtn.classList.add('active');
+        } else {
+            italicBtn.classList.remove('active');
+        }
+    }
+    
+    if (fontFamilySelect) {
+        fontFamilySelect.value = textObj.fontFamily || 'sf, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+    }
+    
+    if (fontSizeSelect) {
+        fontSizeSelect.value = textObj.fontSize || 18;
+    }
+}
+
+function duplicateText() {
+    if (!selectedObject || selectedObject.type !== 'text') return;
+    
+    const newText = {
+        type: 'text',
+        text: selectedObject.text,
+        x: selectedObject.x + 20,
+        y: selectedObject.y + 20,
+        fontSize: selectedObject.fontSize,
+        color: selectedObject.color,
+        fontFamily: selectedObject.fontFamily,
+        width: selectedObject.width,
+        height: selectedObject.height,
+        align: selectedObject.align,
+        bold: selectedObject.bold,
+        italic: selectedObject.italic,
+        id: nextObjectId++
+    };
+    
+    if (typeof IWB.assignLayerMetadata === 'function') {
+        IWB.assignLayerMetadata(newText, defaultLayer);
+    } else {
+        newText.layer = defaultLayer;
+    }
+    
+    objects.push(newText);
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    
+    IWB.addToUndoStack({ type: 'add', object: newText });
+    selectedObject = newText;
+    render();
+}
+
+function deleteText() {
+    if (!selectedObject || selectedObject.type !== 'text') return;
+    
+    const index = objects.findIndex(o => o.id === selectedObject.id);
+    if (index !== -1) {
+        const removed = objects.splice(index, 1)[0];
+        IWB.addToUndoStack({ type: 'delete', object: removed });
+        selectedObject = null;
+        updateToolbars();
+        render();
+    }
+}
+
+function resetImageTransform() {
+    if (!selectedObject || selectedObject.type !== 'image') {
+        console.log('[IMAGE_TRANSFORM] No image selected');
+        return;
+    }
+    
+    const oldState = {
+        rotation: selectedObject.rotation || 0,
+        flipH: selectedObject.flipH || false,
+        flipV: selectedObject.flipV || false
+    };
+    
+    if (IWB.resetImageTransform && IWB.resetImageTransform(selectedObject)) {
+        IWB.addToUndoStack({
+            type: 'imageReset',
+            objectId: selectedObject.id,
+            oldState: oldState
+        });
+        render();
+    }
+}
+
+function rotateImage90() {
+    if (!selectedObject || selectedObject.type !== 'image') {
+        console.log('[IMAGE_TRANSFORM] No image selected');
+        return;
+    }
+    
+    const oldRotation = selectedObject.rotation || 0;
+    selectedObject.rotation = oldRotation + Math.PI / 2;
+    
+    IWB.addToUndoStack({
+        type: 'imageRotate',
+        objectId: selectedObject.id,
+        oldRotation: oldRotation,
+        newRotation: selectedObject.rotation
+    });
+    render();
+}
+
+function rotateImageMinus90() {
+    if (!selectedObject || selectedObject.type !== 'image') {
+        console.log('[IMAGE_TRANSFORM] No image selected');
+        return;
+    }
+    
+    const oldRotation = selectedObject.rotation || 0;
+    selectedObject.rotation = oldRotation - Math.PI / 2;
+    
+    IWB.addToUndoStack({
+        type: 'imageRotate',
+        objectId: selectedObject.id,
+        oldRotation: oldRotation,
+        newRotation: selectedObject.rotation
+    });
+    render();
+}
+
+function duplicateImage() {
+    if (!selectedObject || selectedObject.type !== 'image') {
+        console.log('[IMAGE_TRANSFORM] No image selected');
+        return;
+    }
+    
+    // Create a copy of the image
+    const newImage = {
+        id: nextObjectId++,
+        type: 'image',
+        x: selectedObject.x + 20,
+        y: selectedObject.y + 20,
+        w: selectedObject.w,
+        h: selectedObject.h,
+        rotation: selectedObject.rotation || 0,
+        flipH: selectedObject.flipH || false,
+        flipV: selectedObject.flipV || false,
+        src: selectedObject.src,
+        imageElement: selectedObject.imageElement
+    };
+    
+    if (typeof IWB.assignLayerMetadata === 'function') {
+        IWB.assignLayerMetadata(newImage, selectedObject.layer || 0);
+    } else {
+        newImage.layer = selectedObject.layer || 0;
+    }
+    
+    objects.push(newImage);
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    
+    IWB.addToUndoStack({ type: 'add', object: newImage });
+    
+    // Select the new image
+    if (typeof IWB.selectSingle === 'function') {
+        IWB.selectSingle(newImage.id);
+    } else {
+        selectedObject = newImage;
+    }
+    refreshSelectedObject();
+    render();
+}
+
+function deleteSelectedImage() {
+    if (!selectedObject || selectedObject.type !== 'image') {
+        console.log('[IMAGE_TRANSFORM] No image selected');
+        return;
+    }
+    
+    const index = objects.findIndex(o => o.id === selectedObject.id);
+    if (index !== -1) {
+        const removed = objects.splice(index, 1)[0];
+        IWB.addToUndoStack({ type: 'delete', object: removed });
+        selectedObject = null;
+        updateToolbars();
+        render();
+    }
+}
+
+// Generic duplicate function for any selection
+function duplicateSelection() {
+    const selectionCount = getSelectionCount();
+    if (selectionCount === 0) {
+        console.log('[DUPLICATE] No selection');
+        return;
+    }
+    
+    const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : (selectedObject ? [selectedObject] : []);
+    
+    const newObjects = [];
+    selectedObjects.forEach(obj => {
+        let newObj;
+        if (obj.type === 'image') {
+            newObj = {
+                id: nextObjectId++,
+                type: 'image',
+                x: obj.x + 20,
+                y: obj.y + 20,
+                w: obj.w,
+                h: obj.h,
+                rotation: obj.rotation || 0,
+                flipH: obj.flipH || false,
+                flipV: obj.flipV || false,
+                src: obj.src,
+                imageElement: obj.imageElement
+            };
+        } else if (obj.type === 'stroke' && obj.path) {
+            newObj = {
+                id: nextObjectId++,
+                type: 'stroke',
+                tool: obj.tool,
+                color: obj.color,
+                size: obj.size,
+                path: obj.path.map(pt => ({ x: pt.x + 20, y: pt.y + 20 }))
+            };
+        } else if (obj.type === 'shape') {
+            newObj = {
+                id: nextObjectId++,
+                type: 'shape',
+                shapeType: obj.shapeType,
+                x: obj.x + 20,
+                y: obj.y + 20,
+                w: obj.w,
+                h: obj.h,
+                color: obj.color,
+                strokeWidth: obj.strokeWidth || 2,
+                filled: obj.filled || false,
+                fillColor: obj.fillColor,
+                rotation: obj.rotation || 0,
+                flipH: obj.flipH || false,
+                flipV: obj.flipV || false,
+                // Copy connector coordinates if they exist
+                startX: obj.startX !== undefined ? obj.startX + 20 : undefined,
+                startY: obj.startY !== undefined ? obj.startY + 20 : undefined,
+                endX: obj.endX !== undefined ? obj.endX + 20 : undefined,
+                endY: obj.endY !== undefined ? obj.endY + 20 : undefined
+            };
+        }
+        
+        if (newObj) {
+            if (typeof IWB.assignLayerMetadata === 'function') {
+                IWB.assignLayerMetadata(newObj, obj.layer || 0);
+            } else {
+                newObj.layer = obj.layer || 0;
+            }
+            objects.push(newObj);
+            newObjects.push(newObj);
+            IWB.addToUndoStack({ type: 'add', object: newObj });
+        }
+    });
+    
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    
+    // Select the new objects
+    if (typeof IWB.clearSelection === 'function') {
+        IWB.clearSelection();
+    }
+    newObjects.forEach(obj => {
+        if (typeof IWB.addToSelection === 'function') {
+            IWB.addToSelection(obj.id);
+        }
+    });
+    
+    refreshSelectedObject();
+    render();
+    console.log(`[DUPLICATE] Duplicated ${newObjects.length} object(s)`);
+}
+
+// Generic delete function for any selection
+function deleteSelection() {
+    const selectionCount = getSelectionCount();
+    if (selectionCount === 0) {
+        console.log('[DELETE] No selection');
+        return;
+    }
+    
+    const selectedObjects = typeof IWB.getSelectedObjects === 'function'
+        ? IWB.getSelectedObjects(objects)
+        : (selectedObject ? [selectedObject] : []);
+    
+    selectedObjects.forEach(obj => {
+        const index = objects.findIndex(o => o.id === obj.id);
+        if (index !== -1) {
+            const removed = objects.splice(index, 1)[0];
+            IWB.addToUndoStack({ type: 'delete', object: removed });
+        }
+    });
+    
+    if (typeof IWB.clearSelection === 'function') {
+        IWB.clearSelection();
+    }
+    selectedObject = null;
+    updateToolbars();
+    render();
+    console.log(`[DELETE] Deleted ${selectedObjects.length} object(s)`);
+}
+
+// Initialize undo/redo shortcuts
+IWB.initUndoRedoShortcuts(undo, redo);
+
+// Initialize layer shortcuts
+IWB.initLayerShortcuts(bringToFrontHandler, sendToBackHandler, moveUpHandler, moveDownHandler);
+
+// ============================================================================
+// LAYER PANEL
+// ============================================================================
+
+function toggleLayerPanel() {
+    const panel = document.getElementById('layer-panel');
+    const toggleBtn = document.getElementById('layer-toggle-btn');
+    
+    panel.classList.toggle('open');
+    toggleBtn.classList.toggle('panel-open');
+}
+
+// Layer toggle button click handler
+document.getElementById('layer-toggle-btn').addEventListener('click', toggleLayerPanel);
+
+// Click handler for layer items - now works regardless of current tool
+function handleLayerItemClick(objectId) {
+    const obj = objects.find(o => o.id === objectId);
+    if (!obj) return;
+    
+    // Switch to select tool to enable transform handles
+    IWB.currentTool = 'select';
+    
+    // Update tool button UI to reflect the select tool
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    const selectBtn = document.querySelector('.tool-btn[data-tool="select"]');
+    if (selectBtn) selectBtn.classList.add('active');
+    
+    // Force select the object
+    if (typeof IWB.selectSingle === 'function') {
+        IWB.selectSingle(obj.id);
+        selectedObject = obj;
+    } else {
+        selectedObject = obj;
+    }
+    
+    refreshSelectedObject();
+    render();
+}
+
+// Toggle layer group visibility (eye icon)
+function toggleLayerVisibility(layerValue) {
+    if (typeof IWB.toggleLayerVisibility === 'function') {
+        IWB.toggleLayerVisibility(layerValue);
+    }
+    
+    // Update the panel and re-render canvas
+    updateLayerPanelUI();
+    render();
+}
+
+// Toggle layer group collapse/expand
+function toggleLayerGroup(layerValue) {
+    if (typeof IWB.toggleLayerGroupCollapse === 'function') {
+        IWB.toggleLayerGroupCollapse(layerValue);
+    }
+    
+    // Update UI to reflect collapse state
+    const groupContent = document.querySelector(`.layer-group-content[data-layer="${layerValue}"]`);
+    const groupToggle = document.querySelector(`.layer-group-toggle[data-layer="${layerValue}"]`);
+    
+    if (groupContent && groupToggle) {
+        groupContent.classList.toggle('collapsed');
+        groupToggle.classList.toggle('collapsed');
+    }
+}
+
+// Helper to update layer panel UI
+function updateLayerPanelUI() {
+    const selectedIds = typeof IWB.getSelectionIds === 'function' ? IWB.getSelectionIds() : null;
+    if (typeof IWB.updateLayerPanel === 'function') {
+        IWB.updateLayerPanel(objects, selectedObject, selectedIds);
+    }
+}
+
+// ============================================================================
+// IMAGE HANDLING
+// ============================================================================
+
+const getPointerWorld = () => {
+    return lastPointerWorld || IWB.screenToWorld(canvas.width / 2, canvas.height / 2);
+};
+
+function startImagePlacement(preview) {
+    pendingImagePlacement = preview;
+    const anchor = getPointerWorld();
+    pendingImagePosition = {
+        x: anchor.x - preview.w,
+        y: anchor.y - preview.h
+    };
+    if (typeof IWB.clearSelection === 'function') {
+        IWB.clearSelection();
+    }
+    selectedObject = null;
+    IWB.setTool('select', canvas);
+    updateToolbars();
+    render();
+}
+
+function cancelImagePlacement() {
+    pendingImagePlacement = null;
+    pendingImagePosition = null;
+    render();
+}
+
+function placePendingImage(worldPos) {
+    if (!pendingImagePlacement) return;
+
+    const anchor = worldPos || getPointerWorld();
+    const x = (pendingImagePosition ? pendingImagePosition.x : anchor.x - pendingImagePlacement.w);
+    const y = (pendingImagePosition ? pendingImagePosition.y : anchor.y - pendingImagePlacement.h);
+
+    const imageObj = {
+        id: nextObjectId++,
+        type: 'image',
+        x,
+        y,
+        w: pendingImagePlacement.w,
+        h: pendingImagePlacement.h,
+        src: pendingImagePlacement.src,
+        imageElement: pendingImagePlacement.imageElement,
+        rotation: 0,
+        flipH: false,
+        flipV: false
+    };
+
+    if (typeof IWB.assignLayerMetadata === 'function') {
+        IWB.assignLayerMetadata(imageObj, defaultLayer);
+    } else {
+        imageObj.layer = defaultLayer;
+    }
+
+    objects.push(imageObj);
+    if (IWB.sortObjectsByLayerInPlace) {
+        IWB.sortObjectsByLayerInPlace(objects);
+    }
+    if (typeof IWB.addToUndoStack === 'function') {
+        IWB.addToUndoStack({ type: 'add', object: imageObj });
+    }
+    if (typeof IWB.clearSelection === 'function') {
+        IWB.clearSelection();
+    }
+    if (typeof IWB.selectSingle === 'function') {
+        IWB.selectSingle(imageObj.id);
+    }
+    selectedObject = imageObj;
+
+    pendingImagePlacement = null;
+    pendingImagePosition = null;
+    updateToolbars();
+    render();
+}
+
+// Handle image file upload
+document.getElementById('image-upload').addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const img = new Image();
+        img.src = ev.target.result;
+        img.onload = () => {
+            // Compress image if needed (max 1.2MP)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const targetPixels = 1.2 * 1000000;
+            const currentPixels = img.width * img.height;
+            
+            let w = img.width;
+            let h = img.height;
+            
+            if (currentPixels > targetPixels) {
+                const scale = Math.sqrt(targetPixels / currentPixels);
+                w = Math.round(img.width * scale);
+                h = Math.round(img.height * scale);
+            }
+            
+            canvas.width = w;
+            canvas.height = h;
+            ctx.drawImage(img, 0, 0, w, h);
+            
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            
+            const imgEl = new Image();
+            imgEl.src = compressedDataUrl;
+            imgEl.onload = () => {
+                startImagePlacement({
+                    src: compressedDataUrl,
+                    w,
+                    h,
+                    imageElement: imgEl
+                });
+                console.log(`[IMAGE] Ready for placement: ${w}x${h}px, Size: ${Math.round(compressedDataUrl.length/1024)}KB`);
+            };
+        };
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    e.target.value = '';
+});
+
+// Handle clipboard paste (images and text)
+async function pasteFromClipboard() {
+    try {
+        const clipboardItems = await navigator.clipboard.read();
+        
+        for (const item of clipboardItems) {
+            // Check for images
+            const imageTypes = item.types.filter(type => type.startsWith('image/'));
+            if (imageTypes.length > 0) {
+                const imageType = imageTypes[0];
+                const blob = await item.getType(imageType);
+                
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.src = ev.target.result;
+                    img.onload = () => {
+                        // Compress image
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        const targetPixels = 1.2 * 1000000;
+                        const currentPixels = img.width * img.height;
+                        
+                        let w = img.width;
+                        let h = img.height;
+                        
+                        if (currentPixels > targetPixels) {
+                            const scale = Math.sqrt(targetPixels / currentPixels);
+                            w = Math.round(img.width * scale);
+                            h = Math.round(img.height * scale);
+                        }
+                        
+                        canvas.width = w;
+                        canvas.height = h;
+                        ctx.drawImage(img, 0, 0, w, h);
+                        
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        // Create image object at center of viewport
+                        const imageObj = {
+                            id: nextObjectId++,
+                            type: 'image',
+                            x: -IWB.viewportX / IWB.zoom + (window.innerWidth / 2 / IWB.zoom) - w/2,
+                            y: -IWB.viewportY / IWB.zoom + (window.innerHeight / 2 / IWB.zoom) - h/2,
+                            w: w,
+                            h: h,
+                            src: compressedDataUrl,
+                            imageElement: null,
+                            rotation: 0,
+                            flipH: false,
+                            flipV: false
+                        };
+                        
+                        // Load image element
+                        const imgEl = new Image();
+                        imgEl.src = compressedDataUrl;
+                        imgEl.onload = () => {
+                            imageObj.imageElement = imgEl;
+                            render();
+                        };
+                        
+                        if (typeof IWB.assignLayerMetadata === 'function') {
+                            IWB.assignLayerMetadata(imageObj, defaultLayer);
+                        } else {
+                            imageObj.layer = defaultLayer;
+                        }
+                        objects.push(imageObj);
+                        if (IWB.sortObjectsByLayerInPlace) {
+                            IWB.sortObjectsByLayerInPlace(objects);
+                        }
+                        console.log('[DEBUG] Added pasted image at layer', imageObj.layer, '(default insertion)');
+                        IWB.addToUndoStack({ type: 'add', object: imageObj });
+                        render();
+                        
+                        console.log(`[CLIPBOARD] Image pasted: ${w}x${h}px, Size: ${Math.round(compressedDataUrl.length/1024)}KB`);
+                    };
+                };
+                reader.readAsDataURL(blob);
+                return; // Found image, exit
+            }
+        }
+        
+        console.log('[CLIPBOARD] No images found in clipboard');
+    } catch (err) {
+        console.error('[CLIPBOARD] Error pasting:', err);
+    }
+}
+
+// ============================================================================
+// INITIALIZE
+// ============================================================================
+
+// Initialize toolbar module
+if (IWB.Toolbars && typeof IWB.Toolbars.init === 'function') {
+    IWB.Toolbars.init();
+}
+
+render();
+
+// Initialize undo/redo button states
+if (typeof IWB.updateUndoRedoButtons === 'function') {
+    IWB.updateUndoRedoButtons();
+}
+
+console.log('Infinite Whiteboard initialized with dedicated modules');
+console.log('Available infinite whiteboard modules:', {
+    core: typeof IWB.applyTransform !== 'undefined',
+    drawing: typeof IWB.drawObject !== 'undefined',
+    minimap: typeof IWB.updateMinimap !== 'undefined',
+    tools: typeof IWB.setTool !== 'undefined',
+    undo: typeof IWB.undo !== 'undefined',
+    layers: typeof IWB.bringToFront !== 'undefined'
+});
+console.log('[DEBUG] Initial state:', {
+    objectCount: objects.length,
+    selectedObject: selectedObject,
+    currentTool: IWB.currentTool,
+    canvasSize: { width: canvas.width, height: canvas.height },
+    defaultLayer: defaultLayer
+});
+console.log('[LAYERS] New objects will be inserted at Layer', defaultLayer);
+
+// ============================================================================
+// SAVE/LOAD FUNCTIONALITY
+// ============================================================================
+
+// Board ID from template context
+const boardId = {{ board.id if board else 'null' }};
+const isNewBoard = !boardId;
+
+// Load existing board content if editing
+{% if board and board.content_json %}
+function loadBoardContent() {
+    try {
+        const content = {{ board.content_json | tojson }};
+        console.log('[LOAD] Loading infinite whiteboard content:', content);
+        
+        if (content && content.objects) {
+            // Load objects
+            objects = content.objects.map(obj => {
+                // Reconstruct image elements if needed
+                if (obj.type === 'image' && obj.src) {
+                    const imgEl = new Image();
+                    imgEl.src = obj.src;
+                    obj.imageElement = imgEl;
+                    imgEl.onload = () => render();
+                }
+                return obj;
+            });
+            
+            // Update global reference for export functions
+            window.objects = objects;
+
+            if (IWB.initializeLayerMetadata) {
+                IWB.initializeLayerMetadata(objects);
+            }
+            if (IWB.sortObjectsByLayerInPlace) {
+                IWB.sortObjectsByLayerInPlace(objects);
+            }
+            
+            // Load viewport state
+            if (content.viewport) {
+                IWB.viewportX = content.viewport.x || 0;
+                IWB.viewportY = content.viewport.y || 0;
+                IWB.zoom = content.viewport.zoom || 1.0;
+            }
+            
+            // Load next object ID
+            nextObjectId = content.nextObjectId || (objects.length > 0 ? Math.max(...objects.map(o => o.id)) + 1 : 1);
+            
+            console.log(`[LOAD] Loaded ${objects.length} objects, nextId: ${nextObjectId}`);
+            render();
+        }
+    } catch (e) {
+        console.error('[LOAD] Error loading board content:', e);
+    }
+}
+
+// Call load on page load
+loadBoardContent();
+
+// Initialize title and description inputs with board data
+const titleInput = document.getElementById('board-title-input');
+const descriptionInput = document.getElementById('board-description-input');
+if (titleInput) {
+    titleInput.value = '{{ board.title if board else "" }}';
+}
+if (descriptionInput) {
+    descriptionInput.value = '{{ board.description if board and board.description else "" }}';
+}
+{% endif %}
+
+// Auto-save every 30 seconds or after N actions
+let autoSaveTimer = null;
+let hasUnsavedChanges = false;
+let unsavedActionCount = 0;
+let lastSaveTimestamp = 0;
+let pendingThresholdSave = null;
+
+function markUnsavedChanges() {
+    hasUnsavedChanges = true;
+    unsavedActionCount += 1;
+    console.log(`[AUTOSAVE] Marked unsaved changes - count: ${unsavedActionCount}`);
+    
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    
+    // Threshold save: After 5 actions, schedule auto-save with rate limiting
+    if (!isNewBoard && unsavedActionCount >= 5) {
+        const now = Date.now();
+        const msSinceLast = now - lastSaveTimestamp;
+        const waitMs = Math.max(0, 5000 - msSinceLast); // align with server 5s rate limit
+        console.log(`[AUTOSAVE] Threshold reached (5 actions) - scheduling save in ${waitMs}ms`);
+        if (pendingThresholdSave) clearTimeout(pendingThresholdSave);
+        pendingThresholdSave = setTimeout(() => {
+            console.log('[AUTOSAVE] Executing threshold save (5 actions)');
+            saveToServer(true);
+        }, waitMs);
+        // keep counter; reset happens on successful save
+    }
+    
+    // Timer save: After 30 seconds of inactivity
+    autoSaveTimer = setTimeout(() => {
+        if (hasUnsavedChanges && !isNewBoard) {
+            console.log('[AUTOSAVE] Executing timer save (30 seconds)');
+            saveToServer(true); // true = silent auto-save
+        }
+    }, 30000); // 30 seconds
+}
+
+const metadataTitleInput = document.getElementById('board-title-input');
+const metadataDescriptionInput = document.getElementById('board-description-input');
+[metadataTitleInput, metadataDescriptionInput].forEach((input) => {
+    if (input) {
+        input.addEventListener('input', markUnsavedChanges);
+    }
+});
+
+// Mark changes on any drawing action
+const originalAddToUndoStack = IWB.addToUndoStack;
+IWB.addToUndoStack = function(action) {
+    originalAddToUndoStack(action);
+    markUnsavedChanges();
+};
+
+// Save to server
+async function saveToServer(silent = false) {
+    console.log(`[SAVE] saveToServer called - silent: ${silent}, unsavedActionCount: ${unsavedActionCount}, hasUnsavedChanges: ${hasUnsavedChanges}`);
+    
+    if (isNewBoard) {
+        console.log('[SAVE] Cannot save - no board ID');
+        if (!silent) alert('Please create a board first');
+        return;
+    }
+    
+    try {
+        if (!silent) {
+            document.getElementById('statusbar').textContent = 'Saving...';
+            console.log('[SAVE] Showing save feedback in statusbar');
+        }
+        
+        // Prepare content for saving
+        const content = {
+            objects: objects.map(obj => {
+                // Remove imageElement before serializing (can't serialize DOM elements)
+                const { imageElement, ...rest } = obj;
+                return rest;
+            }),
+            nextObjectId: nextObjectId,
+            viewport: {
+                x: IWB.viewportX,
+                y: IWB.viewportY,
+                zoom: IWB.zoom
+            }
+        };
+        
+        const contentStr = JSON.stringify(content);
+        console.log(`[SAVE] Saving ${objects.length} objects, size: ${Math.round(contentStr.length/1024)}KB`);
+        
+        const titleInput = document.getElementById('board-title-input');
+        const descriptionInput = document.getElementById('board-description-input');
+        const boardTitle = titleInput?.value?.trim() || 'Infinite Whiteboard';
+        const boardDescription = descriptionInput?.value?.trim() || '';
+        
+        const response = await fetch(`/infinite_boards/edit/${boardId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                content: contentStr,
+                title: boardTitle,
+                description: boardDescription,
+                generate_thumbnail: !silent ? 'true' : 'false'  // Only generate on manual saves, not autosaves
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+            console.log(`[SAVE] Save successful - silent: ${silent}`);
+            hasUnsavedChanges = false;
+            unsavedActionCount = 0;
+            lastSaveTimestamp = Date.now();
+            console.log(`[SAVE] Updated lastSaveTimestamp: ${lastSaveTimestamp}`);
+            if (pendingThresholdSave) {
+                clearTimeout(pendingThresholdSave);
+                pendingThresholdSave = null;
+            }
+            
+            // CRITICAL: Update local objects with server-processed content
+            // This replaces data URIs with file paths from disk
+            if (result.content && result.content.objects) {
+                console.log('[SAVE] Syncing server-processed content (data URIs → file paths)');
+                const serverObjects = result.content.objects;
+                
+                // Update each object's src if it changed (data URI → file path)
+                serverObjects.forEach(serverObj => {
+                    const localObj = objects.find(obj => obj.id === serverObj.id);
+                    if (localObj && serverObj.type === 'image' && serverObj.src) {
+                        // If server converted data URI to file path, update local copy
+                        if (serverObj.src !== localObj.src && !serverObj.src.startsWith('data:')) {
+                            console.log(`[SAVE] Updated image ${serverObj.id}: data URI → ${serverObj.src}`);
+                            localObj.src = serverObj.src;
+                            // Reload image element with new path
+                            if (localObj.imageElement) {
+                                const img = new Image();
+                                img.src = serverObj.src;
+                                img.onload = () => {
+                                    localObj.imageElement = img;
+                                    render();
+                                };
+                            }
+                        }
+                    }
+                });
+            }
+            
+            if (!silent) {
+                document.getElementById('statusbar').textContent = 'Saved successfully!';
+                setTimeout(() => {
+                    document.getElementById('statusbar').textContent = `Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%`;
+                }, 2000);
+            }
+            console.log('[SAVE] Board saved successfully');
+        } else {
+            throw new Error(result.error || 'Save failed');
+        }
+    } catch (error) {
+        console.error('[SAVE] Error saving board:', error);
+        if (!silent) {
+            document.getElementById('statusbar').textContent = `Save failed: ${error.message}`;
+        }
+    }
+}
+
+// Ctrl+S to save (manual save - never rate limited)
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        console.log('[SAVE] Manual save triggered (Ctrl+S)');
+        // Manual saves always execute immediately with full feedback
+        saveToServer(false); // false = show UI feedback
+    }
+});
+
+// Warn before leaving with unsaved changes
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges && !isNewBoard) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// Export Functions (exposed globally for preview panel integration)
+window.exportInfiniteWhiteboardAsPNG = async function() {
+    console.log('[EXPORT PNG] Starting PNG export...');
+    console.log(`[EXPORT PNG] Objects count: ${objects.length}`);
+    const getImageDimensions = (imageObj) => {
+        const width = typeof imageObj.w === 'number'
+            ? imageObj.w
+            : (typeof imageObj.width === 'number' ? imageObj.width : 0);
+        const height = typeof imageObj.h === 'number'
+            ? imageObj.h
+            : (typeof imageObj.height === 'number' ? imageObj.height : 0);
+        return { width, height };
+    };
+    
+    // Wait for all images to load before exporting
+    const imageObjects = objects.filter(obj => obj.type === 'image');
+    console.log(`[EXPORT PNG] Image objects: ${imageObjects.length}`);
+    
+    if (imageObjects.length > 0) {
+        console.log('[EXPORT PNG] Waiting for images to load...');
+        const imagePromises = imageObjects.map(obj => {
+            return new Promise((resolve) => {
+                if (!obj.imageElement || !obj.src) {
+                    console.warn(`[EXPORT PNG] Image object ${obj.id} missing imageElement or src`);
+                    resolve();
+                    return;
+                }
+                
+                if (obj.imageElement.complete && obj.imageElement.naturalHeight !== 0) {
+                    console.log(`[EXPORT PNG] Image ${obj.id} already loaded`);
+                    resolve();
+                } else {
+                    console.log(`[EXPORT PNG] Waiting for image ${obj.id} to load...`);
+                    obj.imageElement.onload = () => {
+                        console.log(`[EXPORT PNG] Image ${obj.id} loaded`);
+                        resolve();
+                    };
+                    obj.imageElement.onerror = () => {
+                        console.error(`[EXPORT PNG] Image ${obj.id} failed to load`);
+                        resolve(); // Resolve anyway to not block export
+                    };
+                    // Trigger load if not started
+                    if (!obj.imageElement.src) {
+                        obj.imageElement.src = obj.src;
+                    }
+                }
+            });
+        });
+        
+        await Promise.all(imagePromises);
+        console.log('[EXPORT PNG] All images loaded');
+    }
+    
+    // Calculate bounding box of all objects
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    let strokeCount = 0, imageCount = 0, textCount = 0, shapeCount = 0, otherCount = 0;
+    
+    objects.forEach(obj => {
+        if (obj.type === 'stroke' && obj.path && obj.path.length > 0) {
+            strokeCount++;
+            // Account for stroke width in bounding box
+            const halfStroke = (obj.size || 2) / 2;
+            obj.path.forEach(pt => {
+                if (pt && typeof pt.x === 'number' && typeof pt.y === 'number') {
+                    minX = Math.min(minX, pt.x - halfStroke);
+                    minY = Math.min(minY, pt.y - halfStroke);
+                    maxX = Math.max(maxX, pt.x + halfStroke);
+                    maxY = Math.max(maxY, pt.y + halfStroke);
+                }
+            });
+        } else if (obj.type === 'shape' && typeof obj.x === 'number' && typeof obj.y === 'number') {
+            shapeCount++;
+            // Shapes have x, y, w, h properties
+            const halfStroke = (obj.strokeWidth || 2) / 2;
+            minX = Math.min(minX, obj.x - halfStroke);
+            minY = Math.min(minY, obj.y - halfStroke);
+            maxX = Math.max(maxX, obj.x + obj.w + halfStroke);
+            maxY = Math.max(maxY, obj.y + obj.h + halfStroke);
+        } else if (obj.type === 'image' && typeof obj.x === 'number' && typeof obj.y === 'number') {
+            imageCount++;
+            const { width: imgWidth, height: imgHeight } = getImageDimensions(obj);
+            if (imgWidth > 0 && imgHeight > 0) {
+                // Account for rotation by calculating all four corners
+                const rotation = obj.rotation || 0;
+                const centerX = obj.x + imgWidth / 2;
+                const centerY = obj.y + imgHeight / 2;
+                const halfW = imgWidth / 2;
+                const halfH = imgHeight / 2;
+
+                // Calculate rotated corners
+                const corners = [
+                    [-halfW, -halfH], [halfW, -halfH],
+                    [halfW, halfH], [-halfW, halfH]
+                ];
+
+                corners.forEach(([dx, dy]) => {
+                    const rotatedX = centerX + (dx * Math.cos(rotation) - dy * Math.sin(rotation));
+                    const rotatedY = centerY + (dx * Math.sin(rotation) + dy * Math.cos(rotation));
+                    minX = Math.min(minX, rotatedX);
+                    minY = Math.min(minY, rotatedY);
+                    maxX = Math.max(maxX, rotatedX);
+                    maxY = Math.max(maxY, rotatedY);
+                });
+            } else {
+                console.warn(`[EXPORT PNG] Image ${obj.id} missing dimensions, skipping bounds calculation`);
+            }
+        } else if (obj.type === 'text' && typeof obj.x === 'number' && typeof obj.y === 'number') {
+            textCount++;
+            // Better text size estimation using canvas measureText
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.font = `${obj.fontSize || 16}px sans-serif`;
+            const metrics = tempCtx.measureText(obj.text || '');
+            const textWidth = metrics.width;
+            const textHeight = obj.fontSize || 16;
+            
+            minX = Math.min(minX, obj.x);
+            minY = Math.min(minY, obj.y - textHeight); // Text is drawn from baseline, so subtract height
+            maxX = Math.max(maxX, obj.x + textWidth);
+            maxY = Math.max(maxY, obj.y);
+        } else {
+            otherCount++;
+        }
+    });
+    
+    console.log(`[EXPORT PNG] Object types: ${strokeCount} strokes, ${shapeCount} shapes, ${imageCount} images, ${textCount} text, ${otherCount} other`);
+    console.log(`[EXPORT PNG] Raw bounding box before padding: (${minX}, ${minY}) to (${maxX}, ${maxY})`);
+    
+    // Add generous padding to ensure nothing is cut off
+    const padding = 100;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+    
+    // Handle empty canvas or invalid bounds
+    if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY) || minX >= maxX || minY >= maxY) {
+        console.warn('[EXPORT PNG] Invalid bounding box detected, using default canvas size');
+        console.warn(`[EXPORT PNG] minX=${minX}, minY=${minY}, maxX=${maxX}, maxY=${maxY}`);
+        minX = 0;
+        minY = 0;
+        maxX = 1920;
+        maxY = 1080;
+    }
+    
+    const exportWidth = maxX - minX;
+    const exportHeight = maxY - minY;
+    
+    console.log(`[EXPORT PNG] Bounding box: (${minX}, ${minY}) to (${maxX}, ${maxY})`);
+    console.log(`[EXPORT PNG] Export size: ${exportWidth}x${exportHeight}`);
+    
+    // Create temporary canvas
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = exportWidth;
+    exportCanvas.height = exportHeight;
+    const ctx = exportCanvas.getContext('2d');
+    
+    // Match live canvas background (dark theme)
+    const bodyStyles = window.getComputedStyle(document.body);
+    const canvasBg = (bodyStyles.getPropertyValue('--bg') || '#0a0a0b').trim() || '#0a0a0b';
+    ctx.fillStyle = canvasBg;
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+    
+    // Translate context to center on content
+    ctx.translate(-minX, -minY);
+    
+    // Render all objects
+    objects.forEach(obj => {
+        if (obj.type === 'stroke') {
+            ctx.strokeStyle = obj.color;
+            ctx.lineWidth = obj.size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = obj.opacity !== undefined ? obj.opacity : 1;
+            
+            ctx.beginPath();
+            obj.path.forEach((pt, idx) => {
+                if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                else ctx.lineTo(pt.x, pt.y);
+            });
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        } else if (obj.type === 'shape') {
+            // Use the IWB.drawShape function if available, otherwise draw basic rectangle
+            if (typeof IWB.drawShape === 'function') {
+                IWB.drawShape(ctx, obj);
+            } else {
+                // Fallback: draw basic rectangle
+                ctx.save();
+                ctx.strokeStyle = obj.color || '#14b8a6';
+                ctx.lineWidth = obj.strokeWidth || 2;
+                ctx.fillStyle = obj.filled ? (obj.fillColor || obj.color || '#14b8a6') : 'transparent';
+                ctx.globalAlpha = obj.opacity !== undefined ? obj.opacity : 1;
+                
+                if (obj.filled) {
+                    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+                }
+                ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+                
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+        } else if (obj.type === 'image' && obj.imageElement) {
+            const { width: imgWidth, height: imgHeight } = getImageDimensions(obj);
+            if (imgWidth <= 0 || imgHeight <= 0) {
+                console.warn(`[EXPORT PNG] Skipping image ${obj.id} - missing render dimensions`);
+                return;
+            }
+            ctx.save();
+            ctx.translate(obj.x + imgWidth / 2, obj.y + imgHeight / 2);
+            ctx.rotate(obj.rotation || 0);
+            ctx.globalAlpha = obj.opacity !== undefined ? obj.opacity : 1;
+            ctx.drawImage(obj.imageElement, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight);
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        } else if (obj.type === 'text') {
+            ctx.save();
+            ctx.fillStyle = obj.color || '#000000';
+            ctx.font = `${obj.fontSize || 16}px sans-serif`;
+            ctx.globalAlpha = obj.opacity !== undefined ? obj.opacity : 1;
+            ctx.fillText(obj.text, obj.x, obj.y);
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+    });
+    
+    // Download
+    const boardTitle = '{{ board.title if board else "Infinite_Whiteboard" }}'.replace(/[^a-z0-9_\-]/gi, '_');
+    const filename = `${boardTitle}.png`;
+    
+    exportCanvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log(`[EXPORT PNG] Downloaded as ${filename}`);
+        document.getElementById('statusbar').textContent = `Exported as ${filename}`;
+        setTimeout(() => {
+            document.getElementById('statusbar').textContent = 'Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%';
+        }, 3000);
+    }, 'image/png');
+};
+
+window.exportInfiniteWhiteboardAsJSONL = function() {
+    console.log('[EXPORT JSONL] Starting JSONL export...');
+    
+    // Prepare export data
+    const exportData = {
+        type: 'proprietary_infinite_whiteboard',
+        id: boardId || 0,
+        title: '{{ board.title if board else "Infinite Whiteboard" }}',
+        created_at: '{{ board.created_at.isoformat() if board and board.created_at else "" }}',
+        last_modified: '{{ board.last_modified.isoformat() if board and board.last_modified else "" }}',
+        content: {
+            objects: objects.map(obj => {
+                // Remove non-serializable imageElement
+                const { imageElement, ...rest } = obj;
+                return rest;
+            }),
+            nextObjectId: nextObjectId,
+            viewport: {
+                x: IWB.viewportX,
+                y: IWB.viewportY,
+                zoom: IWB.zoom
+            }
+        },
+        metadata: {
+            description: '{{ board.description if board and board.description else "" }}',
+            object_count: objects.length,
+            export_date: new Date().toISOString()
+        }
+    };
+    
+    // Convert to JSONL (one JSON object per line)
+    const jsonl = JSON.stringify(exportData) + '\n';
+    
+    // Download
+    const boardTitle = '{{ board.title if board else "Infinite_Whiteboard" }}'.replace(/[^a-z0-9_\-]/gi, '_');
+    const filename = `${boardTitle}.jsonl`;
+    
+    const blob = new Blob([jsonl], { type: 'application/x-ndjson' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log(`[EXPORT JSONL] Downloaded as ${filename}`);
+    document.getElementById('statusbar').textContent = `Exported as ${filename}`;
+    setTimeout(() => {
+        document.getElementById('statusbar').textContent = 'Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%';
+    }, 3000);
+};
+
+</script>
+</body>
+</html>

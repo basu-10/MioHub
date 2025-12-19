@@ -1,0 +1,37 @@
+<!-- folder_view_batch_operations_partial.html -->
+<!-- Batch operation buttons that appear in sticky bar when items are ctrl+clicked -->
+<div id="batch-operations" style="display: none !important;" class="d-flex align-items-center gap-1">
+  <button id="btn-batch-cut" class="btn btn-sm btn-outline-warning" title="Cut selected items">
+    <i class="material-icons" style="font-size: 18px;">content_cut</i>
+  </button>
+  <button id="btn-batch-copy" class="btn btn-sm btn-outline-secondary" title="Copy selected items">
+    <i class="material-icons" style="font-size: 18px;">content_copy</i>
+  </button>
+  <button id="btn-batch-paste" class="btn btn-sm btn-outline-success" title="Paste items" disabled>
+    <i class="material-icons" style="font-size: 18px;">content_paste</i>
+  </button>
+  <button id="btn-batch-pin" class="btn btn-sm btn-outline-primary" title="Toggle pin for selected items"
+          hx-post="/folders/batch_toggle_pin_htmx"
+          hx-swap="none">
+    <i class="material-icons" style="font-size: 18px;">push_pin</i>
+  </button>
+  <button id="btn-batch-send" class="btn btn-sm btn-outline-info" title="Send selected items to pinned users">
+    <i class="material-icons" style="font-size: 18px;">send</i>
+  </button>
+  <button id="btn-batch-public" class="btn btn-sm btn-outline-info" title="Toggle public/private for selected items"
+          hx-post="/folders/batch_toggle_public_htmx"
+          hx-swap="none">
+    <i class="material-icons" style="font-size: 18px;">public</i>
+  </button>
+  <button id="btn-batch-delete" class="btn btn-sm btn-outline-danger" title="Delete selected items">
+    <i class="material-icons" style="font-size: 18px;">delete</i>
+  </button>
+  <button id="btn-clear-batch" class="btn btn-sm btn-outline-secondary" title="Clear selection">
+    <i class="material-icons" style="font-size: 18px;">clear</i>
+  </button>
+  <span id="batch-count" class="badge bg-primary ms-1" style="font-size: 0.75rem;">0</span>
+</div>
+
+<!-- Hidden inputs for HTMX -->
+<input type="hidden" name="items" id="htmx-items-input" value="">
+<input type="hidden" name="folder_id" id="htmx-folder-id-input" value="{{ folder.id if folder else '' }}">

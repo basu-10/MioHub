@@ -1,0 +1,876 @@
+<!-- 📁 Navbar -->
+<style>
+/* Carbon Teal theme variables (shared) */
+:root{
+  --bg:#0a0a0b;
+  --card:#121516;
+  --muted:#9aa8ad;
+  --accent:#14b8a6;
+  --accent-strong:#0d9488;
+  --white:#ECFFFF;
+  --radius:10px;
+
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--card);
+  --bg-tertiary: rgba(18,21,22,0.98);
+  --bg-quaternary: #0a171b;
+
+  --text-primary: var(--white);
+  --text-secondary: var(--muted);
+  --text-muted: var(--muted);
+
+  --border-primary: rgba(255,255,255,0.04);
+  --border-secondary: rgba(255,255,255,0.02);
+  --border-hover: rgba(13,148,136,0.12);
+
+  --accent-green: var(--accent);
+  --accent-green-hover: var(--accent-strong);
+  --hover-overlay: rgba(20,184,166,0.06);
+}
+/* Apply page background for Carbon Teal theme */
+html,body{background-color:var(--bg);color:var(--text-primary);background-image:radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);background-size:cover;background-repeat:no-repeat;background-attachment:fixed;background-position:center top}
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/telemetry_panel.css') }}">
+<style>
+/* Scoped overrides to map common utility classes to Carbon Teal appearance */
+.bg-gray-900 { background: var(--bg) !important; }
+.bg-gray-800 { background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; }
+.bg-gray-800\/60 { background: linear-gradient(135deg, rgba(18,21,22,0.6), rgba(10,23,27,0.6)) !important; }
+.bg-gray-800.bg-opacity-50 { background: linear-gradient(135deg, rgba(18,21,22,0.5), rgba(10,23,27,0.5)) !important; }
+.public-profile-card, .card, .item-card { background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; border:1px solid var(--border-primary) !important; color:var(--text-primary) !important; }
+.card-title, .text-white, h1, h2, h3, h4 { color: var(--text-primary) !important; }
+.text-gray-200, .text-gray-300, .text-gray-400, .text-gray-500 { color: var(--text-secondary) !important; }
+.item-body, .card-body, .note-description, .board-description, .content-preview { color: var(--text-primary) !important; }
+.btn, .btn-sm { background: transparent !important; color: var(--text-primary) !important; border: 1px solid var(--border-primary) !important; }
+.btn-outline-primary, .btn-outline-success, .btn-outline-warning, .btn-outline-light { border-color: var(--border-primary) !important; color: var(--text-primary) !important; background: transparent !important; }
+.bg-green-600 { background-color: var(--accent) !important; color: var(--text-primary) !important; }
+.bg-blue-600 { background-color: var(--accent-strong) !important; color: var(--text-primary) !important; }
+#dropdowns:where(.dropdown-custom, .fab-dropdown) { background: linear-gradient(180deg,var(--bg-secondary), var(--bg-tertiary)) !important; border:1px solid var(--border-primary); box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+
+/* Dropdown link text and icon color: ensure light text for readability */
+.dropdown-custom li a,
+#switchDropdown a,
+#userDropdown a {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+}
+
+/* Slightly muted helper text inside dropdowns */
+.dropdown-custom li a .muted {
+  color: var(--text-secondary) !important;
+}
+
+/* Icons in dropdowns should use accent or white for contrast */
+.dropdown-custom li a .material-icons {
+  color: var(--accent) !important;
+  margin-right: 8px;
+}
+#exportImportModal .bg-gray-800, #exportImportModal .bg-gray-800.bg-opacity-50 { background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; }
+#exportImportModal .bg-yellow-900 { background: rgba(92,64,0,0.5); }
+#exportImportModal .text-yellow-200, #exportImportModal .text-yellow-800 { color: #f6e7c2 !important; }
+#exportImportModal a.inline-flex { color: var(--text-primary) !important; }
+#toast-container div { background: rgba(255,255,255,0.06); color: var(--text-primary) !important; }
+  /* Moved asset-card styles to note toolbar partial for editor scoping */
+</style>
+<!-- Navbar inherits z-index from header container (950) -->
+<nav class="bg-gray-900 text-white w-full shadow-lg">
+  <div class="w-full px-6">
+    <div class="flex justify-between items-center h-16">
+      <!-- Brand -->
+      <a class="text-xl font-semibold text-white hover:text-gray-200 no-underline flex items-center" href="{{ url_for('folders.view_folder', folder_id=current_folder_id or current_user.folders[0].id) }}">
+        <i class="material-icons mr-2">folder</i>
+        Hi {{ current_user.username }}
+        {%- if current_user.user_type %}
+          <span class="ml-2 text-gray-300 text-xs font-medium uppercase px-2 py-0.5 rounded" title="{{ current_user.user_type }}">{{ current_user.user_type|capitalize }}</span>
+        {%- endif %}
+        , welcome to MioSpace
+      </a>
+      
+      <!-- Navigation Items -->
+      <div class="flex items-center space-x-4">
+
+        <!-- TelemetryPanel: Oscilloscope-style diagnostic display -->
+        {% include 'p2/telemetry_panel_partial.html' %}
+
+        <!-- Switch To Dropdown -->
+        <div class="relative dropdown">
+          <button id="switchBtn" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200 flex items-center">
+            Switch to
+            <i class="material-icons ml-1 text-sm">arrow_drop_down</i>
+          </button>
+          <ul id="switchDropdown" class="absolute right-0 top-full mt-1 w-48 dropdown-custom hidden z-50">
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('core_blueprint.landing') }}">
+              <i class="material-icons mr-2 text-sm">home</i>Home
+            </a></li>
+
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p3_bp.chatbot') }}">
+              <i class="material-icons mr-2 text-sm">chat</i>MioChat
+            </a></li>
+
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p1_bp.product1') }}">
+              <i class="material-icons mr-2 text-sm">calculate</i>MioCalc
+            </a></li>
+
+          </ul>
+        </div>
+
+        <!-- User Dropdown -->
+        <div class="relative dropdown">
+          <button id="userBtn" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200 flex items-center" aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown">
+            User
+            <i class="material-icons ml-1 text-sm">arrow_drop_down</i>
+          </button>
+          <!-- Anchor user dropdown to the right side so it opens leftwards near screen edges.
+               Add 'dropdown-menu-end' so Popper (if present) uses bottom-end placement and avoids overflow. -->
+          <ul id="userDropdown" class="absolute right-0 top-full mt-1 w-48 dropdown-custom hidden z-50 dropdown-menu-end" role="menu" aria-labelledby="userBtn">
+            <li id="userStorageItem"><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="#" onclick="event.preventDefault();">
+              <i class="material-icons mr-2 text-sm">storage</i>
+              {% set used_mb = (current_user.total_data_size or 0) / (1024 * 1024) %}
+              {% if current_user.user_type == 'guest' %}
+                {% set remaining_mb = 50 - used_mb %}
+                <span id="storageText">Used/Remaining: {{ "%.1f"|format(used_mb) }} MB / {{ "%.1f"|format(remaining_mb if remaining_mb > 0 else 0) }} MB</span>
+              {% else %}
+                <span id="storageText">Used: {{ "%.1f"|format(used_mb) }} MB (Unlimited)</span>
+              {% endif %}
+            </a></li>
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.assets') }}">
+              <i class="material-icons mr-2 text-sm">photo</i>Picture Assets
+            </a></li>
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.profile') }}">
+              <i class="material-icons mr-2 text-sm">person</i>Profile
+            </a></li>
+
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openExportImportModal()">
+              <i class="material-icons mr-2 text-sm">import_export</i>Export/Import Data
+            </a></li>
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openSettingsModal()">
+              <i class="material-icons mr-2 text-sm">settings</i>Settings
+            </a></li>
+            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.logout') }}">
+              <i class="material-icons mr-2 text-sm">logout</i>Logout
+            </a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Storage status for guest users is shown inside the User dropdown and updated dynamically via JS -->
+
+<script>
+// Poll the server for storage usage and update the User dropdown text.
+// Also update when the page becomes visible again.
+function formatMB(bytes) {
+  return (bytes / (1024 * 1024)).toFixed(1);
+}
+
+async function updateStorageText() {
+  try {
+    const resp = await fetch('{{ url_for("p2_bp.storage_status") }}', { credentials: 'same-origin' });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const used = Number(data.used_bytes || 0);
+    const total = (typeof data.total_bytes === 'number') ? data.total_bytes : null;
+    const remaining = (typeof data.remaining_bytes === 'number') ? data.remaining_bytes : (total !== null ? total - used : null);
+    const usedMB = formatMB(used);
+    let text;
+    if (total !== null) {
+      const remainingMB = formatMB(Math.max(remaining || 0, 0));
+      text = `Used/Remaining: ${usedMB} MB / ${remainingMB} MB`;
+    } else {
+      text = `Used: ${usedMB} MB (Unlimited)`;
+    }
+    const el = document.getElementById('storageText');
+    if (el) {
+      el.textContent = text;
+    }
+  } catch (e) {
+    // silent fail
+    console.error('Failed to update storage text', e);
+  }
+}
+
+// Poll every 30 seconds (reduced from 8s to minimize server load)
+setInterval(updateStorageText, 30000);
+// Update on visibility change (when user returns to tab)
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) updateStorageText();
+});
+
+// Initial call after DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+  updateStorageText();
+});
+</script>
+
+<!-- Reparent navbar dropdowns to document.body when opened to avoid clipping behind other UI elements -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const navbar = document.querySelector('nav');
+  if (!navbar) return;
+
+  const hasPopper = !!(window.Popper && typeof window.Popper.createPopper === 'function');
+
+  navbar.querySelectorAll('.dropdown').forEach(dropdown => {
+    const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+    const menu = dropdown.querySelector('.dropdown-menu');
+    if (!toggle || !menu) return;
+
+    let placeholder = null;
+    let popperInstance = null;
+
+    dropdown.addEventListener('show.bs.dropdown', function () {
+      placeholder = document.createElement('div');
+      placeholder.className = 'dropdown-placeholder d-none';
+      dropdown.insertBefore(placeholder, menu);
+
+      document.body.appendChild(menu);
+      menu.style.position = 'absolute';
+      menu.style.zIndex = '99999';
+
+      if (hasPopper) {
+        popperInstance = Popper.createPopper(toggle, menu, {
+          placement: (menu.classList.contains('dropdown-menu-end') ? 'bottom-end' : 'bottom-start'),
+          modifiers: [
+            { name: 'offset', options: { offset: [0, 8] } },
+            { name: 'preventOverflow', options: { boundary: document.documentElement, padding: 8 } },
+            { name: 'flip', options: { fallbackPlacements: ['top-start', 'top-end', 'bottom-start', 'bottom-end'] } },
+            { name: 'computeStyles', options: { adaptive: false } }
+          ]
+        });
+      } else {
+        const rect = toggle.getBoundingClientRect();
+        menu.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+        menu.style.left = (rect.left + window.scrollX) + 'px';
+      }
+    });
+
+    dropdown.addEventListener('hide.bs.dropdown', function () {
+      if (popperInstance) { try { popperInstance.destroy(); } catch (e) {} popperInstance = null; }
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.insertBefore(menu, placeholder);
+        placeholder.parentNode.removeChild(placeholder);
+        placeholder = null;
+      }
+      menu.style.position = '';
+      menu.style.top = '';
+      menu.style.left = '';
+      menu.style.right = '';
+      menu.style.bottom = '';
+      menu.style.zIndex = '';
+    });
+
+    dropdown.addEventListener('shown.bs.dropdown', function () {
+      if (popperInstance && typeof popperInstance.update === 'function') popperInstance.update();
+    });
+  });
+});
+
+// Note: Summernote modal theming & assets injection logic has been moved to the
+// note toolbar partial to scope behavior specifically to editor pages.
+</script>
+
+{# Flash messages: folder views include this navbar but do not extend core/base.html, so show flashes here too. #}
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div style="margin-top:70px;">
+      <div class="container px-4">
+        <div class="alert alert-warning">{{ messages[0] }}</div>
+      </div>
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Combined Export/Import Modal -->
+<div id="exportImportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center overflow-y-auto p-4" style="z-index: 12000;">
+  <div class="bg-gray rounded-lg shadow-xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto" style="background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%); backdrop-filter: blur(8px); border: 1px solid var(--border-primary);">
+    
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-4" style="border-bottom:1px solid var(--border-primary);">
+      <h5 class="text-lg font-semibold flex items-center" style="color:var(--text-primary)">
+        <i class="material-icons mr-2" style="color:var(--accent)">import_export</i> Export/Import Data
+      </h5>
+      <button type="button" style="color:var(--text-secondary)" onclick="closeExportImportModal()">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+
+    <!-- Modal Body - Scrollable -->
+    <div class="overflow-y-auto" style="max-height: calc(90vh - 120px);">
+      
+      <!-- Export Section -->
+      <div class="p-6 border-b border-gray-700">
+        <h6 class="text-white font-semibold mb-3 flex items-center">
+          <i class="material-icons mr-2 text-green-400">download</i> Export Current Folder
+        </h6>
+        
+        <!-- ZIP Backup Export -->
+        <div class="mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-md">
+          <h7 class="text-gray-200 font-medium mb-2 block">Export as Backup (ZIP)</h7>
+          <p class="text-gray-300 text-sm mb-3">
+            Download all MioNotes, MioDraws, and images from the current folder and its subfolders as a ZIP file.
+          </p>
+          
+          <!-- Warning Box -->
+          <div class="bg-yellow-900 bg-opacity-40 border border-yellow-600 rounded-md p-3 mb-3">
+            <div class="flex items-start">
+              <i class="material-icons text-yellow-400 mr-2 text-sm mt-0.5">warning</i>
+              <div>
+                <p class="text-yellow-200 text-xs">
+                  <strong>Note:</strong> These ZIP backups can be re-uploaded to restore MioNotes, MioDraws, and MioBooks. However, they are <strong>not viewable by 3rd party software</strong>. For a viewable format, use the PDF export option below.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <a href="{{ url_for('notes.export_notes') }}" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition duration-200">
+            <i class="material-icons mr-2 text-sm">folder_zip</i> Export as ZIP Backup
+          </a>
+        </div>
+
+        <!-- PDF Export -->
+        <div class="p-4 bg-gray-800 bg-opacity-50 rounded-md">
+          <h7 class="text-gray-200 font-medium mb-2 block">Download as Viewable PDF</h7>
+          <p class="text-gray-300 text-sm mb-3">
+            Export all MioNotes, MioDraws, and MioBooks from the current folder as a readable PDF file.
+          </p>
+          <a href="{{ url_for('notes.export_folder_as_pdf') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200">
+            <i class="material-icons mr-2 text-sm">picture_as_pdf</i> Download as PDF
+          </a>
+        </div>
+      </div>
+
+      <!-- Import Section -->
+      <div class="p-6">
+        <h6 class="text-white font-semibold mb-3 flex items-center">
+          <i class="material-icons mr-2 text-blue-400">upload</i> Import Data
+        </h6>
+        
+        <!-- Import Any File Subsection -->
+        <div class="mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-md">
+          <h7 class="text-gray-200 font-medium mb-2 block">Import Individual Files</h7>
+          <p class="text-gray-400 text-sm mb-3">
+            Import HTML, TXT, DOCX, XLSX, or <strong>JSONL</strong> (app-exported) files as new items in the current folder.
+          </p>
+          <div class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-md p-3 mb-3">
+            <div class="flex items-start">
+              <i class="material-icons text-blue-400 mr-2 text-sm mt-0.5">info</i>
+              <div>
+                <p class="text-blue-300 text-xs mb-1">
+                  <strong>JSONL Support:</strong> Import individual files exported from this app, including:
+                </p>
+                <ul class="text-blue-200 text-xs ml-4 list-disc">
+                  <li>Graph Workspaces (with nodes, edges, and attachments)</li>
+                  <li>MioNotes, MioDraws, MioBooks</li>
+                  <li>Infinite Whiteboards</li>
+                  <li>Markdown, Code, Todo, Diagram, Table, Blocks</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <form action="{{ url_for('notes.import_files') }}" method="post" enctype="multipart/form-data" class="inline-block">
+            <input type="hidden" name="target_folder_id" value="{{ current_folder_id }}">
+            <input type="file" name="import_files" accept=".html,.txt,.docx,.xlsx,.jsonl" multiple style="display:none;" id="importFilesInput">
+            <button type="button" class="inline-flex items-center px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition duration-200"
+                    onclick="document.getElementById('importFilesInput').click()">
+              <i class="material-icons mr-2 text-sm">attach_file</i>Select Files to Import
+            </button>
+            <button type="submit" id="importFilesSubmit" style="display:none;"></button>
+          </form>
+        </div>
+
+        <!-- Import ZIP Backup Subsection -->
+        <div class="p-4 bg-gray-800 bg-opacity-50 rounded-md">
+          <h7 class="text-gray-200 font-medium mb-2 block">Import ZIP Backup</h7>
+          <p class="text-gray-400 text-sm mb-3">
+            Import a complete backup ZIP file created by this application.
+          </p>
+          
+          <form action="{{ url_for('notes.import_notes') }}" method="post" enctype="multipart/form-data" id="importForm">
+            <input type="hidden" name="target_folder_id" id="target_folder_id" value="{{ current_folder_id }}">
+            
+            <div class="mb-4">
+              <label for="import_zip" class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                <i class="material-icons mr-1 text-sm">folder_zip</i> Select Backup File
+              </label>
+              <input type="file" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="import_zip" name="import_zip" accept=".zip" required>
+              <div class="text-xs text-gray-400 mt-1">Choose a ZIP file previously exported from this application</div>
+            </div>
+            
+            <div class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-md p-3 mb-3">
+              <div class="flex items-start">
+                <i class="material-icons text-blue-400 mr-2 text-sm mt-0.5">info</i>
+                <div>
+                  <p class="text-blue-300 text-sm mb-2">
+                    <strong>Import Location:</strong> 
+                    <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs ml-1" id="currentFolderBadge">
+                      {% if session.get('current_breadcrumb') %}
+                        {% for crumb_id, crumb_name in session.get('current_breadcrumb') %}
+                          {{ crumb_name }}{% if not loop.last %} › {% endif %}
+                        {% endfor %}
+                      {% else %}
+                        Root Folder
+                      {% endif %}
+                    </span>
+                  </p>
+                  <p class="text-blue-200 text-xs">
+                    Preserves folder hierarchy, optimizes images, imports all content with formatting.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200" id="importBtn">
+              <i class="material-icons mr-1 text-sm">upload</i> Import ZIP Backup
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+/* Carbon Teal dropdowns for switch/user menus */
+.dropdown-custom {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+  padding: 6px 4px;
+  z-index: 11000; /* ensure dropdowns float above sticky bars and global nav content */
+}
+.dropdown-custom .block {
+  color: var(--text-primary) !important;
+}
+.dropdown-custom a {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  text-decoration: none;
+  border-radius: 6px;
+}
+.dropdown-custom a:hover {
+  background: var(--hover-overlay);
+}
+/* Ensure utility classes from Tailwind (e.g., text-gray-700) don't override our theme */
+.dropdown-custom a.text-gray-700,
+.dropdown-custom a.no-underline {
+  color: var(--text-primary) !important;
+}
+
+/* Style the trigger buttons to match the Carbon Teal surface */
+#switchBtn, #userBtn {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-primary);
+}
+#switchBtn:hover, #userBtn:hover {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+</style>
+
+<script>
+// Enhanced UX improvements for the import process
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle import files input (individual files like HTML, TXT, etc.)
+  const importFilesInput = document.getElementById('importFilesInput');
+  if (importFilesInput) {
+    importFilesInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        document.getElementById('importFilesSubmit').click();
+      }
+    });
+  }
+
+  const importForm = document.getElementById('importForm');
+  const importBtn = document.getElementById('importBtn');
+  const fileInput = document.getElementById('import_zip');
+  const currentFolderBadge = document.getElementById('currentFolderBadge');
+  
+  // Update current folder display
+  const currentFolderId = '{{ current_folder_id }}';
+  // console.log('Current folder ID from template:', currentFolderId);
+  
+  // Update the badge with actual folder info if needed
+  if (currentFolderId) {
+    // The breadcrumb is already rendered in the template, so we don't need to change it here
+    // console.log('Import will target folder ID:', currentFolderId);
+  }
+  
+  // Handle form submission
+  if (importForm) {
+    importForm.addEventListener('submit', function(e) {
+      // Ensure current folder ID is set
+      const targetFolderInput = document.getElementById('target_folder_id');
+      if (targetFolderInput && currentFolderId) {
+        targetFolderInput.value = currentFolderId;
+        console.log('Setting target folder ID to:', currentFolderId);
+      }
+      
+      // Show loading state
+      importBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importing...';
+      importBtn.disabled = true;
+      
+    });
+  }
+  
+  // Handle file selection
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        console.log(`Selected file: ${file.name} (${fileSize} MB)`);
+        
+        // Validate file type
+        if (!file.name.toLowerCase().endsWith('.zip')) {
+          alert('Please select a ZIP file.');
+          this.value = '';
+          return;
+        }
+        
+        // Show file info in UI (optional)
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'small text-muted mt-1';
+        fileInfo.textContent = `Selected: ${file.name} (${fileSize} MB)`;
+        
+        // Remove any existing file info
+        const existingInfo = this.parentNode.querySelector('.file-info');
+        if (existingInfo) existingInfo.remove();
+        
+        fileInfo.className += ' file-info';
+        this.parentNode.appendChild(fileInfo);
+      }
+    });
+  }
+  
+  // Reset form when modal is closed
+  const exportImportModal = document.getElementById('exportImportModal');
+  if (exportImportModal) {
+    // Note: We're using custom modal handling, not Bootstrap
+    // Reset is handled when modal closes via closeExportImportModal()
+  }
+});
+
+// Debug function to check current folder context
+function debugCurrentFolder() {
+  // console.log('Current folder ID:', '{{ current_folder_id }}');
+  // console.log('Session current_folder_id:', '{{ session.get("current_folder_id") }}');
+}
+
+// Call debug function when page loads (remove this in production)
+// debugCurrentFolder();
+
+// Navbar dropdown move/restore/popper logic
+document.addEventListener('DOMContentLoaded', function() {
+  // helper: navbar dropdown move/restore/popper logic
+  const hasPopper = !!(window.Popper && typeof window.Popper.createPopper === 'function');
+  const menuStateMap = new Map();
+
+  function moveMenuToBody(toggle, menu) {
+    if (menuStateMap.has(menu)) return;
+    if (window.MIO_DEBUG_DROPDOWNS) console.debug('moveMenuToBody called', { toggleId: toggle && toggle.id, menuId: menu && menu.id, parent: menu.parentNode && menu.parentNode.className });
+    // Heuristic: only reparent to body if parent has restrictive overflow or placement would cause clipping
+    const parent = menu.parentNode;
+    if (parent && parent.nodeType === 1) {
+      const parentStyle = window.getComputedStyle(parent);
+      const hasOverflow = ['hidden', 'auto', 'scroll'].includes(parentStyle.overflow) || ['hidden', 'auto', 'scroll'].includes(parentStyle.overflowX) || ['hidden', 'auto', 'scroll'].includes(parentStyle.overflowY);
+      const parentRect = parent.getBoundingClientRect();
+      const spaceRight = document.documentElement.clientWidth - parentRect.left;
+      let shouldReparent = hasOverflow || menu.offsetWidth > spaceRight;
+      // Ensure nav-level dropdowns are reparented since sticky bars or other
+      // high-z-index elements can overlap the navbar's dropdowns.
+      const insideNav = toggle && !!toggle.closest && !!toggle.closest('nav');
+      const insideStickyBar = parent && !!parent.closest && !!parent.closest('.folder-sticky-bar');
+      if (insideNav || insideStickyBar) {
+        // Force reparent
+        shouldReparent = true; // eslint-disable-line no-param-reassign
+      }
+      if (!shouldReparent && !menu.classList.contains('dropdown-menu-end')) {
+        // Parent allows visible overflow and there's ample space; skip reparenting to avoid DOM reflows
+        menuStateMap.set(menu, { placeholder: null, popperInstance: null, toggle });
+        return;
+      }
+      if (window.MIO_DEBUG_DROPDOWNS) console.debug('shouldReparent?', shouldReparent, { insideNav: insideNav, insideStickyBar: insideStickyBar, hasOverflow: hasOverflow, parentRectLeft: parentRect.left });
+    }
+    const placeholder = document.createElement('div');
+    placeholder.className = 'dropdown-placeholder d-none';
+    menu.parentNode.insertBefore(placeholder, menu);
+    document.body.appendChild(menu);
+    menu.style.position = 'absolute';
+    menu.style.zIndex = '99999';
+    // Preserve utility alignment classes so we can restore later
+    menu.dataset.__orig_left0 = menu.classList.contains('left-0') ? '1' : '0';
+    menu.dataset.__orig_right0 = menu.classList.contains('right-0') ? '1' : '0';
+    menu.dataset.__orig_topfull = menu.classList.contains('top-full') ? '1' : '0';
+    menu.dataset.__orig_bottomfull = menu.classList.contains('bottom-full') ? '1' : '0';
+    menu.classList.remove('left-0', 'right-0', 'top-full', 'bottom-full');
+    let popperInstance = null;
+    if (hasPopper) {
+      try {
+        popperInstance = Popper.createPopper(toggle, menu, {
+          placement: (menu.classList.contains('dropdown-menu-end') ? 'bottom-end' : 'bottom-start'),
+          modifiers: [
+            { name: 'offset', options: { offset: [0, 8] } },
+            { name: 'preventOverflow', options: { boundary: document.documentElement, padding: 8 } },
+            { name: 'flip', options: { fallbackPlacements: ['top-start', 'top-end', 'bottom-start', 'bottom-end'] } }
+            , { name: 'computeStyles', options: { adaptive: false } }
+          ]
+        });
+      } catch (e) {
+        popperInstance = null;
+      }
+    } else {
+      const rect = toggle.getBoundingClientRect();
+      const topPos = rect.bottom + window.scrollY + 8;
+      let leftPos;
+      if (menu.classList.contains('dropdown-menu-end')) {
+        leftPos = rect.right + window.scrollX - menu.offsetWidth;
+      } else {
+        leftPos = rect.left + window.scrollX;
+      }
+      const viewportLeft = window.scrollX + 8;
+      const viewportRight = window.scrollX + document.documentElement.clientWidth - 8;
+      leftPos = Math.max(viewportLeft, Math.min(leftPos, viewportRight - menu.offsetWidth));
+      let adjustedTop = topPos;
+      if (topPos + menu.offsetHeight > window.scrollY + window.innerHeight - 8) {
+        adjustedTop = rect.top + window.scrollY - menu.offsetHeight - 8;
+      }
+      menu.style.top = adjustedTop + 'px';
+      menu.style.left = leftPos + 'px';
+    }
+    menuStateMap.set(menu, { placeholder, popperInstance, toggle });
+    if (window.MIO_DEBUG_DROPDOWNS) console.debug('menuStateMap.set', { menuId: menu && menu.id, placeholder, popperInstance });
+  }
+
+  function restoreMenuFromBody(menu) {
+    const state = menuStateMap.get(menu);
+    if (!state) return;
+    const { placeholder, popperInstance } = state;
+    if (window.MIO_DEBUG_DROPDOWNS) console.debug('restoreMenuFromBody called', { menuId: menu && menu.id });
+    if (popperInstance) { try { popperInstance.destroy(); } catch (e) {} }
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(menu, placeholder);
+      placeholder.parentNode.removeChild(placeholder);
+    }
+    if (menu.dataset.__orig_left0 === '1') menu.classList.add('left-0');
+    if (menu.dataset.__orig_right0 === '1') menu.classList.add('right-0');
+    if (menu.dataset.__orig_topfull === '1') menu.classList.add('top-full');
+    if (menu.dataset.__orig_bottomfull === '1') menu.classList.add('bottom-full');
+    delete menu.dataset.__orig_left0;
+    delete menu.dataset.__orig_right0;
+    delete menu.dataset.__orig_topfull;
+    delete menu.dataset.__orig_bottomfull;
+    menu.style.position = '';
+    menu.style.top = '';
+    menu.style.left = '';
+    menu.style.right = '';
+    menu.style.bottom = '';
+    menu.style.zIndex = '';
+    menuStateMap.delete(menu);
+  }
+
+  // Navbar dropdowns
+  const dropdowns = [
+    { btn: 'switchBtn', dropdown: 'switchDropdown' },
+    { btn: 'userBtn', dropdown: 'userDropdown' }
+  ];
+  
+  dropdowns.forEach(({ btn, dropdown }) => {
+    const button = document.getElementById(btn);
+    const menu = document.getElementById(dropdown);
+    
+    if (button && menu) {
+      button.setAttribute('aria-expanded','false');
+      button.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+        const isOpen = !menu.classList.contains('hidden');
+        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (isOpen) {
+          moveMenuToBody(button, menu);
+        } else {
+          restoreMenuFromBody(menu);
+        }
+        // Close other dropdowns
+        closeAllDropdowns([dropdown]);
+      });
+    }
+  });
+  
+  // Close all dropdowns when clicking outside
+  document.addEventListener('click', function() {
+    closeAllDropdowns();
+  });
+  
+  // Make closeAllDropdowns globally accessible for FAB partial
+  window.closeAllDropdowns = function(except = []) {
+    const allDropdowns = ['switchDropdown', 'userDropdown', 'createDropdown'];
+    allDropdowns.forEach(id => {
+      if (!except.includes(id)) {
+        const dropdown = document.getElementById(id);
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+          const btnId = id.replace('Dropdown','Btn');
+          const btn = document.getElementById(btnId);
+          if (btn) btn.setAttribute('aria-expanded','false');
+          try { if (typeof restoreMenuFromBody === 'function') restoreMenuFromBody(dropdown); } catch (e) {}
+        }
+      }
+    });
+  }
+});
+
+// Ensure custom nav dropdowns that toggle via CSS class do not get clipped by other stacking contexts
+document.addEventListener('DOMContentLoaded', function () {
+  const navDropdownIds = ['switchDropdown', 'userDropdown'];
+  const hasPopper = !!(window.Popper && typeof window.Popper.createPopper === 'function');
+  const menuStateMap = new Map();
+
+    function moveMenuToBody(toggle, menu) {
+    if (menuStateMap.has(menu)) return;
+    const placeholder = document.createElement('div');
+    placeholder.className = 'dropdown-placeholder d-none';
+    menu.parentNode.insertBefore(placeholder, menu);
+      document.body.appendChild(menu);
+    menu.style.position = 'absolute';
+    menu.style.zIndex = '99999';
+      // Preserve utility alignment classes so we can restore later
+      menu.dataset.__orig_left0 = menu.classList.contains('left-0') ? '1' : '0';
+      menu.dataset.__orig_right0 = menu.classList.contains('right-0') ? '1' : '0';
+      menu.dataset.__orig_topfull = menu.classList.contains('top-full') ? '1' : '0';
+      menu.dataset.__orig_bottomfull = menu.classList.contains('bottom-full') ? '1' : '0';
+      // Remove tailwind positional utilities to allow inline absolute positioning
+      menu.classList.remove('left-0', 'right-0', 'top-full', 'bottom-full');
+    let popperInstance = null;
+    if (hasPopper) {
+      try {
+        popperInstance = Popper.createPopper(toggle, menu, {
+          placement: (menu.classList.contains('dropdown-menu-end') ? 'bottom-end' : 'bottom-start'),
+          modifiers: [
+            { name: 'offset', options: { offset: [0, 8] } },
+            { name: 'preventOverflow', options: { boundary: document.body } },
+            { name: 'flip', options: { fallbackPlacements: ['top-start', 'top-end'] } }
+          ]
+        });
+      } catch (e) {
+        popperInstance = null;
+      }
+    } else {
+      // simple positioning fallback
+      const rect = toggle.getBoundingClientRect();
+      // Prefer right aligned placement for menus with 'dropdown-menu-end'
+      const topPos = rect.bottom + window.scrollY + 8;
+      let leftPos;
+      if (menu.classList.contains('dropdown-menu-end')) {
+        // Align so right edges match (right alignment): right edge of toggle -> right edge of menu
+        leftPos = rect.right + window.scrollX - menu.offsetWidth;
+      } else {
+        leftPos = rect.left + window.scrollX;
+      }
+      // Clamp within viewport so it never overflows the right/left edges
+      const viewportLeft = window.scrollX + 8;
+      const viewportRight = window.scrollX + document.documentElement.clientWidth - 8;
+      leftPos = Math.max(viewportLeft, Math.min(leftPos, viewportRight - menu.offsetWidth));
+      // If menu would overflow below the viewport, flip above toggle
+      let adjustedTop = topPos;
+      if (topPos + menu.offsetHeight > window.scrollY + window.innerHeight - 8) {
+        adjustedTop = rect.top + window.scrollY - menu.offsetHeight - 8;
+      }
+      menu.style.top = adjustedTop + 'px';
+      menu.style.left = leftPos + 'px';
+      if (window.MIO_DEBUG_DROPDOWNS) console.log('fallback position', { rect, leftPos, adjustedTop, menuWidth: menu.offsetWidth, menuHeight: menu.offsetHeight });
+    }
+    menuStateMap.set(menu, { placeholder, popperInstance, toggle });
+  }
+
+  function restoreMenuFromBody(menu) {
+    const state = menuStateMap.get(menu);
+    if (!state) return;
+    const { placeholder, popperInstance, toggle } = state;
+    if (popperInstance) { try { popperInstance.destroy(); } catch (e) {} }
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(menu, placeholder);
+      placeholder.parentNode.removeChild(placeholder);
+    }
+    // Restore original utility classes if they existed
+    if (menu.dataset.__orig_left0 === '1') menu.classList.add('left-0');
+    if (menu.dataset.__orig_right0 === '1') menu.classList.add('right-0');
+    if (menu.dataset.__orig_topfull === '1') menu.classList.add('top-full');
+    if (menu.dataset.__orig_bottomfull === '1') menu.classList.add('bottom-full');
+    // Remove transient dataset markers
+    delete menu.dataset.__orig_left0;
+    delete menu.dataset.__orig_right0;
+    delete menu.dataset.__orig_topfull;
+    delete menu.dataset.__orig_bottomfull;
+    menu.style.position = '';
+    menu.style.top = '';
+    menu.style.left = '';
+    menu.style.zIndex = '';
+    menuStateMap.delete(menu);
+  }
+
+  // MutationObserver-based navDropdowns removed to avoid overhead.
+  // We now call moveMenuToBody/restoreMenuFromBody directly in the click handlers above.
+});
+
+// Function to open combined export/import modal
+function openExportImportModal() {
+  const modal = document.getElementById('exportImportModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+}
+
+// Function to close combined export/import modal
+function closeExportImportModal() {
+  const modal = document.getElementById('exportImportModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    
+    // Reset forms
+    const importForm = document.getElementById('importForm');
+    if (importForm) importForm.reset();
+    
+    const importBtn = document.getElementById('importBtn');
+    if (importBtn) {
+      importBtn.innerHTML = '<i class="material-icons mr-1 text-sm">upload</i> Import ZIP Backup';
+      importBtn.disabled = false;
+    }
+    
+    // Remove any file info messages
+    const fileInfos = document.querySelectorAll('.file-info');
+    fileInfos.forEach(info => info.remove());
+  }
+}
+
+// Function to open settings modal
+function openSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+}
+
+// Function to close settings modal
+function closeSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
+
+</script>
+
+<!-- TelemetryPanel JavaScript -->
+<script src="{{ url_for('static', filename='js/telemetry_panel.js') }}"></script>

@@ -1,0 +1,1450 @@
+/* folder_view.css - Dedicated CSS for folder view page */
+
+/* Page background: subtle teal radial highlight like register.html */
+html,body{
+    height:100%;
+    min-height:100vh;
+    margin:0;
+    padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+    color:var(--text-primary);
+    background-color:var(--bg);
+    background-image:
+        radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),
+        linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+    background-size:cover;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+    background-position:center top;
+}
+
+/* Badge container system to prevent overlap */
+.badge-container {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  max-width: calc(100% - 16px);
+  z-index: 2;
+}
+
+/* Public badge shown on items that are public */
+.public-badge {
+  background: var(--accent);
+  color: var(--white);
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 14px rgba(20,184,166,0.18);
+  white-space: nowrap;
+}
+.public-badge .material-icons { font-size: 14px; }
+
+/* Pin badge shown on items that are pinned */
+.pin-badge {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: var(--white);
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 14px rgba(245,158,11,0.25);
+  white-space: nowrap;
+}
+.pin-badge .material-icons { 
+  font-size: 14px; 
+  transform: rotate(45deg);
+}
+
+/* Type badge for file types */
+.type-badge {
+  background: var(--accent);
+  color: var(--white);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Subtype badge (for things like language) - visually connected to type badge */
+.subtype-badge {
+  background: rgba(20,184,166,0.3);
+  color: var(--white);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border: 1px solid var(--accent);
+  margin-left: -2px;
+}
+
+.path {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.breadcrumb-custom {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 8px 16px;
+  margin-bottom: 0;
+}
+
+/* Sticky top bar that holds the breadcrumb and the right-side controls (Sort/View/Help) */
+/* Now positioned inside the fixed header container, no longer individually sticky */
+.folder-sticky-bar {
+  z-index: 1045; /* keep above content and slightly below global navbar */
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  backdrop-filter: blur(6px);
+  overflow-x: auto; /* keep compact on small screens by allowing horizontal scroll */
+  overflow-y: visible; /* allow dropdowns to extend beyond the sticky bar vertically */
+}
+
+/* Make the left side (breadcrumb + action bar) take remaining space so the controls stay right aligned */
+.folder-sticky-bar > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0; /* allow overflow: hidden children to ellipsis */
+}
+
+/* Keep the control button group from shrinking below its minimum width */
+.folder-sticky-bar > .d-flex.align-items-center.ms-auto {
+  flex: 0 0 auto;
+}
+
+.folder-sticky-bar .breadcrumb-custom {
+  margin-bottom: 0;
+  white-space: nowrap; /* keep breadcrumb on one line */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure dropdowns inside the sticky bar appear above the sticky element and other content */
+.folder-sticky-bar .dropdown-menu {
+  z-index: 1060 !important;
+  position: absolute !important; /* ensure it's positioned relative to ancestor .dropdown */
+  min-width: 160px; /* ensure a reasonable width */
+}
+
+/* Ensure each dropdown's parent is positioned so the absolute menu aligns correctly */
+.folder-sticky-bar .dropdown { position: relative; }
+
+.folder-sticky-bar .d-flex.align-items-center { gap: 0.5rem; }
+
+    .breadcrumb-custom .breadcrumb-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+      content: "/";
+      color: var(--text-muted);
+      margin: 0 8px;
+      font-weight: 400;
+    }
+
+    .breadcrumb-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .breadcrumb-link:hover {
+      background: var(--hover-overlay);
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .breadcrumb-current {
+      color: var(--text-primary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+
+    .breadcrumb-custom .breadcrumb-item.active .breadcrumb-current {
+      background: var(--bg-tertiary);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+
+
+
+   .card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-primary);
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      position: relative; 
+      color: #c8cebdd7;
+      z-index: 10;
+    box-sizing: border-box;
+    overflow: hidden; /* Prevent children from overflowing and pushing layout */
+    }
+
+.card:hover {
+  background: var(--bg-quaternary);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+    /* Ensure card body doesn't clip dropdown */
+    .card-body {
+      overflow: visible !important;
+    }
+
+    /* Card titles and folder names styling */
+    .card-title {
+      color: var(--text-primary) !important;
+      font-weight: 600;
+      font-size: 0.975rem;
+    }
+
+    /* Lighter labels for static card text (MioDraw / Combined) */
+    .mio-draw-label,
+    .combined-label {
+      color: var(--white-60) !important;
+    }
+
+    .card-title a {
+      color: var(--text-primary) !important;
+      text-decoration: none;
+    }
+
+    .card-title a:hover {
+      color: var(--accent-green) !important;
+    }
+
+    .item-link {
+      color: var(--text-primary) !important;
+      text-decoration: none;
+    }
+
+    .item-link:hover {
+      color: var(--accent-green) !important;
+    }
+
+
+/* FIX: When dropdown is open, elevate the entire card */
+.card:has(.dropdown-menu.show) {
+  z-index: 1051 !important;
+  position: relative;
+}
+
+/* Alternative fix for browsers that don't support :has() */
+.card.dropdown-active {
+  z-index: 1051 !important;
+  position: relative;
+}
+
+.dropdown-menu {
+  background: var(--bg-quaternary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  min-width: 180px;
+}
+
+.dropdown-item {
+  color: var(--white);
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  border: none;
+  background: none;
+  font-size: 0.875rem;
+}
+
+.dropdown-item:hover {
+  background: var(--hover-overlay);
+  color: var(--white);
+}
+
+.dropdown-item:focus {
+  background: var(--hover-overlay);
+  color: var(--white);
+}
+
+.dropdown-item.active {
+  background: var(--accent-blue);
+  color: white;
+}
+
+/* Button styling for dropdown actions */
+.dropdown-menu .btn {
+  width: 100%;
+  margin: 2px 0;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Ensure dropdown labels and helper text are white for high contrast */
+.dropdown-menu .dropdown-header,
+.dropdown-menu .form-label,
+.dropdown-menu .form-check-label,
+.dropdown-menu label.btn,
+.dropdown-menu .text-muted,
+.dropdown-menu .muted {
+  color: var(--white) !important;
+}
+
+.dropdown-menu .btn-outline-primary {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: transparent;
+}
+
+.dropdown-menu .btn-outline-primary:hover {
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+  color: white;
+}
+
+/* Make checked .btn-check labels inside dropdown visually active (overrides global navbar .btn styles) */
+.dropdown-menu input.btn-check:checked + .btn-outline-primary,
+.dropdown-menu input.btn-check:checked + .btn-outline-primary:focus,
+.dropdown-menu input.btn-check:checked + .btn-outline-primary:hover,
+.dropdown-menu input.btn-check:active + .btn-outline-primary,
+.dropdown-menu input.btn-check:focus + .btn-outline-primary {
+  background: var(--accent-green) !important;
+  border-color: var(--accent-green) !important;
+  color: white !important;
+  box-shadow: 0 6px 18px rgba(20,184,166,0.12);
+}
+
+/* Ensure material icons inside checked button labels update color too */
+.dropdown-menu input.btn-check:checked + .btn-outline-primary .material-icons {
+  color: white !important;
+}
+
+.dropdown-menu .btn-outline-secondary {
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.dropdown-menu .btn-outline-secondary:hover {
+  background: var(--border-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.dropdown-menu .btn-outline-danger {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  background: transparent;
+}
+
+.dropdown-menu .btn-outline-danger:hover {
+  background: var(--accent-red);
+  border-color: var(--accent-red);
+  color: white;
+}
+    /* General Button Styling */
+    .btn {
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      position: relative;
+      overflow: hidden;
+      border-width: 1px;
+    }
+
+    .btn-outline-primary {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      background: transparent;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+      color: white;
+    }
+
+    .btn-outline-secondary {
+      border-color: var(--border-hover);
+      color: var(--text-secondary);
+      background: transparent;
+    }
+
+    .btn-outline-secondary:hover,
+    .btn-outline-secondary:focus {
+      background: var(--border-hover);
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+    }
+
+    /* put the dropdown button above the stretched-link overlay */
+  .dropdown .btn,
+  .dropdown-toggle {
+    position: relative;
+    z-index: 3;        /* higher than stretched-link's pseudo-element */
+  }
+
+    /* HR Styling */
+    hr {
+      border: none;
+      height: 1px;
+      background: var(--border-primary);
+      margin: 2rem 0;
+    }
+
+    /* Scrollbar styling */
+    .hide-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+      border-radius: 4px;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar-thumb {
+      background: var(--border-hover);
+      border-radius: 4px;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Content preview horizontal + vertical scrollbar colors: match vertical green accent used in note-description */
+    .content-preview::-webkit-scrollbar {
+      width: 6px;  /* vertical */
+      height: 6px; /* horizontal */
+    }
+    .content-preview::-webkit-scrollbar-track {
+      background: transparent;
+      border-radius: 6px;
+    }
+    .content-preview::-webkit-scrollbar-thumb {
+      background: var(--accent-green);
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.02); /* subtle outline for visibility */
+    }
+    .content-preview::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-green-hover);
+    }
+
+    /* Ensure nested scroll containers inside content-preview (like <pre>, tables, code blocks) also use the green scrollbars */
+    .content-preview *::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .content-preview *::-webkit-scrollbar-track {
+      background: transparent;
+      border-radius: 6px;
+    }
+    .content-preview *::-webkit-scrollbar-thumb {
+      background: var(--accent-green);
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.02);
+    }
+    .content-preview *::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-green-hover);
+    }
+
+    /* Firefox support: set scrollbar color for content-preview and children */
+    .content-preview,
+    .content-preview * {
+      scrollbar-color: var(--accent-green) transparent; /* thumb track */
+      scrollbar-width: thin;
+    }
+
+    /* If element has both hide-scrollbar + content-preview classes, prefer the green accent */
+    .content-preview.hide-scrollbar::-webkit-scrollbar-thumb,
+    .content-preview.hide-scrollbar *::-webkit-scrollbar-thumb {
+      background: var(--accent-green) !important;
+    }
+
+/* Fix dropdown z-index for fixed navbar */
+.dropdown-menu {
+  z-index: 1040 !important;
+}
+
+/* Ensure navbar dropdowns are always visible */
+.navbar .dropdown-menu {
+  z-index: 1055 !important;
+  position: absolute !important;
+}
+
+/* Enhanced Section Headers */
+.section-container {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+.section-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.section-title .material-icons {
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.count-badge {
+  background: var(--bg-quaternary);
+  color: var(--text-primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--border-primary);
+}
+
+.folders-section .section-title .material-icons { color: var(--accent); }
+.folders-section .count-badge {
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(20,184,166,0.3);
+}
+
+.notes-section .section-title .material-icons { color: var(--accent); }
+.notes-section .count-badge {
+  background: var(--accent);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  border: none;
+}
+
+.boards-section .section-title .material-icons { color: var(--accent); }
+.boards-section .count-badge {
+  background: var(--accent);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  border: none;
+}
+
+.combined-section .section-title .material-icons { color: var(--accent); }
+.combined-section .count-badge {
+  background: var(--accent);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  border: none;
+}
+
+/* File Sections - Apply green accent styling to all file types */
+.files-section .section-title .material-icons { color: var(--accent); }
+.files-section .count-badge {
+  background: var(--accent);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  border: none;
+}
+
+/* Recents Section - Distinctive Styling */
+.recents-section {
+  background: linear-gradient(135deg, 
+    rgba(20, 184, 166, 0.08) 0%, 
+    rgba(13, 148, 136, 0.12) 50%, 
+    rgba(20, 184, 166, 0.08) 100%);
+  border: 2px solid var(--accent);
+  box-shadow: 
+    0 4px 20px rgba(20, 184, 166, 0.15),
+    inset 0 1px 0 rgba(20, 184, 166, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.recents-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--accent) 20%, 
+    var(--accent-strong) 50%, 
+    var(--accent) 80%, 
+    transparent 100%);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.recents-section .section-header {
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  background: linear-gradient(90deg, 
+    rgba(20, 184, 166, 0.05) 0%, 
+    transparent 100%);
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  margin-top: -1.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.recents-section .section-title {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.35rem;
+  text-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+}
+
+.recents-section .section-title .material-icons {
+  color: var(--accent);
+  font-size: 1.75rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.9; }
+}
+
+.recents-section .count-badge {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  box-shadow: 0 3px 12px rgba(20, 184, 166, 0.4);
+  border: 2px solid var(--accent-strong);
+  padding: 0.3rem 0.85rem;
+}
+
+/* Enhanced cards within recents section */
+.recents-section .item-card {
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  transition: all 0.3s ease;
+}
+
+.recents-section .item-card:hover {
+  border-color: var(--accent);
+  box-shadow: 
+    0 8px 24px rgba(20, 184, 166, 0.2),
+    0 0 0 1px var(--accent);
+  transform: translateY(-2px);
+}
+
+/* Section-Specific Background Colors */
+.folders-section {
+  background: #16221f60;;
+}
+
+.notes-section {
+  background: #22201688;
+}
+
+.boards-section {
+  background: #22161a88;
+}
+
+.combined-section {
+  background: #1a1e2288;
+}
+
+/* Paste animation for newly inserted items */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  50% {
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animating-in {
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Quick Navigation Sidebar */
+.section-nav {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%) translateX(0);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-quaternary);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.section-nav.hidden {
+  transform: translateY(-50%) translateX(calc(100% - 20px));
+  opacity: 0.3;
+  pointer-events: auto; /* Ensure it's still hoverable when hidden */
+}
+
+.section-nav.scrolling-hidden {
+  transform: translateY(-50%) translateX(100%);
+  opacity: 0;
+  pointer-events: none; /* Disable interaction when fully hidden during scroll */
+}
+
+.nav-pill {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 20px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.nav-pill:hover {
+  background: var(--hover-overlay);
+  transform: translateX(-2px);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.nav-pill.active {
+  background: var(--accent-green);
+  color: white;
+  border-color: var(--accent-green);
+}
+
+.nav-pill .material-icons {
+  font-size: 1.1rem;
+  transition: transform 0.15s ease;
+}
+
+.nav-pill:hover .material-icons {
+  transform: scale(1.05);
+}
+
+/* Special styling for the back to top button */
+.nav-top-btn {
+  margin-top: 8px;
+  border-top: 1px solid var(--border-primary);
+  padding-top: 12px;
+}
+
+.nav-top-btn:hover {
+  background: linear-gradient(135deg, var(--blue-80) 0%, var(--emerald-80) 100%);
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  .section-nav {
+    bottom: 20px;
+    top: auto;
+    right: 10px;
+    flex-direction: row;
+    transform: translateX(0);
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .section-nav.hidden {
+    transform: translateX(calc(100% - 30px));
+  }
+
+  .section-nav.scrolling-hidden {
+    transform: translateX(100%);
+  }
+
+  .nav-pill {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    min-width: auto;
+  }
+
+  .nav-pill span {
+    display: none; /* Hide text on mobile, show only icons */
+  }
+
+  .nav-pill .material-icons {
+    font-size: 1.2rem;
+  }
+
+  .nav-top-btn {
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+    margin-left: 6px;
+    border-left: 1px solid var(--green-30);
+    padding-left: 8px;
+  }
+}
+
+/* Hide navigation sidebar on very small screens */
+@media (max-width: 480px) {
+  .section-nav {
+    display: none;
+  }
+}
+
+/* Smooth scrolling for section navigation */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Display Settings Styles */
+/* Card Size Variations */
+.content-grid[data-card-size="compact"] .card-body {
+  padding: 0.75rem !important;
+}
+
+.content-grid[data-card-size="compact"] .card-title {
+  font-size: 0.95rem !important;
+}
+
+.content-grid[data-card-size="compact"] .card-text {
+  font-size: 0.85rem !important;
+}
+
+.content-grid[data-card-size="compact"] .content-preview {
+  max-height: 100px !important;
+}
+
+.content-grid[data-card-size="large"] .card-body {
+  padding: 1.75rem !important;
+}
+
+.content-grid[data-card-size="large"] .card-title {
+  font-size: 1.35rem !important;
+}
+
+.content-grid[data-card-size="large"] .card-text {
+  font-size: 1.05rem !important;
+}
+
+.content-grid[data-card-size="large"] .content-preview {
+  max-height: 300px !important;
+}
+
+/* Normal size (default) card heights and content preview limits */
+.content-grid[data-card-size="normal"] .card {
+  /* Keep a fixed height for normal card size so long descriptions don't expand the card */
+  height: 260px; /* tunable value — normal size */
+  max-height: 260px;
+}
+.content-grid[data-card-size="normal"] .card .card-body {
+  display: flex; /* ensure flexible layout to allow inner scroll */
+  flex-direction: column;
+  overflow: hidden; /* hide overflow on the body — inner sections will scroll */
+}
+.content-grid[data-card-size="normal"] .content-preview {
+  max-height: 160px !important; /* prevents the content preview from growing unbounded */
+  overflow-y: auto;
+}
+
+/* Card height limits for compact/large sizes (keeps cards fixed) */
+.content-grid[data-card-size="compact"] .card {
+  height: 120px; /* compact card — smallest */
+  max-height: 120px;
+}
+.content-grid[data-card-size="compact"] .card .card-body {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.content-grid[data-card-size="compact"] .content-preview {
+  max-height: 64px !important;
+  overflow-y: auto;
+}
+
+.content-grid[data-card-size="large"] .card {
+  height: 420px; /* larger maximum for rich previews */
+  max-height: 420px;
+}
+.content-grid[data-card-size="large"] .card .card-body {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* Ensure note/board/folder description blocks constrain and scroll inside their area */
+.content-grid[data-card-size="compact"] .note-description,
+.content-grid[data-card-size="compact"] .folder-description,
+.content-grid[data-card-size="compact"] .board-description {
+  max-height: 0.001px; /* hidden by compact */
+  overflow: hidden;
+}
+.content-grid[data-card-size="normal"] .folder-description,
+.content-grid[data-card-size="normal"] .note-description,
+.content-grid[data-card-size="normal"] .board-description {
+  max-height: 4.5em; /* reasonable default height */
+  overflow-y: auto;
+}
+.content-grid[data-card-size="large"] .folder-description,
+.content-grid[data-card-size="large"] .note-description,
+.content-grid[data-card-size="large"] .board-description {
+  max-height: 8em; /* show longer descriptions in large mode */
+  overflow-y: auto;
+}
+
+/* Yet keep list view unaffected and inline functionality consistent */
+.content-grid[data-view-mode="list"] .card {
+  height: auto !important;
+  max-height: none !important;
+}
+.content-grid[data-view-mode="list"] .content-preview {
+  display: none !important; /* descriptions handled inline in list view */
+}
+
+/* Todo preview styling */
+.todo-preview {
+  padding: 0.5rem;
+  border-radius: 6px;
+  /* no green left border for todo previews (clean card look) */
+  border-left: none;
+}
+
+.todo-items-preview {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.todo-preview .material-icons {
+  flex-shrink: 0;
+}
+
+/* List View Mode */
+.content-grid[data-view-mode="list"] {
+  display: none !important; /* Hide card grid completely in list mode */
+}
+
+.content-grid[data-view-mode="list"] > .col,
+.content-grid[data-view-mode="list"] > .col-md-2,
+.content-grid[data-view-mode="list"] > .col-lg-3,
+.content-grid[data-view-mode="list"] > .col-lg-4,
+.content-grid[data-view-mode="list"] > .col-lg-5,
+.content-grid[data-view-mode="list"] > .col-lg-6 {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+.content-grid[data-view-mode="list"] .card {
+  margin-bottom: 0.75rem;
+}
+
+.content-grid[data-view-mode="list"] .card-body {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 1rem 1.25rem !important;
+}
+
+.content-grid[data-view-mode="list"] .card-title {
+  margin-bottom: 0 !important;
+  flex: 1;
+}
+
+.content-grid[data-view-mode="list"] .content-preview {
+  display: none !important;
+}
+
+.content-grid[data-view-mode="list"] .dropdown {
+  margin-left: auto;
+}
+
+/* Folder Description Styling */
+/* Shared description styling for folders, notes, and boards */
+.folder-description,
+.note-description,
+.board-description {
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  background: rgba(20, 184, 166, 0.08);
+  border-left: 2px solid var(--accent-green);
+  border-radius: 4px;
+  max-height: 4.5em; /* ~3 lines */
+  overflow-y: auto;
+}
+
+.folder-description::-webkit-scrollbar,
+.note-description::-webkit-scrollbar,
+.board-description::-webkit-scrollbar {
+  width: 4px;
+}
+
+.folder-description::-webkit-scrollbar-track,
+.note-description::-webkit-scrollbar-track,
+.board-description::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.folder-description::-webkit-scrollbar-thumb,
+.note-description::-webkit-scrollbar-thumb,
+.board-description::-webkit-scrollbar-thumb {
+  background: var(--accent-green);
+  border-radius: 2px;
+}
+
+/* Table View Styling - Carbon Black Theme */
+.table-view-container {
+  margin-bottom: 2rem;
+}
+
+.detail-table {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+.detail-table thead {
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-primary);
+}
+
+.detail-table thead th {
+  border: none;
+  padding: 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.detail-table thead th:first-child {
+  border-top-left-radius: 8px;
+}
+
+.detail-table thead th:last-child {
+  border-top-right-radius: 8px;
+}
+
+.detail-table tbody tr {
+  border-bottom: 1px solid var(--border-primary);
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  background: var(--card);
+}
+
+.detail-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.detail-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+.detail-table tbody tr:hover {
+  background: var(--hover-overlay);
+}
+
+.detail-table tbody tr:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.detail-table tbody td {
+  padding: 1rem;
+  vertical-align: middle;
+  border: none;
+  color: var(--text-primary);
+}
+
+.detail-table .item-link {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.detail-table .item-link:hover {
+  color: var(--accent);
+}
+
+.detail-table .text-muted {
+  color: var(--text-secondary) !important;
+}
+
+.detail-table .badge {
+  background: var(--accent) !important;
+  color: var(--white) !important;
+}
+
+.calculate-size-btn {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+}
+
+.calculate-size-btn:hover {
+  background: var(--hover-overlay);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.calculate-size-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.table-responsive {
+  border-radius: 8px;
+  overflow-x: auto;
+  background: var(--card);
+}
+
+.folder-description::-webkit-scrollbar-thumb:hover,
+.note-description::-webkit-scrollbar-thumb:hover,
+.board-description::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-green-hover);
+}
+
+.folder-description span,
+.note-description span,
+.board-description span {
+  display: block;
+  word-wrap: break-word;
+  color: rgba(255, 255, 255, 0.9) !important; /* Lighter text for dark theme */
+  line-height: 1.5;
+}
+
+/* Compact card size: hide descriptions to save space */
+.content-grid[data-card-size="compact"] .folder-description,
+.content-grid[data-card-size="compact"] .note-description,
+.content-grid[data-card-size="compact"] .board-description {
+  display: none !important;
+}
+
+/* List view: make descriptions inline and shorter */
+.content-grid[data-view-mode="list"] .folder-description,
+.content-grid[data-view-mode="list"] .note-description,
+.content-grid[data-view-mode="list"] .board-description {
+  margin-left: 1rem;
+  margin-top: 0;
+  padding: 0.25rem 0.5rem;
+  max-width: 300px;
+  max-height: 2em;
+  overflow-y: auto;
+}
+
+.content-grid[data-view-mode="list"] .folder-description span,
+.content-grid[data-view-mode="list"] .note-description span,
+.content-grid[data-view-mode="list"] .board-description span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive column adjustments */
+@media (max-width: 768px) {
+  /* On mobile, content-grid columns are reduced via specific grid classes below */
+  .content-grid[data-view-mode="grid"].row-cols-lg-5,
+  .content-grid[data-view-mode="grid"].row-cols-lg-6 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Main Content Area Adjustment for Folder Browser */
+.main-content-with-sidebar {
+  margin-left: 280px;
+  transition: margin-left 0.3s ease;
+}
+
+.main-content-with-sidebar.sidebar-collapsed {
+  margin-left: 0;
+}
+
+@media (max-width: 768px) {
+  .main-content-with-sidebar {
+    margin-left: 0 !important;
+  }
+}
+/* Action bar icon-only button styles (used only for the floating action bar) */
+.action-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.action-btn .material-icons {
+  font-size: 16px;
+  line-height: 1;
+}
+.action-btn[disabled] {
+  opacity: 0.5 !important;
+  pointer-events: none;
+}
+/* Make action buttons follow Carbon Teal accents */
+.action-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.04);
+  color: var(--text-primary);
+}
+.action-btn:hover {
+  background: var(--hover-overlay);
+  border-color: var(--hover-border);
+  color: var(--text-primary);
+}
+/* Ensure the action bar inner box includes padding/border in its width so JS width calc doesn't overflow */
+#action-bar-inner {
+  box-sizing: border-box;
+  padding: 8px !important; /* align with JS sizing assumptions */
+  overflow: hidden; /* keep icons inside if content is tight */
+}
+
+/* Layout for action buttons container to avoid overflow */
+/* Layout for action buttons container: allow wrapping into multiple rows when space is limited */
+#action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap; /* allow 2 rows */
+  max-width: 100%;
+  overflow: visible; /* allow visible wrapped rows inside the card */
+  align-content: center;
+  /* allow the action-buttons to take available space but not push the clear button off
+     it will wrap when there's not enough horizontal room */
+  flex: 1 1 auto;
+}
+
+/* Ensure each action button stays within the bar and has fixed size */
+.action-btn {
+  flex: 0 0 36px;
+  margin: 0;
+  min-width: 36px;
+  height: 36px;
+}
+
+/* Context Menu Styles */
+.context-menu {
+  background: var(--bg-quaternary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  min-width: 160px;
+  padding: 4px;
+}
+
+.context-menu-item {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+  margin: 2px 0;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-menu-item:hover {
+  background-color: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+/* Submenu styles */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu .submenu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: var(--bg-quaternary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  min-width: 150px;
+  padding: 4px;
+  margin-left: 4px;
+  z-index: 1001;
+}
+
+.dropdown-submenu:hover .submenu {
+  display: block;
+}
+
+/* Override Bootstrap dropdown-item styles for context menu */
+.context-menu .list-group-item {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+  margin: 2px 0;
+  font-size: 0.875rem;
+}
+
+.context-menu .list-group-item:hover {
+  background-color: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+/* Override additional dropdown styles */
+.dropdown-item.active {
+  background-color: var(--accent-blue) !important;
+  color: white !important;
+}
+
+/* Form controls in dropdowns */
+.dropdown-menu .form-control {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  border-radius: 6px;
+}
+
+.dropdown-menu .form-control:focus {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-green);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.25);
+}
+
+.dropdown-menu .form-select {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  border-radius: 6px;
+}
+
+.dropdown-menu .form-select:focus {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-green);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.25);
+}
+
+/* Modal styling */
+.modal-content {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-primary) !important;
+  color: var(--text-primary);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-primary);
+}
+
+.modal-title {
+  color: var(--text-primary);
+}
+
+/* ============================================================================ */
+/* THUMBNAIL STYLES FOR INFINITE WHITEBOARD CARDS */
+/* ============================================================================ */
+
+.card-thumbnail-container {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  background: rgba(10, 10, 11, 0.8);
+  border-bottom: 1px solid rgba(20, 184, 166, 0.2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.item-card:hover .card-thumbnail {
+  transform: scale(1.05);
+}
+
+.card-thumbnail-fallback {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(18, 21, 22, 0.95) 0%, rgba(20, 184, 166, 0.1) 100%);
+}

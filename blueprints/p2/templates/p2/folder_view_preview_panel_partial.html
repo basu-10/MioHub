@@ -1,0 +1,2032 @@
+<!-- folder_view_preview_panel_partial.html -->
+<!-- Preview Panel - Shows file/folder details and preview on single click -->
+<div id="preview-panel-handle" class="preview-panel-handle" role="button" aria-expanded="false" aria-controls="preview-panel" title="Show preview">
+  <i class="material-icons">chevron_left</i>
+</div>
+
+<div id="preview-panel" class="preview-panel collapsed">
+  <div class="preview-header">
+    <div class="preview-title-section">
+      <i class="material-icons preview-icon" id="preview-icon">description</i>
+      <h3 id="preview-title" class="preview-title">Select an item</h3>
+    </div>
+  </div>
+  
+  <div class="preview-content">
+    <!-- Metadata Section -->
+    <div class="preview-section" id="preview-metadata">
+      <div class="preview-metadata-grid">
+        <div class="metadata-item">
+          <span class="metadata-label">Type</span>
+          <span class="metadata-value" id="preview-type">—</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Created</span>
+          <span class="metadata-value" id="preview-created">—</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Modified</span>
+          <span class="metadata-value" id="preview-modified">—</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Size</span>
+          <span class="metadata-value" id="preview-size">—</span>
+        </div>
+      </div>
+      
+      <!-- Description -->
+      <div class="preview-description" id="preview-description-container" style="display: none;">
+        <div class="metadata-label">Description</div>
+        <p id="preview-description" class="description-text">—</p>
+      </div>
+      
+      <!-- Badges -->
+      <div class="preview-badges" id="preview-badges-container" style="display: none;">
+        <span class="preview-badge public-badge" id="preview-public-badge" style="display: none;">
+          <i class="material-icons">public</i>
+          Public
+        </span>
+        <span class="preview-badge pin-badge" id="preview-pin-badge" style="display: none;">
+          <i class="material-icons">push_pin</i>
+          Pinned
+        </span>
+      </div>
+    </div>
+    
+    <!-- Preview Section -->
+    <div class="preview-section" id="preview-content-section">
+      <div class="preview-label">Preview</div>
+      <div class="preview-content-area" id="preview-content-area">
+        <div class="preview-placeholder">
+          <i class="material-icons">visibility</i>
+          <p>Select an item to preview</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Actions Section -->
+    <div class="preview-section preview-actions">
+      <button class="preview-action-btn primary" onclick="openPreviewedItem()" id="preview-open-btn">
+        <i class="material-icons">open_in_new</i>
+        Open
+      </button>
+      <button class="preview-action-btn" onclick="regenerateThumbnail()" id="preview-regenerate-thumbnail-btn" style="display: none;" title="Regenerate preview thumbnail">
+        <i class="material-icons">refresh</i>
+        <span>Refresh Preview</span>
+      </button>
+      <button class="preview-action-btn" onclick="togglePinPreviewedItem()" id="preview-pin-btn">
+        <i class="material-icons">push_pin</i>
+        <span id="preview-pin-text">Pin</span>
+      </button>
+      <button class="preview-action-btn" onclick="togglePublicPreviewedItem()" id="preview-public-btn">
+        <i class="material-icons">public</i>
+        <span id="preview-public-text">Public</span>
+      </button>
+      <button class="preview-action-btn" onclick="renamePreviewedItem()" id="preview-rename-btn">
+        <i class="material-icons">edit</i>
+        Rename
+      </button>
+      <button class="preview-action-btn" onclick="duplicatePreviewedItem()" id="preview-duplicate-btn">
+        <i class="material-icons">content_copy</i>
+        Duplicate
+      </button>
+      <button class="preview-action-btn" onclick="downloadPreviewedItem()" id="preview-download-btn">
+        <i class="material-icons">download</i>
+        Download
+      </button>
+      <button class="preview-action-btn" onclick="sendPreviewedItem()" id="preview-send-btn">
+        <i class="material-icons">send</i>
+        Send
+      </button>
+      <button class="preview-action-btn danger" onclick="deletePreviewedItem()" id="preview-delete-btn">
+        <i class="material-icons">delete</i>
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Preview Panel Styles */
+  :root {
+    --preview-panel-width: 400px;
+  }
+
+.preview-panel {
+  position: fixed;
+  top: 120px; /* Below fixed header */
+  right: 0;
+  width: var(--preview-panel-width);
+  height: calc(100vh - 120px);
+  background: var(--card, #121516);
+  border-left: 1px solid rgba(20, 184, 166, 0.2);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  z-index: 900;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-panel.collapsed {
+  transform: translateX(100%);
+}
+
+/* Adjust main content when preview is open */
+.main-content-with-preview {
+  margin-right: var(--preview-panel-width);
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Preview Handle */
+.preview-panel-handle {
+  position: fixed;
+  top: 160px;
+  right: 0;
+  width: 44px;
+  height: 84px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 950;
+  transition: right 0.3s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.25);
+}
+
+.preview-panel-handle .material-icons {
+  font-size: 24px;
+  transition: transform 0.2s ease;
+}
+
+.preview-panel-handle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.preview-panel-handle.panel-open {
+  right: var(--preview-panel-width);
+  background: linear-gradient(90deg, var(--accent, #14b8a6) 0%, var(--accent-strong, #0d9488) 100%);
+  color: var(--white);
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35);
+}
+
+.preview-panel-handle.panel-open .material-icons {
+  transform: translateX(-2px);
+}
+
+/* Header */
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(20, 184, 166, 0.15);
+  background: rgba(20, 184, 166, 0.05);
+}
+
+.preview-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-icon {
+  font-size: 24px;
+  color: var(--accent, #14b8a6);
+  flex-shrink: 0;
+}
+
+.preview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--white, #ECFFFF);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Content Area */
+.preview-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+}
+
+.preview-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.preview-content::-webkit-scrollbar-track {
+  background: rgba(20, 184, 166, 0.05);
+}
+
+.preview-content::-webkit-scrollbar-thumb {
+  background: rgba(20, 184, 166, 0.2);
+  border-radius: 4px;
+}
+
+.preview-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(20, 184, 166, 0.3);
+}
+
+/* Sections */
+.preview-section {
+  margin-bottom: 24px;
+}
+
+.preview-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted, #9aa8ad);
+  margin-bottom: 12px;
+}
+
+/* Metadata Grid */
+.preview-metadata-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.metadata-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metadata-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted, #9aa8ad);
+}
+
+.metadata-value {
+  font-size: 13px;
+  color: var(--white, #ECFFFF);
+  word-break: break-word;
+}
+
+/* Description */
+.preview-description {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(20, 184, 166, 0.05);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent, #14b8a6);
+}
+
+.description-text {
+  font-size: 13px;
+  color: var(--white, #ECFFFF);
+  margin: 8px 0 0 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Badges */
+.preview-badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(20, 184, 166, 0.15);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent, #14b8a6);
+}
+
+.preview-badge .material-icons {
+  font-size: 14px;
+}
+
+/* Preview Content Area */
+.preview-content-area {
+  background: rgba(10, 10, 11, 0.5);
+  border: 1px solid rgba(20, 184, 166, 0.15);
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 200px;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  color: var(--muted, #9aa8ad);
+}
+
+.preview-placeholder .material-icons {
+  font-size: 48px;
+}
+
+/* Thumbnail styles for preview panel */
+.preview-thumbnail-container {
+  width: 100%;
+  max-height: 400px;
+  background: rgba(10, 10, 11, 0.8);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+}
+
+.preview-thumbnail-image {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  display: block;
+}
+
+.preview-thumbnail-container:hover .preview-thumbnail-image {
+  cursor: pointer;
+  opacity: 0.95;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.preview-placeholder p {
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Preview for different content types */
+.preview-text-content {
+  font-size: 13px;
+  color: var(--white, #ECFFFF);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.preview-markdown-content {
+  font-size: 13px;
+  color: var(--white, #ECFFFF);
+  line-height: 1.8;
+}
+
+.preview-markdown-content h1,
+.preview-markdown-content h2,
+.preview-markdown-content h3 {
+  color: var(--accent, #14b8a6);
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.preview-markdown-content code {
+  background: rgba(20, 184, 166, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+}
+
+.preview-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+}
+
+.preview-folder-content {
+  font-size: 13px;
+  color: var(--muted, #9aa8ad);
+}
+
+.preview-folder-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(20, 184, 166, 0.1);
+}
+
+.preview-folder-item:last-child {
+  border-bottom: none;
+}
+
+.preview-folder-item .material-icons {
+  font-size: 18px;
+  color: var(--accent, #14b8a6);
+}
+
+/* Actions */
+.preview-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(20, 184, 166, 0.15);
+}
+
+.preview-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  border-radius: 6px;
+  color: var(--accent, #14b8a6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preview-action-btn:hover {
+  background: rgba(20, 184, 166, 0.2);
+  border-color: var(--accent, #14b8a6);
+  transform: translateY(-1px);
+}
+
+.preview-action-btn:active {
+  transform: translateY(0);
+}
+
+.preview-action-btn.primary {
+  background: var(--accent, #14b8a6);
+  color: white;
+  grid-column: 1 / -1;
+}
+
+.preview-action-btn.primary:hover {
+  background: var(--accent-strong, #0d9488);
+}
+
+.preview-action-btn.danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  grid-column: 1 / -1;
+}
+
+.preview-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+}
+
+.preview-action-btn .material-icons {
+  font-size: 18px;
+}
+
+/* Loading state */
+.preview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  color: var(--muted, #9aa8ad);
+}
+
+.preview-loading .material-icons {
+  font-size: 32px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .preview-panel {
+    --preview-panel-width: 320px;
+    width: var(--preview-panel-width);
+  }
+  
+  .main-content-with-preview {
+    margin-right: var(--preview-panel-width);
+  }
+}
+
+@media (max-width: 768px) {
+  .preview-panel {
+    --preview-panel-width: 100%;
+    width: 100%;
+    top: 120px;
+  }
+  
+  .main-content-with-preview {
+    margin-right: 0;
+  }
+
+  .preview-panel-handle,
+  .preview-panel-handle.panel-open {
+    right: 12px;
+    top: 130px;
+  }
+}
+</style>
+
+<script>
+// Preview Panel State
+let previewedItem = null;
+const previewMetadataCache = new Map();
+const previewMetadataRequests = new Map();
+
+function syncPreviewHandleState(isOpen) {
+  const handle = document.getElementById('preview-panel-handle');
+  if (!handle) return;
+  handle.classList.toggle('panel-open', isOpen);
+  handle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  handle.setAttribute('title', isOpen ? 'Hide preview' : 'Show preview');
+  const icon = handle.querySelector('.material-icons');
+  if (icon) {
+    icon.textContent = isOpen ? 'chevron_right' : 'chevron_left';
+  }
+}
+
+function setPreviewPanelState(isOpen) {
+  const panel = document.getElementById('preview-panel');
+  const mainContent = document.getElementById('mainContent');
+  if (!panel) {
+    console.error('[PREVIEW] Preview panel element not found');
+    return;
+  }
+
+  panel.classList.toggle('collapsed', !isOpen);
+  if (mainContent) {
+    mainContent.classList.toggle('main-content-with-preview', isOpen);
+  }
+
+  syncPreviewHandleState(isOpen);
+
+  if (!isOpen) {
+    document.querySelectorAll('.item-card, .item-row').forEach(card => {
+      card.classList.remove('previewing');
+    });
+    previewedItem = null;
+  }
+}
+
+// Open Preview Panel
+function openPreviewPanel(item) {
+  console.log('[PREVIEW] Opening preview panel for item:', item);
+  previewedItem = item;
+  setPreviewPanelState(true);
+  
+  // Update preview content
+  updatePreviewPanel(item);
+  
+  // Visual feedback on card - remove from all, then add to current
+  document.querySelectorAll('.item-card, .item-row').forEach(card => {
+    card.classList.remove('previewing');
+  });
+  if (item.card) {
+    console.log('[PREVIEW] Adding previewing class to card');
+    item.card.classList.add('previewing');
+  } else {
+    console.warn('[PREVIEW] item.card is undefined');
+  }
+}
+
+// Close Preview Panel
+function closePreviewPanel() {
+  console.log('[PREVIEW] Closing preview panel');
+  setPreviewPanelState(false);
+  console.log('[PREVIEW] Preview panel closed');
+}
+
+// Expose function immediately
+window.closePreviewPanel = closePreviewPanel;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const panel = document.getElementById('preview-panel');
+  const handle = document.getElementById('preview-panel-handle');
+  const initialOpen = panel && !panel.classList.contains('collapsed');
+  syncPreviewHandleState(Boolean(initialOpen));
+
+  if (handle) {
+    handle.addEventListener('click', () => {
+      const isOpen = panel && !panel.classList.contains('collapsed');
+      if (isOpen) {
+        closePreviewPanel();
+      } else {
+        setPreviewPanelState(true);
+      }
+    });
+  }
+});
+
+// Update Preview Panel Content
+function updatePreviewPanel(item) {
+  if (!item) {
+    console.warn('[PREVIEW] updatePreviewPanel called with null item');
+    return;
+  }
+  
+  console.log('[PREVIEW] Updating preview panel with item:', item);
+  console.log('[PREVIEW] Item card dataset:', item.card?.dataset);
+  
+  // Update icon and title
+  const iconMap = {
+    'folder': 'folder',
+    'note': 'description',
+    'board': 'dashboard',
+    'whiteboard': 'dashboard',
+    'proprietary_infinite_whiteboard': 'grid_on',
+    'markdown': 'code',
+    'todo': 'checklist',
+    'diagram': 'account_tree',
+    'table': 'table_chart',
+    'blocks': 'view_agenda',
+    'proprietary_graph': 'device_hub',
+    'book': 'menu_book',
+    'file': 'insert_drive_file'
+  };
+  
+  // Determine the actual type (handle 'file' with file-type attribute)
+  let displayType = item.type;
+  if (item.type === 'file' && item.card?.dataset.fileType) {
+    displayType = item.card.dataset.fileType;
+  }
+  
+  document.getElementById('preview-icon').textContent = iconMap[displayType] || iconMap[item.type] || 'insert_drive_file';
+  
+  const titleLink = item.card?.querySelector('.card-title a.item-link, a.item-link');
+  const title = titleLink ? titleLink.textContent.trim() : `${displayType} ${item.id}`;
+  document.getElementById('preview-title').textContent = title;
+  console.log('[PREVIEW] Title set to:', title);
+  
+  // Update metadata
+  const typeMap = {
+    'folder': 'Folder',
+    'note': 'MioNote',
+    'board': 'MioDraw',
+    'whiteboard': 'MioDraw',
+    'proprietary_infinite_whiteboard': 'Infinite Whiteboard',
+    'markdown': 'Markdown',
+    'todo': 'Todo List',
+    'diagram': 'Diagram',
+    'table': 'Table',
+    'blocks': 'Blocks',
+    'proprietary_graph': 'Graph Workspace',
+    'book': 'MioBook',
+    'file': 'File'
+  };
+  document.getElementById('preview-type').textContent = typeMap[displayType] || typeMap[item.type] || item.type;
+  
+  // Build metadata snapshot from existing dataset attributes
+  const metadataState = {
+    created: item.card?.dataset.createdAt || '',
+    modified: item.card?.dataset.lastModified || item.card?.dataset.createdAt || '',
+    size: parseSizeValue(item.card?.dataset.size)
+  };
+  
+  if (metadataState.size === null) {
+    const fileSizeSpan = item.card?.querySelector('.file-size');
+    if (fileSizeSpan) {
+      const bytes = fileSizeSpan.dataset.bytes;
+      const parsedBytes = parseSizeValue(bytes);
+      if (parsedBytes !== null) {
+        metadataState.size = parsedBytes;
+      } else {
+        const fallbackText = fileSizeSpan.textContent?.trim();
+        if (fallbackText) {
+          metadataState.size = fallbackText;
+        }
+      }
+    }
+  }
+  
+  console.log('[PREVIEW] Metadata - created:', metadataState.created || '—', 'modified:', metadataState.modified || '—', 'size:', metadataState.size ?? '—');
+  setPreviewMetadataDisplays(metadataState);
+  
+  // Description - check multiple possible sources
+  let description = '';
+  if (item.type === 'folder' || displayType === 'folder') {
+    description = item.card?.dataset.folderDescription || '';
+  } else {
+    // All files store description in file-description
+    description = item.card?.dataset.fileDescription || '';
+  }
+  
+  console.log('[PREVIEW] Description:', description);
+  
+  const descContainer = document.getElementById('preview-description-container');
+  if (description && description.trim()) {
+    document.getElementById('preview-description').textContent = description;
+    descContainer.style.display = 'block';
+  } else {
+    descContainer.style.display = 'none';
+  }
+  
+  // Public and Pin badges
+  const isPublic = item.card?.dataset.isPublic === '1' || item.card?.dataset.isPublic === 'true';
+  const isPinned = item.card?.dataset.isPinned === '1' || item.card?.dataset.isPinned === 'true';
+  
+  console.log('[PREVIEW] Flags - public:', isPublic, 'pinned:', isPinned);
+  
+  const badgesContainer = document.getElementById('preview-badges-container');
+  const publicBadge = document.getElementById('preview-public-badge');
+  const pinBadge = document.getElementById('preview-pin-badge');
+  
+  if (badgesContainer && publicBadge && pinBadge) {
+    publicBadge.style.display = isPublic ? 'flex' : 'none';
+    pinBadge.style.display = isPinned ? 'flex' : 'none';
+    badgesContainer.style.display = (isPublic || isPinned) ? 'flex' : 'none';
+  }
+  
+  // Update action button states
+  updateActionButtonStates(item);
+  maybeFetchPreviewMetadata(item, displayType, metadataState);
+  
+  // Load preview content
+  loadPreviewContent(item);
+  
+  console.log('[PREVIEW] Preview panel update complete');
+}
+
+// Helper function to format bytes
+function formatBytes(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0 B';
+  }
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const index = Math.min(Math.floor(Math.log(value) / Math.log(k)), sizes.length - 1);
+  const normalized = value / Math.pow(k, index);
+  const precision = index === 0 || normalized >= 10 ? 0 : 2;
+  return `${normalized.toFixed(precision)} ${sizes[index]}`;
+}
+
+function parseSizeValue(value) {
+  if (value === undefined || value === null || value === '' || value === '—') {
+    return null;
+  }
+  const numericValue = Number(value);
+  if (!Number.isNaN(numericValue) && numericValue >= 0) {
+    return numericValue;
+  }
+  return typeof value === 'string' ? value : null;
+}
+
+function setPreviewMetadataDisplays(metadata) {
+  const createdElem = document.getElementById('preview-created');
+  const modifiedElem = document.getElementById('preview-modified');
+  const sizeElem = document.getElementById('preview-size');
+
+  const createdText = metadata.created && metadata.created !== '—' ? formatDate(metadata.created) : '—';
+  const modifiedText = metadata.modified && metadata.modified !== '—' ? formatDate(metadata.modified) : '—';
+
+  let sizeText = '—';
+  if (typeof metadata.size === 'number' && !Number.isNaN(metadata.size)) {
+    sizeText = formatBytes(metadata.size);
+  } else if (metadata.size && metadata.size !== '—') {
+    sizeText = metadata.size;
+  }
+
+  createdElem.textContent = createdText;
+  modifiedElem.textContent = modifiedText;
+  sizeElem.textContent = sizeText;
+}
+
+function isMetadataValueMissing(value) {
+  return value === null || value === undefined || value === '' || value === '—';
+}
+
+function needsMetadataFetch(metadata) {
+  if (!metadata) {
+    return true;
+  }
+  return (
+    isMetadataValueMissing(metadata.created) ||
+    isMetadataValueMissing(metadata.modified) ||
+    isMetadataValueMissing(metadata.size)
+  );
+}
+
+function hydrateCardDatasetFromMetadata(card, data) {
+  if (!card || !data) {
+    return;
+  }
+  if (data.created_at) {
+    card.dataset.createdAt = data.created_at;
+  }
+  if (data.last_modified) {
+    card.dataset.lastModified = data.last_modified;
+  }
+  if (typeof data.size_bytes === 'number' && !Number.isNaN(data.size_bytes)) {
+    card.dataset.size = data.size_bytes;
+    const fileSizeSpan = card.querySelector('.file-size');
+    if (fileSizeSpan) {
+      fileSizeSpan.dataset.bytes = data.size_bytes;
+    }
+  }
+}
+
+function maybeFetchPreviewMetadata(item, displayType, metadata) {
+  if (!item || !needsMetadataFetch(metadata)) {
+    return;
+  }
+  const resolvedType = (displayType === 'folder' || item.type === 'folder') ? 'folder' : 'file';
+  const cacheKey = `${resolvedType}:${item.id}`;
+
+  if (previewMetadataCache.has(cacheKey)) {
+    const cached = previewMetadataCache.get(cacheKey);
+    hydrateCardDatasetFromMetadata(item.card, cached);
+    if (previewedItem && previewedItem.id === item.id && previewedItem.type === item.type) {
+      setPreviewMetadataDisplays({
+        created: cached.created_at || '',
+        modified: cached.last_modified || '',
+        size: typeof cached.size_bytes === 'number' ? cached.size_bytes : (cached.size_display || '')
+      });
+    }
+    return;
+  }
+
+  if (previewMetadataRequests.has(cacheKey)) {
+    return;
+  }
+
+  previewMetadataRequests.set(cacheKey, true);
+  const params = new URLSearchParams({ type: resolvedType, id: item.id });
+
+  fetch(`/folders/api/item_metadata?${params.toString()}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Metadata request failed with status ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(payload => {
+      previewMetadataRequests.delete(cacheKey);
+      if (!payload?.success || !payload.data) {
+        throw new Error('Metadata response missing data');
+      }
+      previewMetadataCache.set(cacheKey, payload.data);
+      hydrateCardDatasetFromMetadata(item.card, payload.data);
+      if (previewedItem && previewedItem.id === item.id && previewedItem.type === item.type) {
+        setPreviewMetadataDisplays({
+          created: payload.data.created_at || '',
+          modified: payload.data.last_modified || '',
+          size: typeof payload.data.size_bytes === 'number' ? payload.data.size_bytes : (payload.data.size_display || '')
+        });
+      }
+    })
+    .catch(error => {
+      previewMetadataRequests.delete(cacheKey);
+      console.error('[PREVIEW] Metadata fetch failed:', error);
+    });
+}
+
+// Update Action Button States
+function updateActionButtonStates(item) {
+  const isPinned = item.card?.dataset.isPinned === '1' || item.card?.dataset.isPinned === 'true';
+  const isPublic = item.card?.dataset.isPublic === '1' || item.card?.dataset.isPublic === 'true';
+  const isFolder = item.type === 'folder';
+  
+  // Pin button
+  const pinBtn = document.getElementById('preview-pin-btn');
+  const pinText = document.getElementById('preview-pin-text');
+  if (isFolder) {
+    // Folders cannot be pinned
+    pinBtn.style.display = 'none';
+  } else {
+    pinBtn.style.display = 'flex';
+    pinText.textContent = isPinned ? 'Unpin' : 'Pin';
+    if (isPinned) {
+      pinBtn.style.background = 'rgba(245,158,11,0.15)';
+      pinBtn.style.borderColor = 'rgba(245,158,11,0.3)';
+      pinBtn.style.color = '#f59e0b';
+    } else {
+      pinBtn.style.background = '';
+      pinBtn.style.borderColor = '';
+      pinBtn.style.color = '';
+    }
+  }
+  
+  // Public button
+  const publicBtn = document.getElementById('preview-public-btn');
+  const publicText = document.getElementById('preview-public-text');
+  publicText.textContent = isPublic ? 'Make Private' : 'Make Public';
+  if (isPublic) {
+    publicBtn.style.background = 'rgba(20,184,166,0.15)';
+    publicBtn.style.borderColor = 'rgba(20,184,166,0.3)';
+    publicBtn.style.color = 'var(--accent, #14b8a6)';
+  } else {
+    publicBtn.style.background = '';
+    publicBtn.style.borderColor = '';
+    publicBtn.style.color = '';
+  }
+
+  // Update Badges
+  const badgesContainer = document.getElementById('preview-badges-container');
+  const publicBadge = document.getElementById('preview-public-badge');
+  const pinBadge = document.getElementById('preview-pin-badge');
+  
+  if (badgesContainer) {
+    if (publicBadge) publicBadge.style.display = isPublic ? 'flex' : 'none';
+    if (pinBadge) pinBadge.style.display = isPinned ? 'flex' : 'none';
+    
+    // Show container if any badge is visible
+    badgesContainer.style.display = (isPublic || isPinned) ? 'flex' : 'none';
+  }
+  
+  // Regenerate thumbnail button - only for infinite whiteboards
+  const regenerateBtn = document.getElementById('preview-regenerate-thumbnail-btn');
+  const displayType = item.card?.dataset.fileType || item.type;
+  if (regenerateBtn) {
+    regenerateBtn.style.display = displayType === 'proprietary_infinite_whiteboard' ? 'flex' : 'none';
+  }
+}
+
+// Load Preview Content
+function loadPreviewContent(item) {
+  const contentArea = document.getElementById('preview-content-area');
+  const displayType = item.card?.dataset.fileType || item.type;
+  
+  // Show loading state
+  contentArea.innerHTML = '<div class="preview-loading"><i class="material-icons">hourglass_empty</i></div>';
+  
+  // Fetch preview based on type
+  if (item.type === 'folder') {
+    loadFolderPreview(item, contentArea);
+  } else if (
+    displayType === 'proprietary_note' ||
+    displayType === 'markdown' ||
+    displayType === 'code' ||
+    displayType === 'todo'
+  ) {
+    loadTextPreview(item, contentArea);
+  } else if (
+    displayType === 'proprietary_whiteboard' ||
+    displayType === 'proprietary_infinite_whiteboard'
+  ) {
+    loadBoardPreview(item, contentArea);
+  } else {
+    contentArea.innerHTML = '<div class="preview-placeholder"><i class="material-icons">visibility</i><p>Preview not available</p></div>';
+  }
+}
+
+// Load Folder Preview (show first few items)
+function loadFolderPreview(item, contentArea) {
+  const maxItems = 8;
+  fetch(`/folders/${item.id}/preview?limit=${maxItems}`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Preview request failed with status ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      const items = data?.items || [];
+      if (!items.length) {
+        contentArea.innerHTML = '<div class="preview-placeholder"><i class="material-icons">folder_open</i><p>Empty folder</p></div>';
+        return;
+      }
+
+      const iconMap = {
+        'folder': 'folder',
+        'proprietary_note': 'description',
+        'proprietary_whiteboard': 'dashboard',
+        'proprietary_blocks': 'menu_book',
+        'proprietary_infinite_whiteboard': 'gesture',
+        'markdown': 'code',
+        'code': 'code',
+        'todo': 'checklist',
+        'diagram': 'account_tree',
+        'table': 'table_chart',
+        'blocks': 'view_agenda',
+        'book': 'menu_book',
+        'file': 'insert_drive_file'
+      };
+
+      let previewHTML = '<div class="preview-folder-content">';
+      items.forEach(entry => {
+        const icon = iconMap[entry.type] || 'insert_drive_file';
+        const name = (entry.name || 'Untitled').trim();
+        previewHTML += `
+          <div class="preview-folder-item">
+            <i class="material-icons">${icon}</i>
+            <span>${name}</span>
+          </div>
+        `;
+      });
+
+      if (data.more_count) {
+        previewHTML += `<div class="preview-folder-item" style="color: var(--muted);">+ ${data.more_count} more items</div>`;
+      }
+
+      previewHTML += '</div>';
+      contentArea.innerHTML = previewHTML;
+    })
+    .catch(error => {
+      console.error('Failed to load folder preview:', error);
+      contentArea.innerHTML = '<div class="preview-placeholder"><i class="material-icons">error</i><p>Failed to load preview</p></div>';
+    });
+}
+
+// Load Text Preview (all file types with text content)
+function loadTextPreview(item, contentArea) {
+  // All file types use the unified File API
+  const url = `/p2/files/${item.id}/view`;
+  
+  fetch(url, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(response => response.text())
+  .then(html => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Try to extract content
+    let content = '';
+    const contentDiv = doc.querySelector('.note-content, .markdown-content, .file-content');
+    if (contentDiv) {
+      content = contentDiv.textContent.trim();
+    } else {
+      const textarea = doc.querySelector('textarea, .CodeMirror, .editor');
+      if (textarea) {
+        content = textarea.value || textarea.textContent || '';
+      }
+    }
+    
+    if (!content || content.length === 0) {
+      contentArea.innerHTML = '<div class="preview-placeholder"><i class="material-icons">description</i><p>No content</p></div>';
+      return;
+    }
+    
+    // Limit preview length
+    const maxLength = 500;
+    const preview = content.length > maxLength ? content.substring(0, maxLength) + '...' : content;
+    
+    contentArea.innerHTML = `<div class="preview-text-content">${escapeHtml(preview)}</div>`;
+  })
+  .catch(error => {
+    console.error('Failed to load text preview:', error);
+    contentArea.innerHTML = '<div class="preview-placeholder"><i class="material-icons">error</i><p>Failed to load preview</p></div>';
+  });
+}
+
+// Load Board Preview (show thumbnail if available)
+function loadBoardPreview(item, contentArea) {
+  console.log('[PREVIEW] Loading board preview for item:', item.id);
+  
+  // Check if item has thumbnail
+  const thumbnailUrl = item.card?.dataset.thumbnailUrl;
+  const displayType = item.card?.dataset.fileType || item.type;
+  const isInfiniteWhiteboard = displayType === 'proprietary_infinite_whiteboard';
+  
+  if (thumbnailUrl && thumbnailUrl.trim() !== '') {
+    console.log('[PREVIEW] Found cached thumbnail:', thumbnailUrl);
+    
+    contentArea.innerHTML = `
+      <div class="preview-thumbnail-container">
+        <img src="${thumbnailUrl}" 
+             alt="Whiteboard preview" 
+             class="preview-thumbnail-image"
+             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'preview-placeholder\\'><i class=\\'material-icons\\' style=\\'font-size: 64px; color: var(--accent);\\'>dashboard</i><p style=\\'margin-top: 12px;\\'>Thumbnail unavailable</p></div>';">
+      </div>
+    `;
+  } else {
+    // No thumbnail available - show placeholder
+    const icon = isInfiniteWhiteboard ? 'grid_on' : 'dashboard';
+    const label = isInfiniteWhiteboard ? 'Infinite Whiteboard' : 'Whiteboard';
+    
+    contentArea.innerHTML = `
+      <div class="preview-placeholder">
+        <i class="material-icons" style="font-size: 64px; color: var(--accent);">${icon}</i>
+        <p style="margin-top: 12px;">${label} preview</p>
+        <p style="font-size: 11px; color: var(--muted);">Click "Open" to view</p>
+        ${isInfiniteWhiteboard ? '<p style="font-size: 10px; color: var(--muted); margin-top: 8px;">💡 Thumbnails generated on manual save</p>' : ''}
+      </div>
+    `;
+  }
+}
+
+// Helper: Format Date
+function formatDate(dateString) {
+  if (!dateString || dateString === '—') return '—';
+  
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+  } catch (e) {
+    return dateString;
+  }
+}
+
+// Helper: Escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Action Handlers
+function openPreviewedItem() {
+  if (!previewedItem) return;
+  
+  const link = previewedItem.card?.querySelector('a.item-link');
+  if (link) {
+    window.location.href = link.href;
+  } else {
+    // Fallback URL construction
+    const fileType = previewedItem.card?.dataset.fileType || previewedItem.type;
+    
+    if (previewedItem.type === 'folder') {
+      window.location.href = `/folders/${previewedItem.id}`;
+    } else if (fileType === 'proprietary_blocks') {
+      window.location.href = `/p2/combined/edit/${previewedItem.id}`;
+    } else {
+      // All other file types use the unified File edit route
+      window.location.href = `/p2/files/${previewedItem.id}/edit`;
+    }
+  }
+}
+
+function renamePreviewedItem() {
+  if (!previewedItem) return;
+  
+  // Preserve the item reference before closing since closePreviewPanel clears it
+  const itemToRename = previewedItem;
+  const itemCard = itemToRename.card;
+
+  // Close preview panel to show modal
+  closePreviewPanel();
+  
+  // Wait for panel to close before opening modal
+  setTimeout(() => {
+    if (window.FolderOperations) {
+      window.FolderOperations.renameItem(itemToRename);
+    }
+  }, 300);
+}
+
+function copyPreviewedItem() {
+  if (!previewedItem) return;
+  
+  if (window.FolderOperations) {
+    window.FolderOperations.copyItem(previewedItem);
+  }
+}
+
+function sendPreviewedItem() {
+  if (!previewedItem) return;
+  
+  if (window.FolderOperations) {
+    window.FolderOperations.sendItem(previewedItem);
+  }
+}
+
+function deletePreviewedItem() {
+  if (!previewedItem) return;
+  
+  // Capture before closing because closePreviewPanel clears previewedItem
+  const itemToDelete = previewedItem;
+  const itemName = itemToDelete.card?.querySelector('.item-link')?.textContent?.trim() || `${itemToDelete.type} ${itemToDelete.id}`;
+  
+  closePreviewPanel();
+  
+  if (window.FolderOperations) {
+    window.FolderOperations.deleteItem(itemToDelete, itemName);
+  }
+}
+
+function cutPreviewedItem() {
+  if (!previewedItem) return;
+  
+  if (window.FolderOperations) {
+    window.FolderOperations.cutItem(previewedItem);
+  }
+  
+  closePreviewPanel();
+}
+
+function duplicatePreviewedItem() {
+  if (!previewedItem) return;
+  
+  const item = previewedItem;
+  const itemName = item.card?.querySelector('.item-link')?.textContent?.trim() || `${item.type} ${item.id}`;
+  
+  // Show activity
+  if (window.TelemetryPanel) {
+    window.TelemetryPanel.setActive(`Duplicating ${itemName}...`);
+  }
+  
+  // Determine the actual item type - prioritize data-file-type for File records
+  let actualType = item.type;
+  if (item.card?.dataset.fileType) {
+    // File records have data-file-type attribute with the real database type
+    actualType = item.card.dataset.fileType;
+  }
+  
+  // Map item type to appropriate duplicate endpoint
+  let duplicateUrl = null;
+  
+  if (actualType === 'folder') {
+    // Folders use copy endpoint
+    duplicateUrl = `/folders/copy/${item.id}`;
+  } else {
+    // All file types use the unified /p2/files endpoint
+    duplicateUrl = `/p2/files/${item.id}/duplicate`;
+  }
+  
+  if (!duplicateUrl) {
+    console.error('[DUPLICATE] Unknown item type:', actualType);
+    if (window.TelemetryPanel) {
+      window.TelemetryPanel.setIdle('Duplicate failed: unknown type');
+    }
+    return;
+  }
+  
+  // Get current folder ID from the page
+  const currentFolderId = window.FolderOperations ? window.FolderOperations.getCurrentFolderId() : 
+                          (localStorage.getItem('currentFolderId') || '');
+  
+  // Create form data
+  const formData = new FormData();
+  formData.append('target_folder', currentFolderId);
+  formData.append('htmx', 'true'); // Signal backend to return HTML fragment
+  
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  if (csrfToken) {
+    formData.append('csrf_token', csrfToken);
+  }
+  
+  // Perform AJAX request
+  fetch(duplicateUrl, {
+    method: 'POST',
+    body: formData,
+    headers: { 
+      'X-Requested-With': 'XMLHttpRequest',
+      'HX-Request': 'true'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Insert new item into DOM
+      if (data.new_item_html) {
+        const container = document.querySelector('.folder-items-grid');
+        if (container) {
+          container.insertAdjacentHTML('afterbegin', data.new_item_html);
+          
+          // Re-attach event listeners to the new card
+          const newCard = container.querySelector('.item-card');
+          if (newCard && window.attachCardClickListeners) {
+            window.attachCardClickListeners(newCard.querySelector('.item-body'));
+          }
+        }
+      }
+      
+      // Success notification
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle(`Duplicated ${itemName}`);
+      }
+      
+      // Refresh the page to show the new item
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } else {
+      console.error('[DUPLICATE] Failed:', data.message);
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle(`Duplicate failed: ${data.message || 'unknown error'}`);
+      }
+    }
+  })
+  .catch(error => {
+    console.error('[DUPLICATE] Error:', error);
+    if (window.TelemetryPanel) {
+      window.TelemetryPanel.setIdle('Duplicate failed');
+    }
+  });
+}
+
+function downloadPreviewedItem() {
+  if (!previewedItem) return;
+  
+  const itemName = previewedItem.card?.querySelector('.item-link')?.textContent?.trim() || `${previewedItem.type}_${previewedItem.id}`;
+  
+  // Show download format modal
+  showDownloadModal(previewedItem, itemName);
+}
+
+function showDownloadModal(item, itemName) {
+  // Special handling for infinite whiteboards - only PNG and JSONL
+  // Determine the actual type (handle 'file' with file-type attribute)
+  let displayType = item.type;
+  if (item.type === 'file' && item.card?.dataset.fileType) {
+    displayType = item.card.dataset.fileType;
+  }
+  
+  const isInfiniteWhiteboard = displayType === 'proprietary_infinite_whiteboard';
+  
+  let downloadOptionsHTML = '';
+  
+  if (isInfiniteWhiteboard) {
+    downloadOptionsHTML = `
+      <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'png')">
+        <i class="material-icons">image</i>
+        <div>
+          <strong>PNG Image</strong>
+          <small>Export entire canvas as high-quality PNG</small>
+        </div>
+      </button>
+      <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'jsonl')">
+        <i class="material-icons">data_object</i>
+        <div>
+          <strong>JSONL Dump</strong>
+          <small>Complete data dump in JSON Lines format</small>
+        </div>
+      </button>
+    `;
+  } else {
+    downloadOptionsHTML = `
+      <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'native')">
+        <i class="material-icons">insert_drive_file</i>
+        <div>
+          <strong>Native Format</strong>
+          <small>Original content format (HTML/Markdown/JSON)</small>
+        </div>
+      </button>
+      <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'pdf')">
+        <i class="material-icons">picture_as_pdf</i>
+        <div>
+          <strong>PDF Document</strong>
+          <small>Formatted PDF for printing/sharing</small>
+        </div>
+      </button>
+      <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'jsonl')">
+        <i class="material-icons">data_object</i>
+        <div>
+          <strong>JSONL Dump</strong>
+          <small>Complete data dump in JSON Lines format</small>
+        </div>
+      </button>
+    `;
+  }
+  
+  // Create modal HTML
+  const modalHTML = `
+    <div class="modal fade" id="downloadFormatModal" tabindex="-1" aria-labelledby="downloadFormatModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--card, #121516); border: 1px solid rgba(20, 184, 166, 0.2);">
+          <div class="modal-header" style="border-bottom: 1px solid rgba(20, 184, 166, 0.15);">
+            <h5 class="modal-title" id="downloadFormatModalLabel" style="color: var(--white, #ECFFFF);">
+              <i class="material-icons" style="vertical-align: middle; color: var(--accent, #14b8a6);">download</i>
+              Download "${itemName}"
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1);"></button>
+          </div>
+          <div class="modal-body" style="color: var(--white, #ECFFFF);">
+            <p style="color: var(--muted, #9aa8ad); margin-bottom: 20px;">Choose a download format:</p>
+            <div class="d-grid gap-2">
+              ${downloadOptionsHTML}
+            </div>
+          </div>
+          <div class="modal-footer" style="border-top: 1px solid rgba(20, 184, 166, 0.15);">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <style>
+      .download-format-btn {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: rgba(20, 184, 166, 0.05);
+        border: 1px solid rgba(20, 184, 166, 0.2);
+        border-radius: 8px;
+        color: var(--white, #ECFFFF);
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .download-format-btn:hover {
+        background: rgba(20, 184, 166, 0.12);
+        border-color: var(--accent, #14b8a6);
+        transform: translateX(4px);
+      }
+      .download-format-btn .material-icons {
+        font-size: 32px;
+        color: var(--accent, #14b8a6);
+      }
+      .download-format-btn strong {
+        display: block;
+        font-size: 15px;
+        margin-bottom: 4px;
+      }
+      .download-format-btn small {
+        display: block;
+        font-size: 12px;
+        color: var(--muted, #9aa8ad);
+      }
+    </style>
+  `;
+  
+  // Remove existing modal if present
+  const existingModal = document.getElementById('downloadFormatModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  // Add modal to DOM
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Show modal
+  const modal = new bootstrap.Modal(document.getElementById('downloadFormatModal'));
+  modal.show();
+  
+  // Cleanup on close
+  document.getElementById('downloadFormatModal').addEventListener('hidden.bs.modal', function() {
+    this.remove();
+  });
+}
+
+function downloadInFormat(type, id, itemName, format) {
+  // Close modal
+  const modal = bootstrap.Modal.getInstance(document.getElementById('downloadFormatModal'));
+  if (modal) modal.hide();
+  
+  // Show loading indicator
+  if (window.TelemetryPanel) {
+    window.TelemetryPanel.setActive(`Preparing ${format.toUpperCase()} download...`);
+  }
+  
+  let downloadUrl = '';
+  let filename = '';
+  
+  // Sanitize filename
+  const safeName = itemName.replace(/[^a-z0-9_\-]/gi, '_');
+  
+  if (format === 'png') {
+    // PNG export - only for infinite whiteboards
+    if (type === 'proprietary_infinite_whiteboard') {
+      // Open the infinite whiteboard in a new window/tab and trigger export
+      const exportUrl = `/infinite_boards/edit/${id}`;
+      const exportWindow = window.open(exportUrl, '_blank');
+      
+      if (exportWindow) {
+        // Wait for window to load, then trigger PNG export after content loads
+        exportWindow.addEventListener('load', function() {
+          console.log('[DOWNLOAD PNG] Window loaded, waiting for content...');
+          
+          // Poll until export function and objects are available
+          let attempts = 0;
+          const maxAttempts = 30; // 6 seconds max (200ms * 30)
+          
+          const checkAndExport = () => {
+            attempts++;
+            const hasFunction = typeof exportWindow.exportInfiniteWhiteboardAsPNG === 'function';
+            const hasObjects = exportWindow.objects && exportWindow.objects.length > 0;
+            
+            console.log(`[DOWNLOAD PNG] Attempt ${attempts}/${maxAttempts} - Function: ${hasFunction}, Objects: ${hasObjects ? exportWindow.objects.length : 0}`);
+            
+            if (hasFunction && hasObjects) {
+              console.log(`[DOWNLOAD PNG] Ready! Starting export of ${exportWindow.objects.length} objects...`);
+              exportWindow.exportInfiniteWhiteboardAsPNG();
+            } else if (attempts >= maxAttempts) {
+              console.error('[DOWNLOAD PNG] Timeout - Function:', hasFunction, 'Objects:', hasObjects);
+              alert('Export timed out. The whiteboard may still be loading. Please wait a moment and try again.');
+            } else {
+              setTimeout(checkAndExport, 200); // Check every 200ms
+            }
+          };
+          
+          // Start checking after initial delay
+          setTimeout(checkAndExport, 1000);
+        });
+      }
+      
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Opening infinite whiteboard for PNG export...');
+      }
+    } else {
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('PNG export only available for infinite whiteboards');
+      }
+    }
+  } else if (format === 'native') {
+    // Native format - fetch content and download
+    if (type === 'book') {
+      // MioBook has existing download route
+      downloadUrl = `/combined/download_json/${id}`;
+      window.location.href = downloadUrl;
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Downloaded as JSON');
+      }
+    } else {
+      // Fetch content via API and create download
+      fetch(`/p2/api/files/${id}/content`)
+        .then(response => {
+          if (!response.ok) throw new Error('Failed to fetch content');
+          return response.json();
+        })
+        .then(data => {
+          let content = '';
+          let mimeType = 'text/plain';
+          
+          if (type === 'note') {
+            content = data.content_html || '';
+            filename = `${safeName}.html`;
+            mimeType = 'text/html';
+          } else if (type === 'board' || type === 'whiteboard') {
+            content = JSON.stringify(data.content_json || {}, null, 2);
+            filename = `${safeName}.json`;
+            mimeType = 'application/json';
+          } else if (type === 'markdown') {
+            content = data.content_text || '';
+            filename = `${safeName}.md`;
+            mimeType = 'text/markdown';
+          } else if (type === 'todo' || type === 'diagram' || type === 'table' || type === 'blocks') {
+            content = JSON.stringify(data.content_json || {}, null, 2);
+            filename = `${safeName}.json`;
+            mimeType = 'application/json';
+          } else {
+            // Default to text
+            content = data.content_text || data.content_html || JSON.stringify(data.content_json || {});
+            filename = `${safeName}.txt`;
+          }
+          
+          // Create blob and download
+          const blob = new Blob([content], { type: mimeType });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Downloaded as ${filename}`);
+          }
+        })
+        .catch(error => {
+          console.error('Download failed:', error);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle('Download failed');
+          }
+          alert('Failed to download file. Please try again.');
+        });
+    }
+  } else if (format === 'pdf') {
+    // PDF export - different strategies based on type
+    if (type === 'folder') {
+      // Use existing folder PDF export (creates ZIP of PDFs)
+      window.location.href = `/export_folder_as_pdf?folder_id=${id}`;
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Exporting folder as PDF...');
+      }
+    } else if (type === 'book') {
+      // MioBook has print view - open and auto-trigger print
+      const printUrl = `/combined/print_view/${id}`;
+      const printWindow = window.open(printUrl, '_blank');
+      if (printWindow) {
+        // Auto-trigger print dialog when page loads
+        printWindow.onload = function() {
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        };
+      }
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Opening print dialog...');
+      }
+    } else {
+      // For other items: fetch content and create print-optimized page
+      fetch(`/p2/api/files/${id}/content`)
+        .then(response => {
+          if (!response.ok) throw new Error('Failed to fetch content');
+          return response.json();
+        })
+        .then(data => {
+          // Create print-optimized HTML
+          let content = '';
+          if (type === 'note') {
+            content = data.content_html || '';
+          } else if (type === 'markdown') {
+            // Convert markdown to HTML (simple approach)
+            content = '<pre style="white-space: pre-wrap; font-family: monospace;">' + 
+                     (data.content_text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + 
+                     '</pre>';
+          } else if (type === 'board' || type === 'whiteboard') {
+            // For boards, just open the board view and trigger print
+            const boardUrl = `/boards/${id}`;
+            const printWindow = window.open(boardUrl, '_blank');
+            if (printWindow) {
+              printWindow.onload = function() {
+                setTimeout(() => printWindow.print(), 1000);
+              };
+            }
+            if (window.TelemetryPanel) {
+              window.TelemetryPanel.setIdle('Opening board for print...');
+            }
+            return; // Exit early
+          } else if (type === 'todo' || type === 'diagram' || type === 'table' || type === 'blocks') {
+            content = '<pre style="white-space: pre-wrap; font-family: monospace;">' + 
+                     JSON.stringify(data.content_json || {}, null, 2) + 
+                     '</pre>';
+          } else {
+            content = '<pre style="white-space: pre-wrap;">' + 
+                     (data.content_text || data.content_html || JSON.stringify(data.content_json || {})) + 
+                     '</pre>';
+          }
+          
+          // Create new window with print-optimized HTML
+          const printWindow = window.open('', '_blank');
+          if (printWindow) {
+            const title = data.title || 'Document';
+            const htmlContent = '<!DOCTYPE html>' +
+              '<html>' +
+              '<head>' +
+              '<meta charset="UTF-8">' +
+              '<title>' + title + '</title>' +
+              '<style>' +
+              '@media print { body { margin: 0; padding: 20mm; } }' +
+              'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }' +
+              'h1 { color: #1a365d; margin-bottom: 20px; }' +
+              'pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }' +
+              '</style>' +
+              '</head>' +
+              '<body>' +
+              '<h1>' + title + '</h1>' +
+              content +
+              '<script>' +
+              'window.onload = function() { setTimeout(function() { window.print(); }, 500); };' +
+              '</' + 'script>' +
+              '</body>' +
+              '</html>';
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+          }
+          
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle('Print dialog opened');
+          }
+        })
+        .catch(error => {
+          console.error('PDF export failed:', error);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle('PDF export failed');
+          }
+          alert('Failed to prepare PDF export. Please try again.');
+        });
+    }
+  } else if (format === 'jsonl') {
+    // Special case for infinite whiteboards - trigger browser-side export
+    if (type === 'proprietary_infinite_whiteboard') {
+      // Open the infinite whiteboard in a new window/tab and trigger export
+      const exportUrl = `/infinite_boards/edit/${id}`;
+      const exportWindow = window.open(exportUrl, '_blank');
+      
+      if (exportWindow) {
+        // Wait for window to load, then trigger JSONL export after content loads
+        exportWindow.addEventListener('load', function() {
+          console.log('[DOWNLOAD JSONL] Window loaded, waiting for content...');
+          
+          // Poll until export function and objects are available
+          let attempts = 0;
+          const maxAttempts = 30; // 6 seconds max (200ms * 30)
+          
+          const checkAndExport = () => {
+            attempts++;
+            const hasFunction = typeof exportWindow.exportInfiniteWhiteboardAsJSONL === 'function';
+            const hasObjects = exportWindow.objects && exportWindow.objects.length > 0;
+            
+            console.log(`[DOWNLOAD JSONL] Attempt ${attempts}/${maxAttempts} - Function: ${hasFunction}, Objects: ${hasObjects ? exportWindow.objects.length : 0}`);
+            
+            if (hasFunction && hasObjects) {
+              console.log(`[DOWNLOAD JSONL] Ready! Starting export of ${exportWindow.objects.length} objects...`);
+              exportWindow.exportInfiniteWhiteboardAsJSONL();
+            } else if (attempts >= maxAttempts) {
+              console.error('[DOWNLOAD JSONL] Timeout - Function:', hasFunction, 'Objects:', hasObjects);
+              alert('Export timed out. The whiteboard may still be loading. Please wait a moment and try again.');
+            } else {
+              setTimeout(checkAndExport, 200); // Check every 200ms
+            }
+          };
+          
+          // Start checking after initial delay
+          setTimeout(checkAndExport, 1000);
+        });
+      }
+      
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Opening infinite whiteboard for JSONL export...');
+      }
+      return;
+    }
+    
+    // JSONL dump - fetch full item data and format as JSON Lines
+    fetch(`{{ url_for('p2_bp.export_item_jsonl') }}?type=${type}&id=${id}`)
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(data => {
+            throw new Error(data.error || 'Export failed');
+          }).catch(() => {
+            throw new Error(`Export failed with status ${response.status}`);
+          });
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeName}.jsonl`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle(`Downloaded ${safeName}.jsonl`);
+        }
+      })
+      .catch(error => {
+        console.error('JSONL export failed:', error);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle(`Export failed: ${error.message}`);
+        }
+        alert(`Failed to export as JSONL: ${error.message}`);
+      });
+  }
+}
+
+// Toggle Pin Status
+function togglePinPreviewedItem() {
+  if (!previewedItem) return;
+  
+  // Keep panel open - HTMX afterSwap event will refresh it
+  if (window.FolderOperations) {
+    window.FolderOperations.togglePinItem(previewedItem);
+  }
+}
+
+// Toggle Public Status
+function togglePublicPreviewedItem() {
+  if (!previewedItem) return;
+  
+  // Keep panel open - HTMX afterSwap event will refresh it
+  if (window.FolderOperations) {
+    window.FolderOperations.togglePublicItem(previewedItem);
+  }
+}
+
+// Expose globally (closePreviewPanel already exposed after definition)
+window.openPreviewPanel = openPreviewPanel;
+window.togglePinPreviewedItem = togglePinPreviewedItem;
+window.togglePublicPreviewedItem = togglePublicPreviewedItem;
+window.openPreviewedItem = openPreviewedItem;
+window.renamePreviewedItem = renamePreviewedItem;
+window.copyPreviewedItem = copyPreviewedItem;
+window.sendPreviewedItem = sendPreviewedItem;
+window.cutPreviewedItem = cutPreviewedItem;
+window.downloadPreviewedItem = downloadPreviewedItem;
+window.deletePreviewedItem = deletePreviewedItem;
+window.downloadInFormat = downloadInFormat;
+
+// Keyboard shortcut: Escape to close preview
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && previewedItem) {
+    closePreviewPanel();
+  }
+});
+
+// Listen for custom public toggle event from folder_operations.js
+document.addEventListener('previewItemPublicChanged', function(event) {
+  console.log('[PREVIEW-PUBLIC] Public changed event received:', event.detail);
+  
+  if (!previewedItem) {
+    console.log('[PREVIEW-PUBLIC] No previewed item, ignoring event');
+    return;
+  }
+  
+  // Check if the event is for the currently previewed item
+  if (previewedItem.type === event.detail.type && previewedItem.id === event.detail.id) {
+    console.log('[PREVIEW-PUBLIC] Event matches previewed item, updating...');
+    
+    // Update the card's dataset immediately
+    if (previewedItem.card) {
+      const newPublicState = event.detail.isPublic;
+      previewedItem.card.dataset.isPublic = newPublicState ? '1' : '0';
+      console.log('[PREVIEW-PUBLIC] Updated card dataset.isPublic to:', previewedItem.card.dataset.isPublic);
+    }
+    
+    // Refresh button states immediately
+    updateActionButtonStates(previewedItem);
+    
+    console.log('[PREVIEW-PUBLIC] ✓ Preview panel updated successfully');
+  } else {
+    console.log('[PREVIEW-PUBLIC] Event for different item, ignoring');
+  }
+});
+
+// Listen for custom pin toggle event from folder_operations.js
+document.addEventListener('previewItemPinChanged', function(event) {
+  console.log('[PREVIEW-PIN] Pin changed event received:', event.detail);
+  
+  if (!previewedItem) {
+    console.log('[PREVIEW-PIN] No previewed item, ignoring event');
+    return;
+  }
+  
+  // Check if the event is for the currently previewed item
+  if (previewedItem.type === event.detail.type && previewedItem.id === event.detail.id) {
+    console.log('[PREVIEW-PIN] Event matches previewed item, updating...');
+    
+    // Update the card's dataset immediately
+    if (previewedItem.card) {
+      const newPinState = event.detail.isPinned;
+      previewedItem.card.dataset.isPinned = newPinState ? '1' : '0';
+      console.log('[PREVIEW-PIN] Updated card dataset.isPinned to:', previewedItem.card.dataset.isPinned);
+    }
+    
+    // Refresh button states immediately
+    updateActionButtonStates(previewedItem);
+    
+    console.log('[PREVIEW-PIN] ✓ Preview panel updated successfully');
+  } else {
+    console.log('[PREVIEW-PIN] Event for different item, ignoring');
+  }
+});
+
+// Listen for HTMX afterSwap to refresh preview panel when content is updated
+document.body.addEventListener('htmx:afterSwap', function(event) {
+  console.log('[PREVIEW-HTMX] afterSwap detected, event:', event);
+  console.log('[PREVIEW-HTMX] Event target:', event.target);
+  console.log('[PREVIEW-HTMX] Event detail:', event.detail);
+  
+  // If preview panel is open and we have a previewed item, refresh it
+  if (previewedItem) {
+    console.log('[PREVIEW-HTMX] Preview panel is open with item:', previewedItem);
+    
+    // Wait a bit for DOM to settle and event listeners to reattach
+    setTimeout(() => {
+      console.log('[PREVIEW-HTMX] Attempting to refresh preview after HTMX swap');
+      console.log('[PREVIEW-HTMX] Looking for item with type:', previewedItem.type, 'id:', previewedItem.id);
+      
+      // Build selector based on item type
+      let selector;
+      if (previewedItem.type === 'note' || previewedItem.type === 'board' || previewedItem.type === 'folder') {
+        // Legacy types use data-type directly
+        selector = `[data-type="${previewedItem.type}"][data-id="${previewedItem.id}"]`;
+      } else if (previewedItem.type === 'file') {
+        // File types use data-type="file" with data-file-type for specific type
+        selector = `[data-type="file"][data-id="${previewedItem.id}"]`;
+      } else {
+        // Fallback: try both patterns
+        selector = `[data-type="${previewedItem.type}"][data-id="${previewedItem.id}"], [data-type="file"][data-id="${previewedItem.id}"]`;
+      }
+      
+      console.log('[PREVIEW-HTMX] Using selector:', selector);
+      const updatedCard = document.querySelector(selector);
+      
+      if (updatedCard) {
+        console.log('[PREVIEW-HTMX] ✓ Found updated card:', updatedCard);
+        console.log('[PREVIEW-HTMX] Updated card dataset:', updatedCard.dataset);
+        
+        // Update the previewed item reference with the new card
+        previewedItem = {
+          type: previewedItem.type,
+          id: previewedItem.id,
+          card: updatedCard
+        };
+        
+        console.log('[PREVIEW-HTMX] Calling updatePreviewPanel with refreshed item');
+        // Refresh the preview panel content (which will update button states and badges)
+        updatePreviewPanel(previewedItem);
+        console.log('[PREVIEW-HTMX] ✓ Preview panel refreshed successfully');
+      } else {
+        console.warn('[PREVIEW-HTMX] ✗ Could not find updated card with selector:', selector);
+        console.warn('[PREVIEW-HTMX] Available cards in DOM:', document.querySelectorAll('.item-card').length);
+        // Log all cards with matching ID for debugging
+        const allMatchingId = document.querySelectorAll(`[data-id="${previewedItem.id}"]`);
+        console.warn('[PREVIEW-HTMX] Cards with matching ID:', allMatchingId);
+        if (allMatchingId.length > 0) {
+          allMatchingId.forEach((card, idx) => {
+            console.warn(`[PREVIEW-HTMX]   Card ${idx}:`, card.dataset);
+          });
+        }
+      }
+    }, 150); // Increased timeout to wait for backend reattachEventListeners (300ms in backend script)
+  } else {
+    console.log('[PREVIEW-HTMX] Preview panel not open, skipping refresh');
+  }
+});
+
+// Regenerate thumbnail for infinite whiteboard
+async function regenerateThumbnail() {
+  if (!previewedItem || previewedItem.type !== 'file') return;
+  
+  const displayType = previewedItem.card?.dataset.fileType;
+  if (displayType !== 'proprietary_infinite_whiteboard') return;
+  
+  const btn = document.getElementById('preview-regenerate-thumbnail-btn');
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<i class="material-icons rotating">hourglass_empty</i><span>Generating...</span>';
+  btn.disabled = true;
+  
+  try {
+    const response = await fetch(`/infinite_boards/api/generate_thumbnail/${previewedItem.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (result.success && result.thumbnail_url) {
+      // Update card dataset
+      if (previewedItem.card) {
+        previewedItem.card.dataset.thumbnailUrl = result.thumbnail_url;
+      }
+      
+      // Reload preview content to show new thumbnail
+      const contentArea = document.getElementById('preview-content-area');
+      loadBoardPreview(previewedItem, contentArea);
+      
+      // Show success feedback
+      btn.innerHTML = '<i class="material-icons">check_circle</i><span>Updated!</span>';
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+      }, 2000);
+    } else {
+      throw new Error(result.error || 'Thumbnail generation failed');
+    }
+  } catch (error) {
+    console.error('[PREVIEW] Thumbnail regeneration failed:', error);
+    btn.innerHTML = '<i class="material-icons">error</i><span>Failed</span>';
+    setTimeout(() => {
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }, 2000);
+  }
+}
+</script>
+
+<style>
+/* Additional card styling for preview state */
+.item-card.previewing {
+  outline: 2px solid rgba(20, 184, 166, 0.6);
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.3), 0 4px 16px rgba(20, 184, 166, 0.2);
+  background: rgba(20, 184, 166, 0.04);
+}
+</style>

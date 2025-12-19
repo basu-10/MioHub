@@ -1,0 +1,464 @@
+<!-- Edit code file with CodeMirror editor and syntax highlighting -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if file %}Edit: {{ file.title }}{% else %}New Code File{% endif %} - MioSpace</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <!-- Monaco Editor (VS Code editor) -->
+  <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
+  
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+    
+    .editor-container {
+      max-width: 1600px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .editor-header {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .editor-wrapper {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .editor-toolbar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border-primary);
+      padding: 0.75rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .editor-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+    
+    #code-editor {
+      height: 600px;
+      border: 1px solid var(--border-primary);
+    }
+    
+    /* Monaco Editor is self-contained, minimal overrides needed */
+    
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      color: var(--white);
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-strong);
+    }
+    
+    .btn-outline-secondary {
+      color: var(--muted);
+      border-color: var(--border-primary);
+    }
+    
+    .btn-outline-secondary:hover {
+      background: var(--card);
+      color: var(--white);
+      border-color: var(--accent);
+    }
+    
+    .language-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--accent);
+      color: var(--white);
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .autosave-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    
+    .autosave-indicator.saving {
+      display: flex;
+      color: var(--accent);
+    }
+    
+    .autosave-indicator.saved {
+      display: flex;
+      color: #10b981;
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-container">
+    <div class="editor-header">
+      <form id="code-form" method="POST">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+          <div class="md:col-span-6">
+            <label for="title" class="block text-sm font-medium mb-2" style="color: var(--muted);">Title</label>
+            <input type="text" style="background: var(--bg); color: var(--white); border-color: var(--border-primary);" class="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2" id="title" name="title" 
+                   value="{% if file %}{{ file.title }}{% endif %}" required>
+          </div>
+          <div class="md:col-span-3">
+            <label for="language" class="block text-sm font-medium mb-2" style="color: var(--muted);">Language</label>
+            <select style="background: var(--bg); color: var(--white); border-color: var(--border-primary);" class="w-full px-3 py-2 rounded-lg border cursor-pointer focus:outline-none focus:ring-2" id="language" name="language" required>
+              <option value="python" {% if file and file.metadata_json.get('language') == 'python' %}selected{% endif %}>Python</option>
+              <option value="javascript" {% if file and file.metadata_json.get('language') == 'javascript' %}selected{% endif %}>JavaScript</option>
+              <option value="typescript" {% if file and file.metadata_json.get('language') == 'typescript' %}selected{% endif %}>TypeScript</option>
+              <option value="java" {% if file and file.metadata_json.get('language') == 'java' %}selected{% endif %}>Java</option>
+              <option value="cpp" {% if file and file.metadata_json.get('language') == 'cpp' %}selected{% endif %}>C++</option>
+              <option value="c" {% if file and file.metadata_json.get('language') == 'c' %}selected{% endif %}>C</option>
+              <option value="csharp" {% if file and file.metadata_json.get('language') == 'csharp' %}selected{% endif %}>C#</option>
+              <option value="go" {% if file and file.metadata_json.get('language') == 'go' %}selected{% endif %}>Go</option>
+              <option value="rust" {% if file and file.metadata_json.get('language') == 'rust' %}selected{% endif %}>Rust</option>
+              <option value="php" {% if file and file.metadata_json.get('language') == 'php' %}selected{% endif %}>PHP</option>
+              <option value="ruby" {% if file and file.metadata_json.get('language') == 'ruby' %}selected{% endif %}>Ruby</option>
+              <option value="sql" {% if file and file.metadata_json.get('language') == 'sql' %}selected{% endif %}>SQL</option>
+              <option value="html" {% if file and file.metadata_json.get('language') == 'html' %}selected{% endif %}>HTML</option>
+              <option value="css" {% if file and file.metadata_json.get('language') == 'css' %}selected{% endif %}>CSS</option>
+              <option value="json" {% if file and file.metadata_json.get('language') == 'json' %}selected{% endif %}>JSON</option>
+              <option value="xml" {% if file and file.metadata_json.get('language') == 'xml' %}selected{% endif %}>XML</option>
+              <option value="yaml" {% if file and file.metadata_json.get('language') == 'yaml' %}selected{% endif %}>YAML</option>
+              <option value="markdown" {% if file and file.metadata_json.get('language') == 'markdown' %}selected{% endif %}>Markdown</option>
+              <option value="shell" {% if file and file.metadata_json.get('language') == 'shell' %}selected{% endif %}>Shell/Bash</option>
+              <option value="powershell" {% if file and file.metadata_json.get('language') == 'powershell' %}selected{% endif %}>PowerShell</option>
+              <option value="plaintext" {% if file and file.metadata_json.get('language') == 'plaintext' %}selected{% endif %}>Plain Text</option>
+            </select>
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium mb-2">&nbsp;</label>
+            <div class="flex items-center">
+              <input class="w-4 h-4 mr-2 rounded border-gray-600 bg-gray-900 text-teal-500 focus:ring-teal-500" type="checkbox" id="is_public" name="is_public" 
+                     {% if file and file.is_public %}checked{% endif %}>
+              <label class="text-sm cursor-pointer" for="is_public">
+                <i class="material-icons" style="font-size: 16px; vertical-align: middle;">public</i>
+                Make Public
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label for="description" class="block text-sm font-medium mb-2">Description (optional)</label>
+          <input type="text" class="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-900 text-white focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25" id="description" name="description" 
+                 value="{% if file and file.metadata_json %}{{ file.metadata_json.get('description', '') }}{% endif %}"
+                 placeholder="Brief description of this code file">
+        </div>
+        
+        <input type="hidden" id="content" name="content" value="">
+        
+        <div class="flex justify-between items-center">
+          <div class="flex gap-2">
+            <button type="submit" style="background: var(--accent); color: var(--white);" class="px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2">
+              <i class="material-icons" style="font-size: 18px;">save</i>
+              Save
+            </button>
+            <a href="{{ url_for('folders.view_folder', folder_id=session.get('current_folder_id', 1)) }}" style="border-color: var(--border-primary); color: var(--muted);" class="px-4 py-2 border rounded-lg hover:opacity-80 transition-opacity flex items-center gap-2">
+              <i class="material-icons" style="font-size: 18px;">close</i>
+              Cancel
+            </a>
+          </div>
+          <div class="text-sm" style="color: var(--muted);">
+            <i class="material-icons" style="font-size: 16px; vertical-align: middle;">info</i>
+            Full syntax highlighting & line numbers
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <div class="editor-wrapper">
+      <div class="editor-toolbar">
+        <div class="editor-info">
+          <span id="line-count">Lines: 1</span>
+          <span id="char-count">Chars: 0</span>
+          <span id="current-language" class="language-badge">
+            <i class="material-icons" style="font-size: 16px;">code</i>
+            <span id="language-text">Python</span>
+          </span>
+        </div>
+        <div class="editor-info">
+          <span>Ctrl+S to save</span>
+        </div>
+      </div>
+      <div id="code-editor"></div>
+    </div>
+  </div>
+  
+  <div class="autosave-indicator" id="autosave-indicator">
+    <i class="material-icons" style="font-size: 18px;">cloud_upload</i>
+    <span id="autosave-text">Saving...</span>
+  </div>
+  
+  <!-- Monaco Editor CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+  <script>
+    // Configure Monaco loader
+    require.config({ 
+      paths: { 
+        'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' 
+      } 
+    });
+    
+    let editor;
+    const initialValue = {% if file and file.content_text %}{{ file.content_text|tojson }}{% else %}""{% endif %};
+    const selectedLanguage = document.getElementById('language').value;
+    
+    // Language mapping for Monaco
+    const monacoLanguages = {
+      python: 'python',
+      javascript: 'javascript',
+      typescript: 'typescript',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      csharp: 'csharp',
+      go: 'go',
+      rust: 'rust',
+      php: 'php',
+      ruby: 'ruby',
+      sql: 'sql',
+      html: 'html',
+      css: 'css',
+      json: 'json',
+      xml: 'xml',
+      yaml: 'yaml',
+      markdown: 'markdown',
+      shell: 'shell',
+      powershell: 'powershell',
+      plaintext: 'plaintext'
+    };
+    
+    // Initialize Monaco Editor
+    require(['vs/editor/editor.main'], function() {
+      editor = monaco.editor.create(document.getElementById('code-editor'), {
+        value: initialValue,
+        language: monacoLanguages[selectedLanguage] || 'plaintext',
+        theme: 'vs-dark',
+        automaticLayout: true,
+        fontSize: 14,
+        fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
+        fontLigatures: true,
+        minimap: { enabled: true },
+        scrollBeyondLastLine: false,
+        lineNumbers: 'on',
+        renderWhitespace: 'selection',
+        tabSize: 4,
+        insertSpaces: true,
+        wordWrap: 'on',
+        formatOnPaste: true,
+        formatOnType: true
+      });
+      
+      // Ctrl+S to save - add as an action with proper handler
+      editor.addAction({
+        id: 'save-file',
+        label: 'Save File',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+        precondition: null,
+        keybindingContext: null,
+        contextMenuGroupId: 'navigation',
+        contextMenuOrder: 1.5,
+        run: function(ed) {
+          // Sync content to hidden input
+          document.getElementById('content').value = editor.getValue();
+          // Submit the form
+          document.getElementById('code-form').submit();
+          return null;
+        }
+      });
+      
+      // Update stats on content change
+      editor.onDidChangeModelContent(() => {
+        updateStats();
+        autoSave();
+      });
+      
+      updateStats();
+      
+      // Update language when selection changes (moved inside Monaco callback)
+      document.getElementById('language').addEventListener('change', function() {
+        const newLang = this.value;
+        console.log('Language changed to:', newLang); // Debug log
+        
+        if (editor) {
+          monaco.editor.setModelLanguage(editor.getModel(), monacoLanguages[newLang] || 'plaintext');
+          console.log('Monaco language updated to:', monacoLanguages[newLang] || 'plaintext');
+        }
+        
+        // Update language badge
+        const langNames = {
+          python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript',
+          java: 'Java', cpp: 'C++', c: 'C', csharp: 'C#', go: 'Go', rust: 'Rust',
+          php: 'PHP', ruby: 'Ruby', sql: 'SQL', html: 'HTML', css: 'CSS',
+          json: 'JSON', xml: 'XML', yaml: 'YAML', markdown: 'Markdown',
+          shell: 'Shell', powershell: 'PowerShell', plaintext: 'Plain Text'
+        };
+        document.getElementById('language-text').textContent = langNames[newLang] || newLang;
+      });
+    });
+    
+    // Update stats
+    function updateStats() {
+      if (!editor) return;
+      
+      const model = editor.getModel();
+      const lines = model.getLineCount();
+      const chars = model.getValue().length;
+      
+      document.getElementById('line-count').textContent = `Lines: ${lines}`;
+      document.getElementById('char-count').textContent = `Chars: ${chars}`;
+    }
+    
+    // Sync editor content to hidden input on form submit
+    document.getElementById('code-form').addEventListener('submit', function(e) {
+      if (editor) {
+        document.getElementById('content').value = editor.getValue();
+      }
+    });
+    
+    // Auto-save to localStorage (only for NEW files)
+    const autosaveKey = 'code-autosave-{% if file %}{{ file.id }}{% else %}new{% endif %}';
+    let autosaveTimer;
+    
+    function autoSave() {
+      if (!editor) return;
+      
+      // Only autosave for NEW files (when initialValue is empty)
+      if (initialValue) {
+        return; // Skip autosave for existing files
+      }
+      
+      clearTimeout(autosaveTimer);
+      
+      const indicator = document.getElementById('autosave-indicator');
+      const text = document.getElementById('autosave-text');
+      
+      indicator.className = 'autosave-indicator saving';
+      text.textContent = 'Saving...';
+      
+      autosaveTimer = setTimeout(() => {
+        localStorage.setItem(autosaveKey, editor.getValue());
+        
+        indicator.className = 'autosave-indicator saved';
+        text.textContent = 'Saved to browser';
+        
+        setTimeout(() => {
+          indicator.style.display = 'none';
+        }, 2000);
+      }, 1000);
+    }
+    
+    // Restore from localStorage ONLY for NEW files (when initialValue is empty)
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem(autosaveKey);
+      // Only restore if: 1) there's a saved draft, 2) this is a NEW file (no initialValue), 3) editor exists
+      if (saved && !initialValue && editor) {
+        if (confirm('Found a saved draft. Would you like to restore it?')) {
+          editor.setValue(saved);
+          updateStats();
+        } else {
+          // User declined, clear the autosave
+          localStorage.removeItem(autosaveKey);
+        }
+      }
+    });
+    
+    // Prevent browser's default Ctrl+S behavior
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        // Trigger save if editor exists
+        if (editor) {
+          saveFile();
+        }
+      }
+    });
+    
+    // AJAX save function to stay on page
+    async function saveFile() {
+      try {
+        // Trigger telemetry activity animation
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setActive('Saving code...');
+        }
+        
+        const formData = new FormData(document.getElementById('code-form'));
+        formData.set('content', editor.getValue());
+        
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          localStorage.removeItem(autosaveKey);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Saved ${result.file_type} (${result.size})`);
+          }
+        } else {
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Save failed: ${result.error}`);
+          } else {
+            alert('Error: ' + result.error);
+          }
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle('Save failed: network error');
+        } else {
+          alert('Error saving file');
+        }
+      }
+    }
+    
+
+    // Initialize language badge text
+    const langSelect = document.getElementById('language');
+    const langNames = {
+      python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript',
+      java: 'Java', cpp: 'C++', c: 'C', csharp: 'C#', go: 'Go', rust: 'Rust',
+      php: 'PHP', ruby: 'Ruby', sql: 'SQL', html: 'HTML', css: 'CSS',
+      json: 'JSON', xml: 'XML', yaml: 'YAML', markdown: 'Markdown',
+      shell: 'Shell', powershell: 'PowerShell', plaintext: 'Plain Text'
+    };
+    document.getElementById('language-text').textContent = langNames[langSelect.value] || langSelect.value;
+  </script>
+</body>
+</html>

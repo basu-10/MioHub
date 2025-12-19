@@ -1,0 +1,198 @@
+<!-- Partial: _view_dropdown.html -->
+<!-- Display Settings dropdown + JS for display preference management -->
+<div class="dropdown">
+  <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="displaySettingsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="material-icons" style="font-size: 16px; vertical-align: middle;">view_module</i>
+    <span class="ms-1 d-none d-md-inline">View</span>
+  </button>
+  <div class="dropdown-menu dropdown-menu-end p-3" aria-labelledby="displaySettingsDropdown" style="min-width: 280px;" onclick="event.stopPropagation();">
+    <h6 class="dropdown-header px-0 mb-2">Display Settings</h6>
+
+    <!-- View Mode -->
+    <div class="mb-3">
+      <label class="form-label small mb-1" style="color: var(--white);">View Mode</label>
+      <div class="btn-group btn-group-sm w-100" role="group">
+        <input type="radio" class="btn-check" name="viewMode" id="viewGrid" value="grid" {% if display_prefs.view_mode == 'grid' %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="viewGrid">
+          <i class="material-icons" style="font-size: 14px;">grid_view</i> Grid
+        </label>
+        
+        <input type="radio" class="btn-check" name="viewMode" id="viewList" value="list" {% if display_prefs.view_mode == 'list' %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="viewList">
+          <i class="material-icons" style="font-size: 14px;">view_list</i> List
+        </label>
+      </div>
+    </div>
+
+    <!-- Grid-only Options (Columns, Card Size, Previews) -->
+    <div id="gridOptionsContainer" class="grid-options {% if display_prefs.view_mode != 'grid' %}d-none{% endif %}">
+    <!-- Column Count -->
+    <div class="mb-3">
+      <label class="form-label small mb-1" style="color: var(--white);">Columns</label>
+      <div class="btn-group btn-group-sm w-100" role="group">
+        <input type="radio" class="btn-check" name="columnCount" id="col1" value="1" {% if display_prefs.columns == 1 %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="col1">1</label>
+        
+        <input type="radio" class="btn-check" name="columnCount" id="col2" value="2" {% if display_prefs.columns == 2 %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="col2">2</label>
+        
+        <input type="radio" class="btn-check" name="columnCount" id="col3" value="3" {% if display_prefs.columns == 3 %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="col3">3</label>
+        
+        <input type="radio" class="btn-check" name="columnCount" id="col4" value="4" {% if display_prefs.columns == 4 %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="col4">4</label>
+        
+        <input type="radio" class="btn-check" name="columnCount" id="col5" value="5" {% if display_prefs.columns == 5 %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="col5">5</label>
+        
+        <input type="radio" class="btn-check" name="columnCount" id="col6" value="6" {% if display_prefs.columns == 6 %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="col6">6</label>
+      </div>
+    </div>
+
+
+    <!-- Card Size -->
+    <div class="mb-3">
+      <label class="form-label small mb-1" style="color: var(--white);">Card Size</label>
+      <div class="btn-group btn-group-sm w-100" role="group">
+        <input type="radio" class="btn-check" name="cardSize" id="sizeCompact" value="compact" {% if display_prefs.card_size == 'compact' %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="sizeCompact">Compact</label>
+        
+        <input type="radio" class="btn-check" name="cardSize" id="sizeNormal" value="normal" {% if display_prefs.card_size == 'normal' %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="sizeNormal">Normal</label>
+        
+        <input type="radio" class="btn-check" name="cardSize" id="sizeLarge" value="large" {% if display_prefs.card_size == 'large' %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="sizeLarge">Large</label>
+      </div>
+    </div>
+
+    <!-- Show Previews Toggle -->
+    <div class="mb-2">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="showPreviews" {% if display_prefs.show_previews %}checked{% endif %}>
+        <label class="form-check-label small" for="showPreviews" style="color: var(--white);">
+          Show content previews
+        </label>
+      </div>
+    </div>
+    </div>
+
+    <hr class="my-2">
+    <div class="small" style="color: var(--white);">
+      <i class="material-icons" style="font-size: 12px;">info</i>
+      Settings are saved to your account
+    </div>
+  </div>
+</div>
+
+<script>
+// Display Settings Management (partial scoped)
+document.addEventListener('DOMContentLoaded', function() {
+  const gridOptionsContainer = document.getElementById('gridOptionsContainer');
+  const columnInputs = document.querySelectorAll('input[name="columnCount"]');
+  const viewModeInputs = document.querySelectorAll('input[name="viewMode"]');
+  const cardSizeInputs = document.querySelectorAll('input[name="cardSize"]');
+  const showPreviewsInput = document.getElementById('showPreviews');
+  const contentGrids = document.querySelectorAll('.content-grid');
+
+  function getCurrentDisplayPreferences() {
+    const prefs = {};
+    const colChecked = document.querySelector('input[name="columnCount"]:checked');
+    if (colChecked) prefs.columns = parseInt(colChecked.value, 10);
+    const viewChecked = document.querySelector('input[name="viewMode"]:checked');
+    if (viewChecked) prefs.view_mode = viewChecked.value;
+    const sizeChecked = document.querySelector('input[name="cardSize"]:checked');
+    if (sizeChecked) prefs.card_size = sizeChecked.value;
+    const sp = document.getElementById('showPreviews');
+    if (sp) prefs.show_previews = !!sp.checked;
+    return prefs;
+  }
+
+  function saveDisplayPreferences(preferences) {
+    fetch('{{ url_for("folders.save_display_preferences") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(preferences)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) console.error('Failed to save preferences:', data.message);
+    }).catch(err => console.error('Error saving preferences:', err));
+  }
+
+  function applyColumnCount(columns) {
+    contentGrids.forEach(grid => {
+      for (let i = 1; i <= 6; i++) grid.classList.remove(`row-cols-lg-${i}`);
+      grid.classList.add(`row-cols-lg-${columns}`);
+    });
+    saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+
+  function applyViewMode(mode, skipSave = false) {
+    contentGrids.forEach(grid => grid.setAttribute('data-view-mode', mode));
+    
+    // Toggle between table view and card grid
+    const tableContainers = document.querySelectorAll('.table-view-container');
+    if (mode === 'list') {
+      // Hide card grids, show tables
+      contentGrids.forEach(grid => grid.style.display = 'none');
+      tableContainers.forEach(table => table.classList.remove('d-none'));
+    } else {
+      // Show card grids, hide tables
+      contentGrids.forEach(grid => grid.style.display = '');
+      tableContainers.forEach(table => table.classList.add('d-none'));
+    }
+    
+    // show/hide grid-specific options
+    if (gridOptionsContainer) {
+      if (mode === 'grid') gridOptionsContainer.classList.remove('d-none');
+      else gridOptionsContainer.classList.add('d-none');
+    }
+    if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+
+  function applyCardSize(size, skipSave = false) {
+    contentGrids.forEach(grid => grid.setAttribute('data-card-size', size));
+    if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+
+  function togglePreviews(show, skipSave = false) {
+    document.querySelectorAll('.content-preview').forEach(p => p.style.display = show ? 'block' : 'none');
+    if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+
+  columnInputs.forEach(input => input.addEventListener('change', function(){ applyColumnCount(this.value); }));
+  viewModeInputs.forEach(input => input.addEventListener('change', function(){ applyViewMode(this.value); }));
+  cardSizeInputs.forEach(input => input.addEventListener('change', function(){ applyCardSize(this.value); }));
+  if (showPreviewsInput) {
+    showPreviewsInput.addEventListener('change', function(){ togglePreviews(this.checked); });
+    // Initial preview toggle - skip save since it's just applying server state
+    togglePreviews(showPreviewsInput.checked, true);
+  }
+
+  // Initialize view mode based on current selection or server preference (skip save on init)
+  const currentView = (document.querySelector('input[name="viewMode"]:checked') || {}).value || '{{ display_prefs.view_mode }}';
+  if (currentView) {
+    applyViewMode(currentView, true);
+  }
+
+  // Keep dropdown open when clicking inside handled by inline onclick on container
+});
+
+// Also initialize view mode on page load (outside the DOMContentLoaded to ensure it runs)
+window.addEventListener('load', function() {
+  const currentViewMode = '{{ display_prefs.view_mode }}';
+  const tableContainers = document.querySelectorAll('.table-view-container');
+  const contentGrids = document.querySelectorAll('.content-grid');
+  
+  if (currentViewMode === 'list') {
+    // Hide card grids, show tables
+    contentGrids.forEach(grid => grid.style.display = 'none');
+    tableContainers.forEach(table => table.classList.remove('d-none'));
+  } else {
+    // Show card grids, hide tables
+    contentGrids.forEach(grid => grid.style.display = '');
+    tableContainers.forEach(table => table.classList.add('d-none'));
+  }
+});
+</script>

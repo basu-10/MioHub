@@ -1,0 +1,426 @@
+<!-- Edit table file with Luckysheet library -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if file %}Edit: {{ file.title }}{% else %}New Table{% endif %} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  
+  <!-- Luckysheet CSS -->
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css' />
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css' />
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css' />
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css' />
+  
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+    
+    .editor-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .editor-header {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .table-editor {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .toolbar button {
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      color: var(--white);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .toolbar button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    /* Luckysheet container */
+    #luckysheet {
+      width: 100%;
+      height: 600px;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .form-control, .form-select {
+      background: var(--bg);
+      color: var(--white);
+      border: 1px solid var(--border-primary);
+    }
+    
+    .form-control:focus {
+      background: var(--bg);
+      color: var(--white);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.25);
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-strong);
+    }
+    
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    
+    .stats span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .stats .value {
+      color: var(--accent);
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-container">
+    <div class="editor-header">
+      <form id="table-form" method="POST">
+        <div class="row mb-3">
+          <div class="col-md-8">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" name="title" 
+                   value="{% if file %}{{ file.title }}{% endif %}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label d-block">&nbsp;</label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="is_public" name="is_public" 
+                     {% if file and file.is_public %}checked{% endif %}>
+              <label class="form-check-label" for="is_public">
+                <i class="material-icons" style="font-size: 16px; vertical-align: middle;">public</i>
+                Make Public
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="description" class="form-label">Description (optional)</label>
+          <input type="text" class="form-control" id="description" name="description" 
+                 value="{% if file and file.metadata_json %}{{ file.metadata_json.get('description', '') }}{% endif %}"
+                 placeholder="Brief description of this table">
+        </div>
+        
+        <input type="hidden" id="content" name="content" value="">
+        
+        <div class="d-flex justify-content-between">
+          <div>
+            <button type="submit" class="btn btn-primary">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">save</i>
+              Save
+            </button>
+            <a href="{{ url_for('folders.view_folder', folder_id=session.get('current_folder_id', 1)) }}" class="btn btn-outline-secondary ms-2">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">close</i>
+              Cancel
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <div class="table-editor">
+      <div class="toolbar">
+        <button type="button" id="import-csv">
+          <i class="material-icons">upload_file</i>
+          Import CSV
+        </button>
+        <button type="button" id="export-csv">
+          <i class="material-icons">download</i>
+          Export CSV
+        </button>
+        <button type="button" id="clear-table">
+          <i class="material-icons">delete_sweep</i>
+          Clear All
+        </button>
+      </div>
+      
+      <div id="luckysheet"></div>
+      
+      <div class="stats">
+        <span><i class="material-icons">info</i> Luckysheet provides Excel-like editing with formulas, formatting, and more</span>
+      </div>
+    </div>
+    
+    <!-- Hidden file input for CSV import -->
+    <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+  </div>
+  
+  <!-- Luckysheet JS -->
+  <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
+  
+  <script>
+    // Load existing data or create default
+    let existingData = {% if file and file.content_json %}{{ file.content_json|tojson|safe }}{% else %}null{% endif %};
+    
+    // Convert to Luckysheet format if needed
+    let luckysheetData = [];
+    
+    if (existingData && typeof existingData === 'object') {
+      if (Array.isArray(existingData)) {
+        // Already in Luckysheet format
+        luckysheetData = existingData;
+      } else if (existingData.data && existingData.columns) {
+        // Legacy Tabulator format - convert to Luckysheet
+        console.log('Converting Tabulator format to Luckysheet');
+        const headers = existingData.columns.map(col => col.title || col.field);
+        const rows = [headers];
+        
+        existingData.data.forEach(row => {
+          const rowData = existingData.columns.map(col => row[col.field] || '');
+          rows.push(rowData);
+        });
+        
+        luckysheetData = [{
+          "name": "Sheet1",
+          "color": "",
+          "status": 1,
+          "order": 0,
+          "data": rows,
+          "config": {},
+          "index": 0
+        }];
+      } else {
+        // Unknown format - use default
+        luckysheetData = getDefaultSheet();
+      }
+    } else {
+      // No existing data - use default
+      luckysheetData = getDefaultSheet();
+    }
+    
+    function getDefaultSheet() {
+      return [
+        {
+          "name": "Sheet1",
+          "color": "",
+          "status": 1,
+          "order": 0,
+          "data": [
+            ["Product", "Quantity", "Price", "Category", "Status"],
+            ["Laptop", 5, 999.99, "Electronics", "In Stock"],
+            ["Mouse", 25, 29.99, "Accessories", "In Stock"],
+            ["Keyboard", 15, 79.99, "Accessories", "In Stock"],
+            ["Monitor", 8, 349.99, "Electronics", "Low Stock"]
+          ],
+          "config": {},
+          "index": 0
+        }
+      ];
+    }
+    
+    // Initialize Luckysheet
+    try {
+      luckysheet.create({
+        container: 'luckysheet',
+        data: luckysheetData,
+        showinfobar: false,
+        showsheetbar: true,
+        showstatisticBar: true,
+        sheetFormulaBar: true,
+        enableAddRow: true,
+        enableAddBackTop: true,
+        userInfo: false,
+        myFolderUrl: '',
+        title: '{% if file %}{{ file.title }}{% else %}New Table{% endif %}',
+        lang: 'en'
+      });
+    } catch (e) {
+      console.error('Failed to initialize Luckysheet:', e);
+      alert('Error initializing table editor. Please refresh the page.');
+    }
+    
+    // Import CSV
+    document.getElementById('import-csv').addEventListener('click', function() {
+      document.getElementById('csv-file-input').click();
+    });
+    
+    document.getElementById('csv-file-input').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const csv = event.target.result;
+        const lines = csv.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) return;
+        
+        // Parse CSV to 2D array
+        const data = lines.map(line => {
+          return line.split(',').map(cell => {
+            const trimmed = cell.trim();
+            // Try to convert to number if possible
+            const num = parseFloat(trimmed);
+            return isNaN(num) ? trimmed : num;
+          });
+        });
+        
+        // Create new sheet with CSV data
+        const newSheet = {
+          "name": "Imported",
+          "color": "",
+          "status": 1,
+          "order": luckysheet.getAllSheets().length,
+          "data": data,
+          "config": {},
+          "index": luckysheet.getAllSheets().length
+        };
+        
+        luckysheet.setSheetAdd(newSheet);
+        alert('CSV imported successfully!');
+      };
+      
+      reader.readAsText(file);
+      e.target.value = ''; // Reset input
+    });
+    
+    // Export CSV
+    document.getElementById('export-csv').addEventListener('click', function() {
+      try {
+        const sheetData = luckysheet.getSheetData();
+        if (!sheetData || sheetData.length === 0) {
+          alert('No data to export');
+          return;
+        }
+        
+        // Convert to CSV
+        const csv = sheetData.map(row => {
+          return row.map(cell => {
+            const value = cell && cell.v !== undefined ? cell.v : '';
+            // Quote if contains comma or quotes
+            const stringValue = String(value);
+            if (stringValue.includes(',') || stringValue.includes('"')) {
+              return '"' + stringValue.replace(/"/g, '""') + '"';
+            }
+            return stringValue;
+          }).join(',');
+        }).join('\n');
+        
+        // Download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '{% if file %}{{ file.title }}{% else %}table{% endif %}.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.error('Export error:', e);
+        alert('Error exporting data. Please try again.');
+      }
+    });
+    
+    // Clear table
+    document.getElementById('clear-table').addEventListener('click', function() {
+      if (confirm('Clear all data? This cannot be undone.')) {
+        luckysheet.clearRange();
+      }
+    });
+    
+    // Form submit - save JSON
+    document.getElementById('table-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      saveFile();
+    });
+    
+    // Keyboard shortcut: Ctrl+S to save
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveFile();
+      }
+    });
+    
+    // AJAX save function to stay on page
+    async function saveFile() {
+      try {
+        // Trigger telemetry activity animation
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setActive('Saving table...');
+        }
+        
+        const allSheets = luckysheet.getAllSheets();
+        const formData = new FormData(document.getElementById('table-form'));
+        formData.set('content', JSON.stringify(allSheets));
+        
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Saved ${result.file_type} (${result.size})`);
+          }
+        } else {
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Save failed: ${result.error}`);
+          } else {
+            alert('Error: ' + result.error);
+          }
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle('Save failed: network error');
+        } else {
+          alert('Error saving file');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

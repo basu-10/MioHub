@@ -1,0 +1,4024 @@
+<!--
+ctrl + e to insert page at that location ✓ IMPLEMENTED
+delete to delete selected elements ✓ IMPLEMENTED
+ctrl +z to undo ✓ IMPLEMENTED
+ctrl +y to redo ✓ IMPLEMENTED
+ctrl +t to insert text ✓ IMPLEMENTED (Ctrl+Shift+T or Alt+T)
+ctrl +i to insert image ✓ IMPLEMENTED
+ctrl +s to save ✓ IMPLEMENTED (with success modal)
+copy paste across pages!!!!!!!!!! ✓ IMPLEMENTED
+ctrl + click to add/remove from selection
+highlikghter tool ✓ IMPLEMENTED
+multi select with rectangle tool ✓ IMPLEMENTED
+paste across pages ✓ IMPLEMENTED
+memory for each tool's color and size ✓ IMPLEMENTED
+color palette selection ✓ IMPLEMENTED
+text settings: max lines per page, max words per line ✓ IMPLEMENTED
+text editing on double click ✓ IMPLEMENTED
+right click anywhere to paste at that locaiton ✓ IMPLEMENTED
+nicer design with 2 lines of toolbar ✓ IMPLEMENTED
+copy once, multiple paste ✓ IMPLEMENTED
+CROP in modal with resizable rectangle ✓ IMPLEMENTED
+clipboard: can copy from os clipbvoard for images and text ✓ IMPLEMENTED
+move around objects with arrow keys ✓ IMPLEMENTED
+move around objects with arrow keys + shift for faster ✓ IMPLEMENTED
+flowcsharting tools with memory for color!! ✓ IMPLEMENTED
+layers and object list!! ✓ IMPLEMENTED
+with layers, bring to front, send to back, layer up, layer down ✓ IMPLEMENTED
+with tooltips on all buttons ✓ IMPLEMENTED
+with keyboard shortcuts modal ✓ IMPLEMENTED
+
+
+to implement:
+shift + drag to constrain aspect ratio when resizing ✓ IMPLEMENTED
+
+shift + line = straight line
+
+under settings:
+page reordering
+
+paste text + image from web with text + image embedings
+
+write text on canvas not modal
+
+-->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Page Whiteboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+
+<!-- Shepherd.js Tutorial -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/css/shepherd.css"/>
+<link rel="stylesheet" href="{{ url_for('p2_bp.static', filename='css/tutorial-theme.css') }}">
+
+<script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sf': ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'sans-serif']
+                    },
+                    colors: {
+                        'apple-blue': '#007AFF',
+                        'apple-gray': {
+                            50: '#F2F2F7',
+                            100: '#E5E5EA',
+                            200: '#D1D1D6',
+                            300: '#C7C7CC',
+                            400: '#AEAEB2',
+                            500: '#8E8E93',
+                            600: '#636366',
+                            700: '#48484A',
+                            800: '#3A3A3C',
+                            900: '#1C1C1E'
+                        }
+                    },
+                    backdropBlur: {
+                        'xs': '2px'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .palette-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 2px solid #e5e5ea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .palette-color:hover {
+            transform: scale(1.1);
+            border-color: #007AFF;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+        
+        .palette-color.active {
+            border-color: #007AFF;
+            border-width: 3px;
+            box-shadow: 0 0 0 1px #007AFF;
+        }
+
+        /* Collapsible sections styling */
+        details {
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            margin-bottom: 8px;
+        }
+
+        details summary {
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        details summary:hover {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        }
+
+        details[open] summary {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        details summary::marker {
+            content: "▶";
+            color: #007AFF;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        details[open] summary::marker {
+            content: "▼";
+        }
+
+        details div {
+            padding: 12px 16px;
+            background: white;
+            border-radius: 0 0 6px 6px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/new_board_v3.css') }}">
+    
+    <!-- Whiteboard Modules -->
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_shapes.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_commands.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_settings.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_layers.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_render.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_images.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_pages.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_transform.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_events.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_text.js') }}"></script>
+    <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_export.js') }}"></script>
+</head>
+<body style="height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
+    <!-- Modern Improved Toolbar -->
+    <div class="bg-gradient-to-r from-gray-50 to-gray-100 backdrop-blur-md border-b border-gray-200 shadow-lg" style="position: fixed; top: 0; left: 0; right: 0; z-index: 10;">
+        <!-- Main Toolbar Row -->
+        <div class="px-4 py-3 overflow-x-auto">
+            <div class="flex items-center justify-between min-w-fit">
+                <!-- Left Section: Title and Primary Tools -->
+                <div class="flex items-center space-x-3">
+                    <!-- Title Input with Icon -->
+                    <div class="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 border border-gray-200 shadow-sm">
+                        <i class="fas fa-edit text-gray-500 text-sm"></i>
+                        <input type="text" id="board-title" placeholder="Whiteboard Title" 
+                               value="{{ board.title if board else 'Whiteboard' }}" 
+                               class="bg-transparent text-sm font-medium text-gray-700 focus:outline-none w-32 sm:w-48">
+                    </div>
+                    
+                    <!-- Tool Groups -->
+                    <div class="flex items-center space-x-2">
+                        <!-- Selection Tools -->
+                        <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                            <button type="button" onclick="s('select')" data-value="select" aria-pressed="true" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 bg-blue-50 text-blue-700 border-r border-gray-200 rounded-l-lg hover:bg-blue-100"
+                                    title="Select tool">
+                                <i class="fas fa-mouse-pointer"></i>
+                            </button>
+                            <button type="button" onclick="s('rect-select')" data-value="rect-select" aria-pressed="false" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 rounded-r-lg"
+                                    title="Rectangle select">
+                                <i class="fas fa-vector-square"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Drawing Tools -->
+                        <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                            <button type="button" onclick="s('pen')" data-value="pen" aria-pressed="false" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200 rounded-l-lg"
+                                    title="Pen tool">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button type="button" onclick="s('marker')" data-value="marker" aria-pressed="false" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200"
+                                    title="Marker tool">
+                                <i class="fas fa-marker"></i>
+                            </button>
+                            <button type="button" onclick="s('highlighter')" data-value="highlighter" aria-pressed="false" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200"
+                                    title="Highlighter tool">
+                                <i class="fas fa-highlighter"></i>
+                            </button>
+                            <button type="button" onclick="s('line')" data-value="line" aria-pressed="false" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 rounded-r-lg"
+                                    title="Line tool">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Content Tools -->
+                        <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                            <!-- Shapes Dropdown -->
+                            <div class="relative">
+                                <button type="button" id="shapes-btn" 
+                                        class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200 rounded-l-lg"
+                                        title="Shapes tools">
+                                    <i class="fas fa-shapes mr-1"></i>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                <!-- Shapes Dropdown Menu -->
+                                <div id="shapes-dropdown" class="hidden fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999] w-96 max-h-[600px] overflow-y-auto">
+                                    <!-- Basic Drawing Tools -->
+                                    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                        Drawing Tools
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1 px-2 mb-3">
+                                        <button type="button" onclick="s('line')" data-value="line" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Draw straight lines">
+                                            <i class="fas fa-minus w-4 text-gray-500"></i>
+                                            <span>Line</span>
+                                        </button>
+                                        <button type="button" onclick="s('doubleArrow')" data-value="doubleArrow" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Draw double-ended arrows">
+                                            <i class="fas fa-arrows-left-right w-4 text-gray-500"></i>
+                                            <span>Double Arrow</span>
+                                        </button>
+                                        <button type="button" onclick="s('arrow')" data-value="arrow" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Draw arrows">
+                                            <i class="fas fa-arrow-right w-4 text-gray-500"></i>
+                                            <span>Arrow</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Flowchart Shapes -->
+                                    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                        Flowchart
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1 px-2 mb-3">
+                                        <button type="button" onclick="s('process')" data-value="process" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Process/Task box">
+                                            <i class="fas fa-square w-4 text-gray-500"></i>
+                                            <span>Process</span>
+                                        </button>
+                                        <button type="button" onclick="s('decision')" data-value="decision" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Decision diamond">
+                                            <i class="fas fa-diamond w-4 text-gray-500"></i>
+                                            <span>Decision</span>
+                                        </button>
+                                        <button type="button" onclick="s('inputOutput')" data-value="inputOutput" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Input/Output parallelogram">
+                                            <i class="fas fa-play w-4 text-gray-500"></i>
+                                            <span>Input/Output</span>
+                                        </button>
+                                        <button type="button" onclick="s('document')" data-value="document" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Document shape">
+                                            <i class="fas fa-file w-4 text-gray-500"></i>
+                                            <span>Document</span>
+                                        </button>
+                                        <button type="button" onclick="s('manualInput')" data-value="manualInput" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Manual input trapezoid">
+                                            <i class="fas fa-keyboard w-4 text-gray-500"></i>
+                                            <span>Manual Input</span>
+                                        </button>
+                                        <button type="button" onclick="s('storedData')" data-value="storedData" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Stored data (cylinder)">
+                                            <i class="fas fa-database w-4 text-gray-500"></i>
+                                            <span>Stored Data</span>
+                                        </button>
+                                        <button type="button" onclick="s('display')" data-value="display" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Display/Monitor shape">
+                                            <i class="fas fa-tv w-4 text-gray-500"></i>
+                                            <span>Display</span>
+                                        </button>
+                                        <button type="button" onclick="s('merge')" data-value="merge" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Merge/Storage triangle">
+                                            <i class="fas fa-caret-down w-4 text-gray-500"></i>
+                                            <span>Merge</span>
+                                        </button>
+                                        <button type="button" onclick="s('connector')" data-value="connector" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Connector circle">
+                                            <i class="fas fa-circle w-4 text-gray-500"></i>
+                                            <span>Connector</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Basic Shapes -->
+                                    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 mb-1">
+                                        Basic Shapes
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1 px-2 mb-2">
+                                        <button type="button" onclick="s('rectangle')" data-value="rectangle" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Rectangle">
+                                            <i class="fas fa-square w-4 text-gray-500"></i>
+                                            <span>Rectangle</span>
+                                        </button>
+                                        <button type="button" onclick="s('roundedRectangle')" data-value="roundedRectangle" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Rounded rectangle">
+                                            <i class="fas fa-square-rounded w-4 text-gray-500"></i>
+                                            <span>Rounded Rect</span>
+                                        </button>
+                                        <button type="button" onclick="s('circle')" data-value="circle" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Perfect circle">
+                                            <i class="fas fa-circle w-4 text-gray-500"></i>
+                                            <span>Circle</span>
+                                        </button>
+                                        <button type="button" onclick="s('ellipse')" data-value="ellipse" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Ellipse/Oval">
+                                            <i class="fas fa-circle w-4 text-gray-500"></i>
+                                            <span>Ellipse</span>
+                                        </button>
+                                        <button type="button" onclick="s('triangle')" data-value="triangle" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Triangle">
+                                            <i class="fas fa-play w-4 text-gray-500"></i>
+                                            <span>Triangle</span>
+                                        </button>
+                                        <button type="button" onclick="s('pentagon')" data-value="pentagon" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Pentagon">
+                                            <i class="fas fa-stop w-4 text-gray-500"></i>
+                                            <span>Pentagon</span>
+                                        </button>
+                                        <button type="button" onclick="s('hexagon')" data-value="hexagon" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="Hexagon">
+                                            <i class="fas fa-stop w-4 text-gray-500"></i>
+                                            <span>Hexagon</span>
+                                        </button>
+                                        <button type="button" onclick="s('star')" data-value="star" 
+                                                class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2"
+                                                title="5-pointed star">
+                                            <i class="fas fa-star w-4 text-gray-500"></i>
+                                            <span>Star</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" onclick="s('text')" data-value="text" aria-pressed="false" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 border-r border-gray-200"
+                                    title="Text tool (Ctrl+T)">
+                                <i class="fas fa-font"></i>
+                            </button>
+                            
+                            <input type="file" id="image-upload" accept="image/*" class="hidden">
+                            <button onclick="document.getElementById('image-upload').click()" 
+                                    class="tool-btn px-3 py-2 text-sm font-medium transition-all duration-200 text-gray-600 hover:bg-gray-50 rounded-r-lg"
+                                    title="Image tool (Ctrl+I)">
+                                <i class="fas fa-image"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Center Section: Undo/Redo -->
+                <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <button id="undo-btn" class="px-3 py-2 text-gray-600 hover:bg-gray-50 transition-colors duration-200 border-r border-gray-200 rounded-l-lg" title="Undo (Ctrl+Z)">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button id="redo-btn" class="px-3 py-2 text-gray-600 hover:bg-gray-50 transition-colors duration-200 rounded-r-lg" title="Redo (Ctrl+Y)">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+                
+                <!-- Right Section: File Operations -->
+                <div class="flex items-center space-x-2">
+                    <!-- File Operations Dropdown -->
+                    <div class="relative" id="file-dropdown">
+                        <button id="file-menu-btn" class="flex items-center space-x-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-sm font-medium shadow-sm"
+                                title="File operations">
+                            <i class="fas fa-file-export"></i>
+                            <span class="hidden sm:inline">File</span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="file-menu" class="hidden fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999] w-48">
+                            <button id="save-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                    title="Save (Ctrl+S)">
+                                <i class="fas fa-save w-4 text-green-600"></i>
+                                <span>Save</span>
+                            </button>
+                            <div class="border-t border-gray-200 my-1"></div>
+                            <button onclick="exportJSON()" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                    title="Export as JSON">
+                                <i class="fas fa-download w-4 text-blue-600"></i>
+                                <span>Export JSON</span>
+                            </button>
+                            <button onclick="importJSON()" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                    title="Import JSON">
+                                <i class="fas fa-upload w-4 text-purple-600"></i>
+                                <span>Import JSON</span>
+                            </button>
+                            <div class="border-t border-gray-200 my-1"></div>
+                            <button id="export-png" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                    title="Export as PNG">
+                                <i class="fas fa-image w-4 text-orange-600"></i>
+                                <span>Export PNG</span>
+                            </button>
+                            <button id="print-pdf" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                                    title="Print as PDF">
+                                <i class="fas fa-print w-4 text-red-600"></i>
+                                <span>Print PDF</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Secondary Toolbar Row -->
+        <div class="px-4 py-2 border-t border-gray-200 bg-gray-50/50">
+            <div class="flex items-center justify-between">
+                <!-- Left Section: Drawing Controls -->
+                <div class="flex items-center space-x-3">
+                    <!-- Tool Properties -->
+                    <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm px-3 py-1.5 space-x-3">
+                        <!-- Font Size -->
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-text-height text-gray-500 text-sm"></i>
+                            <input type="number" id="text-size" min="8" max="160" value="24" 
+                                   class="w-14 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        
+                        <!-- Color Control -->
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-palette text-gray-500 text-sm"></i>
+                            <input type="color" id="color-picker" value="#000000" class="w-8 h-8 border border-gray-200 rounded cursor-pointer">
+                            <span id="current-tool-color" class="w-6 h-6 border border-gray-200 rounded shadow-sm" style="background-color: #000000;"></span>
+                        </div>
+                        
+                        <!-- Size Control -->
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-circle text-gray-500 text-xs"></i>
+                            <input type="range" id="size-range" min="1" max="50" value="2" 
+                                   class="w-20 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        
+                        <!-- Transparency Slider -->
+                        <div id="transparency-control" class="hidden flex items-center space-x-2">
+                            <i class="fas fa-adjust text-gray-500 text-sm"></i>
+                            <input type="range" id="transparency-range" min="0.1" max="1" step="0.1" value="0.4" 
+                                   class="w-20 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <span id="transparency-value" class="text-xs text-gray-600 min-w-[2rem]">40%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div id="color-palette" class="hidden bg-white rounded-lg border border-gray-200 shadow-sm p-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-gray-600 font-medium">Quick Colors:</span>
+                            <div id="palette-colors" class="flex space-x-1"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex items-center space-x-2">
+                        <button id="paste-btn" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 text-sm shadow-sm"
+                                title="Paste">
+                            <i class="fas fa-paste text-sm"></i>
+                            <span class="hidden sm:inline">Paste</span>
+                        </button>
+                        <button id="clear-btn" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors duration-200 text-sm shadow-sm"
+                                title="Clear page">
+                            <i class="fas fa-eraser text-sm"></i>
+                            <span class="hidden sm:inline">Clear</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Right Section: Additional Tools -->
+                <div class="flex items-center space-x-2">
+                    <button id="info-btn" class="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 shadow-sm" title="Keyboard Shortcuts">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                    <button id="settings-btn" class="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 shadow-sm" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button id="objects-btn" class="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors duration-200 shadow-sm" title="Objects & Layers">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tool-specific hidden inputs -->
+        <input type="hidden" id="tool-select" value="select">
+        <div id="tool-buttons" role="toolbar" aria-label="Tool selection" class="hidden"></div>
+    </div>
+
+    <div class="board" style="margin-top: 160px; height: calc(100vh - 160px - 40px); overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 10px; background-color: #f8f9fa;">
+        <div class="canvas-container" style="display: flex; justify-content: center; align-items: center; border: 3px solid #d1d5db; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); background: white; padding: 12px; max-width: fit-content; max-height: fit-content;">
+            <canvas id="board-canvas" width="1600" height="1000" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); max-width: calc(100vw - 60px); max-height: calc(100vh - 220px); display: block;"></canvas>
+        </div>
+        
+        <!-- Floating Page Controls -->
+        <div class="fixed bottom-6 right-6 z-40">
+            <div class="bg-white/90 backdrop-blur-md border border-apple-gray-200 rounded-xl shadow-lg p-2 flex items-center space-x-1">
+                <button id="prev-page" title="Previous Page" class="p-2 rounded-lg hover:bg-apple-gray-100 transition-colors duration-200">
+                    <i class="fas fa-chevron-left text-apple-gray-700"></i>
+                </button>
+                <div class="px-3 py-1 text-sm font-medium text-apple-gray-700 min-w-[3rem] text-center" id="page-info">1 / 1</div>
+                <button id="next-page" title="Next Page" class="p-2 rounded-lg hover:bg-apple-gray-100 transition-colors duration-200">
+                    <i class="fas fa-chevron-right text-apple-gray-700"></i>
+                </button>
+                <div class="w-px h-6 bg-apple-gray-300 mx-1"></div>
+                <button id="add-page" title="Insert New Page After Current Page" class="p-2 rounded-lg hover:bg-apple-gray-100 transition-colors duration-200">
+                    <i class="fas fa-plus text-apple-gray-700"></i>
+                </button>
+                <button id="delete-page" title="Delete Current Page" class="p-2 rounded-lg hover:bg-red-100 transition-colors duration-200">
+                    <i class="fas fa-trash text-red-600"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="statusbar" id="statusbar" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #e5e7eb; padding: 8px 16px; font-size: 12px; color: #6b7280; z-index: 100; text-align: center;">Ready</div>
+
+    <!-- Context Menu -->
+    <div class="ctx-menu" id="ctx" style="display: none; position: fixed; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); padding: 4px; z-index: 2000; min-width: 140px;">
+        <button data-cmd="edit-text" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Edit Text</button>
+        <button data-cmd="crop" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Crop</button>
+        <button data-cmd="copy" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Copy</button>
+        <button data-cmd="paste" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Paste</button>
+        <hr style="margin: 4px 0; border: none; border-top: 1px solid #e5e7eb;">
+        <button data-cmd="duplicate" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Duplicate</button>
+        <button data-cmd="layer-up" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Layer Up</button>
+        <button data-cmd="layer-down" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Layer Down</button>
+        <button data-cmd="front" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Bring to Front</button>
+        <button data-cmd="back" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #374151;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">Send to Back</button>
+        <hr style="margin: 4px 0; border: none; border-top: 1px solid #e5e7eb;">
+        <button data-cmd="delete" style="display: block; width: 100%; padding: 8px 12px; border: none; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; font-size: 14px; color: #dc2626;" onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='transparent'">Delete</button>
+    </div>
+
+    <!-- Text Editor Overlay -->
+    <div class="overlay" id="text-editor-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+      <div class="modal" style="background: var(--ct-card); padding: 20px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border:1px solid var(--ct-border-primary); color:var(--ct-white)">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">Edit Text</h3>
+            <textarea id="text-editor-textarea" placeholder="Enter your text here..." style="width: 100%; height: 150px; border: 1px solid #ddd; border-radius: 5px; padding: 10px; resize: vertical; font-family: inherit;"></textarea>
+            <div class="buttons" style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+              <button id="text-editor-cancel" style="padding: 8px 16px; border: 1px solid var(--ct-border-primary); background: var(--ct-bg-quaternary); color:var(--ct-white); border-radius: 5px; cursor: pointer;">Cancel</button>
+              <button id="text-editor-save" style="padding: 8px 16px; border: none; background: var(--ct-accent); color: var(--ct-white); border-radius: 5px; cursor: pointer;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop Image Overlay -->
+    <div class="overlay" id="crop-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal" style="background: var(--ct-card); padding: 20px; border-radius: 10px; min-width: 600px; max-width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border:1px solid var(--ct-border-primary); color:var(--ct-white)">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">Crop Image</h3>
+            <div id="crop-container" style="position: relative; margin: 20px 0;">
+                <img id="crop-image" style="max-width: 100%; max-height: 400px; display: block;" />
+                <div id="crop-selection" style="position: absolute; border: 2px solid #007AFF; background: rgba(0, 122, 255, 0.1); cursor: move; box-sizing: border-box;"></div>
+                <div id="crop-handles">
+                    <div class="crop-handle" data-handle="nw" style="position: absolute; width: 10px; height: 10px; background: #007AFF; cursor: nw-resize;"></div>
+                    <div class="crop-handle" data-handle="ne" style="position: absolute; width: 10px; height: 10px; background: #007AFF; cursor: ne-resize;"></div>
+                    <div class="crop-handle" data-handle="sw" style="position: absolute; width: 10px; height: 10px; background: #007AFF; cursor: sw-resize;"></div>
+                    <div class="crop-handle" data-handle="se" style="position: absolute; width: 10px; height: 10px; background: #007AFF; cursor: se-resize;"></div>
+                </div>
+            </div>
+            <div class="buttons" style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+              <button id="crop-cancel" style="padding: 8px 16px; border: 1px solid var(--ct-border-primary); background: var(--ct-bg-quaternary); color:var(--ct-white); border-radius: 5px; cursor: pointer;">Cancel</button>
+              <button id="crop-save" style="padding: 8px 16px; border: none; background: var(--ct-accent); color: var(--ct-white); border-radius: 5px; cursor: pointer;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div class="overlay" id="settings-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal" style="background: var(--ct-card); padding: 20px; border-radius: 10px; min-width: 400px; max-width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border:1px solid var(--ct-border-primary); color:var(--ct-white)">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">Settings</h3>
+            
+            <h4 style="margin: 15px 0 8px 0; font-size: 14px; font-weight: bold;">Color Palette</h4>
+            <label style="display: block; margin-bottom: 10px;">Select Color Palette:
+                <select id="color-palette-select" style="width: 100%; padding: 5px; border: 1px solid var(--ct-border-primary); border-radius: 3px; margin-top: 5px; background: var(--ct-card); color:var(--ct-white)">
+                    <option value="none">No Palette</option>
+                    <option value="pastel" selected>Pastel Colors</option>
+                    <option value="primary">Primary Colors</option>
+                    <option value="secondary">Secondary Colors</option>
+                    <option value="warm">Warm Colors</option>
+                    <option value="cool">Cool Colors</option>
+                </select>
+            </label>
+            
+            <div id="palette-preview" style="margin: 10px 0; display: none;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Preview:</div>
+                <div id="palette-preview-colors" style="display: flex; gap: 5px;"></div>
+            </div>
+            
+            <h4 style="margin: 15px 0 8px 0; font-size: 14px; font-weight: bold;">Paste Text Settings</h4>
+                <label style="display: block; margin-bottom: 8px;">Max lines per page: <input type="number" id="max-lines-per-page" min="1" max="100" value="25" style="width: 60px; padding: 3px; border: 1px solid var(--ct-border-primary); border-radius: 3px; margin-left: 10px; background: var(--ct-card); color:var(--ct-white)"></label>
+            <label style="display: block; margin-bottom: 15px;">Max words per line: <input type="number" id="max-words-per-line" min="1" max="50" value="10" style="width: 60px; padding: 3px; border: 1px solid #ddd; border-radius: 3px; margin-left: 10px;"></label>
+            <div class="buttons" style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="settings-cancel" style="padding: 8px 16px; border: 1px solid var(--ct-border-primary); background: var(--ct-bg-quaternary); color:var(--ct-white); border-radius: 5px; cursor: pointer;">Cancel</button>
+                <button id="settings-save" style="padding: 8px 16px; border: none; background: var(--ct-accent); color: var(--ct-white); border-radius: 5px; cursor: pointer;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Objects/Layers Overlay -->
+    <div class="overlay" id="objects-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal" style="background: white; padding: 20px; border-radius: 10px; min-width: 600px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">Objects & Layers</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Select Layer:</label>
+                <select id="layer-select" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;">
+                    <option value="all">All Layers</option>
+                </select>
+            </div>
+            
+            <div id="objects-list" style="max-height: 400px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 5px;">
+                <!-- Objects will be populated here -->
+            </div>
+            
+            <div class="buttons" style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="objects-close" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Overlay -->
+    <div class="overlay" id="shortcuts-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal" style="background: white; padding: 20px; border-radius: 10px; min-width: 500px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">Keyboard Shortcuts</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #007AFF;">Tools & Actions</h4>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Text Tool</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Ctrl+T</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Image Tool</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Ctrl+I</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Save</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Ctrl+S</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Undo</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Ctrl+Z</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Redo</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Ctrl+Y</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Insert Page</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Ctrl+E</kbd>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #007AFF;">Selection & Movement</h4>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Add/Remove from Selection</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Ctrl+Click</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Move Selected Objects</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Arrow Keys</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Move Faster</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Shift+Arrows</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Constrain Aspect Ratio</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Shift+Drag</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Delete Selected</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Delete</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                            <span>Paste at Cursor</span>
+                            <kbd style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 12px;">Right Click</kbd>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007AFF;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: bold; color: #007AFF;">Features & Tips</h4>
+
+                <details style="margin-bottom: 8px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #333; margin-bottom: 8px; outline: none;">📝 Text & Pasting</summary>
+                    <div style="padding-left: 15px; font-size: 13px; color: #666; line-height: 1.4;">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><strong>Smart Text Breaking:</strong> Large pasted text automatically breaks across pages with configurable limits</li>
+                            <li><strong>Per-Line Control:</strong> Set maximum words per line in settings</li>
+                            <li><strong>Per-Page Limits:</strong> Configure maximum lines per page</li>
+                            <li><strong>Double-click to Edit:</strong> Edit any text object by double-clicking</li>
+                            <li><strong>Cross-Page Copy/Paste:</strong> Copy text and paste it on any page</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details style="margin-bottom: 8px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #333; margin-bottom: 8px; outline: none;">🎨 Tools & Customization</summary>
+                    <div style="padding-left: 15px; font-size: 13px; color: #666; line-height: 1.4;">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><strong>Persistent Settings:</strong> Each tool remembers its last color and size</li>
+                            <li><strong>Color Palettes:</strong> Choose from predefined color palettes or create custom ones</li>
+                            <li><strong>Size Control:</strong> Adjust tool sizes with the slider or size inputs</li>
+                            <li><strong>Highlighter Opacity:</strong> Adjust transparency for highlighter tool</li>
+                            <li><strong>Shape Tools:</strong> Flowchart shapes with persistent color memory</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details style="margin-bottom: 8px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #333; margin-bottom: 8px; outline: none;">🖼️ Images & Media</summary>
+                    <div style="padding-left: 15px; font-size: 13px; color: #666; line-height: 1.4;">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><strong>Compressed Uploads:</strong> Images are automatically compressed for better performance</li>
+                            <li><strong>Crop Modal:</strong> Resize and crop images with the interactive crop tool</li>
+                            
+                            <li><strong>Clipboard Support:</strong> Paste images directly from clipboard or web. Pictures supported.</li>
+                            <li><strong>Resize Images with Shift:</strong> Hold Shift while resizing to maintain aspect ratio</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details style="margin-bottom: 8px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #333; margin-bottom: 8px; outline: none;">🎯 Selection & Navigation</summary>
+                    <div style="padding-left: 15px; font-size: 13px; color: #666; line-height: 1.4;">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><strong>Multi-Selection:</strong> Use rectangle select tool for selecting multiple objects</li>
+                            <li><strong>Add/Remove:</strong> Ctrl+Click to add/remove individual objects from selection</li>
+                            <li><strong>Arrow Key Movement:</strong> Move selected objects with arrow keys</li>
+                            <li><strong>Fast Movement:</strong> Hold Shift + arrows for faster movement</li>
+                            <li><strong>Right-Click Paste:</strong> Paste at cursor position with right-click</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details style="margin-bottom: 8px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #333; margin-bottom: 8px; outline: none;">📄 Pages & Organization</summary>
+                    <div style="padding-left: 15px; font-size: 13px; color: #666; line-height: 1.4;">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><strong>Multi-Page Support:</strong> Create unlimited pages for your whiteboard</li>
+                            <li><strong>Page Navigation:</strong> Use prev/next buttons or left/right arrow keys</li>
+                            <li><strong>Insert Pages:</strong> Use the "+" button or Ctrl+E to insert new pages after current page</li>
+                           
+                            <li><strong>Cross-Page Operations:</strong> Copy/paste objects between pages</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details style="margin-bottom: 8px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #333; margin-bottom: 8px; outline: none;">💾 File Operations</summary>
+                    <div style="padding-left: 15px; font-size: 13px; color: #666; line-height: 1.4;">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><strong>Auto-Save:</strong> Work is automatically saved as you create</li>
+                            <li><strong>Export Options:</strong> Export as JSON, PNG, or PDF</li>
+                            <li><strong>Import Support:</strong> Import previously exported JSON files</li>
+                            <li><strong>Keyboard Save:</strong> Ctrl+S for quick saving</li>
+                            <li><strong>Success Notifications:</strong> Visual feedback when saves complete</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+            
+            <div class="buttons" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="shortcuts-close" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Success Notification -->
+    <div id="save-success-notification" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 3000; background: #4CAF50; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 250px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; transition: all 0.3s ease;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">✓</span>
+            <div>
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 2px;">Saved Successfully!</div>
+                <div id="save-success-message" style="font-size: 12px; opacity: 0.9;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Loading Overlay -->
+    <div id="save-loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; justify-content: center; align-items: center; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;">
+        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; max-width: 300px;">
+            <div style="font-size: 24px; margin-bottom: 10px;">💾</div>
+            <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">Saving...</div>
+            <div style="font-size: 14px; color: #666; margin-bottom: 15px;">Please wait while your whiteboard is being saved.</div>
+            <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #007AFF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        </div>
+    </div>
+
+    <!-- Hidden Forms -->
+<!-- Automatically route to correct Flask endpoint depending on new vs. existing board -->
+<form id="save-form" action="{{ url_for('boards.edit_board', board_id=board.id) if board else url_for('boards.new_board') }}" method="POST" style="display:none;">
+    <input id="title-input" name="title" value="{{ board.title if board else 'Whiteboard' }}">
+    <input id="content-input" name="content">
+    <input type="hidden" name="folder_id" id="folder-id-input" value="{{ board.folder_id if board else current_folder_id }}">
+</form>
+
+
+    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="handleImportFile(event)">
+
+    <script id="initial-board-data" type="application/json">{{ board.content|safe if board and board.content else 'null' }}</script>
+
+
+<script>
+  let rectSelecting = false;
+  let rectSelectStart = null;
+  let rectSelectEnd = null;
+  let multiSelectedIds = new Set();
+
+  function s(v){
+    const i = document.getElementById('tool-select');
+    if (i.value === v) return;
+    
+    // Save current tool's settings before switching
+    const oldTool = i.value;
+    if (oldTool && (oldTool === 'pen' || oldTool === 'marker' || oldTool === 'highlighter' || oldTool === 'line' || oldTool === 'rectangle' || oldTool === 'arrow' || oldTool === 'roundedRectangle' || oldTool === 'decision' || oldTool === 'inputOutput' || oldTool === 'connector')) {
+      toolColors[oldTool] = color;
+      toolSizes[oldTool] = size;
+      if (oldTool === 'highlighter' || oldTool === 'marker') {
+        toolTransparencies[oldTool] = currentTransparency;
+      }
+    }
+    
+    i.value = v;
+    currentTool = v;
+    
+    // Update all tool buttons visual state - target buttons with data-value attribute
+    Array.from(document.querySelectorAll('button[data-value]'))
+        .forEach(b => {
+            const isPressed = b.dataset.value === v;
+            b.setAttribute('aria-pressed', String(isPressed));
+            
+            // Remove all existing state classes
+            b.classList.remove('bg-blue-50', 'text-blue-700', 'bg-blue-100', 'text-gray-600', 'hover:bg-gray-50', 'hover:bg-blue-100');
+            
+            // Apply appropriate classes based on state
+            if (isPressed) {
+                b.classList.add('bg-blue-50', 'text-blue-700');
+                // Add hover state for active button
+                b.classList.add('hover:bg-blue-100');
+            } else {
+                b.classList.add('text-gray-600', 'hover:bg-gray-50');
+            }
+        });
+    
+    // Close shapes dropdown if a shape tool is selected
+    if (v === 'line' || v === 'rectangle' || v === 'arrow' || v === 'roundedRectangle' || v === 'decision' || v === 'inputOutput' || v === 'connector') {
+      document.getElementById('shapes-dropdown').classList.add('hidden');
+    }
+    
+    // Load tool-specific color when switching tools
+    if (toolColors[v]) {
+      color = toolColors[v];
+      document.getElementById('color-picker').value = color;
+      document.getElementById('current-tool-color').style.backgroundColor = color;
+    }
+    
+    // Load tool-specific size when switching tools
+    if (toolSizes[v]) {
+      size = toolSizes[v];
+      document.getElementById('size-range').value = size;
+    }
+    
+    // Show/hide transparency control and load transparency for highlighter
+    const transparencyControl = document.getElementById('transparency-control');
+    if (v === 'highlighter') {
+      transparencyControl.classList.remove('hidden');
+      transparencyControl.classList.add('flex');
+      currentTransparency = toolTransparencies[v] || 0.4;
+      document.getElementById('transparency-range').value = currentTransparency;
+      document.getElementById('transparency-value').textContent = Math.round(currentTransparency * 100) + '%';
+    } else {
+      transparencyControl.classList.add('hidden');
+      transparencyControl.classList.remove('flex');
+      currentTransparency = toolTransparencies[v] || 1.0;
+    }
+    
+    i.dispatchEvent(new Event('change', { bubbles: true }));
+    // Reset multi-selection state when switching tools
+    if (v !== 'rect-select') {
+      rectSelecting = false;
+      rectSelectStart = null;
+      rectSelectEnd = null;
+      multiSelectedIds.clear();
+      redraw();
+    }
+  }
+
+  // Function to visually deselect all tools
+  function deselectAllTools() {
+    const i = document.getElementById('tool-select');
+    i.value = ''; // Clear the tool value
+    currentTool = '';
+    Array.from(document.querySelectorAll('#tool-buttons button'))
+        .forEach(b => {
+            b.setAttribute('aria-pressed', 'false');
+            b.className = 'tool-btn px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-apple-gray-100 text-apple-gray-700 hover:bg-apple-gray-200';
+        });
+  }
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fid = params.get('folder_id');
+    const folderInput = document.getElementById('folder-id-input');
+    if (folderInput && fid) folderInput.value = fid;
+  } catch (e) {
+    // noop
+  }
+});
+</script>
+
+
+
+
+<script>
+/* =========================
+   Enhanced Multi-Page Whiteboard
+   ========================= */
+
+/* ======= Model ======= */
+const BASE_STROKE_LAYER = 0;
+const BASE_OBJECT_LAYER = 0;
+const MAX_CACHED_IMAGES = 50;
+
+const canvas = document.getElementById('board-canvas');
+const ctx = canvas.getContext('2d');
+const statusbar = document.getElementById('statusbar');
+const imageCache = new Map();
+
+// Multi-page data structure
+let pages = []; // Array of page objects: {id, objects, undoStack, redoStack}
+let currentPageIndex = 0;
+let nextPageId = 1;
+let nextObjectId = 1;
+
+// Global clipboard for copy/paste across pages
+let globalClipboard = null;
+// Position where context menu was opened (for paste positioning)
+let contextMenuPosition = null;
+// Current mouse position for keyboard paste
+let currentMousePosition = null;
+
+// Helper function to position pasted objects at context menu location
+function positionPastedObjects(objects, basePosition) {
+  if (!basePosition || !objects.length) return objects;
+  
+  // Find the reference point (top-left most point of all objects)
+  let minX = Infinity, minY = Infinity;
+  objects.forEach(obj => {
+    const objX = obj.props?.x || obj.x;
+    const objY = obj.props?.y || obj.y;
+    const objPath = obj.props?.path || obj.path || [];
+    
+    if (obj.type === 'image' || obj.type === 'text') {
+      minX = Math.min(minX, objX);
+      minY = Math.min(minY, objY);
+    } else if (obj.type === 'stroke' && objPath.length > 0) {
+      objPath.forEach(pt => {
+        minX = Math.min(minX, pt.x);
+        minY = Math.min(minY, pt.y);
+      });
+    }
+  });
+  
+  // Calculate offset to move the group to the base position
+  const offsetX = basePosition.x - minX;
+  const offsetY = basePosition.y - minY;
+  
+  // Apply offset to all objects
+  return objects.map(obj => {
+    const clone = structuredCloneSafe(obj);
+    
+    if (clone.type === 'image' || clone.type === 'text') {
+      if (clone.props) {
+        clone.props.x = (clone.props.x || 0) + offsetX;
+        clone.props.y = (clone.props.y || 0) + offsetY;
+      } else {
+        clone.x = (clone.x || 0) + offsetX;
+        clone.y = (clone.y || 0) + offsetY;
+      }
+    } else if (clone.type === 'stroke') {
+      const path = clone.props?.path || clone.path || [];
+      const newPath = path.map(pt => ({x: pt.x + offsetX, y: pt.y + offsetY}));
+      if (clone.props) {
+        clone.props.path = newPath;
+      } else {
+        clone.path = newPath;
+      }
+    }
+    
+    return clone;
+  });
+}
+
+// Current page state (loaded from pages array)
+let objects = [];
+let undoStack = [];
+let redoStack = [];
+
+// Expose to window for module access
+window.objects = objects;
+window.undoStack = undoStack;
+window.redoStack = redoStack;
+
+// Expose additional globals and helpers for rendering module
+window.drawing = false;
+window.currentStroke = null;
+window.currentTool = 'select';
+window.currentTransparency = 1.0;
+window.color = '#000000';
+window.size = 2;
+window.selectedId = null;
+window.multiSelectedIds = new Set();
+window.rectSelecting = false;
+window.rectSelectStart = null;
+window.rectSelectEnd = null;
+window.currentHandles = [];
+window.shiftPressed = false;
+
+// Expose helper functions for modules
+window.findById = (id) => objects.find(o => o.id === id);
+window.getBounds = getBounds;
+window.isObjectFullyInRect = isObjectFullyInRect;
+window.updateStatus = updateStatus;
+window.resetUIControls = resetUIControls;
+window.autoWrapTextByWords = autoWrapTextByWords;
+window.commitAppliedChange = commitAppliedChange;
+window.structuredCloneSafe = structuredCloneSafe;
+window.BASE_OBJECT_LAYER = BASE_OBJECT_LAYER;
+window.nextObjectId = 1;
+
+// Expose page variables for pages module
+window.pages = [];
+window.currentPageIndex = 0;
+window.nextPageId = 1;
+
+// Expose crop variables for images module
+window.croppingImageId = null;
+window.cropSelection = { x: 0, y: 0, w: 100, h: 100 };
+window.isDraggingCrop = false;
+window.isResizingCrop = false;
+
+let currentTool = 'select';
+let color = '#000000';
+let size = 2;  // Default to pen size
+
+// Tool-specific colors
+let toolColors = {
+  pen: '#ff0000',      // Red for pen
+  marker: '#0000ff',   // Blue for marker  
+  highlighter: '#ffb3d9', // Light pink for highlighter
+  line: '#000000',     // Black for line
+  rectangle: '#000000', // Black for rectangle
+  arrow: '#000000',    // Black for arrow
+  roundedRectangle: '#000000', // Black for rounded rectangle
+  decision: '#000000', // Black for decision
+  inputOutput: '#000000', // Black for input/output
+  connector: '#000000', // Black for connector
+  text: '#000000'      // Black for text
+};
+
+// Tool-specific sizes
+let toolSizes = {
+  pen: 2,              // Thin for pen
+  marker: 5,           // Thick for marker
+  highlighter: 8,      // Thick for highlighter
+  line: 3,             // Medium for line
+  rectangle: 3,        // Medium for rectangle
+  arrow: 3,            // Medium for arrow
+  roundedRectangle: 3, // Medium for rounded rectangle
+  decision: 3,         // Medium for decision
+  inputOutput: 3,      // Medium for input/output
+  connector: 3         // Medium for connector
+};
+
+// Tool-specific transparencies
+let toolTransparencies = {
+  pen: 1.0,            // Opaque for pen
+  marker: 0.6,         // Semi-transparent for marker
+  highlighter: 0.4,    // More transparent for highlighter
+  line: 1.0,           // Opaque for line
+  rectangle: 1.0,      // Opaque for rectangle
+  arrow: 1.0,          // Opaque for arrow
+  roundedRectangle: 1.0, // Opaque for rounded rectangle
+  decision: 1.0,       // Opaque for decision
+  inputOutput: 1.0,    // Opaque for input/output
+  connector: 1.0,      // Opaque for connector
+  text: 1.0            // Opaque for text
+};
+
+// Current transparency value
+let currentTransparency = 1.0;
+
+// Color Palette Definitions
+const colorPalettes = {
+  pastel: {
+    name: 'Pastel Colors',
+    colors: ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D4BAFF', '#FFBAE8', '#F0F0F0']
+  },
+  primary: {
+    name: 'Primary Colors',
+    colors: ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#000000', '#FFFFFF']
+  },
+  secondary: {
+    name: 'Secondary Colors',
+    colors: ['#FF8000', '#8000FF', '#0080FF', '#80FF00', '#FF0080', '#00FF80', '#808080', '#400040']
+  },
+  warm: {
+    name: 'Warm Colors',
+    colors: ['#FF6B35', '#F7931E', '#FFD23F', '#EE4B2B', '#DC143C', '#B22222', '#A0522D', '#CD853F']
+  },
+  cool: {
+    name: 'Cool Colors',
+    colors: ['#00CED1', '#20B2AA', '#008B8B', '#4682B4', '#6495ED', '#7B68EE', '#9370DB', '#8A2BE2']
+  }
+};
+
+// Current active palette
+let activePalette = 'pastel'; // Default to pastel palette instead of 'none'
+let selectedPaletteColor = null;
+
+let selectedId = null;
+let editingTextId = null;
+
+let drawing = false;
+let currentStroke = null;
+let lineStartPoint = null;
+
+let dragging = false;
+let rotating = false;
+let resizing = false;
+
+let dragStart = null;
+let dragOffset = null;
+
+let lastClickTime = 0;
+let lastClickTarget = null;
+const DOUBLE_CLICK_TIME = 300;
+
+// Enhanced scaling/resizing state
+let activeHandle = null;
+let initialBounds = null;
+let initialMouse = null;
+let aspectRatio = null;
+let shiftPressed = false;
+
+const originalPositions = new Map();
+let currentHandles = [];
+
+// Add these variables at the top (after other state variables)
+let multiMoving = false;
+let multiMoveStart = null;
+let multiMoveOriginals = null;
+let multiRotating = false;
+let multiRotateStart = null;
+let multiRotateOriginals = null;
+
+let ignoreNextCtxMenuClose = false;
+
+
+/* ======= Page Management ======= */
+function createNewPage() {
+  return {
+    id: nextPageId++,
+    objects: [],
+    undoStack: [],
+    redoStack: []
+  };
+}
+
+// Page management functions moved to whiteboard_pages.js module
+// Use window.saveCurrentPageState, window.loadPageState, etc.
+function saveCurrentPageState() {
+  if (pages.length > 0 && currentPageIndex < pages.length) {
+    pages[currentPageIndex].objects = structuredCloneSafe(objects);
+    pages[currentPageIndex].undoStack = structuredCloneSafe(undoStack);
+    pages[currentPageIndex].redoStack = structuredCloneSafe(redoStack);
+  }
+}
+
+function loadPageState(pageIndex) {
+  console.log('=== LOADING PAGE STATE ===');
+  console.log('Loading page index:', pageIndex);
+  console.log('Total pages:', pages.length);
+  
+  if (pageIndex < 0 || pageIndex >= pages.length) {
+    console.log('ERROR: Invalid page index!');
+    return;
+  }
+  
+  const page = pages[pageIndex];
+  console.log('Loading page data:', page);
+  console.log('Page objects:', page.objects);
+  console.log('Page objects count:', page.objects?.length || 0);
+  
+  objects = structuredCloneSafe(page.objects);
+  undoStack = structuredCloneSafe(page.undoStack);
+  redoStack = structuredCloneSafe(page.redoStack);
+  
+  // Sync window references for modules
+  window.objects = objects;
+  window.undoStack = undoStack;
+  window.redoStack = redoStack;
+  
+  console.log('After cloning - objects:', objects);
+  console.log('After cloning - objects count:', objects.length);
+  
+  selectedId = null;
+  resetUIControls();
+  console.log('Calling redraw...');
+  redraw();
+  console.log('redraw() completed');
+}
+
+function switchToPage(pageIndex) {
+  if (pageIndex === currentPageIndex) return;
+  if (pageIndex < 0 || pageIndex >= pages.length) return;
+  
+  saveCurrentPageState();
+  currentPageIndex = pageIndex;
+  loadPageState(pageIndex);
+  updatePageControls();
+}
+
+function addNewPage() {
+  saveCurrentPageState();
+  const newPage = createNewPage();
+  pages.push(newPage);
+  currentPageIndex = pages.length - 1;
+  loadPageState(currentPageIndex);
+  updatePageControls();
+}
+
+function insertPageAtCurrentLocation() {
+  saveCurrentPageState();
+  const newPage = createNewPage();
+  pages.splice(currentPageIndex + 1, 0, newPage);
+  currentPageIndex = currentPageIndex + 1;
+  loadPageState(currentPageIndex);
+  updatePageControls();
+}
+
+function deleteCurrentPage() {
+  if (pages.length <= 1) {
+    alert("Cannot delete the last page.");
+    return;
+  }
+  
+  if (!confirm(`Delete page ${currentPageIndex + 1}?`)) return;
+  
+  pages.splice(currentPageIndex, 1);
+  
+  if (currentPageIndex >= pages.length) {
+    currentPageIndex = pages.length - 1;
+  }
+  
+  loadPageState(currentPageIndex);
+  updatePageControls();
+}
+
+function updatePageControls() {
+  const pageInfo = document.getElementById('page-info');
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
+  const deleteBtn = document.getElementById('delete-page');
+  
+  pageInfo.textContent = `${currentPageIndex + 1} / ${pages.length}`;
+  
+  prevBtn.disabled = currentPageIndex <= 0;
+  nextBtn.disabled = currentPageIndex >= pages.length - 1;
+  deleteBtn.disabled = pages.length <= 1;
+}
+
+/* ======= Bootstrap from server JSON (safe) ======= */
+/* ======= Fabric.js Migration Helper ======= */
+function parseFabricPath(fabricPath) {
+  // Convert Fabric.js path array to current format points
+  const points = [];
+  
+  if (!fabricPath || !Array.isArray(fabricPath)) return points;
+  
+  try {
+    for (let i = 0; i < fabricPath.length; i++) {
+      const segment = fabricPath[i];
+      if (Array.isArray(segment) && segment.length >= 3) {
+        const command = segment[0];
+        if (command === 'M' || command === 'L') {
+          // Move to or Line to
+          points.push({
+            x: segment[1] || 0,
+            y: segment[2] || 0
+          });
+        } else if (command === 'Q' && segment.length >= 5) {
+          // Quadratic curve - add the end point
+          points.push({
+            x: segment[3] || 0,
+            y: segment[4] || 0
+          });
+        } else if (command === 'C' && segment.length >= 7) {
+          // Cubic curve - add the end point
+          points.push({
+            x: segment[5] || 0,
+            y: segment[6] || 0
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error parsing Fabric.js path:', e);
+  }
+  
+  return points;
+}
+
+/* ======= Bootstrap and Data Loading ======= */
+(function bootstrap(){
+  try{
+    const raw = document.getElementById('initial-board-data')?.textContent || 'null';
+    console.log('=== LOADING BOARD DATA ===');
+    console.log('Raw board data:', raw);
+    console.log('Raw data length:', raw.length);
+    
+    const parsed = JSON.parse(raw);
+    console.log('Parsed board data:', parsed);
+    
+    if(parsed){
+      if(parsed.pages && Array.isArray(parsed.pages) && parsed.pages.length > 0) {
+        // Multi-page format (current format)
+        console.log('Loading multi-page format, pages:', parsed.pages);
+        console.log('Number of pages:', parsed.pages.length);
+        
+        pages = parsed.pages;
+        currentPageIndex = Math.max(0, Math.min(parsed.currentPageIndex || 0, pages.length - 1));
+        nextPageId = parsed.nextPageId || (pages.reduce((m,p)=>Math.max(m,p.id||0),0)+1) || 1;
+        nextObjectId = parsed.nextObjectId || 1;
+        
+        console.log('Set currentPageIndex to:', currentPageIndex);
+        console.log('Set nextPageId to:', nextPageId);
+        console.log('Set nextObjectId to:', nextObjectId);
+        
+        if(pages.length > 0) {
+          console.log('Loading page state for index:', currentPageIndex);
+          console.log('Page data:', pages[currentPageIndex]);
+          console.log('Page objects count:', pages[currentPageIndex]?.objects?.length || 0);
+          
+          loadPageState(currentPageIndex);
+          
+          console.log('After loadPageState - objects array:', objects);
+          console.log('After loadPageState - objects count:', objects.length);
+        } else {
+          console.log('Pages array is empty, creating new page');
+          pages = [createNewPage()];
+          currentPageIndex = 0;
+          loadPageState(0);
+        }
+      } else if(parsed.objects) {
+        // Legacy format - could be either old app format or Fabric.js format
+        console.log('Loading legacy format, objects count:', parsed.objects.length);
+        let convertedObjects = [];
+        
+        // Check if it's Fabric.js format (has version property and objects array)
+        if(parsed.version && typeof parsed.version === 'string' && parsed.version.includes('.')) {
+          console.log('Detected Fabric.js format version:', parsed.version, 'converting to current format...');
+          // Convert Fabric.js objects to current format
+          convertedObjects = (parsed.objects || []).map((obj, index) => {
+            console.log('Converting object:', index, obj.type, obj);
+            // Convert Fabric.js object to current whiteboard format
+            if(obj.type === 'path') {
+              // Convert Fabric.js path to stroke
+              const converted = {
+                id: index + 1,
+                type: 'stroke',
+                layer: 0,
+                props: {
+                  color: obj.stroke || '#000000',
+                  size: obj.strokeWidth || 4,
+                  path: obj.path ? parseFabricPath(obj.path) : []
+                }
+              };
+              console.log('Converted path to stroke:', converted);
+              return converted;
+            } else if(obj.type === 'i-text' || obj.type === 'textbox') {
+              // Convert Fabric.js text to current text format
+              const converted = {
+                id: index + 1,
+                type: 'text',
+                layer: 0,
+                props: {
+                  text: obj.text || '',
+                  x: obj.left || 0,
+                  y: obj.top || 0,
+                  fontSize: obj.fontSize || 24,
+                  color: obj.fill || '#000000'
+                }
+              };
+              console.log('Converted text:', converted);
+              return converted;
+            } else {
+              // Generic object conversion
+              console.log('Unknown object type:', obj.type);
+              return {
+                id: index + 1,
+                type: 'unknown',
+                layer: 0,
+                props: obj
+              };
+            }
+          });
+        } else {
+          // Old app legacy format
+          console.log('Using old app legacy format');
+          convertedObjects = parsed.objects || [];
+        }
+        
+        pages = [{
+          id: nextPageId++,
+          objects: convertedObjects,
+          undoStack: parsed.undoStack || [],
+          redoStack: parsed.redoStack || []
+        }];
+        currentPageIndex = 0;
+        nextObjectId = (convertedObjects.reduce((m,o)=>Math.max(m,o.id||0),0)+1) || 1;
+        console.log('Created page with objects:', convertedObjects.length);
+        loadPageState(0);
+      }
+    } else {
+      // No data - create first page
+      console.log('No data, creating new page');
+      pages = [createNewPage()];
+      currentPageIndex = 0;
+      console.log('Created first page, pages:', pages);
+      loadPageState(0);
+      console.log('After loadPageState, objects:', objects);
+    }
+  }catch(e){ 
+    console.error('Error loading board data:', e);
+    pages = [createNewPage()];
+    currentPageIndex = 0;
+    loadPageState(0);
+  }
+  updatePageControls();
+})();
+
+/* ======= Command System ======= */
+function redraw(){
+  currentHandles = render() || [];
+}
+
+function executeCommand(cmd){
+  applyCommand(cmd);
+  undoStack.push(cmd);
+  redoStack = [];
+  redraw();
+}
+
+function commitAppliedChange(cmd){
+  undoStack.push(cmd);
+  redoStack = [];
+  redraw();
+}
+
+function undo(){
+  const cmd = undoStack.pop();
+  if(!cmd) return;
+  applyInverse(cmd);
+  redoStack.push(cmd);
+  redraw();
+}
+
+function redo(){
+  const cmd = redoStack.pop();
+  if(!cmd) return;
+  applyCommand(cmd);
+  undoStack.push(cmd);
+  redraw();
+}
+
+function applyCommand(cmd){
+  switch(cmd.type){
+    case "add":
+      objects.push(structuredCloneSafe(cmd.object));
+      break;
+    case "delete":
+      objects = objects.filter(o => o.id !== cmd.object.id);
+      break;
+    case "updateProps": {
+      const o = findById(cmd.id); if(o) Object.assign(o.props, cmd.next);
+      break;
+    }
+    case "updateRoot": {
+      const o = findById(cmd.id); if(o) Object.assign(o, cmd.next);
+      break;
+    }
+    case "batch":
+      cmd.commands.forEach(applyCommand);
+      break;
+  }
+}
+
+function applyInverse(cmd){
+  switch(cmd.type){
+    case "add":
+      objects = objects.filter(o => o.id !== cmd.object.id);
+      break;
+    case "delete":
+      objects.push(structuredCloneSafe(cmd.object));
+      break;
+    case "updateProps": {
+      const o = findById(cmd.id); if(o) Object.assign(o.props, cmd.prev);
+      break;
+    }
+    case "updateRoot": {
+      const o = findById(cmd.id); if(o) Object.assign(o, cmd.prev);
+      break;
+    }
+    case "batch":
+      for(let i = cmd.commands.length - 1; i >= 0; i--){
+        applyInverse(cmd.commands[i]);
+      }
+      break;
+  }
+}
+
+function structuredCloneSafe(v){
+  if (window.structuredClone) return structuredClone(v);
+  return JSON.parse(JSON.stringify(v));
+}
+
+/* ======= Utilities ======= */
+function addObject(obj){ executeCommand({type:"add", object: obj}); }
+function removeByIdCmd(o){ executeCommand({type:"delete", object: structuredCloneSafe(o)}); }
+
+function findById(id){ return objects.find(o=>o.id===id); }
+
+function toCanvasXY(e){
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(canvas.width/r.width);
+  const y=(e.clientY-r.top)*(canvas.height/r.height);
+  return {x,y};
+}
+
+// Rendering functions moved to whiteboard_render.js module
+function clearCanvas() { 
+  if (window.clearCanvas) {
+    window.clearCanvas();
+  } else {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+}
+
+function manageImageCache(){
+  if (window.manageImageCache) {
+    window.manageImageCache();
+  } else {
+    if(imageCache.size > MAX_CACHED_IMAGES){
+      const entries = Array.from(imageCache.entries());
+      const toRemove = entries.slice(0, imageCache.size - MAX_CACHED_IMAGES);
+      toRemove.forEach(([key]) => imageCache.delete(key));
+    }
+  }
+}
+
+function updateCursor(){
+  if(currentTool === 'select'){ canvas.style.cursor = 'default'; }
+  else if(currentTool === 'text'){ canvas.style.cursor = 'text'; }
+  else { canvas.style.cursor = 'crosshair'; }
+}
+
+function updateStatus(){
+  // If rectangle selection is active and multiSelectedIds is not empty
+  if (currentTool === 'rect-select' && multiSelectedIds.size > 0) {
+    if (multiSelectedIds.size === 1) {
+      // Show details for the single selected object
+      const id = Array.from(multiSelectedIds)[0];
+      const o = findById(id);
+      if (o) {
+        const parts=[`id:${o.id}`,`type:${o.type}`,`layer:${o.layer}`];
+        const objText = o.props?.text || o.text;
+        if(o.type==='text' && objText) parts.push(`text:"${objText.slice(0,40)}"`);
+        statusbar.textContent = `Page ${currentPageIndex + 1}/${pages.length} - ` + parts.join('  •  ') + (shiftPressed ? ' [SHIFT: Constrain aspect ratio]' : '');
+        syncUIWithSelectedObject(o);
+        return;
+      }
+    } else {
+      // Show summary for multi-selection
+      const selectedObjects = Array.from(multiSelectedIds).map(id => findById(id)).filter(Boolean);
+      const typeCounts = selectedObjects.reduce((acc, obj) => {
+        acc[obj.type] = (acc[obj.type] || 0) + 1;
+        return acc;
+      }, {});
+      const typeSummary = Object.entries(typeCounts)
+        .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+        .join(', ');
+      statusbar.textContent = `Page ${currentPageIndex + 1}/${pages.length} - ${multiSelectedIds.size} objects selected (${typeSummary})`;
+      resetUIControls();
+      return;
+    }
+  }
+
+  // Fallback: single selection (select tool)
+  if(selectedId==null){ 
+    statusbar.textContent = `Page ${currentPageIndex + 1}/${pages.length} - No selection`; 
+    return; 
+  }
+  const o=findById(selectedId); 
+  if(!o){ 
+    statusbar.textContent=`Page ${currentPageIndex + 1}/${pages.length} - No selection`; 
+    return; 
+  }
+  
+  const parts=[`id:${o.id}`,`type:${o.type}`,`layer:${o.layer}`];
+  const objText = o.props?.text || o.text;
+  if(o.type==='text' && objText) parts.push(`text:"${objText.slice(0,40)}"`);
+  statusbar.textContent = `Page ${currentPageIndex + 1}/${pages.length} - ` + parts.join('  •  ') + (shiftPressed ? ' [SHIFT: Constrain aspect ratio]' : '');
+  
+  syncUIWithSelectedObject(o);
+}
+
+function syncUIWithSelectedObject(o) {
+  const colorPicker = document.getElementById('color-picker');
+  const sizeRange = document.getElementById('size-range');
+  const textSize = document.getElementById('text-size');
+  const transparencyControl = document.getElementById('transparency-control');
+  const transparencyRange = document.getElementById('transparency-range');
+  
+  if(o.type === 'stroke') {
+    const objColor = o.props?.color || o.color;
+    const objSize = o.props?.size || o.size;
+    const strokeType = o.props?.strokeType || o.strokeType || 'pen'; // Default to pen for legacy strokes
+    
+    if(objColor) {
+      colorPicker.value = objColor;
+      color = objColor;
+      // Update tool color memory based on stroke type
+      if (toolColors[strokeType]) {
+        toolColors[strokeType] = objColor;
+      }
+    }
+    if(objSize) {
+      sizeRange.value = objSize;
+      size = objSize;
+      // Update tool size memory based on stroke type
+      if (toolSizes[strokeType]) {
+        toolSizes[strokeType] = objSize;
+      }
+    }
+    
+    // Show transparency control for highlighter and marker strokes
+    if(strokeType === 'highlighter' || strokeType === 'marker') {
+      transparencyControl.classList.remove('hidden');
+      transparencyControl.classList.add('flex');
+      const objTransparency = o.props?.transparency ?? o.transparency;
+      if(objTransparency !== undefined) {
+        currentTransparency = objTransparency;
+        transparencyRange.value = currentTransparency;
+        document.getElementById('transparency-value').textContent = Math.round(currentTransparency * 100) + '%';
+      }
+    } else {
+      transparencyControl.classList.add('hidden');
+      transparencyControl.classList.remove('flex');
+    }
+    
+    colorPicker.disabled = false;
+    sizeRange.disabled = false;
+    textSize.disabled = true;
+  } else if(o.type === 'text') {
+    const objColor = o.props?.color || o.color;
+    const objFontSize = o.props?.fontSize || o.fontSize;
+    
+    if(objColor) {
+      colorPicker.value = objColor;
+      color = objColor;
+      // Update text tool color memory when selecting a text object
+      toolColors.text = objColor;
+    }
+    if(objFontSize) {
+      textSize.value = objFontSize;
+    }
+    colorPicker.disabled = false;
+    sizeRange.disabled = true;
+    textSize.disabled = false;
+  } else if(o.type === 'image') {
+    colorPicker.disabled = true;
+    sizeRange.disabled = true;
+    textSize.disabled = true;
+  } else {
+    colorPicker.disabled = false;
+    sizeRange.disabled = false;
+    textSize.disabled = false;
+  }
+}
+
+function resetUIControls() {
+  const colorPicker = document.getElementById('color-picker');
+  const sizeRange = document.getElementById('size-range');
+  const textSize = document.getElementById('text-size');
+  const transparencyControl = document.getElementById('transparency-control');
+  
+  colorPicker.disabled = false;
+  sizeRange.disabled = false;
+  textSize.disabled = false;
+  
+  // Hide transparency control unless highlighter tool is active
+  if(currentTool !== 'highlighter') {
+    transparencyControl.classList.add('hidden');
+    transparencyControl.classList.remove('flex');
+  }
+}
+
+/* ======= Enhanced Drawing with rotation support ======= */
+// Drawing functions moved to whiteboard_render.js module
+function drawObject(o){
+  if (window.drawObject) {
+    window.drawObject(o);
+  } else {
+    // Fallback implementation
+    if(o.type==='stroke'){
+      ctx.save();
+      ctx.lineJoin='round'; ctx.lineCap='round';
+      const objColor = o.props?.color || o.color;
+      const objSize = o.props?.size || o.size;
+      const strokeType = o.props?.strokeType || o.strokeType;
+      const objTransparency = o.props?.transparency ?? o.transparency;
+      
+      ctx.strokeStyle = objColor; 
+      ctx.lineWidth = objSize;
+      
+      if(strokeType === 'marker') {
+        ctx.globalAlpha = objTransparency || toolTransparencies.marker || 0.6;
+      } else if(strokeType === 'highlighter') {
+        ctx.globalAlpha = objTransparency || toolTransparencies.highlighter || 0.4;
+      }
+      
+      ctx.beginPath();
+      if (window.drawShapeStroke) window.drawShapeStroke(ctx, o);
+      ctx.stroke();
+      ctx.restore();
+      
+    } else if(o.type==='image'){
+      ctx.save();
+      const objSrc = o.props?.src || o.src;
+      const objX = o.props?.x || o.x || 0;
+      const objY = o.props?.y || o.y || 0;
+      const objW = o.props?.w || o.w || 0;
+      const objH = o.props?.h || o.h || 0;
+      const objRotation = o.props?.rotation || o.rotation;
+      
+      let img=imageCache.get(objSrc);
+      if(!img){ img=new Image(); img.src=objSrc; img.onload=()=>redraw(); imageCache.set(objSrc,img); manageImageCache(); }
+      
+      if(img.complete && img.width > 0) { 
+        try{
+          if(objRotation) {
+            const centerX = objX + objW/2;
+            const centerY = objY + objH/2;
+            ctx.translate(centerX, centerY);
+            ctx.rotate(objRotation);
+            ctx.drawImage(img, -objW/2, -objH/2, objW, objH);
+          } else {
+            ctx.drawImage(img, objX, objY, objW, objH);
+          }
+        }catch(e){}
+      }
+      ctx.restore();
+      
+    } else if(o.type==='text'){
+      ctx.save();
+      const objFontSize = o.props?.fontSize || o.fontSize || 24;
+      const objColor = o.props?.color || o.color || '#000';
+      const objText = o.props?.text || o.text || '';
+      const objX = o.props?.x || o.x || 0;
+      const objY = o.props?.y || o.y || 0;
+      const objRotation = o.props?.rotation || o.rotation;
+      const objMaxWordsPerLine = o.props?.maxWordsPerLine || o.maxWordsPerLine || userPrefs.maxWordsPerLine || 10;
+      
+      ctx.font = objFontSize + 'px sans-serif';
+      ctx.fillStyle = objColor;
+      ctx.textBaseline = 'alphabetic';
+
+      const wrappedText = autoWrapTextByWords(objText, objMaxWordsPerLine);
+      const lines = wrappedText.split('\n');
+      const lineHeight = objFontSize * 1.2;
+
+      if(objRotation){
+        ctx.translate(objX, objY);
+        ctx.rotate(objRotation);
+        lines.forEach((line, i) => ctx.fillText(line, 0, i * lineHeight));
+      } else {
+        lines.forEach((line, i) => ctx.fillText(line, objX, objY + i * lineHeight));
+      }
+      ctx.restore();
+    }
+  }
+}
+
+// Shape drawing functions moved to whiteboard_shapes.js module
+// These wrapper functions maintain compatibility with existing code
+function drawArrow(startX, startY, endX, endY, size) {
+  window.drawArrow(ctx, startX, startY, endX, endY, size);
+}
+
+function drawRoundedRectangle(startX, startY, endX, endY, size) {
+  window.drawRoundedRectangle(ctx, startX, startY, endX, endY, size);
+}
+
+function drawDecision(startX, startY, endX, endY, size) {
+  window.drawDecision(ctx, startX, startY, endX, endY, size);
+}
+
+function drawInputOutput(startX, startY, endX, endY, size) {
+  window.drawInputOutput(ctx, startX, startY, endX, endY, size);
+}
+
+function drawConnector(startX, startY, endX, endY, size) {
+  window.drawConnector(ctx, startX, startY, endX, endY, size);
+}
+
+// Drawing functions moved to whiteboard_render.js module
+function drawCurrentStroke(){
+  if (window.drawCurrentStroke) {
+    window.drawCurrentStroke();
+  } else {
+    // Fallback
+    if(!currentStroke || !currentStroke.length) return;
+    ctx.save();
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.strokeStyle = color; ctx.lineWidth = size;
+    
+    if(currentTool === 'marker') {
+      ctx.globalAlpha = currentTransparency;
+    } else if(currentTool === 'highlighter') {
+      ctx.globalAlpha = currentTransparency;
+    }
+    
+    ctx.beginPath();
+    if(window.isShapeTool && window.isShapeTool(currentTool) && currentStroke.length >= 2) {
+      const tempStroke = { 
+        props: { 
+          path: currentStroke, 
+          strokeType: currentTool, 
+          size: size 
+        } 
+      };
+      if (window.drawShapeStroke) window.drawShapeStroke(ctx, tempStroke);
+    } else {
+      ctx.moveTo(currentStroke[0].x, currentStroke[0].y);
+      for(let i=1; i<currentStroke.length; i++) ctx.lineTo(currentStroke[i].x, currentStroke[i].y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/* ======= Enhanced Selection handles with better rotation ======= */
+function drawSelectionHandles(o){
+  if (window.drawSelectionHandles) {
+    return window.drawSelectionHandles(o);
+  } else {
+    // Fallback
+    const b = getBounds(o);
+    const handleSize = 8;
+    const rotateDistance = 30;
+    
+    const handles = [
+      {type: 'resize-nw', x: b.x - handleSize/2, y: b.y - handleSize/2},
+      {type: 'resize-ne', x: b.x + b.w - handleSize/2, y: b.y - handleSize/2},
+      {type: 'resize-sw', x: b.x - handleSize/2, y: b.y + b.h - handleSize/2},
+      {type: 'resize-se', x: b.x + b.w - handleSize/2, y: b.y + b.h - handleSize/2},
+      {type: 'resize-n', x: b.x + b.w/2 - handleSize/2, y: b.y - handleSize/2},
+      {type: 'resize-s', x: b.x + b.w/2 - handleSize/2, y: b.y + b.h - handleSize/2},
+      {type: 'resize-e', x: b.x + b.w - handleSize/2, y: b.y + b.h/2 - handleSize/2},
+      {type: 'resize-w', x: b.x - handleSize/2, y: b.y + b.h/2 - handleSize/2},
+      {type: 'rotate', x: b.x + b.w/2 - handleSize/2, y: b.y - rotateDistance - handleSize/2}
+    ];
+
+    ctx.save();
+    ctx.fillStyle = '#0078d4';
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    
+    for(let i = 0; i < 8; i++){
+      const h = handles[i];
+      ctx.fillRect(h.x, h.y, handleSize, handleSize);
+      ctx.strokeRect(h.x, h.y, handleSize, handleSize);
+    }
+    
+    const rotHandle = handles[8];
+    ctx.beginPath();
+    ctx.arc(rotHandle.x + handleSize/2, rotHandle.y + handleSize/2, handleSize/2, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(rotHandle.x + handleSize/2, rotHandle.y + handleSize/2, 3, -Math.PI/3, Math.PI/3);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#0078d4';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(b.x + b.w/2, b.y);
+    ctx.lineTo(rotHandle.x + handleSize/2, rotHandle.y + handleSize/2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    return handles;
+  }
+}
+
+// Transform functions (getHandleAt, getMultiHandleAt, getCursorForHandle, getObjectCenter, rotatePoint, performRotation, getBounds) 
+// are now provided by whiteboard_transform.js module
+// Fallback wrappers for safety:
+function getHandleAt(handles, pt) {
+  return window.getHandleAt ? window.getHandleAt(handles, pt) : null;
+}
+function getMultiHandleAt(handles, pt) {
+  return window.getMultiHandleAt ? window.getMultiHandleAt(handles, pt) : null;
+}
+function getCursorForHandle(handleType) {
+  return window.getCursorForHandle ? window.getCursorForHandle(handleType) : 'default';
+}
+function getObjectCenter(o) {
+  return window.getObjectCenter ? window.getObjectCenter(o) : {x: 0, y: 0};
+}
+function rotatePoint(px, py, cx, cy, angle) {
+  return window.rotatePoint ? window.rotatePoint(px, py, cx, cy, angle) : {x: px, y: py};
+}
+function performRotation(o, currentAngle, initialAngle) {
+  if(window.performRotation) window.performRotation(o, currentAngle, initialAngle);
+}
+function getBounds(o) {
+  return window.getBounds ? window.getBounds(o) : {x:0, y:0, w:0, h:0};
+}
+
+// Render function moved to whiteboard_render.js module
+function render(){
+  if (window.render) {
+    return window.render();
+  } else {
+    // Fallback
+    console.log('=== RENDER CALLED ===');
+    console.log('Objects to render:', objects);
+    console.log('Objects count:', objects.length);
+    
+    clearCanvas();
+    const sorted=[...objects].sort((a,b)=> (a.layer-b.layer) || (a.id-b.id));
+    console.log('Sorted objects:', sorted);
+    
+    for(const o of sorted) {
+      console.log('Drawing object:', o.id, o.type);
+      drawObject(o);
+    }
+
+    if(drawing && currentStroke) drawCurrentStroke();
+
+    let handles = [];
+    if(selectedId!=null){
+      const s=findById(selectedId);
+      if(s){
+        const b=getBounds(s);
+        ctx.save();
+        ctx.strokeStyle='rgba(0,120,215,.9)';
+        ctx.setLineDash([6,4]);
+        ctx.lineWidth=2;
+        ctx.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8);
+        ctx.restore();
+
+        if(currentTool === 'select'){
+          handles = drawSelectionHandles(s);
+        }
+      }
+    }
+
+    if(multiSelectedIds.size > 0){
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for(const id of multiSelectedIds){
+        const o = findById(id);
+        if(o){
+          const b = getBounds(o);
+          minX = Math.min(minX, b.x-4);
+          minY = Math.min(minY, b.y-4);
+          maxX = Math.max(maxX, b.x+b.w+8);
+          maxY = Math.max(maxY, b.y+b.h+8);
+        }
+      }
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,0,0,0.18)';
+      if(isFinite(minX) && isFinite(minY) && isFinite(maxX) && isFinite(maxY)){
+        ctx.fillRect(minX, minY, maxX-minX, maxY-minY);
+
+        ctx.fillStyle = '#0078d4';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        const moveX = (minX + maxX) / 2 - 12;
+        const moveY = minY - 28;
+        ctx.beginPath();
+        ctx.arc(moveX + 12, moveY + 12, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("⇕", moveX + 12, moveY + 12);
+
+        ctx.fillStyle = '#0078d4';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        const rotX = maxX + 24;
+        const rotY = (minY + maxY) / 2 - 12;
+        ctx.beginPath();
+        ctx.arc(rotX, rotY + 12, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillText("⟳", rotX, rotY + 12);
+
+        ctx.fillStyle = '#0078d4';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        const menuX = minX - 36;
+        const menuY = (minY + maxY) / 2 - 12;
+        ctx.beginPath();
+        ctx.arc(menuX + 12, menuY + 12, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("⋮", menuX + 12, menuY + 12);
+
+        handles = [
+          {type: "multi-move", x: moveX, y: moveY, w: 24, h: 24},
+          {type: "multi-rotate", x: rotX - 12, y: rotY, w: 24, h: 24},
+          {type: "multi-menu", x: menuX, y: menuY, w: 24, h: 24}
+        ];
+      }
+      ctx.restore();
+    }
+
+    let highlightIds = new Set(multiSelectedIds);
+    if(currentTool === 'rect-select' && rectSelecting && rectSelectStart && rectSelectEnd){
+      const selRect = getRectFromPoints(rectSelectStart, rectSelectEnd);
+      highlightIds = new Set();
+      for(const o of objects){
+        if(isObjectFullyInRect(o, selRect)){
+          highlightIds.add(o.id);
+        }
+      }
+    }
+
+    if(highlightIds.size > 0){
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,120,215,0.7)';
+      ctx.setLineDash([2,2]);
+      ctx.lineWidth = 2;
+      for(const id of highlightIds){
+        const o = findById(id);
+        if(o){
+          const b = getBounds(o);
+          ctx.strokeRect(b.x-4, b.y-4, b.w+8, b.h+8);
+        }
+      }
+      ctx.restore();
+    }
+
+    if(currentTool === 'rect-select' && rectSelecting && rectSelectStart && rectSelectEnd){
+      const r = getRectFromPoints(rectSelectStart, rectSelectEnd);
+      ctx.save();
+      ctx.strokeStyle = '#0078d4';
+      ctx.setLineDash([4,4]);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x, r.y, r.w, r.h);
+      ctx.restore();
+    }
+
+    updateStatus();
+    return handles;
+  }
+}
+
+// Utility: get rectangle from two points
+function getRectFromPoints(a, b){
+  if (window.getRectFromPoints) {
+    return window.getRectFromPoints(a, b);
+  }
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  const w = Math.abs(a.x - b.x);
+  const h = Math.abs(a.y - b.y);
+  return {x, y, w, h};
+}
+
+// Utility: check if object is fully inside rectangle
+function isObjectFullyInRect(o, rect){
+  const b = getBounds(o);
+  return (
+    b.x >= rect.x &&
+    b.y >= rect.y &&
+    b.x + b.w <= rect.x + rect.w &&
+    b.y + b.h <= rect.y + rect.h
+  );
+}
+
+function redraw() {
+  if (window.redraw) {
+    window.redraw();
+  } else {
+    currentHandles = render() || [];
+  }
+}
+
+// Transform functions (pathForStroke, isPointOnObject, pickTopMost, performResize) 
+// are now provided by whiteboard_transform.js module
+// Fallback wrappers for safety:
+function pathForStroke(o) {
+  if(window.pathForStroke) window.pathForStroke(o);
+}
+function isPointOnObject(o, pt) {
+  return window.isPointOnObject ? window.isPointOnObject(o, pt) : false;
+}
+function pickTopMost(pt) {
+  return window.pickTopMost ? window.pickTopMost(pt) : null;
+}
+function performResize(o, handleType, currentMouse, initialMouse, initialBounds, shiftPressed) {
+  if(window.performResize) window.performResize(o, handleType, currentMouse, initialMouse, initialBounds, shiftPressed);
+}
+
+/* ======= Text Editor ======= */
+// Text editor functions (openTextEditor, closeTextEditor) and event listeners
+// are now provided by whiteboard_text.js module
+// Fallback wrappers for safety:
+function openTextEditor(textObj) {
+  if (window.openTextEditor) window.openTextEditor(textObj);
+}
+function closeTextEditor(save = false) {
+  if (window.closeTextEditor) window.closeTextEditor(save);
+}
+// Text editor event listeners are initialized by whiteboard_text.js module
+
+/* ======= Crop Modal ======= */
+let croppingImageId = null;
+let cropSelection = { x: 0, y: 0, w: 100, h: 100 };
+let isDraggingCrop = false;
+let isResizingCrop = false;
+// Image handling functions moved to whiteboard_images.js module
+let cropDragStart = { x: 0, y: 0 };
+let resizeHandle = null;
+
+function openCropModal(imageObj) {
+  if (window.openCropModal) {
+    window.openCropModal(imageObj);
+  }
+}
+
+function closeCropModal(save = false) {
+  if (window.closeCropModal) {
+    window.closeCropModal(save);
+  }
+}
+
+function updateCropSelection() {
+  if (window.updateCropSelection) {
+    window.updateCropSelection();
+  }
+}
+
+// Crop modal event listeners initialized by whiteboard_images.js module
+
+/* ======= Keyboard Events ======= */
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Shift') {
+    shiftPressed = true;
+    updateStatus();
+  }
+  
+  // Escape to toggle between select tool and deselect all mode
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    const currentTool = document.getElementById('tool-select').value;
+    
+    if (currentTool === 'select') {
+      // If already in select mode, deselect all and visually deselect tools
+      selectedId = null;
+      multiSelectedIds.clear();
+      deselectAllTools();
+      resetUIControls();
+      // Hide context menu when deselecting
+      ctxMenu.style.display='none';
+      ctxMenu.removeAttribute('data-multiselect');
+      ctxMenu.removeAttribute('data-paste-only');
+      redraw();
+    } else {
+      // If in any other tool or no tool selected, switch to select tool
+      s('select');
+    }
+  }
+  
+  // Delete to delete selected elements
+  if (e.key === 'Delete' ) {
+    e.preventDefault();
+    if (multiSelectedIds.size > 1) {
+      // Multi-selection delete
+      const selectedObjects = Array.from(multiSelectedIds).map(id => findById(id)).filter(Boolean);
+      if (selectedObjects.length > 0) {
+        const deletes = selectedObjects.map(o => ({ type:"delete", object: structuredCloneSafe(o) }));
+        executeCommand({ type:"batch", commands: deletes });
+        multiSelectedIds.clear();
+        selectedId = null;
+        resetUIControls();
+        redraw();
+      }
+    } else if (selectedId !== null) {
+      // Single selection delete
+      const o = findById(selectedId);
+      if (o) {
+        executeCommand({type:"delete", object: structuredCloneSafe(o)});
+        selectedId = null;
+        resetUIControls();
+        redraw();
+      }
+    }
+  }
+  
+  // Ctrl+E to insert page at current location
+  if (e.ctrlKey && e.key === 'e') {
+    e.preventDefault();
+    insertPageAtCurrentLocation();
+  }
+  
+  // Ctrl+Z to undo
+  if (e.ctrlKey && e.key === 'z') {
+    e.preventDefault();
+    undo();
+  }
+  
+  // Ctrl+Y to redo
+  if (e.ctrlKey && e.key === 'y') {
+    e.preventDefault();
+    redo();
+  }
+  
+  // Ctrl+Shift+T or Alt+T to insert text
+  if ((e.ctrlKey && e.shiftKey && e.key === 'T') || (e.altKey && e.key === 't')) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const fs = parseInt(document.getElementById('text-size').value, 10) || 24;
+    const textObj = {
+      id: nextObjectId++,
+      type: 'text',
+      layer: BASE_OBJECT_LAYER,
+      props: { text: 'Text', x: 100, y: 100, fontSize: fs, color: color }
+    };
+    addObject(textObj);
+    selectedId = textObj.id;
+    openTextEditor(textObj);
+    redraw();
+    return; // Exit early to prevent any further processing
+  }
+  
+  // Ctrl+I to insert image
+  if (e.ctrlKey && e.key === 'i') {
+    e.preventDefault();
+    document.getElementById('image-upload').click();
+  }
+  
+  // Ctrl+S to save
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    document.getElementById('save-btn').click();
+  }
+  
+  // Ctrl+P to print as PDF
+  if (e.ctrlKey && e.key === 'p') {
+    e.preventDefault();
+    printToPDF();
+  }
+  
+  // Ctrl+C to copy selected objects
+  if (e.ctrlKey && e.key === 'c') {
+    e.preventDefault();
+    if (multiSelectedIds.size > 1) {
+      // Copy multi-selected objects
+      const selectedObjects = Array.from(multiSelectedIds).map(id => findById(id)).filter(Boolean);
+      if (selectedObjects.length > 0) {
+        globalClipboard = selectedObjects.map(o => structuredCloneSafe(o));
+      }
+    } else if (selectedId !== null) {
+      // Copy single selected object
+      const o = findById(selectedId);
+      if (o) {
+        globalClipboard = [structuredCloneSafe(o)];
+      }
+    }
+  }
+  
+  // Ctrl+V to paste at current mouse position
+  if (e.ctrlKey && e.key === 'v') {
+    e.preventDefault();
+    if (globalClipboard && globalClipboard.length > 0) {
+      const pastePosition = currentMousePosition || {x: 100, y: 100}; // Default to (100, 100) if no mouse position
+      const positionedObjects = positionPastedObjects(globalClipboard, pastePosition);
+      const clones = positionedObjects.map(obj => {
+        obj.id = nextObjectId++;
+        return {type:"add", object: obj};
+      });
+      executeCommand({ type:"batch", commands: clones });
+      multiSelectedIds = new Set(clones.map(c => c.object.id));
+      selectedId = null;
+      resetUIControls();
+      redraw();
+    }
+  }
+  
+  // Arrow keys to move selected objects (like in Paint) - always prevent default scrolling
+  if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+    let deltaX = 0;
+    let deltaY = 0;
+    const moveStep = e.shiftKey ? 10 : 1; // Hold Shift for bigger moves (10px), normal for precise (1px)
+    
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        deltaY = -moveStep;
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        deltaY = moveStep;
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        deltaX = -moveStep;
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        deltaX = moveStep;
+        break;
+    }
+    
+    // Only move objects if there are selected objects
+    if ((multiSelectedIds.size > 0 || selectedId !== null) && (deltaX !== 0 || deltaY !== 0)) {
+      const moves = [];
+      
+      // Handle multi-selection
+      if (multiSelectedIds.size > 0) {
+        for (const id of multiSelectedIds) {
+          const obj = findById(id);
+          if (obj) {
+            const original = structuredCloneSafe(obj);
+            if (obj.type === 'text' || obj.type === 'image') {
+              obj.props.x += deltaX;
+              obj.props.y += deltaY;
+            } else if (obj.type === 'stroke') {
+              // Move all points in the stroke
+              obj.props.path = obj.props.path.map(point => ({
+                x: point.x + deltaX,
+                y: point.y + deltaY
+              }));
+            }
+            moves.push({ type: "update", object: original, newObject: structuredCloneSafe(obj) });
+          }
+        }
+      } 
+      // Handle single selection
+      else if (selectedId !== null) {
+        const obj = findById(selectedId);
+        if (obj) {
+          const original = structuredCloneSafe(obj);
+          if (obj.type === 'text' || obj.type === 'image') {
+            obj.props.x += deltaX;
+            obj.props.y += deltaY;
+          } else if (obj.type === 'stroke') {
+            // Move all points in the stroke
+            obj.props.path = obj.props.path.map(point => ({
+              x: point.x + deltaX,
+              y: point.y + deltaY
+            }));
+          }
+          moves.push({ type: "update", object: original, newObject: structuredCloneSafe(obj) });
+        }
+      }
+      
+      if (moves.length > 0) {
+        executeCommand({ type: "batch", commands: moves });
+        redraw();
+      }
+    }
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if(e.key === 'Shift') {
+    shiftPressed = false;
+    updateStatus();
+  }
+});
+
+// Track mouse position for keyboard paste
+document.addEventListener('mousemove', (e) => {
+  currentMousePosition = toCanvasXY(e);
+});
+
+/* ======= Page Control Event Listeners ======= */
+document.getElementById('prev-page').addEventListener('click', () => {
+  if (currentPageIndex > 0) {
+    switchToPage(currentPageIndex - 1);
+  }
+});
+
+document.getElementById('next-page').addEventListener('click', () => {
+  if (currentPageIndex < pages.length - 1) {
+    switchToPage(currentPageIndex + 1);
+  }
+});
+
+document.getElementById('add-page').addEventListener('click', insertPageAtCurrentLocation);
+document.getElementById('delete-page').addEventListener('click', deleteCurrentPage);
+
+/* ======= Enhanced Pointer Events ======= */
+canvas.addEventListener('pointerdown', (ev)=>{
+  canvas.setPointerCapture(ev.pointerId);
+  const p=toCanvasXY(ev);
+  const t = Date.now();
+
+  // Multi-selection handles (MOVE THIS ABOVE rect-select!)
+  if (multiSelectedIds.size > 1 && currentHandles && currentHandles.length) {
+    const h = getMultiHandleAt(currentHandles, p);
+    if (h) {
+      if (h.type === "multi-move") {
+        multiMoving = true;
+        multiMoveStart = p;
+        multiMoveOriginals = Array.from(multiSelectedIds).map(id => {
+          const o = findById(id);
+          if (!o) return null;
+          if (o.type === "image" || o.type === "text") {
+            return {id: o.id, x: o.props.x, y: o.props.y};
+          } else if (o.type === "stroke") {
+            return {id: o.id, path: o.props.path.map(pt => ({x: pt.x, y: pt.y}))};
+          }
+        }).filter(Boolean);
+        canvas.style.cursor = "grabbing";
+        return;
+      }
+      if (h.type === "multi-rotate") {
+        multiRotating = true;
+        multiRotateStart = p;
+        multiRotateOriginals = Array.from(multiSelectedIds).map(id => {
+          const o = findById(id);
+          if (!o) return null;
+          if (o.type === "image" || o.type === "text") {
+            return {id: o.id, rotation: o.props.rotation || 0, center: getObjectCenter(o)};
+          } else if (o.type === "stroke") {
+            return {id: o.id, path: o.props.path.map(pt => ({x: pt.x, y: pt.y})), center: getObjectCenter(o)};
+          }
+        }).filter(Boolean);
+        canvas.style.cursor = "grab";
+        return;
+      }
+      if (h.type === "multi-menu") {
+        ctxMenu.style.display='block';
+        positionContextMenu(ev.clientX, ev.clientY);
+        ctxMenu.setAttribute('data-multiselect', multiSelectedIds.size > 1 ? 'true' : 'false');
+        
+        // Hide "Edit Text" and "Paste" for multi-selection
+        ctxMenu.querySelector('[data-cmd="edit-text"]').style.display = 'none';
+        ctxMenu.querySelector('[data-cmd="paste"]').style.display = 'none';
+        // Show all other buttons explicitly
+        ctxMenu.querySelector('[data-cmd="copy"]').style.display = 'block';
+        ctxMenu.querySelector('[data-cmd="duplicate"]').style.display = 'block';
+        ctxMenu.querySelector('[data-cmd="layer-up"]').style.display = 'block';
+        ctxMenu.querySelector('[data-cmd="layer-down"]').style.display = 'block';
+        ctxMenu.querySelector('[data-cmd="front"]').style.display = 'block';
+        ctxMenu.querySelector('[data-cmd="back"]').style.display = 'block';
+        ctxMenu.querySelector('[data-cmd="delete"]').style.display = 'block';
+        
+        ctxMenu.removeAttribute('data-paste-only');
+        ignoreNextCtxMenuClose = true;
+        return;
+      }
+    }
+  }
+
+  if(currentTool==='rect-select'){
+    rectSelecting = true;
+    rectSelectStart = toCanvasXY(ev);
+    rectSelectEnd = rectSelectStart;
+    multiSelectedIds.clear();
+    redraw();
+    return;
+  }
+
+  if(currentTool==='pen' || currentTool==='marker' || currentTool==='highlighter'){
+    drawing=true;
+    currentStroke=[p];
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='line'){
+    drawing=true;
+    lineStartPoint = p;
+    currentStroke = [p, p]; // Start with two identical points for preview
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='rectangle'){
+    drawing=true;
+    rectangleStartPoint = p;
+    currentStroke = [p, p]; // Start with two identical points for preview
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='arrow'){
+    drawing=true;
+    arrowStartPoint = p;
+    currentStroke = [p, p]; // Start with two identical points for preview
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='roundedRectangle'){
+    drawing=true;
+    roundedRectangleStartPoint = p;
+    currentStroke = [p, p]; // Start with two identical points for preview
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='decision'){
+    drawing=true;
+    decisionStartPoint = p;
+    currentStroke = [p, p]; // Start with two identical points for preview
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='inputOutput'){
+    drawing=true;
+    inputOutputStartPoint = p;
+    currentStroke = [p, p]; // Start with two identical points for preview
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='connector'){
+    drawing=true;
+    connectorStartPoint = p;
+    currentStroke = [p, p]; // Start with two identical points for preview
+    selectedId=null;
+    redraw();
+    return;
+  }
+
+  if(currentTool==='text'){
+    // Create text object at click position with current settings
+    const fs = parseInt(document.getElementById('text-size').value, 10) || 24;
+    const textObj = {
+      id: nextObjectId++,
+      type: 'text',
+      layer: BASE_OBJECT_LAYER,
+      props: { 
+        text: 'Text', 
+        x: p.x, 
+        y: p.y, 
+        fontSize: fs, 
+        color: color,
+        maxWordsPerLine: userPrefs.maxWordsPerLine || 10,
+        maxLinesPerPage: userPrefs.maxLinesPerPage || 25
+      }
+    };
+    addObject(textObj);
+    selectedId = textObj.id;
+    
+    // Immediately open text editor
+    openTextEditor(textObj);
+    redraw();
+    return;
+  }
+
+  if(currentTool==='select'){
+    if(selectedId && currentHandles.length > 0){
+      const handle = getHandleAt(currentHandles, p);
+      if(handle){
+        const o = findById(selectedId);
+        if(o){
+          if(handle.type.startsWith('resize')){
+            resizing = true;
+            activeHandle = handle.type;
+            dragStart = p;
+            initialMouse = {x: p.x, y: p.y};
+            initialBounds = getBounds(o);
+            
+            if(o.type === 'image') {
+              aspectRatio = initialBounds.w / initialBounds.h;
+              originalPositions.set(o.id, {
+                x: o.props.x, y: o.props.y,
+                w: o.props.w, h: o.props.h
+              });
+            } else if(o.type === 'text') {
+              originalPositions.set(o.id, {
+                fontSize: o.props.fontSize || 24
+              });
+              initialBounds.fontSize = o.props.fontSize || 24;
+            } else if(o.type === 'stroke') {
+              originalPositions.set(o.id, (o.props.path || []).map(pt => ({x: pt.x, y: pt.y})));
+            }
+            
+          } else if(handle.type === 'rotate'){
+            rotating = true;
+            dragStart = p;
+            const center = getObjectCenter(o);
+            const initialAngle = Math.atan2(p.y - center.y, p.x - center.x);
+            
+            originalPositions.set(o.id, {
+              rotation: o.props.rotation || 0,
+              center: center,
+              initialAngle: initialAngle,
+              path: o.type === 'stroke' ? (o.props.path || []).map(pt => ({x: pt.x, y: pt.y})) : null
+            });
+          }
+          return;
+        }
+      }
+    }
+
+    const hit=pickTopMost(p);
+    if(hit){
+      const isDoubleClick = hit === lastClickTarget && (t - lastClickTime) < DOUBLE_CLICK_TIME;
+      if(isDoubleClick && hit.type === 'text'){
+        openTextEditor(hit);
+        return;
+      }
+
+      // Ctrl+click for add/remove from multi-selection
+      if(ev.ctrlKey || ev.metaKey) {
+        if(multiSelectedIds.has(hit.id)) {
+          // Remove from selection
+          multiSelectedIds.delete(hit.id);
+          if(selectedId === hit.id) {
+            selectedId = null;
+          }
+        } else {
+          // Add to selection
+          multiSelectedIds.add(hit.id);
+          // If we had a single selection, add it to multi-selection too
+          if(selectedId && selectedId !== hit.id && !multiSelectedIds.has(selectedId)) {
+            multiSelectedIds.add(selectedId);
+          }
+          selectedId = null; // Clear single selection when multi-selecting
+        }
+        
+        // If only one item left in multi-selection, make it single selection
+        if(multiSelectedIds.size === 1) {
+          selectedId = Array.from(multiSelectedIds)[0];
+          multiSelectedIds.clear();
+        } else if(multiSelectedIds.size === 0) {
+          selectedId = null;
+        }
+        
+        resetUIControls();
+        redraw();
+        return;
+      }
+
+      // Normal selection (clear multi-selection unless clicking on already selected item)
+      if(multiSelectedIds.size > 1 && multiSelectedIds.has(hit.id)) {
+        // Clicking on an item that's already in multi-selection - keep multi-selection
+        selectedId = null;
+      } else {
+        // Regular single selection
+        selectedId=hit.id;
+        multiSelectedIds.clear();
+      }
+      
+      lastClickTarget = hit;
+      lastClickTime = t;
+
+      // Only setup dragging if we have a single selection (not multi-selection)
+      if(selectedId && multiSelectedIds.size === 0) {
+        const o=hit;
+        if(o.type==='image' || o.type==='text'){
+          dragOffset={dx:p.x-o.props.x, dy:p.y-o.props.y};
+          originalPositions.set(o.id, { x: o.props.x, y: o.props.y });
+        } else if(o.type==='stroke'){
+          originalPositions.set(o.id, (o.props.path||[]).map(pt=>({x:pt.x,y:pt.y})));
+          dragOffset={dx:0, dy:0};
+        }
+        dragging=true; dragStart=p; canvas.style.cursor='grabbing';
+      }
+      redraw();
+    } else {
+      // Clicked on empty space - clear all selections unless Ctrl is held
+      if(!(ev.ctrlKey || ev.metaKey)) {
+        selectedId=null; 
+        multiSelectedIds.clear();
+        dragging=false;
+        lastClickTarget = null;
+        resetUIControls();
+        redraw();
+      }
+    }
+  }
+
+  if(currentTool==='rect-select'){
+    rectSelecting = true;
+    rectSelectStart = toCanvasXY(ev);
+    rectSelectEnd = rectSelectStart;
+    multiSelectedIds.clear();
+    redraw();
+    return;
+  }
+
+  // Multi-selection handles
+  if (multiSelectedIds.size > 1 && currentHandles && currentHandles.length) {
+    const h = getMultiHandleAt(currentHandles, p);
+    if (h) {
+      if (h.type === "multi-move") {
+        multiMoving = true;
+        multiMoveStart = p;
+        multiMoveOriginals = Array.from(multiSelectedIds).map(id => {
+          const o = findById(id);
+          if (!o) return null;
+          if (o.type === "image" || o.type === "text") {
+            return {id: o.id, x: o.props.x, y: o.props.y};
+          } else if (o.type === "stroke") {
+            return {id: o.id, path: o.props.path.map(pt => ({x: pt.x, y: pt.y}))};
+          }
+        }).filter(Boolean);
+        canvas.style.cursor = "grabbing";
+        return;
+      }
+      if (h.type === "multi-rotate") {
+        multiRotating = true;
+        multiRotateStart = p;
+        multiRotateOriginals = Array.from(multiSelectedIds).map(id => {
+          const o = findById(id);
+          if (!o) return null;
+          if (o.type === "image" || o.type === "text") {
+            return {id: o.id, rotation: o.props.rotation || 0, center: getObjectCenter(o)};
+          } else if (o.type === "stroke") {
+            return {id: o.id, path: o.props.path.map(pt => ({x: pt.x, y: pt.y})), center: getObjectCenter(o)};
+          }
+        }).filter(Boolean);
+        canvas.style.cursor = "grab";
+        return;
+      }
+      if (h.type === "multi-menu") {
+        ctxMenu.style.display='block';
+        positionContextMenu(ev.clientX, ev.clientY);
+        ctxMenu.setAttribute('data-multiselect', multiSelectedIds.size > 1 ? 'true' : 'false');
+        ctxMenu.querySelector('[data-cmd="edit-text"]').style.display = multiSelectedIds.size === 1 && findById(Array.from(multiSelectedIds)[0]).type === 'text' ? 'block' : 'none';
+        ignoreNextCtxMenuClose = true;
+        return;
+      }
+    }
+  }
+});
+
+canvas.addEventListener('pointermove', (ev)=>{
+  const p=toCanvasXY(ev);
+
+  if(drawing){
+    if(currentTool === 'line' && currentStroke && currentStroke.length >= 2){
+      // For line tool, update the end point to show preview
+      currentStroke[1] = p;
+      redraw();
+    } else if(currentTool === 'rectangle' && currentStroke && currentStroke.length >= 2){
+      // For rectangle tool, update the end point to show preview
+      currentStroke[1] = p;
+      redraw();
+    } else if(currentTool === 'arrow' && currentStroke && currentStroke.length >= 2){
+      // For arrow tool, update the end point to show preview
+      currentStroke[1] = p;
+      redraw();
+    } else if(currentTool === 'roundedRectangle' && currentStroke && currentStroke.length >= 2){
+      // For rounded rectangle tool, update the end point to show preview
+      currentStroke[1] = p;
+      redraw();
+    } else if(currentTool === 'decision' && currentStroke && currentStroke.length >= 2){
+      // For decision tool, update the end point to show preview
+      currentStroke[1] = p;
+      redraw();
+    } else if(currentTool === 'inputOutput' && currentStroke && currentStroke.length >= 2){
+      // For input/output tool, update the end point to show preview
+      currentStroke[1] = p;
+      redraw();
+    } else if(currentTool === 'connector' && currentStroke && currentStroke.length >= 2){
+      // For connector tool, update the end point to show preview
+      currentStroke[1] = p;
+      redraw();
+    } else if(currentStroke){
+      // For other drawing tools, add points normally
+      currentStroke.push(p);
+      redraw();
+    }
+    return;
+  }
+
+  if(resizing && selectedId!=null && activeHandle){
+    const o = findById(selectedId); 
+    if(!o) return;
+    
+    performResize(o, activeHandle, p, initialMouse, initialBounds, shiftPressed);
+    redraw();
+    return;
+  }
+
+  if(rotating && selectedId!=null){
+    const o = findById(selectedId); if(!o) return;
+    const orig = originalPositions.get(o.id); if(!orig) return;
+
+    const currentAngle = Math.atan2(p.y - orig.center.y, p.x - orig.center.x);
+    performRotation(o, currentAngle, orig.initialAngle);
+    redraw();
+    return;
+  }
+
+  if(dragging && selectedId!=null){
+    const o=findById(selectedId); if(!o) return;
+
+    if(o.type==='image' || o.type==='text'){
+      o.props.x=p.x-(dragOffset?.dx||0);
+      o.props.y=p.y-(dragOffset?.dy||0);
+      redraw();
+    } else if(o.type==='stroke'){
+      const orig=originalPositions.get(o.id) || (o.props.path||[]);
+      const dx=p.x-dragStart.x, dy=p.y-dragStart.y;
+      o.props.path=orig.map(pt=>({x:pt.x+dx,y:pt.y+dy}));
+      redraw();
+    }
+    return;
+  }
+
+  // Multi-move
+  if (multiMoving && multiMoveOriginals) {
+    const dx = p.x - multiMoveStart.x;
+    const dy = p.y - multiMoveStart.y;
+    multiMoveOriginals.forEach(orig => {
+      const o = findById(orig.id);
+      if (!o) return;
+      if (o.type === "image" || o.type === "text") {
+        o.props.x = orig.x + dx;
+        o.props.y = orig.y + dy;
+      } else if (o.type === "stroke") {
+        o.props.path = orig.path.map(pt => ({x: pt.x + dx, y: pt.y + dy}));
+      }
+    });
+    redraw();
+    return;
+  }
+  // Multi-rotate
+  if (multiRotating && multiRotateOriginals) {
+    multiRotateOriginals.forEach(orig => {
+      const o = findById(orig.id);
+      if (!o) return;
+      const center = orig.center;
+      const startAngle = Math.atan2(multiRotateStart.y - center.y, multiRotateStart.x - center.x);
+      const currentAngle = Math.atan2(p.y - center.y, p.x - center.x);
+      const delta = currentAngle - startAngle;
+      if (o.type === "image" || o.type === "text") {
+        o.props.rotation = orig.rotation + delta;
+      } else if (o.type === "stroke") {
+        o.props.path = orig.path.map(pt => rotatePoint(pt.x, pt.y, center.x, center.y, delta));
+      }
+    });
+    redraw();
+    return;
+  }
+
+  if(currentTool==='select'){
+    let cursor = 'default';
+    if(selectedId && currentHandles.length > 0){
+      const handle = getHandleAt(currentHandles, p);
+      if(handle){
+        cursor = getCursorForHandle(handle.type);
+      }
+    }
+    if(cursor === 'default'){
+      const hit=pickTopMost(p); cursor = hit ? 'grab' : 'default';
+    }
+    canvas.style.cursor = cursor;
+  } else if(currentTool==='rect-select' && rectSelecting){
+    canvas.style.cursor = 'crosshair';
+    rectSelectEnd = p;
+    redraw();
+    return;
+  }
+});
+
+canvas.addEventListener('pointerup', (ev)=>{
+  if(drawing){
+    drawing=false;
+    if(currentTool === 'line' && currentStroke && currentStroke.length >= 2){
+      // For line tool, always create a stroke (even if it's just a dot)
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,
+          transparency: currentTransparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    } else if(currentTool === 'rectangle' && currentStroke && currentStroke.length >= 2){
+      // For rectangle tool, create a rectangle stroke
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,
+          transparency: currentTransparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    } else if(currentTool === 'arrow' && currentStroke && currentStroke.length >= 2){
+      // For arrow tool, create an arrow stroke
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,
+          transparency: currentTransparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    } else if(currentTool === 'roundedRectangle' && currentStroke && currentStroke.length >= 2){
+      // For rounded rectangle tool, create a rounded rectangle stroke
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,
+          transparency: currentTransparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    } else if(currentTool === 'decision' && currentStroke && currentStroke.length >= 2){
+      // For decision tool, create a decision stroke
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,
+          transparency: currentTransparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    } else if(currentTool === 'inputOutput' && currentStroke && currentStroke.length >= 2){
+      // For input/output tool, create an input/output stroke
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,
+          transparency: currentTransparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    } else if(currentTool === 'connector' && currentStroke && currentStroke.length >= 2){
+      // For connector tool, create a connector stroke
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,
+          transparency: currentTransparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    } else if(currentStroke && currentStroke.length > 1){
+      // For other drawing tools, only create if dragged
+      const strokeObj = {
+        id: nextObjectId++,
+        type: 'stroke',
+        layer: BASE_STROKE_LAYER,
+        props: { 
+          path: [...currentStroke], 
+          color: color, 
+          size: size,
+          strokeType: currentTool,  // Store whether it's pen, marker, or highlighter
+          transparency: currentTransparency  // Store current transparency
+        }
+      };
+      addObject(strokeObj);
+      selectedId = strokeObj.id;
+    }
+    currentStroke = null;
+    lineStartPoint = null;
+  }
+
+  if((dragging || resizing || rotating) && selectedId!=null){
+    const o = findById(selectedId);
+    const orig = originalPositions.get(selectedId);
+    if(o && orig){
+      if(dragging){
+        if(o.type==='image' || o.type==='text'){
+          const prev = { x: orig.x, y: orig.y };
+          const next = { x: o.props.x, y: o.props.y };
+          commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+        } else if(o.type==='stroke'){
+          const prev = { path: orig };
+          const next = { path: o.props.path.map(pt=>({x:pt.x,y:pt.y})) };
+          commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+        }
+      } else if(resizing){
+        if(o.type==='image'){
+          const prev = { x: orig.x, y: orig.y, w: orig.w, h: orig.h };
+          const next = { x: o.props.x, y: o.props.y, w: o.props.w, h: o.props.h };
+          commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+        } else if(o.type==='text'){
+          const prev = { fontSize: orig.fontSize };
+          const next = { fontSize: o.props.fontSize };
+          commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+        } else if(o.type==='stroke'){
+          const prev = { path: orig };
+          const next = { path: o.props.path.map(pt=>({x:pt.x,y:pt.y})) };
+          commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+        }
+      } else if(rotating){
+        const prev = { rotation: orig.rotation || 0 };
+        const next = { rotation: o.props.rotation || 0 };
+        commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+      }
+    }
+    originalPositions.delete(selectedId);
+  }
+
+  if(currentTool==='rect-select' && rectSelecting){
+    rectSelecting = false;
+    rectSelectEnd = toCanvasXY(ev);
+    multiSelectedIds.clear();
+    const selRect = getRectFromPoints(rectSelectStart, rectSelectEnd);
+    let selectedObjects = [];
+    for(const o of objects){
+      if(isObjectFullyInRect(o, selRect)){
+        multiSelectedIds.add(o.id);
+        selectedObjects.push(o);
+      }
+    }
+    // If only one object is selected, set selectedId for status bar details
+    if(selectedObjects.length === 1){
+      selectedId = selectedObjects[0].id;
+    } else {
+      selectedId = null;
+    }
+    redraw();
+    return;
+  }
+
+  if (multiMoving && multiMoveOriginals) {
+    multiMoving = false;
+    multiMoveStart = null;
+    multiMoveOriginals = null;
+    canvas.style.cursor = "default";
+    redraw();
+    return;
+  }
+  if (multiRotating && multiRotateOriginals) {
+    multiRotating = false;
+    multiRotateStart = null;
+    multiRotateOriginals = null;
+    canvas.style.cursor = "default";
+    redraw();
+    return;
+  }
+
+  dragging=false; resizing=false; rotating=false;
+  activeHandle=null; initialBounds=null; initialMouse=null; aspectRatio=null;
+  dragStart=null; dragOffset=null;
+  canvas.style.cursor='default';
+  redraw();
+});
+
+/* ======= Context menu ======= */
+const ctxMenu=document.getElementById('ctx');
+
+// Helper function to position context menu intelligently
+function positionContextMenu(clientX, clientY) {
+  const menuHeight = ctxMenu.offsetHeight || 250; // Estimate if not rendered yet
+  const menuWidth = ctxMenu.offsetWidth || 150;
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+  
+  let left = clientX;
+  let top = clientY;
+  
+  // Check if menu would go off the right edge
+  if (left + menuWidth > viewportWidth) {
+    left = clientX - menuWidth;
+    // Ensure menu doesn't go off the left edge
+    if (left < 0) {
+      left = 0;
+    }
+  }
+  
+  // Check if click is in lower half of screen
+  if (clientY > viewportHeight / 2) {
+    // Position menu above the click point
+    top = clientY - menuHeight;
+    // Ensure menu doesn't go off the top edge
+    if (top < 0) {
+      top = 0;
+    }
+  } else {
+    // Position menu below the click point (original behavior)
+    // Ensure menu doesn't go off the bottom edge
+    if (top + menuHeight > viewportHeight) {
+      top = viewportHeight - menuHeight;
+    }
+  }
+  
+  ctxMenu.style.left = left + 'px';
+  ctxMenu.style.top = top + 'px';
+}
+canvas.addEventListener('contextmenu', (ev)=>{
+  ev.preventDefault();
+  const p=toCanvasXY(ev);
+  contextMenuPosition = p; // Store position for paste operations
+
+  // Multi-selection context menu logic (triggered for any tool if multiSelectedIds.size > 1)
+  if (multiSelectedIds.size > 1) {
+    // Check if right-click is on any selected object
+    const hit = Array.from(multiSelectedIds).map(id => findById(id)).find(o => isPointOnObject(o, p));
+    if (hit) {
+      // Do NOT clear selection!
+      selectedId = null; // No single selection
+      redraw();
+
+      // Hide "Edit Text" and "Paste" for multi-selection
+      ctxMenu.querySelector('[data-cmd="edit-text"]').style.display = 'none';
+      ctxMenu.querySelector('[data-cmd="paste"]').style.display = 'none';
+      // Show all other buttons explicitly
+      ctxMenu.querySelector('[data-cmd="copy"]').style.display = 'block';
+      ctxMenu.querySelector('[data-cmd="duplicate"]').style.display = 'block';
+      ctxMenu.querySelector('[data-cmd="layer-up"]').style.display = 'block';
+      ctxMenu.querySelector('[data-cmd="layer-down"]').style.display = 'block';
+      ctxMenu.querySelector('[data-cmd="front"]').style.display = 'block';
+      ctxMenu.querySelector('[data-cmd="back"]').style.display = 'block';
+      ctxMenu.querySelector('[data-cmd="delete"]').style.display = 'block';
+
+      ctxMenu.style.display='block';
+      positionContextMenu(ev.clientX, ev.clientY);
+      ctxMenu.setAttribute('data-multiselect', 'true');
+      ctxMenu.removeAttribute('data-paste-only');
+      return;
+    }
+    // If right-click is NOT on any selected object, fall through and clear selection below
+  }
+
+  // Single selection fallback
+  const hit=pickTopMost(p);
+  if(hit){
+    selectedId=hit.id;
+    redraw();
+
+    const editTextBtn = ctxMenu.querySelector('[data-cmd="edit-text"]');
+    editTextBtn.style.display = hit.type === 'text' ? 'block' : 'none';
+    const cropBtn = ctxMenu.querySelector('[data-cmd="crop"]');
+    cropBtn.style.display = hit.type === 'image' ? 'block' : 'none';
+    // Show all other buttons explicitly for single selection
+    ctxMenu.querySelector('[data-cmd="copy"]').style.display = 'block';
+    ctxMenu.querySelector('[data-cmd="paste"]').style.display = 'block';
+    ctxMenu.querySelector('[data-cmd="duplicate"]').style.display = 'block';
+    ctxMenu.querySelector('[data-cmd="layer-up"]').style.display = 'block';
+    ctxMenu.querySelector('[data-cmd="layer-down"]').style.display = 'block';
+    ctxMenu.querySelector('[data-cmd="front"]').style.display = 'block';
+    ctxMenu.querySelector('[data-cmd="back"]').style.display = 'block';
+    ctxMenu.querySelector('[data-cmd="delete"]').style.display = 'block';
+
+    ctxMenu.style.display='block';
+    positionContextMenu(ev.clientX, ev.clientY);
+    ctxMenu.removeAttribute('data-multiselect');
+    ctxMenu.removeAttribute('data-paste-only');
+  } else {
+    // Only clear selection if right-click is NOT on any selected object
+    selectedId = null;
+    multiSelectedIds.clear();
+    redraw();
+
+    // Show paste menu if clipboard has content
+    if (globalClipboard && globalClipboard.length > 0) {
+      // Hide all buttons except paste
+      ctxMenu.querySelectorAll('button').forEach(btn => {
+        btn.style.display = btn.dataset.cmd === 'paste' ? 'block' : 'none';
+      });
+      ctxMenu.style.display='block';
+      positionContextMenu(ev.clientX, ev.clientY);
+      ctxMenu.setAttribute('data-paste-only', 'true');
+      ctxMenu.removeAttribute('data-multiselect');
+      return;
+    }
+  }
+});
+document.addEventListener('click', (e)=>{
+  if (ignoreNextCtxMenuClose) {
+    ignoreNextCtxMenuClose = false;
+    return;
+  }
+  if(!ctxMenu.contains(e.target)) {
+    ctxMenu.style.display='none';
+    ctxMenu.removeAttribute('data-multiselect');
+    ctxMenu.removeAttribute('data-paste-only');
+  }
+});
+
+ctxMenu.addEventListener('click', (e)=>{
+  const cmdKey = e.target?.dataset?.cmd;
+  if (!cmdKey) return;
+
+  // Paste-only mode (right-click on empty space with clipboard content)
+  if (ctxMenu.getAttribute('data-paste-only') === 'true') {
+    if (cmdKey === 'paste') {
+      if (globalClipboard && globalClipboard.length > 0) {
+        const positionedObjects = positionPastedObjects(globalClipboard, contextMenuPosition);
+        
+        if (positionedObjects.length === 1) {
+          const clone = positionedObjects[0];
+          clone.id = nextObjectId++;
+          addObject(clone);
+          selectedId = clone.id;
+        } else {
+          const clones = positionedObjects.map(obj => {
+            obj.id = nextObjectId++;
+            return {type:"add", object: obj};
+          });
+          executeCommand({ type:"batch", commands: clones });
+          // Select all pasted objects
+          multiSelectedIds = new Set(clones.map(c => c.object.id));
+          selectedId = null;
+          resetUIControls();
+          resetUIControls();
+        }
+      }
+    }
+    ctxMenu.style.display='none';
+    redraw();
+    return;
+  }
+
+  // Multi-selection mode
+  if (ctxMenu.getAttribute('data-multiselect') === 'true' && multiSelectedIds.size > 1) {
+    const selectedObjects = Array.from(multiSelectedIds).map(id => findById(id)).filter(Boolean);
+
+    if (cmdKey === 'duplicate') {
+      const positionedObjects = positionPastedObjects(selectedObjects, contextMenuPosition);
+      const clones = positionedObjects.map(obj => {
+        obj.id = nextObjectId++;
+        return {type:"add", object: obj};
+      });
+      executeCommand({ type:"batch", commands: clones });
+      multiSelectedIds = new Set(clones.map(c => c.object.id));
+      selectedId = null;
+      resetUIControls();
+      resetUIControls();
+    } else if (cmdKey === 'copy') {
+      globalClipboard = selectedObjects.map(o => structuredCloneSafe(o));
+    } else if (cmdKey === 'paste') {
+      if (globalClipboard && globalClipboard.length > 0) {
+        const positionedObjects = positionPastedObjects(globalClipboard, contextMenuPosition);
+        const clones = positionedObjects.map(obj => {
+          obj.id = nextObjectId++;
+          return {type:"add", object: obj};
+        });
+        executeCommand({ type:"batch", commands: clones });
+        multiSelectedIds = new Set(clones.map(c => c.object.id));
+        selectedId = null;
+        resetUIControls();
+      }
+    } else if (cmdKey === 'delete') {
+      const deletes = selectedObjects.map(o => ({ type:"delete", object: structuredCloneSafe(o) }));
+      executeCommand({ type:"batch", commands: deletes });
+      multiSelectedIds.clear();
+      selectedId = null;
+      resetUIControls();
+    } else if (cmdKey === 'layer-up' || cmdKey === 'layer-down' || cmdKey === 'front' || cmdKey === 'back') {
+      const layerCmds = selectedObjects.map(o => {
+        const prev = { layer: o.layer };
+        let newLayer = o.layer;
+        if(cmdKey==='layer-up') newLayer = o.layer + 1;
+        else if(cmdKey==='layer-down') newLayer = o.layer - 1;
+        else if(cmdKey==='front') newLayer = (objects.length? Math.max(...objects.map(x=>x.layer)) : 0) + 1;
+        else if(cmdKey==='back') newLayer = (objects.length? Math.min(...objects.map(x=>x.layer)) : 0) - 1;
+        return { type:"updateRoot", id:o.id, prev, next:{ layer:newLayer } };
+      });
+      executeCommand({ type:"batch", commands: layerCmds });
+    }
+    ctxMenu.style.display='none';
+    ctxMenu.removeAttribute('data-multiselect');
+    ctxMenu.removeAttribute('data-paste-only');
+    redraw();
+    return;
+  }
+
+  // Single selection mode (existing code)
+  if(selectedId==null) return;
+  const o=findById(selectedId); if(!o) return;
+
+  if(cmdKey === 'edit-text' && o.type === 'text'){
+    openTextEditor(o);
+    ctxMenu.style.display='none';
+    return;
+  }
+
+  if(cmdKey === 'crop' && o.type === 'image'){
+    openCropModal(o);
+    ctxMenu.style.display='none';
+    return;
+  }
+
+  if(cmdKey==='layer-up' || cmdKey==='layer-down' || cmdKey==='front' || cmdKey==='back'){
+    const prev = { layer: o.layer };
+    let newLayer = o.layer;
+
+    if(cmdKey==='layer-up') newLayer = o.layer + 1;
+    else if(cmdKey==='layer-down') newLayer = o.layer - 1;
+    else if(cmdKey==='front') newLayer = (objects.length? Math.max(...objects.map(x=>x.layer)) : 0) + 1;
+    else if(cmdKey==='back') newLayer = (objects.length? Math.min(...objects.map(x=>x.layer)) : 0) - 1;
+
+    executeCommand({ type:"updateRoot", id:o.id, prev, next:{ layer:newLayer } });
+  } else if(cmdKey==='duplicate'){
+    const positionedObjects = positionPastedObjects([o], contextMenuPosition);
+    const clone = positionedObjects[0];
+    clone.id = nextObjectId++;
+    addObject(clone);
+    selectedId = clone.id;
+  } else if(cmdKey==='copy'){
+    globalClipboard = [structuredCloneSafe(o)];
+  } else if(cmdKey==='paste'){
+    if (globalClipboard && globalClipboard.length > 0) {
+      const positionedObjects = positionPastedObjects(globalClipboard, contextMenuPosition);
+      
+      if (positionedObjects.length === 1) {
+        // Single object paste
+        const clone = positionedObjects[0];
+        clone.id = nextObjectId++;
+        addObject(clone);
+        selectedId = clone.id;
+      } else {
+        // Multiple objects paste
+        const clones = positionedObjects.map(obj => {
+          obj.id = nextObjectId++;
+          return {type:"add", object: obj};
+        });
+        executeCommand({ type:"batch", commands: clones });
+        // Select all pasted objects
+        multiSelectedIds = new Set(clones.map(c => c.object.id));
+        selectedId = null;
+        resetUIControls();
+      }
+    }
+  } else if(cmdKey==='delete'){
+    removeByIdCmd(o);
+    selectedId = null;
+    resetUIControls();
+  }
+
+  ctxMenu.style.display='none';
+  ctxMenu.removeAttribute('data-multiselect');
+  ctxMenu.removeAttribute('data-paste-only');
+  redraw();
+});
+
+/* ======= Enhanced UI controls with live editing ======= */
+document.getElementById('tool-select').addEventListener('change',e=>{
+  currentTool=e.target.value;
+  
+  // Load tool-specific color when changing tools
+  if (toolColors[currentTool]) {
+    color = toolColors[currentTool];
+    document.getElementById('color-picker').value = color;
+    document.getElementById('current-tool-color').style.backgroundColor = color;
+  }
+  
+  // Load tool-specific size when changing tools
+  if (toolSizes[currentTool]) {
+    size = toolSizes[currentTool];
+    document.getElementById('size-range').value = size;
+  }
+  
+  updateCursor();
+  if(currentTool !== 'select') {
+    selectedId = null;
+    resetUIControls();
+    redraw();
+  }
+});
+
+document.getElementById('color-picker').addEventListener('input',e=> {
+  const newColor = e.target.value;
+  color = newColor;
+  document.getElementById('current-tool-color').style.backgroundColor = newColor;
+  
+  // Save color to current tool's memory
+  if (toolColors[currentTool]) {
+    toolColors[currentTool] = newColor;
+  }
+  
+  if(selectedId) {
+    const o = findById(selectedId);
+    if(o && (o.type === 'stroke' || o.type === 'text')) {
+      const prev = { color: o.props.color };
+      const next = { color: newColor };
+      o.props.color = newColor;
+      commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+    }
+  }
+});
+
+document.getElementById('size-range').addEventListener('input',e=> {
+  const newSize = parseInt(e.target.value,10)||4;
+  size = newSize;
+  
+  // Save size to current tool's memory
+  if (toolSizes[currentTool]) {
+    toolSizes[currentTool] = newSize;
+  }
+  
+  if(selectedId) {
+    const o = findById(selectedId);
+    if(o && o.type === 'stroke') {
+      const prev = { size: o.props.size };
+      const next = { size: newSize };
+      o.props.size = newSize;
+      commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+    }
+  }
+});
+
+document.getElementById('transparency-range').addEventListener('input', e => {
+  const newTransparency = parseFloat(e.target.value) || 0.4;
+  currentTransparency = newTransparency;
+  document.getElementById('transparency-value').textContent = Math.round(newTransparency * 100) + '%';
+  
+  // Save transparency to current tool's memory
+  if (toolTransparencies[currentTool]) {
+    toolTransparencies[currentTool] = newTransparency;
+  }
+  
+  if(selectedId) {
+    const o = findById(selectedId);
+    if(o && o.type === 'stroke' && (o.props.strokeType === 'highlighter' || o.props.strokeType === 'marker')) {
+      const prev = { transparency: o.props.transparency };
+      const next = { transparency: newTransparency };
+      o.props.transparency = newTransparency;
+      commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+      redraw();
+    }
+  }
+});
+
+document.getElementById('text-size').addEventListener('input',e=> {
+  const newFontSize = parseInt(e.target.value, 10) || 24;
+  
+  if(selectedId) {
+    const o = findById(selectedId);
+    if(o && o.type === 'text') {
+      const prev = { fontSize: o.props.fontSize };
+      const next = { fontSize: newFontSize };
+      o.props.fontSize = newFontSize;
+      commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
+    }
+  }
+});
+
+document.getElementById('undo-btn').addEventListener('click',undo);
+document.getElementById('redo-btn').addEventListener('click',redo);
+
+document.getElementById('image-upload').addEventListener('change',(e)=>{
+  const f=e.target.files?.[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    const img=new Image(); img.src=ev.target.result; img.onload=()=>{
+      // Create canvas for compression
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Calculate size for 1.2MP equivalent (approximately 1200x1000 max)
+      const targetPixels = 1.2 * 1000000; // 1.2 megapixels
+      const currentPixels = img.width * img.height;
+      
+      let w = img.width;
+      let h = img.height;
+      
+      // If image is larger than 1.2MP, scale it down
+      if (currentPixels > targetPixels) {
+        const scale = Math.sqrt(targetPixels / currentPixels);
+        w = Math.round(img.width * scale);
+        h = Math.round(img.height * scale);
+      }
+      
+      // Set canvas size
+      canvas.width = w;
+      canvas.height = h;
+      
+      // Draw and compress image
+      ctx.drawImage(img, 0, 0, w, h);
+      
+      // Convert to JPEG with 70% quality
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      
+      console.log(`[IMAGE] Original: ${img.width}x${img.height} (${Math.round(currentPixels/1000000*100)/100}MP), Resized: ${w}x${h} (${Math.round((w*h)/1000000*100)/100}MP)`);
+      console.log(`[IMAGE] Size - Original: ${ev.target.result.length} bytes, Compressed: ${compressedDataUrl.length} bytes, Reduction: ${Math.round((1 - compressedDataUrl.length/ev.target.result.length) * 100)}%`);
+      
+      // Warn if still too large
+      if(compressedDataUrl.length > 500000) {
+        console.warn('[IMAGE] Large image detected (>500KB), may cause save issues');
+      }
+      
+      addObject({id:nextObjectId++, type:'image', layer:BASE_OBJECT_LAYER, props:{src:compressedDataUrl, x:50, y:160, w, h}});
+    };
+  };
+  reader.readAsDataURL(f);
+});
+
+document.getElementById('clear-btn').addEventListener('click',()=>{
+  if(!confirm('Clear this page? This cannot be undone.')) return;
+  if(objects.length === 0) return;
+
+  const deleteCommands = objects.map(o => ({ type:"delete", object: structuredCloneSafe(o) }));
+  executeCommand({ type:"batch", commands: deleteCommands });
+  selectedId=null;
+  resetUIControls();
+});
+
+/* ======= Save Success Notification ======= */
+function showSaveSuccess(fileSize) {
+  // Format file size
+  let sizeText = '';
+  if (fileSize < 1024) {
+    sizeText = `${fileSize} bytes`;
+  } else if (fileSize < 1024 * 1024) {
+    sizeText = `${(fileSize / 1024).toFixed(1)} KB`;
+  } else {
+    sizeText = `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  
+  // Use telemetry panel instead of popup notification
+  if (window.TelemetryPanel) {
+    window.TelemetryPanel.setIdle(`Saved whiteboard (${sizeText})`);
+  }
+}
+
+/* ======= Save / Export PNG ======= */
+// Save, export, and import functions moved to whiteboard_export.js module
+// Event listeners now initialized in whiteboard_export.js
+// Fallback wrappers for manual triggering:
+function triggerSave() {
+  if (window.saveToServer) window.saveToServer();
+}
+
+function exportPNG() {
+  if (window.exportPNG) window.exportPNG();
+}
+
+function printToPDF() {
+  if (window.printToPDF) return window.printToPDF();
+}
+
+/* ======= Export/Import JSON - Functions moved to whiteboard_export.js ======= */
+// Fallback wrappers for safety:
+function exportJSON() {
+  if (window.exportJSON) window.exportJSON();
+}
+
+function importJSON() {
+  if (window.importJSON) window.importJSON();
+}
+
+function handleImportFile(evt) {
+  if (window.handleImportFile) window.handleImportFile(evt);
+}
+
+/// ###############################################################
+
+// Text handling functions (splitTextByLines, addTextAcrossPages, autoWrapTextByWords)
+// are now provided by whiteboard_text.js module
+// Fallback wrappers for safety:
+function splitTextByLines(text, maxLinesPerPage = 25) {
+  return window.splitTextByLines ? window.splitTextByLines(text, maxLinesPerPage) : [text];
+}
+
+function addTextAcrossPages(text, fontSize, startX = 50, startY = 160) {
+  return window.addTextAcrossPages ? window.addTextAcrossPages(text, fontSize, startX, startY) : 0;
+}
+
+document.getElementById("paste-btn").addEventListener("click", async () => {
+  console.log('=== PASTE BUTTON CLICKED ===');
+  try {
+    // First try to read images from clipboard
+    console.log('Checking for images in clipboard...');
+    const clipboardItems = await navigator.clipboard.read();
+    console.log('Clipboard items:', clipboardItems.length);
+
+    let imageFound = false;
+    for (const item of clipboardItems) {
+      console.log('Item types:', item.types);
+
+      // Check if item contains an image
+      const imageTypes = item.types.filter(type => type.startsWith('image/'));
+      if (imageTypes.length > 0) {
+        console.log('Found image types:', imageTypes);
+        imageFound = true;
+
+        // Get the first image type (usually image/png or image/jpeg)
+        const imageType = imageTypes[0];
+        const blob = await item.getType(imageType);
+        console.log('Image blob size:', blob.size, 'bytes');
+
+        // Process the image using the same compression logic as file upload
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.src = ev.target.result;
+          img.onload = () => {
+            // Create canvas for compression (same logic as file upload)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Calculate size for 1.2MP equivalent (approximately 1200x1000 max)
+            const targetPixels = 1.2 * 1000000; // 1.2 megapixels
+            const currentPixels = img.width * img.height;
+
+            let w = img.width;
+            let h = img.height;
+
+            // If image is larger than 1.2MP, scale it down
+            if (currentPixels > targetPixels) {
+              const scale = Math.sqrt(targetPixels / currentPixels);
+              w = Math.round(img.width * scale);
+              h = Math.round(img.height * scale);
+            }
+
+            // Set canvas size
+            canvas.width = w;
+            canvas.height = h;
+
+            // Draw and compress image
+            ctx.drawImage(img, 0, 0, w, h);
+
+            // Convert to JPEG with 70% quality
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+            console.log(`[CLIPBOARD IMAGE] Original: ${img.width}x${img.height} (${Math.round(currentPixels/1000000*100)/100}MP), Resized: ${w}x${h} (${Math.round((w*h)/1000000*100)/100}MP)`);
+            console.log(`[CLIPBOARD IMAGE] Size - Original: ${ev.target.result.length} bytes, Compressed: ${compressedDataUrl.length} bytes, Reduction: ${Math.round((1 - compressedDataUrl.length/ev.target.result.length) * 100)}%`);
+
+            // Warn if still too large
+            if(compressedDataUrl.length > 500000) {
+              console.warn('[CLIPBOARD IMAGE] Large image detected (>500KB), may cause save issues');
+            }
+
+            addObject({id:nextObjectId++, type:'image', layer:BASE_OBJECT_LAYER, props:{src:compressedDataUrl, x:50, y:160, w, h}});
+          };
+        };
+        reader.readAsDataURL(blob);
+        break; // Only process the first image found
+      }
+    }
+
+    // If no image was found, try to read text (existing functionality)
+    if (!imageFound) {
+      console.log('No images found, checking for text...');
+      const text = await navigator.clipboard.readText();
+      console.log('Clipboard text length:', text ? text.length : 0);
+      console.log('Clipboard text preview:', text ? text.substring(0, 100) : 'empty');
+
+      if (!text) return alert("Clipboard is empty or contains unsupported content.");
+
+      const fs = parseInt(document.getElementById("text-size").value, 10) || 24;
+      console.log('Font size:', fs);
+
+      console.log('Calling addTextAcrossPages...');
+      // Use line-based splitting across pages (word wrapping is now handled inside addTextAcrossPages)
+      addTextAcrossPages(text, fs);
+    }
+
+  } catch (error) {
+    console.error('Paste error:', error);
+    alert("Failed to paste from clipboard. This may be due to browser security restrictions.");
+  }
+});
+
+/* ======= Settings ======= */
+// Settings module is loaded from whiteboard_settings.js
+// Access via window.userPrefs, window.loadPrefs(), window.savePrefs(), etc.
+
+/* ======= Color Palette Functions ======= */
+// Color palette functions are in whiteboard_settings.js
+// Hook for settings module to update main color system
+window.updateColorFromPalette = function(colorValue) {
+  color = colorValue;
+  document.getElementById('color-picker').value = colorValue;
+  document.getElementById('current-tool-color').style.backgroundColor = colorValue;
+  
+  // Save color to current tool's memory
+  if (toolColors[currentTool]) {
+    toolColors[currentTool] = colorValue;
+  }
+  
+  // If a stroke or text is selected, update its color
+  if (selectedId) {
+    const o = findById(selectedId);
+    if (o && (o.type === 'stroke' || o.type === 'text')) {
+      const prev = { color: o.props.color };
+      const next = { color: colorValue };
+      o.props.color = colorValue;
+      commitAppliedChange({ type: "updateProps", id: o.id, prev, next });
+      redraw();
+    }
+  }
+};
+
+// Settings and shortcuts modals initialized in whiteboard_settings.js
+
+// Objects/Layers modal initialized in whiteboard_layers.js
+
+// populateLayers and populateObjects are in whiteboard_layers.js
+// Helper function to select object from layers panel
+function selectObject(objectId) {
+  selectedId = objectId;
+  multiSelectedIds.clear();
+  redraw();
+}
+
+// Objects list population is complete in whiteboard_layers.js
+
+/* ======= Utility Functions ======= */
+function autoWrapTextByChars(text, maxChars) {
+  if (!maxChars || maxChars <= 0) return text;
+
+  return text
+    .split("\n")
+    .map(paragraph => {
+      let result = [];
+      for (let i = 0; i < paragraph.length; i += maxChars) {
+        result.push(paragraph.slice(i, i + maxChars));
+      }
+      return result.join("\n");
+    })
+    .join("\n");
+}
+
+// Text wrapping function provided by whiteboard_text.js module
+// Fallback wrapper for safety:
+function autoWrapTextByWords(text, maxWords) {
+  return window.autoWrapTextByWords ? window.autoWrapTextByWords(text, maxWords) : text;
+}
+
+/* ======= Keyboard Shortcuts for Pages ======= */
+document.addEventListener('keydown', (e) => {
+  // Page navigation shortcuts (Ctrl+Left/Right)
+  if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+    if (e.key === 'ArrowLeft' && currentPageIndex > 0) {
+      e.preventDefault();
+      switchToPage(currentPageIndex - 1);
+    } else if (e.key === 'ArrowRight' && currentPageIndex < pages.length - 1) {
+      e.preventDefault();
+      switchToPage(currentPageIndex + 1);
+    } else if (e.key === 'Enter') {
+      // Ctrl+Enter to add new page
+      e.preventDefault();
+      addNewPage();
+    }
+  }
+});
+
+/* ======= Mouse Wheel for Page Navigation ======= */
+document.addEventListener('wheel', (e) => {
+  // Only handle wheel when not zooming (Ctrl not pressed) and not in input fields
+  if (!e.ctrlKey && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+    if (e.deltaY > 0 && currentPageIndex < pages.length - 1) {
+      e.preventDefault();
+      switchToPage(currentPageIndex + 1);
+    } else if (e.deltaY < 0 && currentPageIndex > 0) {
+      e.preventDefault();
+      switchToPage(currentPageIndex - 1);
+    }
+  }
+});
+
+/* ======= Self-tests ======= */
+(function runSelfTests(){
+  try{
+    const circle={id:999,type:'stroke',layer:0,props:{color:'#000',size:8,path:[]}};
+    const cx=200, cy=200, r=80; 
+    for(let a=0;a<=360;a+=10){ 
+      const th=a*Math.PI/180; 
+      circle.props.path.push({x:cx+r*Math.cos(th), y:cy+r*Math.sin(th)}); 
+    }
+    const line={id:1000,type:'stroke',layer:1,props:{color:'#000',size:6,path:[{x:170,y:200},{x:230,y:200}]}}
+    const ptInsideCircleNotOnStroke={x:200,y:200};
+    const ptOnLine={x:200,y:200};
+    const was=objects; objects=[circle,line];
+    const hit1=pickTopMost(ptInsideCircleNotOnStroke);
+    const ok1 = hit1 && hit1.id===1000;
+    const ptOnCircle={x:cx+r,y:cy};
+    const hit2=pickTopMost(ptOnCircle);
+    const ok2 = hit2 && hit2.id===999;
+    objects=was; redraw();  
+    console.log('[multi-page whiteboard tests] hit-inside-circle->line:', ok1, ' hit-on-circle->circle:', ok2);    
+  }catch(err){ console.warn('Self tests failed', err); }})();/* ======= Initialize ======= */
+updateCursor();
+redraw();
+
+// Initialize color indicator
+document.getElementById('current-tool-color').style.backgroundColor = color;
+
+// Initialize size control
+document.getElementById('size-range').value = size;
+
+// Update page title when board title changes
+document.getElementById('board-title').addEventListener('input', function() {
+  const title = this.value || 'Whiteboard';
+  document.title = title + ' - Multi-Page Whiteboard';
+});
+
+// Set initial page title
+document.addEventListener('DOMContentLoaded', function() {
+  const initialTitle = document.getElementById('board-title').value || 'Whiteboard';
+  document.title = initialTitle + ' - Multi-Page Whiteboard';
+});
+
+// Dropdown menu functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const fileMenuBtn = document.getElementById('file-menu-btn');
+    const fileMenu = document.getElementById('file-menu');
+    
+    // Toggle dropdown
+    fileMenuBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        // Position the dropdown relative to the button
+        const rect = fileMenuBtn.getBoundingClientRect();
+        fileMenu.style.top = (rect.bottom + 5) + 'px';
+        fileMenu.style.right = (window.innerWidth - rect.right) + 'px';
+        
+        fileMenu.classList.toggle('hidden');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function() {
+        fileMenu.classList.add('hidden');
+    });
+    
+    // Prevent dropdown from closing when clicking inside
+    fileMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+});
+
+// Shapes dropdown functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const shapesBtn = document.getElementById('shapes-btn');
+    const shapesDropdown = document.getElementById('shapes-dropdown');
+    
+    // Toggle dropdown
+    shapesBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        // Position the dropdown relative to the button
+        const rect = shapesBtn.getBoundingClientRect();
+        shapesDropdown.style.top = (rect.bottom + 5) + 'px';
+        shapesDropdown.style.left = rect.left + 'px';
+        
+        shapesDropdown.classList.toggle('hidden');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function() {
+        shapesDropdown.classList.add('hidden');
+    });
+    
+    // Prevent dropdown from closing when clicking inside
+    shapesDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+});
+
+</script>
+
+<!-- Shepherd.js Tutorial Script -->
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/js/shepherd.min.js"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/tutorial.js') }}"></script>
+
+<!-- Tutorial System Initialization -->
+<script>
+  // Initialize tutorial system when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure whiteboard is fully initialized
+    setTimeout(function() {
+      // Initialize the tutorial (will auto-start if not completed)
+      if (typeof window.initializeTutorialSystem === 'function') {
+        window.initializeTutorialSystem();
+      }
+    }, 1500);
+  });
+  
+  // Add tutorial trigger to keyboard shortcuts button or help menu
+  // You can add a help button to the whiteboard toolbar if desired
+  document.addEventListener('keydown', function(e) {
+    // Ctrl+Shift+? to trigger tutorial manually
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === '?') {
+      e.preventDefault();
+      if (typeof window.startTutorial === 'function') {
+        window.startTutorial();
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,757 @@
+<!-- public_profile_sections_partial.html -->
+<!-- Sectioned content display for public profiles with quick navigation -->
+
+<!-- Quick Navigation Sidebar -->
+<div class="section-nav">
+  {% if folders|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('folders')">
+    <i class="material-icons">folder</i>
+    <span>Folders ({{ folders|length }})</span>
+  </div>
+  {% endif %}
+  {% if notes|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('notes')">
+    <i class="material-icons">description</i>
+    <span>MioNote ({{ notes|length }})</span>
+  </div>
+  {% endif %}
+  {% if boards|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('boards')">
+    <i class="material-icons">dashboard</i>
+    <span>MioDraw ({{ boards|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('markdown') %}
+  <div class="nav-pill" onclick="scrollToSection('markdown')">
+    <i class="material-icons">description</i>
+    <span>Markdown ({{ files_by_type['markdown']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('code') %}
+  <div class="nav-pill" onclick="scrollToSection('code')">
+    <i class="material-icons">code</i>
+    <span>Code ({{ files_by_type['code']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('todo') %}
+  <div class="nav-pill" onclick="scrollToSection('todo')">
+    <i class="material-icons">checklist</i>
+    <span>Todo ({{ files_by_type['todo']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('diagram') %}
+  <div class="nav-pill" onclick="scrollToSection('diagram')">
+    <i class="material-icons">account_tree</i>
+    <span>Diagrams ({{ files_by_type['diagram']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('note') %}
+  <div class="nav-pill" onclick="scrollToSection('file-note')">
+    <i class="material-icons">note</i>
+    <span>Simple Notes ({{ files_by_type['note']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('table') %}
+  <div class="nav-pill" onclick="scrollToSection('table')">
+    <i class="material-icons">table_chart</i>
+    <span>Tables ({{ files_by_type['table']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('blocks') %}
+  <div class="nav-pill" onclick="scrollToSection('blocks')">
+    <i class="material-icons">view_week</i>
+    <span>Blocks ({{ files_by_type['blocks']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('proprietary_blocks') %}
+  <div class="nav-pill" onclick="scrollToSection('book')">
+    <i class="material-icons">article</i>
+    <span>MioBook ({{ files_by_type['proprietary_blocks']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('proprietary_infinite_whiteboard') %}
+  <div class="nav-pill" onclick="scrollToSection('infinite-whiteboard')">
+    <i class="material-icons">grid_on</i>
+    <span>Infinite Canvas ({{ files_by_type['proprietary_infinite_whiteboard']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('proprietary_graph') %}
+  <div class="nav-pill" onclick="scrollToSection('graph')">
+    <i class="material-icons">share</i>
+    <span>Graph ({{ files_by_type['proprietary_graph']|length }})</span>
+  </div>
+  {% endif %}
+  <div class="nav-pill nav-top-btn" onclick="scrollToTop()" title="Back to Top">
+    <i class="material-icons">arrow_upward</i>
+    <span>Top</span>
+  </div>
+</div>
+
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+
+<!-- Folders Section -->
+{% if folders|length > 0 %}
+<div class="section-container folders-section" id="folders">
+  <div class="section-header folders-header">
+    <h3 class="section-title">
+      <i class="material-icons">folder</i>
+      Folders
+      <span class="count-badge">{{ folders|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for f in folders %}
+  <div class="col">
+    <div class="card shadow-sm item-card" data-type="folder" data-id="{{ f.id }}" data-is-public="{{ '1' if f.is_public else '0' }}">
+      <div class="badge-container">
+        {% if f.is_public %}
+        <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+        {% endif %}
+      </div>
+      <div class="card-body item-body" tabindex="0">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span style="font-size: 1.25rem;">📁</span>
+          <h5 class="card-title mb-0">
+            <a href="{{ url_for('p2_bp.public_view_folder', folder_id=f.id) }}" class="item-link">{{ f.name }}</a>
+          </h5>
+        </div>
+        {% if f.description %}
+        <div class="content-preview folder-description" style="margin-left: 2rem;">
+          <div class="d-flex gap-1 align-items-start">
+            <i class="material-icons" style="font-size: 14px; margin-top: 2px; color: var(--accent); opacity: 0.7;">info</i>
+            <span class="small">{{ f.description }}</span>
+          </div>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-2" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('folders.view_folder', folder_id=f.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="folder" data-id="{{ f.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Notes Section -->
+{% if notes|length > 0 %}
+<div class="section-container notes-section" id="notes">
+  <div class="section-header notes-header">
+    <h3 class="section-title">
+      <i class="material-icons">description</i>
+      MioNote
+      <span class="count-badge">{{ notes|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for n in notes %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="note" data-id="{{ n.id }}" data-is-public="{{ '1' if n.is_public else '0' }}">
+      <div class="badge-container">
+        {% if n.is_public %}
+        <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+        {% endif %}
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title">
+          <a href="{{ url_for('p2_bp.public_view_note', note_id=n.id) }}" class="item-link">{{ n.title or '(untitled)' }}</a>
+        </h5>
+        {% if n.description %}
+        <div class="note-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ n.description }}</span>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('notes.edit_note', note_id=n.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="note" data-id="{{ n.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Boards Section -->
+{% if boards|length > 0 %}
+<div class="section-container boards-section" id="boards">
+  <div class="section-header boards-header">
+    <h3 class="section-title">
+      <i class="material-icons">dashboard</i>
+      MioDraw
+      <span class="count-badge">{{ boards|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for b in boards %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="board" data-id="{{ b.id }}" data-is-public="{{ '1' if b.is_public else '0' }}">
+      <div class="badge-container">
+        {% if b.is_public %}
+        <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+        {% endif %}
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title">
+          <a href="{{ url_for('p2_bp.public_view_board', board_id=b.id) }}" class="item-link">{{ b.title or '(untitled)' }}</a>
+        </h5>
+        {% if b.description %}
+        <div class="board-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ b.description }}</span>
+        </div>
+        {% endif %}
+        <div class="card-text text-muted small flex-grow-1 mb-3">🧩 MioDraw</div>
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('boards.edit_board', board_id=b.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="board" data-id="{{ b.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Markdown Files Section -->
+{% if files_by_type.get('markdown') %}
+<div class="section-container files-section" id="markdown">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">description</i>
+      Markdown Files
+      <span class="count-badge">{{ files_by_type['markdown']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['markdown'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="markdown" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">markdown</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Code Files Section -->
+{% if files_by_type.get('code') %}
+<div class="section-container files-section" id="code">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">code</i>
+      Code Files
+      <span class="count-badge">{{ files_by_type['code']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['code'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="code" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">code</span>
+        {% if file.metadata_json and file.metadata_json.get('language') %}
+          <span class="subtype-badge">{{ file.metadata_json.get('language')|title }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Todo Files Section -->
+{% if files_by_type.get('todo') %}
+<div class="section-container files-section" id="todo">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">checklist</i>
+      Todo Lists
+      <span class="count-badge">{{ files_by_type['todo']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['todo'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="todo" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">todo</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        {% set todo_items = file.content_json.get('items', []) if file.content_json else [] %}
+        {% if todo_items %}
+        <div class="content-preview todo-preview">
+          {% set completed = todo_items | selectattr('completed', 'equalto', true) | list | length %}
+          {% set total = todo_items | length %}
+          {% set percentage = ((completed / total * 100) | round | int) if total > 0 else 0 %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-secondary" style="font-size: 0.75rem;">{{ completed }}/{{ total }} done</span>
+            <div class="flex-grow-1" style="height: 4px; background: var(--border-primary); border-radius: 999px; overflow: hidden;">
+              <div style="height: 100%; width: {{ percentage }}%; background: var(--accent); transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Diagram Files Section -->
+{% if files_by_type.get('diagram') %}
+<div class="section-container files-section" id="diagram">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">account_tree</i>
+      Diagrams
+      <span class="count-badge">{{ files_by_type['diagram']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['diagram'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="diagram" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">diagram</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Note Files Section -->
+{% if files_by_type.get('note') %}
+<div class="section-container files-section" id="file-note">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">note</i>
+      Simple Notes
+      <span class="count-badge">{{ files_by_type['note']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['note'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="note" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">note</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Table Files Section -->
+{% if files_by_type.get('table') %}
+<div class="section-container files-section" id="table">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">table_chart</i>
+      Tables
+      <span class="count-badge">{{ files_by_type['table']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['table'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="table" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">table</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Blocks Files Section -->
+{% if files_by_type.get('blocks') %}
+<div class="section-container files-section" id="blocks">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">view_week</i>
+      Blocks
+      <span class="count-badge">{{ files_by_type['blocks']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['blocks'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="blocks" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">blocks</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- MioBook Files Section -->
+{% if files_by_type.get('proprietary_blocks') %}
+<div class="section-container files-section" id="book">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">article</i>
+      MioBook
+      <span class="count-badge">{{ files_by_type['proprietary_blocks']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['proprietary_blocks'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="proprietary_blocks" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">miobook</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-text text-muted small flex-grow-1 mb-3">📄 Combined Document</div>
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Infinite Whiteboard Files Section -->
+{% if files_by_type.get('proprietary_infinite_whiteboard') %}
+<div class="section-container files-section" id="infinite-whiteboard">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">grid_on</i>
+      Infinite Canvas
+      <span class="count-badge">{{ files_by_type['proprietary_infinite_whiteboard']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['proprietary_infinite_whiteboard'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="proprietary_infinite_whiteboard" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">infinite canvas</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-text text-muted small flex-grow-1 mb-3">🎨 Infinite Canvas</div>
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- Graph Files Section -->
+{% if files_by_type.get('proprietary_graph') %}
+<div class="section-container files-section" id="graph">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">share</i>
+      Graph Workspace
+      <span class="count-badge">{{ files_by_type['proprietary_graph']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+{% for file in files_by_type['proprietary_graph'] %}
+  <div class="col d-flex">
+    <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="proprietary_graph" data-is-public="{{ '1' if file.is_public else '0' }}">
+      <div class="badge-container">
+        <span class="type-badge">graph</span>
+      </div>
+      <div class="card-body d-flex flex-column item-body" tabindex="0">
+        <h5 class="card-title mb-2">
+          <a href="{{ url_for('file.public_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+        </h5>
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+        <div class="file-description content-preview mb-2">
+          <i class="fas fa-info-circle me-1" style="color: var(--accent); font-size: 0.875rem;"></i>
+          <span class="small">{{ file.metadata_json.get('description') }}</span>
+        </div>
+        {% endif %}
+        <div class="card-text text-muted small flex-grow-1 mb-3">🔗 Knowledge Graph</div>
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-end mt-auto" style="padding: 0;">
+          {% if current_user.is_authenticated %}
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-success btn-copy" data-type="file" data-id="{{ file.id }}">Copy</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+<hr style="border-color: var(--border-primary); margin: 2rem 0;">
+{% endif %}
+
+<!-- JavaScript for scroll navigation -->
+<script>
+function scrollToSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (section) {
+    const yOffset = -100; // Offset for fixed navbar
+    const y = section.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    window.scrollTo({top: y, behavior: 'smooth'});
+    
+    // Highlight active nav pill
+    document.querySelectorAll('.nav-pill').forEach(pill => pill.classList.remove('active'));
+    event.target.closest('.nav-pill').classList.add('active');
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  document.querySelectorAll('.nav-pill').forEach(pill => pill.classList.remove('active'));
+}
+
+// Highlight active section on scroll
+let ticking = false;
+window.addEventListener('scroll', function() {
+  if (!ticking) {
+    window.requestAnimationFrame(function() {
+      const sections = document.querySelectorAll('.section-container');
+      let currentSection = '';
+      
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 150;
+        if (window.pageYOffset >= sectionTop) {
+          currentSection = section.getAttribute('id');
+        }
+      });
+      
+      document.querySelectorAll('.nav-pill').forEach(pill => {
+        pill.classList.remove('active');
+        const pillSection = pill.getAttribute('onclick')?.match(/scrollToSection\('(.+?)'\)/)?.[1];
+        if (pillSection === currentSection) {
+          pill.classList.add('active');
+        }
+      });
+      
+      ticking = false;
+    });
+    ticking = true;
+  }
+});
+</script>

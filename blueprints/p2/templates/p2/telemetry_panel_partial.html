@@ -1,0 +1,131 @@
+<!-- TelemetryPanel: Oscilloscope-style diagnostic display for system activity -->
+<div id="telemetryPanelContainer" class="telemetry-panel-container" data-telemetry-url="{{ url_for('p2_bp.telemetry_data') }}">
+  <!-- Mini Panel (in navbar) -->
+  <div id="telemetryMiniPanel" class="telemetry-mini-panel" onclick="openTelemetryModal()">
+    <!-- Canvas for oscilloscope waveform -->
+    <canvas id="telemetryCanvas" width="200" height="50"></canvas>
+    
+    <!-- Metric display (rotates through stats) -->
+    <div class="telemetry-metric-display">
+      <span id="telemetryMetricText" class="telemetry-metric-text"></span>
+    </div>
+    
+    <!-- Activity indicator pulse overlay (hidden when idle) -->
+    <div id="telemetryPulseOverlay" class="telemetry-pulse-overlay hidden"></div>
+  </div>
+</div>
+
+<!-- Telemetry Modal (expanded view) -->
+<div id="telemetryModal" class="telemetry-modal hidden">
+  <div class="telemetry-modal-content">
+    <!-- Modal Header -->
+    <div class="telemetry-modal-header">
+      <h5 class="telemetry-modal-title">
+        <i class="material-icons">analytics</i>
+        System Telemetry
+      </h5>
+      <button type="button" class="telemetry-modal-close" onclick="closeTelemetryModal()">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+    
+    <!-- Modal Body -->
+    <div class="telemetry-modal-body">
+      <!-- Notifications List (replaces oscilloscope) -->
+      <div class="telemetry-notifications-container">
+        <div class="telemetry-notifications-header">
+          <h6 class="telemetry-notifications-title">Recent Activity</h6>
+          <span class="telemetry-notifications-count" id="notificationCount">0 notifications</span>
+        </div>
+        
+        <div class="telemetry-notifications-list" id="notificationsList">
+          <!-- Notifications will be inserted here by JavaScript -->
+          <div class="telemetry-notification-placeholder">
+            <i class="material-icons">notifications_none</i>
+            <p>No notifications yet</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Metrics Grid -->
+      <div class="telemetry-modal-metrics">
+        <div class="telemetry-metric-card">
+          <div class="telemetry-metric-label">User Type</div>
+          <div class="telemetry-metric-value" id="modalUserType">—</div>
+        </div>
+        
+        <div class="telemetry-metric-card">
+          <div class="telemetry-metric-label">Storage Used</div>
+          <div class="telemetry-metric-value" id="modalStorageUsed">—</div>
+        </div>
+        
+        <div class="telemetry-metric-card">
+          <div class="telemetry-metric-label">Storage Remaining</div>
+          <div class="telemetry-metric-value" id="modalStorageRemaining">—</div>
+        </div>
+        
+        <div class="telemetry-metric-card">
+          <div class="telemetry-metric-label">Total Images</div>
+          <div class="telemetry-metric-value" id="modalTotalImages">—</div>
+        </div>
+        
+        <div class="telemetry-metric-card">
+          <div class="telemetry-metric-label">Last Sender</div>
+          <div class="telemetry-metric-value" id="modalLastSender">—</div>
+        </div>
+        
+        <div class="telemetry-metric-card">
+          <div class="telemetry-metric-label">Last Transfer</div>
+          <div class="telemetry-metric-value" id="modalLastTransfer">—</div>
+        </div>
+        
+        <div class="telemetry-metric-card telemetry-metric-card-wide">
+          <div class="telemetry-metric-label">Current Activity</div>
+          <div class="telemetry-metric-value" id="modalCurrentActivity">Idle</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Telemetry Modal Control Functions
+function openTelemetryModal() {
+  const modal = document.getElementById('telemetryModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    // Notify the telemetry system that modal is open
+    if (window.TelemetryPanel) {
+      window.TelemetryPanel.onModalOpen();
+    }
+  }
+}
+
+function closeTelemetryModal() {
+  const modal = document.getElementById('telemetryModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    // Notify the telemetry system that modal is closed
+    if (window.TelemetryPanel) {
+      window.TelemetryPanel.onModalClose();
+    }
+  }
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeTelemetryModal();
+  }
+});
+
+// Close modal on backdrop click
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('telemetryModal');
+  if (modal && e.target === modal) {
+    closeTelemetryModal();
+  }
+});
+</script>

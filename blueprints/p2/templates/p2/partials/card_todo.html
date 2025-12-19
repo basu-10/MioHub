@@ -1,0 +1,74 @@
+<!-- Todo Card Partial (todo) -->
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" 
+       data-type="file" 
+       data-id="{{ file.id }}" 
+       data-file-type="todo"
+       data-file-description="{{ file.description }}" 
+       data-is-public="{{ '1' if file.is_public else '0' }}">
+    
+    <div class="badge-container">
+      {% if file.is_public %}
+        <span class="public-badge">
+          <i class="material-icons" aria-hidden="true">public</i>
+          <span class="visually-hidden">Public</span>
+        </span>
+      {% endif %}
+      <span class="type-badge">Todo List</span>
+    </div>
+    
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title mb-2">
+        <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">
+          {{ file.title }}
+        </a>
+      </h5>
+      
+      <!-- Description -->
+      {% if file.description and display_prefs.show_previews %}
+      <div class="file-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <span class="text-muted">{{ file.description }}</span>
+      </div>
+      {% endif %}
+      
+      <!-- Todo Preview: Progress Bar + Item List -->
+      {% if display_prefs.show_previews %}
+        {% set todo_items = file.content_json.get('items', []) if file.content_json else [] %}
+        {% if todo_items %}
+        <div class="content-preview todo-preview">
+          <!-- Progress Bar -->
+          {% set completed = todo_items | selectattr('completed', 'equalto', true) | list | length %}
+          {% set total = todo_items | length %}
+          {% set percentage = ((completed / total * 100) | round | int) if total > 0 else 0 %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-secondary" style="font-size: 0.75rem;">
+              {{ completed }}/{{ total }} done ({{ percentage }}%)
+            </span>
+            <div class="flex-grow-1" style="height: 4px; background: var(--border-primary); border-radius: 999px; overflow: hidden;">
+              <div style="height: 100%; width: {{ percentage }}%; background: var(--accent); transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+          
+          <!-- Item List (first 5 items) -->
+          <div class="todo-item-list small" style="max-height: 120px; overflow-y: auto;">
+            {% for item in todo_items[:5] %}
+            <div class="d-flex align-items-start gap-2 mb-1">
+              <i class="material-icons" style="font-size: 16px; color: {{ 'var(--accent)' if item.completed else 'var(--muted)' }};">
+                {{ 'check_circle' if item.completed else 'radio_button_unchecked' }}
+              </i>
+              <span class="{{ 'text-decoration-line-through text-muted' if item.completed else '' }}">
+                {{ item.text }}
+              </span>
+            </div>
+            {% endfor %}
+            {% if todo_items | length > 5 %}
+            <div class="text-muted small mt-1">... and {{ todo_items | length - 5 }} more items</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,31 @@
+<!-- Note Table Row Partial -->
+<tr class="item-row" data-type="note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" tabindex="0">
+  <td>
+    <i class="material-icons" style="color: var(--accent);">description</i>
+  </td>
+  <td>
+    <a href="{{ url_for('notes.edit_note', note_id=note.id) }}" class="text-decoration-none fw-semibold item-link">
+      {{ note.title }}
+    </a>
+    {% if note.is_public %}
+      <span class="badge bg-success ms-2" style="font-size: 0.7rem;"><i class="material-icons" style="font-size: 12px; vertical-align: middle;">public</i> Public</span>
+    {% endif %}
+    {% if note.description %}
+      <div class="text-muted small mt-1">{{ note.description }}</div>
+    {% endif %}
+  </td>
+  <td class="text-muted small">
+    {{ (note.get_content_size() / 1024) | round(2) }} KB
+  </td>
+  <td class="text-muted small">
+    {{ note.created_at.strftime('%Y-%m-%d %H:%M') if note.created_at else 'N/A' }}
+  </td>
+  <td class="text-muted small">
+    {{ note.last_modified.strftime('%Y-%m-%d %H:%M') if note.last_modified else 'N/A' }}
+  </td>
+  <td>
+    <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('notes.edit_note', note_id=note.id) }}'">
+      <i class="material-icons" style="font-size: 14px;">edit</i>
+    </button>
+  </td>
+</tr>

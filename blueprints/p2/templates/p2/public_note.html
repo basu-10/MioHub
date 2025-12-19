@@ -1,0 +1,85 @@
+{% include "/p2/folder_view_navbar_partial.html" %}
+
+<head>
+  <title>{{ note.title or '(untitled)' }} - Public Note - MioSpace</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+</head>
+
+<div class="min-h-screen bg-gray-900 text-gray-200 pt-28 flex justify-center">
+  <div class="bg-gray-800 rounded-lg p-6 shadow-lg w-full max-w-5xl mx-4">
+    <div class="mb-4 flex items-center justify-between">
+      <a href="javascript:history.back()" class="text-gray-400 hover:text-gray-200 inline-flex items-center">
+        <i class="material-icons mr-1">arrow_back</i>
+        Back
+      </a>
+      {% if current_user.is_authenticated %}
+      <button class="btn btn-copy-public px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-md inline-flex items-center gap-2" data-note-id="{{ note.id }}" data-item-type="note">
+        <i class="material-icons" style="font-size: 18px;">content_copy</i>
+        Copy to My Profile
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div>
+  <h1 class="text-2xl text-gray-100 font-semibold">{{ note.title or '(untitled)' }}</h1>
+  <p class="text-gray-300 text-sm">By {{ note.owner.username if note.owner else 'Unknown user' }} • {{ note.created_at.strftime('%Y-%m-%d') if note.created_at else '' }}</p>
+      </div>
+      <div>
+        {# Viewing a public note — all content here is public so the explicit "Public" tag is omitted #}
+      </div>
+    </div>
+
+    {% if note.descriptions %}
+    <div class="mt-4 text-gray-300">
+      <div class="d-flex flex-column gap-2">
+        {% for key, val in note.descriptions %}
+          <div class="flex items-start gap-2 text-gray-300">
+            <span class="inline-flex items-center justify-center bg-gray-600 rounded-full w-6 h-6 mr-2">{{ key }}</span>
+            <span>{{ val }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% elif note.description and note.description_parse_failed %}
+    <div class="mt-4 text-yellow-400 text-sm">⚠️ Description exists but is not in the expected JSON format. Check server logs.</div>
+    {% endif %}
+
+    <hr class="my-4 border-gray-700">
+
+    <div class="prose max-w-none text-gray-100 mt-4">
+      {{ sanitized_content|safe }}
+    </div>
+  </div>
+</div>
+
+<script>
+  // Copy to profile functionality
+  document.querySelectorAll('.btn-copy-public').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const noteId = btn.dataset.noteId;
+      btn.disabled = true;
+      btn.textContent = 'Copying...';
+      
+      fetch('/folders/public/copy/note/' + noteId, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.new_id) {
+            window.location.href = '/notes/' + data.new_id + '/edit';
+          } else {
+            alert('Copy failed: ' + (data.message || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="material-icons" style="font-size: 18px;">content_copy</i> Copy to My Profile';
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Copy failed');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="material-icons" style="font-size: 18px;">content_copy</i> Copy to My Profile';
+        });
+    });
+  });
+</script>

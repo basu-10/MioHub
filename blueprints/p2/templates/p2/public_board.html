@@ -1,0 +1,77 @@
+{% include "/p2/folder_view_navbar_partial.html" %}
+
+<head>
+  <title>{{ board.title or '(untitled)' }} - Public MioDraw - MioSpace</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+</head>
+
+<div class="w-full mt-8 p-6 text-gray-200">
+  <div class="bg-gray-800 rounded-none p-6 shadow-lg w-full">
+    <div class="mb-4 flex items-center justify-between">
+      <a href="javascript:history.back()" class="text-gray-400 hover:text-gray-200 inline-flex items-center">
+        <i class="material-icons mr-1">arrow_back</i>
+        Back
+      </a>
+      {% if current_user.is_authenticated %}
+      <button class="btn btn-copy-public px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-md inline-flex items-center gap-2" data-board-id="{{ board.id }}" data-item-type="board">
+        <i class="material-icons" style="font-size: 18px;">content_copy</i>
+        Copy to My Profile
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div>
+  <h1 class="text-2xl text-gray-100 font-semibold">{{ board.title or '(untitled)' }}</h1>
+  <p class="text-gray-300 text-sm">By {{ board.owner.username if board.owner else 'Unknown user' }} • {{ board.created_at.strftime('%Y-%m-%d') if board.created_at else '' }}</p>
+      </div>
+      <div>
+        {% if board.is_public %}
+          <span class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-md"> <i class="material-icons mr-1">public</i> Public</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if board.description %}
+    <div class="mt-4 text-gray-300">{{ board.description }}</div>
+    {% endif %}
+
+    <hr class="my-4 border-gray-700">
+
+    <div class="text-gray-100 mt-4">
+      <!-- Board content: escaped for safe display to public users -->
+      <pre class="whitespace-pre-wrap">{{ safe_board_content }}</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Copy to profile functionality
+  document.querySelectorAll('.btn-copy-public').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const boardId = btn.dataset.boardId;
+      btn.disabled = true;
+      btn.textContent = 'Copying...';
+      
+      fetch('/folders/public/copy/board/' + boardId, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.new_id) {
+            window.location.href = '/boards/' + data.new_id + '/edit';
+          } else {
+            alert('Copy failed: ' + (data.message || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="material-icons" style="font-size: 18px;">content_copy</i> Copy to My Profile';
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Copy failed');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="material-icons" style="font-size: 18px;">content_copy</i> Copy to My Profile';
+        });
+    });
+  });
+</script>

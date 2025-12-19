@@ -1,0 +1,29 @@
+<!-- Boards Section Cards - For HTMX Rearrangement -->
+{% for board in boards %}
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" data-type="board" data-id="{{ board.id }}" data-board-description="{{ board.description or '' }}" data-is-public="{{ '1' if board.is_public else '0' }}" data-is-pinned="{{ '1' if board.is_pinned else '0' }}">
+    <div class="badge-container">
+      {% if board.is_pinned %}
+      <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+      {% endif %}
+      {% if board.is_public %}
+      <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+      {% endif %}
+    </div>
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title">
+        <a href="{{ url_for('boards.edit_board', board_id=board.id) }}" class="item-link">{{ board.title }}</a>
+      </h5>
+      
+      {% if board.description and display_prefs.show_previews %}
+      <div class="board-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <span>{{ board.description }}</span>
+      </div>
+      {% endif %}
+      
+      <div class="card-text text-muted small flex-grow-1 mb-3 mio-draw-label">🧩 MioDraw</div>
+    </div>
+  </div>
+</div>
+{% endfor %}

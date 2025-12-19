@@ -1,0 +1,494 @@
+/* ═══════════════════════════════════════════════════════════════════
+   TelemetryPanel: Oscilloscope-style diagnostic display
+   Carbon Teal theme with crisp vector lines and subtle animations
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Mini Panel Container (sits in navbar) */
+.telemetry-panel-container {
+  position: relative;
+  display: inline-block;
+  margin: 0 12px;
+}
+
+.telemetry-mini-panel {
+  position: relative;
+  width: 200px;
+  height: 50px;
+  background: linear-gradient(135deg, rgba(10, 10, 11, 0.95), rgba(18, 21, 22, 0.95));
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 20px rgba(20, 184, 166, 0.05);
+}
+
+.telemetry-mini-panel:hover {
+  border-color: rgba(20, 184, 166, 0.4);
+  box-shadow: 
+    0 4px 12px rgba(20, 184, 166, 0.15),
+    inset 0 0 25px rgba(20, 184, 166, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Canvas for waveform */
+#telemetryCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.telemetry-mini-panel.active #telemetryCanvas {
+  opacity: 1;
+}
+
+/* Metric Display (rotating text) */
+.telemetry-metric-display {
+  position: absolute;
+  bottom: 4px;
+  left: 8px;
+  right: 8px;
+  height: 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.telemetry-metric-text {
+  display: block;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: rgba(20, 184, 166, 0.85);
+  text-shadow: 0 0 4px rgba(20, 184, 166, 0.3);
+  white-space: nowrap;
+  animation: telemetryTextSlide 0.5s ease-in-out;
+}
+
+@keyframes telemetryTextSlide {
+  0% {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Activity Pulse Overlay (shown during transfers) */
+.telemetry-pulse-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(20, 184, 166, 0.15), transparent);
+  pointer-events: none;
+  animation: telemetryPulse 1.5s ease-in-out infinite;
+}
+
+.telemetry-pulse-overlay.hidden {
+  display: none;
+}
+
+@keyframes telemetryPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Telemetry Modal (Expanded View)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.telemetry-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.telemetry-modal.flex {
+  display: flex;
+}
+
+.telemetry-modal-content {
+  background: linear-gradient(135deg, rgba(10, 10, 11, 0.98), rgba(18, 21, 22, 0.98));
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 0 40px rgba(20, 184, 166, 0.08);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Modal Header */
+.telemetry-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(20, 184, 166, 0.2);
+  background: linear-gradient(135deg, rgba(18, 21, 22, 0.8), rgba(10, 23, 27, 0.8));
+}
+
+.telemetry-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(236, 255, 255, 0.95);
+  text-shadow: 0 0 8px rgba(20, 184, 166, 0.3);
+}
+
+.telemetry-modal-title .material-icons {
+  color: rgba(20, 184, 166, 0.9);
+  font-size: 24px;
+}
+
+.telemetry-modal-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(154, 168, 173, 0.9);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.telemetry-modal-close:hover {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.4);
+  color: rgba(252, 165, 165, 0.95);
+}
+
+.telemetry-modal-close .material-icons {
+  font-size: 20px;
+}
+
+/* Modal Body */
+.telemetry-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Notifications Container (replaces oscilloscope) */
+.telemetry-notifications-container {
+  margin-bottom: 24px;
+  background: rgba(10, 10, 11, 0.6);
+  border: 1px solid rgba(20, 184, 166, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.telemetry-notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(18, 21, 22, 0.8), rgba(10, 23, 27, 0.8));
+  border-bottom: 1px solid rgba(20, 184, 166, 0.1);
+}
+
+.telemetry-notifications-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(236, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.telemetry-notifications-count {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: rgba(154, 168, 173, 0.8);
+}
+
+.telemetry-notifications-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* Custom scrollbar for notifications list */
+.telemetry-notifications-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.telemetry-notifications-list::-webkit-scrollbar-track {
+  background: rgba(10, 10, 11, 0.4);
+  border-radius: 4px;
+}
+
+.telemetry-notifications-list::-webkit-scrollbar-thumb {
+  background: rgba(20, 184, 166, 0.2);
+  border-radius: 4px;
+}
+
+.telemetry-notifications-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(20, 184, 166, 0.3);
+}
+
+/* Individual notification item */
+.telemetry-notification-item {
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, rgba(18, 21, 22, 0.5), rgba(10, 23, 27, 0.5));
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-left: 3px solid rgba(20, 184, 166, 0.4);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.telemetry-notification-item:hover {
+  background: linear-gradient(135deg, rgba(18, 21, 22, 0.7), rgba(10, 23, 27, 0.7));
+  border-color: rgba(20, 184, 166, 0.15);
+  border-left-color: rgba(20, 184, 166, 0.6);
+}
+
+.telemetry-notification-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Notification type colors */
+.telemetry-notification-item.type-save {
+  border-left-color: rgba(34, 197, 94, 0.5);
+}
+
+.telemetry-notification-item.type-transfer {
+  border-left-color: rgba(59, 130, 246, 0.5);
+}
+
+.telemetry-notification-item.type-delete {
+  border-left-color: rgba(239, 68, 68, 0.5);
+}
+
+.telemetry-notification-item.type-error {
+  border-left-color: rgba(220, 38, 38, 0.6);
+  background: linear-gradient(135deg, rgba(40, 10, 10, 0.5), rgba(30, 10, 10, 0.5));
+}
+
+.telemetry-notification-item.type-info {
+  border-left-color: rgba(20, 184, 166, 0.4);
+}
+
+/* Notification icon */
+.telemetry-notification-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  font-size: 16px;
+  color: rgba(20, 184, 166, 0.7);
+}
+
+.type-save .telemetry-notification-icon {
+  color: rgba(34, 197, 94, 0.8);
+}
+
+.type-transfer .telemetry-notification-icon {
+  color: rgba(59, 130, 246, 0.8);
+}
+
+.type-delete .telemetry-notification-icon {
+  color: rgba(239, 68, 68, 0.8);
+}
+
+.type-error .telemetry-notification-icon {
+  color: rgba(220, 38, 38, 0.9);
+}
+
+/* Notification content */
+.telemetry-notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.telemetry-notification-message {
+  font-size: 13px;
+  color: rgba(236, 255, 255, 0.9);
+  margin: 0 0 4px 0;
+  word-wrap: break-word;
+}
+
+.telemetry-notification-timestamp {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: rgba(154, 168, 173, 0.7);
+}
+
+/* Placeholder when no notifications */
+.telemetry-notification-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: rgba(154, 168, 173, 0.5);
+}
+
+.telemetry-notification-placeholder .material-icons {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.3;
+}
+
+.telemetry-notification-placeholder p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Large Oscilloscope Display (deprecated - keeping for compatibility) */
+.telemetry-modal-oscilloscope {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(10, 10, 11, 0.6);
+  border: 1px solid rgba(20, 184, 166, 0.15);
+  border-radius: 8px;
+  box-shadow: inset 0 0 30px rgba(20, 184, 166, 0.05);
+}
+
+#telemetryModalCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0.85;
+}
+
+/* Metrics Grid */
+.telemetry-modal-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.telemetry-metric-card {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(18, 21, 22, 0.6), rgba(10, 23, 27, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.telemetry-metric-card:hover {
+  background: linear-gradient(135deg, rgba(18, 21, 22, 0.8), rgba(10, 23, 27, 0.8));
+  border-color: rgba(20, 184, 166, 0.15);
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.08);
+}
+
+.telemetry-metric-card-wide {
+  grid-column: 1 / -1;
+}
+
+.telemetry-metric-label {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: rgba(154, 168, 173, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.telemetry-metric-value {
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(20, 184, 166, 0.95);
+  text-shadow: 0 0 6px rgba(20, 184, 166, 0.25);
+}
+
+/* Activity states for metric values */
+.telemetry-metric-value.active {
+  color: rgba(34, 197, 94, 0.95);
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+  animation: telemetryValuePulse 1s ease-in-out infinite;
+}
+
+.telemetry-metric-value.warning {
+  color: rgba(251, 191, 36, 0.95);
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+.telemetry-metric-value.error {
+  color: rgba(239, 68, 68, 0.95);
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+
+@keyframes telemetryValuePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .telemetry-mini-panel {
+    width: 160px;
+    height: 44px;
+  }
+  
+  #telemetryCanvas {
+    width: 160px;
+    height: 44px;
+  }
+  
+  .telemetry-metric-text {
+    font-size: 9px;
+  }
+  
+  .telemetry-modal-metrics {
+    grid-template-columns: 1fr;
+  }
+  
+  .telemetry-modal-content {
+    max-width: 95vw;
+  }
+  
+  #telemetryModalCanvas {
+    width: 100%;
+    height: 150px;
+  }
+}
+
+/* Performance optimization: GPU acceleration */
+.telemetry-mini-panel,
+#telemetryCanvas,
+.telemetry-pulse-overlay,
+.telemetry-modal-content {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

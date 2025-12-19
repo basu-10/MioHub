@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ file.title }} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  
+  <!-- Editor.js Core (read-only mode) -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+  
+  <!-- Editor.js Tools (for rendering) -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/warning@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/nested-list@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@latest"></script>
+  
+  <style>
+    body {
+      background-color: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    
+    .document-container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .document-header {
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-primary);
+    }
+    
+    .page-title {
+      color: var(--text-primary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .material-icons {
+      font-size: 2rem;
+      color: var(--accent);
+    }
+    
+    .document-meta {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    
+    .description-box {
+      background: rgba(20, 184, 166, 0.08);
+      border-left: 3px solid var(--accent);
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      color: var(--text-primary);
+    }
+    
+    /* Editor.js Read-Only Styling */
+    #editorjs {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: 8px;
+      padding: 1.5rem;
+      min-height: 300px;
+    }
+    
+    .codex-editor__redactor {
+      padding-bottom: 50px !important;
+    }
+    
+    .ce-block__content,
+    .ce-toolbar__content {
+      max-width: 100%;
+    }
+    
+    .ce-paragraph {
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    
+    .ce-header {
+      color: var(--text-primary);
+    }
+    
+    .ce-code__textarea {
+      background: var(--bg-tertiary) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-primary) !important;
+    }
+    
+    .cdx-quote {
+      border-left: 3px solid var(--accent);
+      background: rgba(20, 184, 166, 0.08);
+      color: var(--text-primary);
+    }
+    
+    .cdx-warning {
+      background: rgba(251, 191, 36, 0.08);
+      border-left: 3px solid #fbbf24;
+    }
+    
+    .tc-table {
+      border-color: var(--border-primary) !important;
+    }
+    
+    .tc-table__cell {
+      border-color: var(--border-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    .cdx-marker {
+      background: rgba(20, 184, 166, 0.3);
+      color: var(--text-primary);
+    }
+    
+    .cdx-checklist__item-checkbox {
+      border-color: var(--border-primary) !important;
+      pointer-events: none; /* Disable in read-only mode */
+    }
+    
+    .cdx-checklist__item-checkbox:checked {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+    }
+    
+    /* Hide toolbar in read-only mode */
+    .ce-toolbar {
+      display: none !important;
+    }
+    
+    /* Action Buttons */
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--white);
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+    
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      border-color: var(--border-primary);
+      color: var(--text-primary);
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+    }
+    
+    .btn-secondary:hover {
+      background: var(--bg-quaternary);
+      border-color: var(--border-hover);
+    }
+    
+    .public-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--accent);
+      color: var(--white);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  {% if not public_view %}
+    {% include "/p2/folder_view_navbar_partial.html" %}
+  {% endif %}
+  
+  <div class="container-fluid mt-4">
+    <div class="document-container">
+      <div class="document-header">
+        <h2 class="page-title">
+          <i class="material-icons">view_week</i>
+          {{ file.title }}
+          {% if file.is_public %}
+            <span class="public-badge">
+              <i class="material-icons" style="font-size: 1rem;">public</i>
+              Public
+            </span>
+          {% endif %}
+        </h2>
+        
+        <div class="document-meta">
+          {% if file.created_at %}
+            Created: {{ file.created_at.strftime('%Y-%m-%d %H:%M') }}
+          {% endif %}
+          {% if file.last_modified %}
+            • Last modified: {{ file.last_modified.strftime('%Y-%m-%d %H:%M') }}
+          {% endif %}
+        </div>
+        
+        {% if file.metadata_json and file.metadata_json.get('description') %}
+          <div class="description-box mt-3">
+            <strong>Description:</strong> {{ file.metadata_json.get('description') }}
+          </div>
+        {% endif %}
+      </div>
+      
+      <div id="editorjs"></div>
+      
+      <div class="d-flex gap-2 justify-content-between mt-4">
+        <div class="d-flex gap-2">
+          {% if not public_view and file.owner_id == current_user.id %}
+            <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-primary">
+              <i class="material-icons" style="font-size: 1rem; vertical-align: middle;">edit</i>
+              Edit
+            </a>
+          {% endif %}
+          {% if public_view %}
+            <button class="btn btn-secondary btn-copy-public" data-file-id="{{ file.id }}" data-file-type="file">
+              <i class="material-icons" style="font-size: 1rem; vertical-align: middle;">content_copy</i>
+              Copy to My Profile
+            </button>
+          {% endif %}
+        </div>
+        <div>
+          <a href="javascript:history.back()" class="btn btn-secondary">
+            <i class="material-icons" style="font-size: 1rem; vertical-align: middle;">arrow_back</i>
+            Back
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Parse existing content
+      let documentData = {{ file.content_json | tojson | safe }};
+      
+      // Ensure proper Editor.js format
+      if (!documentData || typeof documentData !== 'object') {
+        documentData = {
+          time: Date.now(),
+          blocks: [],
+          version: "2.28.0"
+        };
+      }
+      
+      // Initialize Editor.js in read-only mode
+      const editor = new EditorJS({
+        holder: 'editorjs',
+        readOnly: true,
+        data: documentData,
+        tools: {
+          header: {
+            class: Header
+          },
+          list: {
+            class: NestedList
+          },
+          checklist: {
+            class: Checklist
+          },
+          quote: {
+            class: Quote
+          },
+          code: {
+            class: CodeTool
+          },
+          delimiter: Delimiter,
+          table: {
+            class: Table
+          },
+          warning: {
+            class: Warning
+          },
+          raw: RawTool,
+          embed: {
+            class: Embed
+          },
+          image: SimpleImage,
+          Marker: {
+            class: Marker
+          },
+          inlineCode: {
+            class: InlineCode
+          },
+          underline: Underline
+        }
+      });
+      
+      // Copy to profile functionality
+      document.querySelectorAll('.btn-copy-public').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const fileId = btn.dataset.fileId;
+          btn.disabled = true;
+          btn.textContent = 'Copying...';
+          
+          fetch('/folders/public/copy/file/' + fileId, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+              if (data.success && data.new_id) {
+                window.location.href = '/p2/files/' + data.new_id + '/edit';
+              } else {
+                alert('Copy failed: ' + (data.message || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="material-icons" style="font-size: 1rem; vertical-align: middle;">content_copy</i> Copy to My Profile';
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              alert('Copy failed');
+              btn.disabled = false;
+              btn.innerHTML = '<i class="material-icons" style="font-size: 1rem; vertical-align: middle;">content_copy</i> Copy to My Profile';
+            });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

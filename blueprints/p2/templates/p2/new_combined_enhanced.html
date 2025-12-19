@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ document.title if document else 'New Combined Document' }}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Summernote Editor CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS for canvas components -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            /* Primary Dark Theme Colors */
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-quaternary: #30363d;
+            
+            /* Text Colors */
+            --text-primary: #f0f6fc;
+            --text-secondary: #7d8590;
+            --text-muted: #656d76;
+            
+            /* Border Colors */
+            --border-primary: #30363d;
+            --border-secondary: #21262d;
+            --border-hover: #484f58;
+            
+            /* Interactive Colors */
+            --accent-blue: #238be6;
+            --accent-blue-hover: #1f79db;
+            --accent-green: #2ea043;
+            --accent-green-hover: #2c974b;
+            --accent-red: #da3633;
+            --accent-red-hover: #c93c37;
+            
+            /* Subtle Hover States */
+            --hover-overlay: rgba(255, 255, 255, 0.05);
+            --hover-border: rgba(255, 255, 255, 0.1);
+
+            /* Layout Measurements */
+            --save-bar-offset: 240px;
+        }
+
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .editor-scroll-region {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        body.combined-editor-locked {
+            overflow: hidden;
+        }
+
+        body.combined-editor-locked .combined-container {
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.combined-editor-locked .save-controls {
+            flex-shrink: 0;
+        }
+
+        body.combined-editor-locked .editor-scroll-region {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            max-height: calc(100vh - var(--save-bar-offset));
+            padding-right: 12px;
+            padding-bottom: 60px;
+        }
+
+        body.combined-editor-locked .editor-scroll-region::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        body.combined-editor-locked .editor-scroll-region::-webkit-scrollbar-thumb {
+            background: var(--border-hover);
+            border-radius: 4px;
+        }
+
+        @media (max-width: 991px) {
+            body.combined-editor-locked {
+                overflow: auto;
+            }
+
+            body.combined-editor-locked .combined-container {
+                height: auto;
+            }
+
+            body.combined-editor-locked .editor-scroll-region {
+                max-height: none;
+                overflow: visible;
+                padding-right: 0;
+                padding-bottom: 40px;
+            }
+        }
+
+        .combined-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .block-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .block-item:hover {
+            border-color: var(--border-hover);
+        }
+
+        .block-item.block-focus-highlight {
+            box-shadow: 0 0 0 2px var(--accent-blue);
+        }
+
+        .block-header {
+            background: var(--bg-quaternary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .block-type {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .block-type i {
+            margin-right: 0;
+        }
+
+        .block-number {
+            margin-left: 6px;
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .block-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .block-controls button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .block-controls button:hover {
+            background: var(--hover-overlay);
+            color: var(--text-primary);
+        }
+
+        .note-block-content {
+            padding: 20px;
+        }
+
+        .note-block-content .form-control {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+            border-radius: 6px;
+        }
+
+        .note-block-content .form-control:focus {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 0.2rem rgba(35, 139, 230, 0.25);
+        }
+
+        .board-block-content {
+            padding: 10px;
+            position: relative;
+        }
+
+        .canvas-container {
+            position: relative;
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            background: white;
+            overflow: hidden;
+        }
+
+        .canvas-toolbar {
+            background: var(--bg-quaternary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 8px 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .canvas-tool-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            padding: 2px;
+        }
+
+        .canvas-tool-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+
+        .canvas-tool-btn:hover, .canvas-tool-btn.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .color-picker {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .size-slider {
+            width: 60px;
+            accent-color: var(--accent-blue);
+        }
+
+        .add-block-controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .add-block-btn {
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border-primary);
+            color: var(--text-secondary);
+            padding: 20px 30px;
+            margin: 0 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .add-block-btn:hover {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            background: var(--hover-overlay);
+        }
+
+        .block-insert-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 14px 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .block-insert-control.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .block-insert-control .insert-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border-primary);
+            opacity: 0.6;
+        }
+
+        .block-insert-control .insert-buttons {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border: 1px dashed var(--border-primary);
+            border-radius: 999px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .block-insert-control .insert-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .block-insert-control .insert-btn:hover {
+            color: var(--accent-blue);
+            background: var(--hover-overlay);
+        }
+
+        .save-controls {
+            position: sticky;
+            top: 20px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            z-index: 1000;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-blue-hover);
+            border-color: var(--accent-blue-hover);
+        }
+
+        .btn-success {
+            background-color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .btn-success:hover {
+            background-color: var(--accent-green-hover);
+            border-color: var(--accent-green-hover);
+        }
+
+        .btn-danger {
+            background-color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--accent-red-hover);
+            border-color: var(--accent-red-hover);
+        }
+
+        .sortable-ghost {
+            opacity: 0.5;
+        }
+
+        .drag-handle {
+            cursor: move;
+            color: var(--text-muted);
+        }
+
+        .drag-handle:hover {
+            color: var(--text-primary);
+        }
+
+        /* Canvas styling for board blocks */
+        .whiteboard-canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        /* Summernote dark theme overrides */
+        .note-editor .note-editable {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .note-editor .note-toolbar {
+            background: var(--bg-quaternary) !important;
+            border-bottom: 1px solid var(--border-primary) !important;
+        }
+
+        .note-editor .note-toolbar .btn-group .btn {
+            background: var(--bg-tertiary) !important;
+            border: 1px solid var(--border-primary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .note-editor .note-toolbar .btn-group .btn:hover {
+            background: var(--hover-overlay) !important;
+        }
+
+        .note-editor.note-frame,
+        .note-editor.note-airframe,
+        .note-editor .note-editing-area {
+            height: auto !important;
+        }
+
+        .note-editor .note-editable {
+            min-height: 200px;
+            height: auto !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+        }
+
+        /* Preview mode styles - hide editing UI elements */
+        body.preview-mode .block-controls,
+        body.preview-mode .canvas-toolbar,
+        body.preview-mode .add-block-controls,
+        body.preview-mode .block-type,
+        body.preview-mode .note-editor .note-toolbar,
+        body.preview-mode .save-controls {
+            display: none !important;
+        }
+
+        body.preview-mode .block-header {
+            display: none !important;
+        }
+
+        body.preview-mode .block-item {
+            border: none;
+            background: transparent;
+        }
+
+        .preview-exit-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            background-color: var(--accent-red);
+            border-color: var(--accent-red);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        .preview-exit-btn:hover,
+        .preview-exit-btn:focus {
+            background-color: var(--accent-red-hover);
+            border-color: var(--accent-red-hover);
+        }
+    </style>
+</head>
+<body>
+    <div class="combined-container">
+        <!-- Header with save controls -->
+        <div class="save-controls">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="documentTitle" 
+                           placeholder="Document Title" 
+                           value="{{ document.title if document else '' }}">
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-success" onclick="saveDocument()">
+                        <i class="fas fa-save"></i> Save Document
+                    </button>
+                    {% if document %}
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('combined.download_json', document_id=document.id) }}">
+                                    <i class="fas fa-file-code"></i> Download as JSON
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('combined.print_view', document_id=document.id) }}" target="_blank">
+                                    <i class="fas fa-file-pdf"></i> Print / Save as PDF
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                    <button class="btn btn-secondary" onclick="goBack()">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                    <button class="btn btn-info preview-toggle-btn" onclick="togglePreview()">
+                        <i class="fas fa-eye"></i> <span class="preview-text">Preview</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scrollable editor region -->
+        <div class="editor-scroll-region">
+            <div id="contentBlocks">
+                {% if content_blocks %}
+                    {% for block in content_blocks %}
+                        {% if block.type == 'note' %}
+                        <div class="block-item" data-type="note" data-id="{{ block.id if block.id else '' }}">
+                            <div class="block-header">
+                                <div class="block-type">
+                                    <i class="fas fa-file-text"></i>
+                                    <span class="block-label">Note Block</span>
+                                    <span class="block-number"></span>
+                                </div>
+                                <div class="block-controls">
+                                    <button type="button" onclick="moveBlockUp(this)" title="Move Up">
+                                        <i class="fas fa-chevron-up"></i>
+                                    </button>
+                                    <button type="button" onclick="moveBlockDown(this)" title="Move Down">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                    <button type="button" onclick="deleteBlock(this)" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <div class="drag-handle" title="Drag to reorder">
+                                        <i class="fas fa-grip-vertical"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="note-block-content">
+                                <textarea class="form-control note-editor" rows="6" 
+                                          placeholder="Write your note here...">{{ block.content if block.content else '' }}</textarea>
+                            </div>
+                        </div>
+                        {% elif block.type == 'board' %}
+                        <div class="block-item" data-type="board" data-id="{{ block.id if block.id else '' }}">
+                            <div class="block-header">
+                                <div class="block-type">
+                                    <i class="fas fa-palette"></i>
+                                    <span class="block-label">Whiteboard Block</span>
+                                    <span class="block-number"></span>
+                                </div>
+                                <div class="block-controls">
+                                    <button type="button" onclick="moveBlockUp(this)" title="Move Up">
+                                        <i class="fas fa-chevron-up"></i>
+                                    </button>
+                                    <button type="button" onclick="moveBlockDown(this)" title="Move Down">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                    <button type="button" onclick="deleteBlock(this)" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <div class="drag-handle" title="Drag to reorder">
+                                        <i class="fas fa-grip-vertical"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="board-block-content">
+                                <div class="canvas-container">
+                                    <div class="canvas-toolbar">
+                                        <div class="canvas-tool-group">
+                                            <button class="canvas-tool-btn active" data-tool="pen" title="Pen">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <button class="canvas-tool-btn" data-tool="eraser" title="Eraser">
+                                                <i class="fas fa-eraser"></i>
+                                            </button>
+                                            <button class="canvas-tool-btn" data-tool="line" title="Line">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <button class="canvas-tool-btn" data-tool="rectangle" title="Rectangle">
+                                                <i class="fas fa-square"></i>
+                                            </button>
+                                            <button class="canvas-tool-btn" data-tool="circle" title="Circle">
+                                                <i class="fas fa-circle"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="canvas-tool-group">
+                                            <input type="color" class="color-picker" value="#000000" title="Color">
+                                            <input type="range" class="size-slider" min="1" max="20" value="2" title="Size">
+                                        </div>
+                                        
+                                        <div class="canvas-tool-group">
+                                            <button class="canvas-tool-btn" onclick="clearCanvas(this)" title="Clear">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            <button class="canvas-tool-btn" onclick="undoCanvas(this)" title="Undo">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <canvas class="whiteboard-canvas" 
+                                            width="1200" height="600" 
+                                            data-content="{{ block.content if block.content else '' }}">
+                                    </canvas>
+                                </div>
+                            </div>
+                        </div>
+                        {% elif block.type == 'board-iframe' %}
+                        <div class="block-item" data-type="board-iframe" data-id="{{ block.id if block.id else '' }}" data-board-id="board-{{ block.id if block.id else 'new' }}">
+                            <div class="block-header">
+                                <div class="block-type">
+                                    <i class="fas fa-palette"></i>
+                                    <span class="block-label">Board Block</span>
+                                    <span class="block-number"></span>
+                                </div>
+                                <div class="block-controls">
+                                    <button type="button" onclick="toggleIframeSize(this)" title="Toggle Fullscreen">
+                                        <i class="fas fa-expand"></i>
+                                    </button>
+                                    <button type="button" onclick="moveBlockUp(this)" title="Move Up">
+                                        <i class="fas fa-chevron-up"></i>
+                                    </button>
+                                    <button type="button" onclick="moveBlockDown(this)" title="Move Down">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                    <button type="button" onclick="deleteBlock(this)" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <div class="drag-handle" title="Drag to reorder">
+                                        <i class="fas fa-grip-vertical"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="board-iframe-container" style="position: relative; width: 100%; height: 800px; border: 2px solid var(--border-primary); border-radius: 8px; overflow: hidden;">
+                                <iframe 
+                                    src="/boards/new?embedded=true&title={{ block.title|urlencode if block.title else 'Whiteboard' }}" 
+                                    style="width: 100%; height: 100%; border: none;"
+                                    data-board-title="{{ block.title if block.title else '' }}"
+                                    data-board-content="{{ block.content|e if block.content else '' }}"
+                                ></iframe>
+                            </div>
+                            <input type="hidden" class="board-iframe-data" value="{{ block.content|e if block.content else '' }}">
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Add new block controls -->
+            <div class="add-block-controls">
+                <button class="add-block-btn" onclick="addNoteBlock()">
+                    <i class="fas fa-file-text"></i>
+                    Add Note Block
+                </button>
+                <button class="add-block-btn" onclick="addBoardBlock()">
+                    <i class="fas fa-palette"></i>
+                    Add Whiteboard Block
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Summernote Editor JS -->
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.js"></script>
+    <!-- Carbon Teal theme variables for editor modals -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+    
+    <!-- SortableJS for drag and drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <script>
+        let currentDocumentId = {% if document %}{{ document.id }}{% else %}null{% endif %};
+        let currentFolderId = {% if current_folder %}{{ current_folder.id }}{% else %}null{% endif %};
+
+        // Canvas drawing state
+        let canvasStates = new Map(); // Store state for each canvas
+        
+        // Initialize sortable
+        let sortable;
+        const NOTE_MIN_HEIGHT = 200;
+        const LAYOUT_BREAKPOINT = 992;
+        const INSERT_HIDE_DELAY = 160;
+        let layoutUpdateRaf = null;
+        let saveBarObserver = null;
+
+        function updateScrollLayout() {
+            const saveControls = document.querySelector('.save-controls');
+            const scrollRegion = document.querySelector('.editor-scroll-region');
+            const bodyEl = document.body;
+
+            if (!saveControls || !scrollRegion) {
+                return;
+            }
+
+            const previewModeActive = bodyEl.classList.contains('preview-mode');
+            const shouldAttemptLock = window.innerWidth >= LAYOUT_BREAKPOINT && !previewModeActive;
+
+            if (!shouldAttemptLock) {
+                bodyEl.classList.remove('combined-editor-locked');
+                document.documentElement.style.removeProperty('--save-bar-offset');
+                return;
+            }
+
+            const offset = saveControls.offsetHeight + 48; // extra space for breathing room
+            const availableHeight = window.innerHeight - offset;
+
+            if (availableHeight < 320) {
+                bodyEl.classList.remove('combined-editor-locked');
+                document.documentElement.style.removeProperty('--save-bar-offset');
+                return;
+            }
+
+            document.documentElement.style.setProperty('--save-bar-offset', `${offset}px`);
+            bodyEl.classList.add('combined-editor-locked');
+        }
+
+        function scheduleLayoutUpdate() {
+            if (layoutUpdateRaf) {
+                cancelAnimationFrame(layoutUpdateRaf);
+            }
+
+            layoutUpdateRaf = requestAnimationFrame(updateScrollLayout);
+        }
+
+        window.addEventListener('resize', scheduleLayoutUpdate);
+        window.addEventListener('load', scheduleLayoutUpdate);
+
+        function updateBlockNumbers() {
+            $('#contentBlocks .block-item').each(function(index) {
+                const blockNumber = index + 1;
+                $(this).find('.block-number').text(`#${blockNumber}`);
+            });
+        }
+
+        function focusBlock($block) {
+            if (!$block || !$block.length) {
+                return;
+            }
+
+            const element = $block[0];
+            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+
+            element.classList.add('block-focus-highlight');
+
+            if (element.dataset.focusTimeout) {
+                clearTimeout(Number(element.dataset.focusTimeout));
+            }
+
+            const timeoutId = window.setTimeout(() => {
+                element.classList.remove('block-focus-highlight');
+                delete element.dataset.focusTimeout;
+            }, 1200);
+
+            element.dataset.focusTimeout = timeoutId;
+        }
+
+        function createInsertControlElement() {
+            return $(
+                `<div class="block-insert-control" data-insert-control>
+                    <div class="insert-line"></div>
+                    <div class="insert-buttons">
+                        <button type="button" class="insert-btn" data-insert-type="note">
+                            <i class="fas fa-plus"></i> Note
+                        </button>
+                        <button type="button" class="insert-btn" data-insert-type="board">
+                            <i class="fas fa-plus"></i> Board
+                        </button>
+                    </div>
+                    <div class="insert-line"></div>
+                </div>`
+            );
+        }
+
+        function refreshInsertionControls() {
+            const $container = $('#contentBlocks');
+            const $blocks = $container.children('.block-item');
+
+            const $existingControls = $container.find('.block-insert-control');
+            $existingControls.each(function() {
+                const $ctrl = $(this);
+                const timeoutId = $ctrl.data('hideTimeout');
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            });
+            $existingControls.remove();
+
+            if ($blocks.length === 0) {
+                const $control = createInsertControlElement();
+                $control.data('persistent', true);
+                $control.addClass('visible');
+                $container.append($control);
+                return;
+            }
+
+            $container.prepend(createInsertControlElement());
+            $blocks.each(function() {
+                $(this).after(createInsertControlElement());
+            });
+        }
+
+        function showInsertControl($control) {
+            if (!$control || !$control.length) {
+                return;
+            }
+
+            const existingTimeout = $control.data('hideTimeout');
+            if (existingTimeout) {
+                clearTimeout(existingTimeout);
+                $control.removeData('hideTimeout');
+            }
+
+            $control.addClass('visible');
+        }
+
+        function hideInsertControl($control) {
+            if (!$control || !$control.length) {
+                return;
+            }
+
+            if ($control.data('persistent')) {
+                $control.addClass('visible');
+                return;
+            }
+
+            const existingTimeout = $control.data('hideTimeout');
+            if (existingTimeout) {
+                clearTimeout(existingTimeout);
+            }
+
+            const timeoutId = window.setTimeout(() => {
+                if (!$control.data('hovering')) {
+                    $control.removeClass('visible');
+                }
+                $control.removeData('hideTimeout');
+            }, INSERT_HIDE_DELAY);
+
+            $control.data('hideTimeout', timeoutId);
+        }
+
+        $(document).on('mouseenter', '.block-item', function() {
+            const $block = $(this);
+            showInsertControl($block.prev('.block-insert-control'));
+            showInsertControl($block.next('.block-insert-control'));
+        });
+
+        $(document).on('mouseleave', '.block-item', function() {
+            const $block = $(this);
+            hideInsertControl($block.prev('.block-insert-control'));
+            hideInsertControl($block.next('.block-insert-control'));
+        });
+
+        $(document).on('mouseenter', '.block-insert-control', function() {
+            const $control = $(this);
+            $control.data('hovering', true);
+            showInsertControl($control);
+        });
+
+        $(document).on('mouseleave', '.block-insert-control', function() {
+            const $control = $(this);
+            $control.data('hovering', false);
+            hideInsertControl($control);
+        });
+
+        $(document).on('click', '.block-insert-control [data-insert-type="note"]', function(e) {
+            e.preventDefault();
+            const $control = $(this).closest('.block-insert-control');
+            const $nextBlock = $control.nextAll('.block-item').first();
+            addNoteBlock($nextBlock);
+        });
+
+        $(document).on('click', '.block-insert-control [data-insert-type="board"]', function(e) {
+            e.preventDefault();
+            const $control = $(this).closest('.block-insert-control');
+            const $nextBlock = $control.nextAll('.block-item').first();
+            addBoardBlock($nextBlock);
+        });
+
+        $(document).ready(function() {
+            // Initialize sortable for drag and drop
+            const contentBlocks = document.getElementById('contentBlocks');
+            sortable = Sortable.create(contentBlocks, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                draggable: '.block-item',
+                onEnd: (evt) => {
+                    scheduleLayoutUpdate();
+                    updateBlockNumbers();
+                    refreshInsertionControls();
+                    focusBlock($(evt.item));
+                }
+            });
+
+            // Initialize existing note editors
+            initializeNoteEditors();
+
+            // Initialize existing whiteboards
+            initializeWhiteboards();
+            
+            // Initialize board iframes (load saved data)
+            initializeBoardIframes();
+
+            scheduleLayoutUpdate();
+            setTimeout(scheduleLayoutUpdate, 200);
+
+            // Apply Carbon Teal theme to Summernote modals when they are shown
+            document.addEventListener('show.bs.modal', function (e) {
+                try {
+                    const el = e.target;
+                    if (el && el.classList && el.classList.contains('note-modal')) {
+                        el.classList.add('theme-carbon-teal');
+                    }
+                } catch (err) {}
+            });
+            setTimeout(scheduleLayoutUpdate, 600);
+
+            if ('ResizeObserver' in window) {
+                saveBarObserver = new ResizeObserver(scheduleLayoutUpdate);
+                const saveControlsEl = document.querySelector('.save-controls');
+                if (saveControlsEl) {
+                    saveBarObserver.observe(saveControlsEl);
+                }
+            }
+
+            updateBlockNumbers();
+            refreshInsertionControls();
+        });
+        
+        function adjustNoteEditorHeight($textarea) {
+            const $editor = $textarea.next('.note-editor');
+            if ($editor.length === 0) {
+                return;
+            }
+
+            const $editable = $editor.find('.note-editable');
+            if ($editable.length === 0) {
+                return;
+            }
+
+            $editable.css('height', 'auto');
+            const contentHeight = Math.max($editable[0].scrollHeight, NOTE_MIN_HEIGHT);
+            $editable.css({
+                'height': contentHeight + 'px',
+                'min-height': NOTE_MIN_HEIGHT + 'px'
+            });
+            $editor.find('.note-editing-area').css('height', 'auto');
+            $editor.css('height', 'auto');
+        }
+
+        function initializeBoardIframes() {
+            // Find all board iframes and send them their saved data
+            $('.block-item[data-type="board-iframe"]').each(function() {
+                const iframe = $(this).find('iframe')[0];
+                const savedData = $(this).find('.board-iframe-data').val();
+                
+                if (iframe && savedData && savedData !== '') {
+                    // Wait for iframe to load before sending data
+                    iframe.addEventListener('load', function() {
+                        console.log('Iframe loaded, sending board data...');
+                        try {
+                            const boardData = JSON.parse(savedData);
+                            // Send data to iframe
+                            iframe.contentWindow.postMessage({
+                                action: 'loadBoardData',
+                                data: boardData
+                            }, '*');
+                            console.log('Sent board data to iframe:', boardData);
+                        } catch (e) {
+                            console.error('Error parsing/sending board data:', e);
+                        }
+                    });
+                }
+            });
+        }
+
+        function initializeNoteEditors() {
+            // Look for textareas with class 'note-editor' that haven't been initialized yet
+            $('textarea.note-editor').each(function() {
+                const $textarea = $(this);
+
+                // Check if Summernote has already been initialized on this element
+                if (!$textarea.next('.note-editor').length && !$textarea.data('summernote')) {
+                    $textarea.summernote({
+                        dialogsInBody: true,
+                        minHeight: NOTE_MIN_HEIGHT,
+                        height: null,
+                        maxHeight: null,
+                        toolbar: [
+                            ['style', ['style']],
+                            ['font', ['bold', 'underline', 'clear']],
+                            ['color', ['color']],
+                            ['para', ['ul', 'ol', 'paragraph']],
+                            ['table', ['table']],
+                            ['insert', ['link', 'picture', 'video']],
+                            ['view', ['fullscreen', 'codeview', 'help']]
+                        ],
+                        callbacks: {
+                            onInit: function() {
+                                adjustNoteEditorHeight($textarea);
+                            },
+                            onChange: function(contents, $editable) {
+                                adjustNoteEditorHeight($textarea);
+                                // Auto-save functionality could go here
+                            }
+                        }
+                    });
+                } else if ($textarea.data('summernote')) {
+                    adjustNoteEditorHeight($textarea);
+                }
+            });
+        }
+
+        function initializeWhiteboards() {
+            $('.whiteboard-canvas').each(function() {
+                if (!$(this).hasClass('board-initialized')) {
+                    initializeCanvas(this);
+                    $(this).addClass('board-initialized');
+                }
+            });
+        }
+
+        function initializeCanvas(canvas) {
+            const ctx = canvas.getContext('2d');
+            const canvasId = Math.random().toString(36).substr(2, 9);
+            
+            // Initialize canvas state
+            const state = {
+                tool: 'pen',
+                color: '#000000',
+                size: 2,
+                isDrawing: false,
+                lastX: 0,
+                lastY: 0,
+                history: [],
+                historyIndex: -1
+            };
+            
+            canvasStates.set(canvas, state);
+            
+            // Save initial state
+            saveCanvasState(canvas);
+
+            // Load existing content if available
+            const existingContent = canvas.getAttribute('data-content');
+            if (existingContent && existingContent !== '') {
+                try {
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0);
+                        saveCanvasState(canvas);
+                    };
+                    img.src = existingContent;
+                } catch (e) {
+                    console.log('Could not parse canvas content');
+                }
+            }
+
+            // Set up toolbar event listeners
+            const container = canvas.closest('.block-item');
+            const toolbar = container.querySelector('.canvas-toolbar');
+            
+            // Tool buttons
+            toolbar.querySelectorAll('.canvas-tool-btn[data-tool]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    toolbar.querySelectorAll('.canvas-tool-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.tool = btn.getAttribute('data-tool');
+                });
+            });
+            
+            // Color picker
+            const colorPicker = toolbar.querySelector('.color-picker');
+            colorPicker.addEventListener('change', (e) => {
+                state.color = e.target.value;
+            });
+            
+            // Size slider
+            const sizeSlider = toolbar.querySelector('.size-slider');
+            sizeSlider.addEventListener('change', (e) => {
+                state.size = parseInt(e.target.value);
+            });
+
+            // Canvas drawing events
+            canvas.addEventListener('mousedown', (e) => {
+                state.isDrawing = true;
+                [state.lastX, state.lastY] = getMousePos(canvas, e);
+                
+                if (state.tool === 'pen' || state.tool === 'eraser') {
+                    ctx.beginPath();
+                    ctx.moveTo(state.lastX, state.lastY);
+                }
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!state.isDrawing) return;
+                
+                const [currentX, currentY] = getMousePos(canvas, e);
+                
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                switch (state.tool) {
+                    case 'pen':
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.strokeStyle = state.color;
+                        ctx.lineWidth = state.size;
+                        ctx.lineTo(currentX, currentY);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(currentX, currentY);
+                        break;
+                        
+                    case 'eraser':
+                        ctx.globalCompositeOperation = 'destination-out';
+                        ctx.lineWidth = state.size * 3;
+                        ctx.lineTo(currentX, currentY);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(currentX, currentY);
+                        break;
+                }
+                
+                [state.lastX, state.lastY] = [currentX, currentY];
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                if (state.isDrawing) {
+                    state.isDrawing = false;
+                    saveCanvasState(canvas);
+                }
+            });
+
+            canvas.addEventListener('mouseout', () => {
+                if (state.isDrawing) {
+                    state.isDrawing = false;
+                    saveCanvasState(canvas);
+                }
+            });
+        }
+
+        function saveCanvasState(canvas) {
+            const state = canvasStates.get(canvas);
+            if (!state) return;
+            
+            const dataURL = canvas.toDataURL();
+            state.history = state.history.slice(0, state.historyIndex + 1);
+            state.history.push(dataURL);
+            state.historyIndex = state.history.length - 1;
+            
+            // Limit history to 50 states
+            if (state.history.length > 50) {
+                state.history.shift();
+                state.historyIndex--;
+            }
+        }
+
+        function clearCanvas(button) {
+            const canvas = button.closest('.block-item').querySelector('.whiteboard-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            saveCanvasState(canvas);
+        }
+
+        function undoCanvas(button) {
+            const canvas = button.closest('.block-item').querySelector('.whiteboard-canvas');
+            const state = canvasStates.get(canvas);
+            if (!state || state.historyIndex <= 0) return;
+            
+            state.historyIndex--;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = state.history[state.historyIndex];
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return [
+                evt.clientX - rect.left,
+                evt.clientY - rect.top
+            ];
+        }
+
+        function addNoteBlock(insertBeforeBlock = null) {
+            const blockHtml = `
+                <div class="block-item" data-type="note" data-id="">
+                    <div class="block-header">
+                        <div class="block-type">
+                            <i class="fas fa-file-text"></i>
+                            <span class="block-label">Note Block</span>
+                            <span class="block-number"></span>
+                        </div>
+                        <div class="block-controls">
+                            <button type="button" onclick="moveBlockUp(this)" title="Move Up">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                            <button type="button" onclick="moveBlockDown(this)" title="Move Down">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <button type="button" onclick="deleteBlock(this)" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <div class="drag-handle" title="Drag to reorder">
+                                <i class="fas fa-grip-vertical"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="note-block-content">
+                        <textarea class="form-control note-editor" rows="6" placeholder="Write your note here..."></textarea>
+                    </div>
+                </div>
+            `;
+            
+            const $block = $(blockHtml);
+            const $target = insertBeforeBlock ? $(insertBeforeBlock) : $();
+
+            if ($target.length) {
+                $target.before($block);
+            } else {
+                $('#contentBlocks').append($block);
+            }
+
+            initializeNoteEditors();
+            scheduleLayoutUpdate();
+            updateBlockNumbers();
+            refreshInsertionControls();
+            focusBlock($block);
+        }
+
+        function addBoardBlock(insertBeforeBlock = null) {
+            const boardTitle = prompt('Enter a title for the whiteboard:');
+            if (!boardTitle) return;
+            
+            const blockId = 'board-' + Date.now();
+            const folderId = currentFolderId || '';
+            
+            const blockHtml = `
+                <div class="block-item" data-type="board-iframe" data-id="" data-board-id="${blockId}">
+                    <div class="block-header">
+                        <div class="block-type">
+                            <i class="fas fa-palette"></i>
+                            <span class="block-label">Board Block</span>
+                            <span class="block-number"></span>
+                        </div>
+                        <div class="block-controls">
+                            <button type="button" onclick="toggleIframeSize(this)" title="Toggle Fullscreen">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                            <button type="button" onclick="moveBlockUp(this)" title="Move Up">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                            <button type="button" onclick="moveBlockDown(this)" title="Move Down">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <button type="button" onclick="deleteBlock(this)" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <div class="drag-handle" title="Drag to reorder">
+                                <i class="fas fa-grip-vertical"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="board-iframe-container" style="position: relative; width: 100%; height: 600px; border: 2px solid var(--border-primary); border-radius: 8px; overflow: hidden;">
+                        <iframe 
+                            src="/boards/new?title=${encodeURIComponent(boardTitle)}&folder_id=${folderId}&embedded=true" 
+                            style="width: 100%; height: 100%; border: none;"
+                            data-board-title="${boardTitle}"
+                        ></iframe>
+                    </div>
+                    <input type="hidden" class="board-iframe-data" value="">
+                </div>
+            `;
+            
+            const $block = $(blockHtml);
+            const $target = insertBeforeBlock ? $(insertBeforeBlock) : $();
+
+            if ($target.length) {
+                $target.before($block);
+            } else {
+                $('#contentBlocks').append($block);
+            }
+
+            scheduleLayoutUpdate();
+            updateBlockNumbers();
+            refreshInsertionControls();
+            focusBlock($block);
+        }
+        
+        function toggleIframeSize(button) {
+            const block = $(button).closest('.block-item');
+            const container = block.find('.board-iframe-container');
+            const icon = $(button).find('i');
+            
+            if (container.hasClass('fullscreen-iframe')) {
+                // Exit fullscreen
+                container.removeClass('fullscreen-iframe');
+                container.css('height', '600px');
+                icon.removeClass('fa-compress').addClass('fa-expand');
+            } else {
+                // Enter fullscreen
+                container.addClass('fullscreen-iframe');
+                container.css('height', '90vh');
+                icon.removeClass('fa-expand').addClass('fa-compress');
+            }
+        }
+
+        function moveBlockUp(button) {
+            const block = $(button).closest('.block-item');
+            const prev = block.prev('.block-item');
+            if (prev.length) {
+                block.insertBefore(prev);
+                scheduleLayoutUpdate();
+                updateBlockNumbers();
+                refreshInsertionControls();
+                focusBlock(block);
+            }
+        }
+
+        function moveBlockDown(button) {
+            const block = $(button).closest('.block-item');
+            const next = block.next('.block-item');
+            if (next.length) {
+                block.insertAfter(next);
+                scheduleLayoutUpdate();
+                updateBlockNumbers();
+                refreshInsertionControls();
+                focusBlock(block);
+            }
+        }
+
+        function deleteBlock(button) {
+            if (confirm('Are you sure you want to delete this block?')) {
+                $(button).closest('.block-item').remove();
+                scheduleLayoutUpdate();
+                updateBlockNumbers();
+                refreshInsertionControls();
+            }
+        }
+
+        function collectBlocksData() {
+            const blocks = [];
+            
+            $('#contentBlocks .block-item').each(function() {
+                const $block = $(this);
+                const type = $block.data('type');
+                const id = $block.data('id') || '';
+                
+                if (type === 'note') {
+                    // Find the textarea element that has Summernote initialized
+                    const $textarea = $block.find('textarea.note-editor');
+                    const content = $textarea.summernote('code');
+                    
+                    blocks.push({
+                        type: 'note',
+                        id: id,
+                        title: '',
+                        content: content
+                    });
+                } else if (type === 'board-iframe') {
+                    const iframe = $block.find('iframe')[0];
+                    
+                    // Try to get board data from iframe via postMessage
+                    try {
+                        // Request board data from iframe
+                        iframe.contentWindow.postMessage({ action: 'getBoardData' }, '*');
+                        
+                        // Get the stored data (will be updated by message listener)
+                        const storedData = $block.find('.board-iframe-data').val();
+                        
+                        blocks.push({
+                            type: 'board-iframe',
+                            id: id,
+                            title: '',
+                            content: storedData || '{}', // Store as JSON string
+                            iframe_src: iframe.src
+                        });
+                    } catch (e) {
+                        console.error('Error getting iframe data:', e);
+                        blocks.push({
+                            type: 'board-iframe',
+                            id: id,
+                            title: '',
+                            content: '{}',
+                            iframe_src: iframe.src
+                        });
+                    }
+                } else if (type === 'board') {
+                    const canvas = $block.find('.whiteboard-canvas')[0];
+                    const content = canvas.toDataURL(); // Save as image data
+                    
+                    blocks.push({
+                        type: 'board',
+                        id: id,
+                        title: '',
+                        content: content
+                    });
+                }
+            });
+            
+            return blocks;
+        }
+
+        function saveDocument() {
+            const title = $('#documentTitle').val().trim();
+            const blocks = collectBlocksData();
+            
+            if (!title) {
+                if (window.TelemetryPanel) {
+                    window.TelemetryPanel.setIdle('Please enter a document title');
+                } else {
+                    alert('Please enter a document title');
+                }
+                return;
+            }
+
+            const data = {
+                title: title,
+                combined_content: JSON.stringify(blocks)
+            };
+
+            const url = currentDocumentId ? 
+                `/combined/edit/${currentDocumentId}` : 
+                '/combined/new';
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: data,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.ok) {
+                        if (!currentDocumentId && response.document_id) {
+                            currentDocumentId = response.document_id;
+                            // Update URL without page reload
+                            window.history.replaceState({}, '', `/combined/edit/${currentDocumentId}`);
+                        }
+                        
+                        // Show success feedback via telemetry
+                        if (window.TelemetryPanel) {
+                            window.TelemetryPanel.setIdle('Saved MioBook document');
+                        } else {
+                            // Fallback: Show button feedback
+                            const saveBtn = $('.btn-success');
+                            const originalText = saveBtn.html();
+                            saveBtn.html('<i class="fas fa-check"></i> Saved!');
+                            setTimeout(() => {
+                                saveBtn.html(originalText);
+                            }, 2000);
+                        }
+                    } else {
+                        if (window.TelemetryPanel) {
+                            window.TelemetryPanel.setIdle('Save failed: ' + (response.error || 'Unknown error'));
+                        } else {
+                            alert('Failed to save: ' + (response.error || 'Unknown error'));
+                        }
+                    }
+                },
+                error: function() {
+                    if (window.TelemetryPanel) {
+                        window.TelemetryPanel.setIdle('Save failed: network error');
+                    } else {
+                        alert('Failed to save document. Please try again.');
+                    }
+                }
+            });
+        }
+
+        function togglePreview() {
+            // Toggle preview mode - hides toolbars, controls, and default block titles
+            const bodyEl = $('body');
+            bodyEl.toggleClass('preview-mode');
+
+            const isPreviewMode = bodyEl.hasClass('preview-mode');
+            const previewBtn = $('.preview-toggle-btn');
+            previewBtn.html('<i class="fas fa-eye"></i> <span class="preview-text">Preview</span>');
+
+            if (isPreviewMode) {
+                // Ensure floating exit button exists
+                if (!$('.preview-exit-btn').length) {
+                    const exitBtn = $('<button type="button" class="btn btn-danger preview-exit-btn"><i class="fas fa-times"></i> Exit Preview</button>');
+                    exitBtn.on('click', togglePreview);
+                    $('body').append(exitBtn);
+                    exitBtn.trigger('focus');
+                }
+            } else {
+                // Remove floating exit button when exiting preview
+                $('.preview-exit-btn').remove();
+
+                // Restore original preview button text/icon
+                previewBtn.html('<i class="fas fa-eye"></i> <span class="preview-text">Preview</span>');
+            }
+
+            // Send preview mode message to all iframe boards
+            $('.board-iframe-container iframe').each(function() {
+                this.contentWindow.postMessage({
+                    action: 'togglePreview',
+                    previewMode: isPreviewMode
+                }, '*');
+            });
+
+            scheduleLayoutUpdate();
+        }
+
+        function goBack() {
+            if (currentFolderId) {
+                window.location.href = `/folders/${currentFolderId}`;
+            } else {
+                window.location.href = '/p2/';
+            }
+        }
+
+        // Listen for messages from iframes (to get board data for saving)
+        window.addEventListener('message', function(event) {
+            // Verify message is from our whiteboard iframe
+            if (event.data && event.data.action === 'boardData') {
+                // Find the iframe that sent this message
+                $('iframe').each(function() {
+                    if (this.contentWindow === event.source) {
+                        const $block = $(this).closest('.block-item');
+                        const boardData = JSON.stringify(event.data.data);
+                        $block.find('.board-iframe-data').val(boardData);
+                        console.log('Received board data from iframe:', event.data.data);
+                    }
+                });
+            }
+        });
+
+        // Send saved data to iframes after they load
+        $(document).ready(function() {
+            setTimeout(function() {
+                $('.board-iframe-container iframe').each(function() {
+                    const $block = $(this).closest('.block-item');
+                    const savedData = $block.find('.board-iframe-data').val();
+                    
+                    if (savedData && savedData !== '' && savedData !== '{}') {
+                        try {
+                            const boardData = JSON.parse(savedData);
+                            console.log('Sending saved data to iframe:', boardData);
+                            this.contentWindow.postMessage({
+                                action: 'loadBoardData',
+                                data: boardData
+                            }, '*');
+                        } catch (e) {
+                            console.error('Error parsing saved board data:', e);
+                        }
+                    }
+                });
+            }, 2000); // Wait 2 seconds for iframes to fully load
+        });
+
+        // Auto-save every 30 seconds
+        setInterval(function() {
+            if (currentDocumentId) {
+                saveDocument();
+            }
+        }, 30000);
+
+        // Save on Ctrl+S
+        $(document).keydown(function(e) {
+            if (e.ctrlKey && e.which === 83) { // Ctrl+S
+                e.preventDefault();
+                saveDocument();
+            }
+        });
+    </script>
+</body>
+</html>

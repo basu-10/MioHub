@@ -1,0 +1,466 @@
+<!-- used inside MioNotes only-->
+<!-- mainly shows a top navbar to switch products, go back, go to home page.-->
+
+<nav class="navbar navbar-expand-lg" style="background-color: #111826; border-bottom: 1px solid var(--border-primary);">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('folders.view_folder', folder_id=current_folder_id or current_user.folders[0].id) }}" style="color: var(--text-primary);">📝 MioNote</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown"
+            aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNavDropdown">
+      <ul class="navbar-nav me-auto">
+
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('core_blueprint.about') }}">Features</a></li>
+  <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Switch to</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ url_for('core_blueprint.landing') }}">Home</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('p3_bp.chatbot') }}">MioChat</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('p1_bp.product1') }}">MioCalc</a></li>
+          </ul>
+        </li>
+      </ul>
+
+      <!-- 🔽 Breadcrumbs (right-aligned) -->
+      <div class="d-flex align-items-center gap-2">
+        <nav aria-label="breadcrumb" class="mb-1">
+          <ol class="breadcrumb breadcrumb-custom">
+            <li class="breadcrumb-item">
+              <a href="{{ url_for('p2_bp.dashboard') }}" class="breadcrumb-link">
+                <i class="material-icons" style="font-size: 18px; vertical-align: middle;">home</i>
+                <span class="ms-1">Home</span>
+              </a>
+            </li>
+            {% for crumb in folder_breadcrumb %}
+            {% if crumb.parent_id is not none %}
+            <li class="breadcrumb-item{% if loop.last %} active{% endif %}">
+              {% if not loop.last %}
+              <a href="{{ url_for('folders.view_folder', folder_id=crumb.id) }}" class="breadcrumb-link">
+                <i class="material-icons" style="font-size: 16px; vertical-align: middle;">folder</i>
+                <span class="ms-1">{{ crumb.name }}</span>
+              </a>
+              {% else %}
+              <span class="breadcrumb-current">
+                <i class="material-icons" style="font-size: 16px; vertical-align: middle;">folder_open</i>
+                <span class="ms-1">{{ crumb.name }}</span>
+              </span>
+              {% endif %}
+            </li>
+            {% endif %}
+            {% endfor %}
+          </ol>
+        </nav>
+        <!-- Info button for shortcuts and tips -->
+        <button id="infoBtn" class="btn btn-outline-info btn-sm" title="Keyboard shortcuts & tips" data-bs-toggle="modal" data-bs-target="#shortcutsModal">
+          <i class="material-icons" style="font-size: 16px;">info</i>
+        </button>
+      </div>
+</nav>
+
+<style>
+/* Apply dark theme variables if not already defined */
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --bg-quaternary: #30363d;
+  --text-primary: #f0f6fc;
+  --text-secondary: #7d8590;
+  --text-muted: #656d76;
+  --border-primary: #30363d;
+  --border-secondary: #21262d;
+  --border-hover: #484f58;
+  --accent-blue: #238be6;
+  --hover-overlay: rgba(255, 255, 255, 0.05);
+}
+
+/* Navbar styling for dark theme */
+.navbar .nav-link {
+  color: var(--text-primary) !important;
+}
+
+.navbar .nav-link:hover {
+  color: var(--accent-blue) !important;
+}
+
+.navbar .btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+}
+
+.navbar .btn:hover {
+  background: var(--bg-quaternary);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.navbar .dropdown-menu {
+  background: var(--bg-quaternary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.navbar .dropdown-item {
+  color: var(--text-primary);
+  background: transparent;
+}
+
+.navbar .dropdown-item:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+.breadcrumb-custom {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 8px 16px;
+  margin-bottom: 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.breadcrumb-custom .breadcrumb-item {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+  content: "/";
+  color: var(--text-muted);
+  margin: 0 8px;
+  font-weight: 400;
+}
+
+.breadcrumb-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-link:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.breadcrumb-current {
+  color: var(--text-primary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-custom .breadcrumb-item.active .breadcrumb-current {
+  background: var(--bg-quaternary);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+</style>
+
+<style>
+/* Asset cards for Insert Image modal (scoped to note toolbar) */
+.asset-card { transition: border-color 0.12s ease, transform 0.12s ease; }
+.asset-card:hover { border-color: var(--accent) !important; transform: translateY(-2px); }
+.asset-used-badge { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.assets-section { border-left: 1px solid rgba(255,255,255,0.02); }
+.assets-section-header { padding: 6px 8px; display:flex; justify-content:space-between; align-items:center; font-weight:600; color:var(--text-muted); }
+</style>
+
+<script>
+// --- Carbon Teal: Summernote modal theming + assets gallery for Insert Image dialog ---
+// This script ensures Summernote modals match the Carbon Teal theme and injects
+// a user-assets gallery into the Insert Image modal so editors can select already-uploaded images.
+function loadAssetsIntoImageModal(node) {
+  if (!node || node.__assetsInjected) return;
+  node.__assetsInjected = true;
+  const modalBody = node.querySelector('.note-modal-body');
+  if (!modalBody) return;
+  const container = document.createElement('div');
+  container.className = 'note-form-group note-group-assets mt-3';
+  container.innerHTML = "<label class='note-form-label'>Select from server</label>" +
+    "<div class='note-form-actions' style='display:flex;justify-content:flex-end;gap:8px;margin-top:8px;margin-bottom:-4px;align-items:center;'>" +
+      "<button type='button' class='btn btn-outline-secondary btn-sm ct-assets-refresh' title='Refresh assets list' style='padding:4px 8px;display:flex;align-items:center;gap:6px;'><span class='material-icons' style='font-size:16px;vertical-align:middle;'>refresh</span><span style='margin-left:6px;'>Refresh</span></button>" +
+      "<span class='assets-refresh-spinner small text-muted' style='display:none;font-size:12px;'>Loading…</span>" +
+    "</div>" +
+    "<div class='assets-sections mt-2' style='display:flex;gap:8px;flex-wrap:nowrap;max-height:260px;'>" +
+      "<div class='assets-section in-use' style='flex:1;min-width:220px;max-width:50%;overflow:auto;'>" +
+        "<div class='assets-section-header'><strong>In Use</strong> <span class='assets-count in-use-count'></span></div><div class='assets-grid in-use-grid mt-2' style='display:flex;gap:8px;flex-wrap:wrap;max-height:200px;overflow:auto;padding:4px;'></div>" +
+      "</div>" +
+      "<div class='assets-section unused' style='flex:1;min-width:220px;max-width:50%;overflow:auto;'>" +
+        "<div class='assets-section-header'><strong>Unused</strong> <span class='assets-count unused-count'></span></div><div class='assets-grid unused-grid mt-2' style='display:flex;gap:8px;flex-wrap:wrap;max-height:200px;overflow:auto;padding:4px;'></div>" +
+      "</div>" +
+    "</div>";
+  modalBody.appendChild(container);
+  const grid = container.querySelector('.assets-grid');
+  const inUseGrid = container.querySelector('.in-use-grid');
+  const unusedGrid = container.querySelector('.unused-grid');
+  const refreshBtn = container.querySelector('.ct-assets-refresh');
+  const spinner = container.querySelector('.assets-refresh-spinner');
+  function updateCounts() {
+    try {
+      const inCount = inUseGrid.children.length;
+      const unCount = unusedGrid.children.length;
+      const inCountEl = container.querySelector('.in-use-count');
+      const unCountEl = container.querySelector('.unused-count');
+      if (inCountEl) inCountEl.textContent = `(${inCount})`;
+      if (unCountEl) unCountEl.textContent = `(${unCount})`;
+    } catch (e) { console.warn('CT: updateCounts failed', e); }
+  }
+  function moveCardToInUse(card, filename) {
+    try {
+      if (!card || card.dataset.inUse === '1') return;
+      card.dataset.inUse = '1';
+      // Remove from current parent and move to in-use grid
+      if (card.parentNode) card.parentNode.removeChild(card);
+      inUseGrid.appendChild(card);
+      // Add or update badge
+      let badge = card.querySelector('.asset-used-badge');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'asset-used-badge';
+        badge.style.position = 'absolute';
+        badge.style.top = '6px';
+        badge.style.right = '6px';
+        badge.style.background = 'rgba(0,0,0,0.6)';
+        badge.style.color = '#fff';
+        badge.style.borderRadius = '9px';
+        badge.style.padding = '0 6px';
+        badge.style.fontSize = '11px';
+        badge.style.lineHeight = '18px';
+        card.appendChild(badge);
+      }
+      badge.textContent = '1';
+      // Remove any placeholder empty children
+      try {
+        const placeholders = inUseGrid.querySelectorAll('.assets-empty');
+        placeholders.forEach(p => p.parentNode && p.parentNode.removeChild(p));
+        const placeholders2 = unusedGrid.querySelectorAll('.assets-empty');
+        placeholders2.forEach(p => p.parentNode && p.parentNode.removeChild(p));
+      } catch (e) { console.warn('CT: failed to clean placeholders', e); }
+      updateCounts();
+      // Attempt to notify server that the asset is used for this session
+      try {
+        fetch('{{ url_for("p2_bp.assets_mark_used") }}', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename })
+        }).then(r => r.json()).then(obj => {
+          if (!obj.success) console.warn('CT: mark_used failed', obj);
+          // Refresh assets lists from server to sync counts and used_in info
+          try { if (typeof refreshAssets === 'function') refreshAssets(); } catch(e) { console.warn('CT: refreshAssets failed', e); }
+        }).catch(e=>{console.warn('CT: mark_used request failed', e)});
+      } catch (e) { console.warn('CT: mark_used call failed', e); }
+    } catch (e) { console.warn('CT: moveCardToInUse failed', e); }
+  }
+  function renderAssets(images) {
+    try {
+      inUseGrid.innerHTML = '';
+      unusedGrid.innerHTML = '';
+      images.forEach(img => {
+        const card = document.createElement('div');
+        card.className = 'asset-card p-1 rounded cursor-pointer';
+        card.style.width = '96px';
+        card.style.height = '72px';
+        card.style.background = 'var(--ct-card)';
+        card.style.border = '1px solid var(--ct-border-primary)';
+        card.style.display = 'flex';
+        card.style.position = 'relative';
+        card.style.alignItems = 'center';
+        card.style.justifyContent = 'center';
+        card.style.overflow = 'hidden';
+        card.innerHTML = `<img src='${img.url}' alt='${img.filename}' title='${img.filename}' style='max-width:100%; max-height:100%; object-fit:contain; display:block; width:100%; height:100%'>`;
+        card.addEventListener('click', function () {
+          if (card.__ctClicked) return; card.__ctClicked = true; card.style.opacity = '0.7';
+          const urlInput = node.querySelector('input.note-image-url');
+          if (urlInput) {
+            urlInput.value = img.url;
+            urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          const insertBtn = node.querySelector('.note-image-btn');
+          if (insertBtn) insertBtn.disabled = false;
+          try {
+            if (insertBtn) {
+              setTimeout(() => { try { insertBtn.click(); } catch (e) { console.warn('CT: insertBtn.click failed', e); } }, 20);
+              try { moveCardToInUse(card, img.filename); } catch (e) { console.warn('CT: immediate move failed', e); }
+              return;
+            }
+            const $visibleEditor = $('.note-editor:visible .note-editable').first();
+            if ($visibleEditor && $visibleEditor.length) {
+              const $editorContainer = $visibleEditor.closest('.note-editor');
+              if ($editorContainer && $editorContainer.length) {
+                setTimeout(() => {
+                  try {
+                    $editorContainer.summernote('insertImage', img.url, function ($image) {
+                      $image.css('max-width', '100%');
+                      $image.css('height', 'auto');
+                    });
+                    moveCardToInUse(card, img.filename);
+                  } catch (e) {
+                    console.warn('CT: direct insertImage failed', e);
+                    try {
+                      const $editable = $editorContainer.find('.note-editable').first();
+                      if ($editable && $editable.length) {
+                        $editable.append(`<img src='${img.url}' style='max-width:100%;height:auto' />`);
+                        moveCardToInUse(card, img.filename);
+                      }
+                    } catch (e2) { console.warn('CT: fallback insert failed', e2); }
+                  }
+                }, 20);
+              }
+            }
+          } catch (e) { console.warn('CT: insertImage failed', e); }
+        });
+        if (Array.isArray(img.used_in) && img.used_in.length) {
+          card.dataset.inUse = '1';
+          card.title = img.used_in.map(u => `${u.type}:${u.title}`).join('\n');
+          inUseGrid.appendChild(card);
+        } else {
+          card.dataset.inUse = '0';
+          unusedGrid.appendChild(card);
+        }
+        if (Array.isArray(img.used_in) && img.used_in.length) {
+          const badge = document.createElement('div');
+          badge.className = 'asset-used-badge';
+          badge.textContent = img.used_in.length;
+          badge.style.position = 'absolute';
+          badge.style.top = '6px';
+          badge.style.right = '6px';
+          badge.style.background = 'rgba(0,0,0,0.6)';
+          badge.style.color = '#fff';
+          badge.style.borderRadius = '9px';
+          badge.style.padding = '0 6px';
+          badge.style.fontSize = '11px';
+          badge.style.lineHeight = '18px';
+          card.appendChild(badge);
+        }
+      });
+      // counts
+      updateCounts();
+      if (inUseGrid.children.length === 0) {
+        const emptyIn = document.createElement('div');
+        emptyIn.className = 'p-2 text-muted small assets-empty';
+        emptyIn.textContent = 'No images currently used in notes or boards.';
+        inUseGrid.appendChild(emptyIn);
+      }
+      if (unusedGrid.children.length === 0) {
+        const emptyUnused = document.createElement('div');
+        emptyUnused.className = 'p-2 text-muted small assets-empty';
+        emptyUnused.textContent = 'No unused images in your assets.';
+        unusedGrid.appendChild(emptyUnused);
+      }
+      // Hook into the modal's native insert button for debug / safety
+      try {
+        const nativeInsertBtn = node.querySelector('.note-image-btn');
+        if (nativeInsertBtn && !nativeInsertBtn.__ctHooked) {
+          nativeInsertBtn.__ctHooked = true;
+          nativeInsertBtn.addEventListener('click', function () { console.debug('CT: native insert button clicked'); });
+        }
+      } catch (e) { console.warn('CT: failed to hook native insert button', e); }
+    } catch (e) { console.warn('CT: renderAssets failed', e); }
+  }
+  function refreshAssets() {
+    if (refreshBtn) refreshBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    console.debug('CT: refreshAssets called');
+    const ac = new AbortController();
+    const signal = ac.signal;
+    // abort fetch beyond 5s to prevent long hanging requests
+    const fetchTimeout = setTimeout(() => ac.abort(), 5000);
+    return fetch('{{ url_for("p2_bp.assets_list") }}', { credentials: 'same-origin', signal })
+      .then(r => { clearTimeout(fetchTimeout); console.debug('CT: assets list response', r.status); return r.json(); })
+      .then(data => {
+        if (!data || !Array.isArray(data.images)) return;
+        try { renderAssets(data.images); } catch (e) { console.warn('CT: renderAssets call failed', e); }
+      }).catch(err => { console.warn('Failed to fetch assets', err); })
+      .finally(() => { if (refreshBtn) refreshBtn.disabled = false; if (spinner) spinner.style.display = 'none'; });
+  }
+  // Listen for global asset-change events, and refresh this modal's assets list when triggered
+  try {
+    // Avoid multiple listeners per node
+    if (!node.__mioAssetChangeListener) {
+      node.__mioAssetChangeListener = function() { try { refreshAssets(); } catch (e) { console.warn('CT: mio asset-change refresh failed', e); } };
+      document.addEventListener('mio:asset-change', node.__mioAssetChangeListener);
+    }
+  } catch (e) { /* ignore */ }
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function () { refreshAssets(); });
+  }
+  // Initial load
+  refreshAssets();
+}
+
+// Apply theme class to Summernote modals so they inherit CT CSS
+document.addEventListener('show.bs.modal', function (e) {
+  try {
+    const el = e.target;
+    console.debug('CT: show.bs.modal', el && el.classList ? Array.from(el.classList).join(' ') : el);
+    if (el && el.classList && el.classList.contains('note-modal')) {
+      el.classList.add('theme-carbon-teal');
+      // inline style enforcement for CT modal appearance
+      const css = getComputedStyle(document.documentElement);
+      const bg = css.getPropertyValue('--ct-bg-tertiary').trim() || '#121516';
+      const text = css.getPropertyValue('--ct-white').trim() || '#ECFFFF';
+      const border = css.getPropertyValue('--ct-border-primary').trim() || 'rgba(255,255,255,0.04)';
+      const modalContent = el.querySelector('.modal-content');
+      if (modalContent) {
+        modalContent.style.background = bg;
+        modalContent.style.color = text;
+        modalContent.style.border = `1px solid ${border}`;
+        const icons = el.querySelectorAll('.note-icon-close, .note-icon, .btn-close, .close');
+        icons.forEach(ci => { try { ci.style.color = text; ci.style.opacity = 0.95; } catch (e) {} });
+      }
+    }
+  } catch (err) { console.warn('CT: show.bs.modal handler error', err); }
+});
+
+// MutationObserver to find Summernote modals and apply CT styling + inject assets gallery
+document.addEventListener('DOMContentLoaded', function () {
+  const observer = new MutationObserver(function (mutationsList) {
+    for (const m of mutationsList) {
+      if (m.addedNodes && m.addedNodes.length) {
+        m.addedNodes.forEach(node => {
+          if (node && node.nodeType === Node.ELEMENT_NODE) {
+            if (node.classList.contains('note-modal')) {
+              console.debug('CT: note-modal added', node);
+              node.classList.add('theme-carbon-teal');
+              const mc = node.querySelector('.note-modal-content, .modal-content');
+              if (mc) {
+                try {
+                  const css = getComputedStyle(document.documentElement);
+                  const bg = css.getPropertyValue('--ct-bg-tertiary').trim() || '#121516';
+                  const text = css.getPropertyValue('--ct-white').trim() || '#ECFFFF';
+                  const border = css.getPropertyValue('--ct-border-primary').trim() || 'rgba(255,255,255,0.04)';
+                  mc.style.background = bg;
+                  mc.style.color = text;
+                  mc.style.border = `1px solid ${border}`;
+                  const closeIcons = node.querySelectorAll('.note-icon-close, .note-icon, .btn-close, .close');
+                  closeIcons.forEach(ci => { try { ci.style.color = text; ci.style.opacity = 0.95; if (ci.classList && ci.classList.contains('btn-close')) ci.classList.add('btn-close-white'); } catch (e) {} });
+                  node.style.zIndex = 2000;
+                  const backdrop = document.querySelector('.note-modal-backdrop');
+                  if (backdrop) backdrop.style.zIndex = 1999;
+                } catch (err) { console.warn('CT: Failed to apply inline modal styles', err); }
+              }
+              if (node.querySelector('.note-image-input') || node.querySelector('.note-image-url')) {
+                try { loadAssetsIntoImageModal(node); } catch (e) { console.warn('CT: failed to load assets into image modal', e); }
+              }
+            }
+          }
+        });
+      }
+      // (attributes observation removed to reduce noisy re-invocations)
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>

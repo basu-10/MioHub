@@ -1,0 +1,284 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app
+from flask_login import login_required, current_user
+from blueprints.p2.models import Board, Folder, db
+from datetime import datetime
+
+from . import whiteboard_bp  # Import the blueprint instance
+
+def format_file_size(size_bytes):
+    """Format file size in human-readable format."""
+    if size_bytes < 1024:
+        return f"{size_bytes} bytes"
+    elif size_bytes < 1024 * 1024:
+        return f"{(size_bytes / 1024):.1f} KB"
+    else:
+        return f"{(size_bytes / (1024 * 1024)):.1f} MB"
+
+@whiteboard_bp.route('/new', methods=['GET', 'POST'])
+@login_required
+def new_board():
+    # Get current folder from session (same pattern as new_note)
+    current_folder_id = session.get('current_folder_id')
+    
+    if not current_folder_id:
+        root_folder = Folder.query.filter_by(user_id=current_user.id, parent_id=None).first()
+        current_folder_id = root_folder.id if root_folder else None
+
+    if request.method == 'POST':
+        print(f"[DEBUG] Creating new board")
+        print(f"[DEBUG] Content type: {request.content_type}")
+        print(f"[DEBUG] Content length: {request.content_length}")
+        print(f"[DEBUG] Flask MAX_CONTENT_LENGTH: {current_app.config.get('MAX_CONTENT_LENGTH')}")
+        
+        try:
+            # Use current folder as default, but allow form override
+            folder_id = request.form.get("folder_id", type=int) or current_folder_id
+            
+            # Validate folder ownership
+            if folder_id:
+                valid_folder = Folder.query.filter_by(id=folder_id, user_id=current_user.id).first()
+                if not valid_folder:
+                    folder_id = current_folder_id
+
+            title = request.form.get('title', '').strip() or f"Untitled {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            description = request.form.get('description', '')
+            
+            # Try form first, then JSON body fallback with better error handling
+            content = None
+            try:
+                content = request.form.get('content')
+                if content is None:
+                    payload = request.get_json(silent=True) or {}
+                    content = payload.get('content', '')
+                    print(f"[DEBUG] Using JSON payload for content")
+                    
+                if content is not None:
+                    print(f"[DEBUG] Content length: {len(content)}")
+                else:
+                    content = ''
+                    print(f"[DEBUG] No content provided, using empty string")
+                    
+            except Exception as content_error:
+                print(f"[ERROR] Failed to parse content: {content_error}")
+                content = ''
+                
+            # Normalize literal "null" to empty string
+            if isinstance(content, str) and content.strip().lower() == 'null':
+                content = ''
+
+            board = Board(title=title, description=description, content=content, folder_id=folder_id, user_id=current_user.id)
+            
+            # Calculate size and check cap
+            def calculate_content_size(content):
+                return len(content.encode('utf-8')) if content else 0
+            content_size = calculate_content_size(content)
+            def check_guest_limit(user, additional_size):
+                if getattr(user, 'user_type', None) == 'guest':
+                    max_size = 50 * 1024 * 1024
+                    if (user.total_data_size or 0) + additional_size > max_size:
+                        flash("Data limit exceeded (50MB max for guests). Please delete some data or upgrade your account.", "danger")
+                        return False
+                return True
+            def update_user_data_size(user, delta):
+                user.total_data_size = (user.total_data_size or 0) + delta
+                db.session.commit()
+            if not check_guest_limit(current_user, content_size):
+                return jsonify({"ok": False, "error": "Data limit exceeded"}), 400
+            
+            try:
+                db.session.add(board)
+                db.session.commit()
+                update_user_data_size(current_user, content_size)
+                print(f"[DEBUG] New board created with ID: {board.id}")
+            except Exception as db_error:
+                print(f"[ERROR] Database error creating board: {db_error}")
+                db.session.rollback()
+                return jsonify({"ok": False, "error": "Database save failed"}), 500
+
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"ok": True, "content_saved": bool(board.content), "content": board.content, "board_id": board.id})
+            
+            # Sync session asset marks to only include assets that are still used in saved notes/boards
+            try:
+                marked = session.get('assets_marked_used', []) or []
+                if marked:
+                    used_filenames = set()
+                    from .models import Note, Board as BoardModel
+                    for n in Note.query.filter_by(user_id=current_user.id).all():
+                        if n.content:
+                            from bs4 import BeautifulSoup as _BS
+                            soup = _BS(n.content, 'html.parser')
+                            for img in soup.find_all('img'):
+                                src = img.get('src', '')
+                                if '/static/uploads/images/' in src:
+                                    used_filenames.add(src.split('/')[-1])
+                    for b in BoardModel.query.filter_by(user_id=current_user.id).all():
+                        if b.content:
+                            soup2 = _BS(b.content, 'html.parser')
+                            for img in soup2.find_all('img'):
+                                src = img.get('src', '')
+                                if '/static/uploads/images/' in src:
+                                    used_filenames.add(src.split('/')[-1])
+                        if getattr(b, 'description', None):
+                            soup3 = _BS(b.description or '', 'html.parser')
+                            for img in soup3.find_all('img'):
+                                src = img.get('src', '')
+                                if '/static/uploads/images/' in src:
+                                    used_filenames.add(src.split('/')[-1])
+                    session['assets_marked_used'] = [m for m in marked if m in used_filenames]
+                    session.modified = True
+            except Exception:
+                pass
+            return redirect(url_for('boards.edit_board', board_id=board.id))
+            
+        except Exception as e:
+            print(f"[ERROR] General error in new_board: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    # GET request - pass current folder context to template
+    return render_template('p2/mioboard_v4.html', current_folder_id=current_folder_id)
+
+
+
+@whiteboard_bp.route('/edit/<int:board_id>', methods=['GET', 'POST'])
+@login_required
+def edit_board(board_id):
+    board = Board.query.get_or_404(board_id)
+    if board.user_id != current_user.id:
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        print(f"[DEBUG] Editing board {board_id}")
+        print(f"[DEBUG] Content type: {request.content_type}")
+        print(f"[DEBUG] Content length: {request.content_length}")
+        print(f"[DEBUG] Flask MAX_CONTENT_LENGTH: {current_app.config.get('MAX_CONTENT_LENGTH')}")
+        
+        # Handle large content requests
+        try:
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '')
+            print(f"[DEBUG] Title: {title}")
+            print(f"[DEBUG] Description: {description}")
+            
+            # Accept form or JSON with better error handling
+            incoming_content = None
+            try:
+                incoming_content = request.form.get('content')
+                if incoming_content is None:
+                    payload = request.get_json(silent=True) or {}
+                    incoming_content = payload.get('content', None)
+                    print(f"[DEBUG] Using JSON payload for content")
+                
+                if incoming_content is not None:
+                    print(f"[DEBUG] Content length: {len(incoming_content)}")
+                    print(f"[DEBUG] Content preview: {incoming_content[:200]}...")
+                else:
+                    print(f"[DEBUG] No content in request")
+                    
+            except Exception as content_error:
+                print(f"[ERROR] Failed to parse content: {content_error}")
+                return jsonify({"ok": False, "error": "Failed to parse request content"}), 400
+
+            # Normalize literal "null" -> None/empty
+            if isinstance(incoming_content, str) and incoming_content.strip().lower() == 'null':
+                incoming_content = ''
+                print(f"[DEBUG] Normalized 'null' to empty string")
+
+            # If incoming_content is not None, the client didn't send content — keep existing.
+            # If it's the empty string, that is considered an intentional overwrite to empty.
+            old_size = len(board.content.encode('utf-8')) if board.content else 0
+            if incoming_content is not None:
+                board.content = incoming_content
+                print(f"[DEBUG] Updated board content")
+            else:
+                print(f"[DEBUG] Keeping existing content")
+
+            board.title = title or board.title
+            board.description = description
+            board.last_modified = datetime.utcnow()
+            
+            new_size = len(board.content.encode('utf-8')) if board.content else 0
+            delta = new_size - old_size
+            def check_guest_limit(user, additional_size):
+                if getattr(user, 'user_type', None) == 'guest':
+                    max_size = 50 * 1024 * 1024
+                    if (user.total_data_size or 0) + additional_size > max_size:
+                        return False
+                return True
+            def update_user_data_size(user, delta):
+                user.total_data_size = (user.total_data_size or 0) + delta
+                db.session.commit()
+            if not check_guest_limit(current_user, delta):
+                return jsonify({"ok": False, "error": "Data limit exceeded"}), 400
+            
+            try:
+                db.session.commit()
+                update_user_data_size(current_user, delta)
+                
+                # Add notification for successful save
+                from blueprints.p2.utils import add_notification
+                size_str = f"{new_size / 1024:.1f} KB" if new_size < 1024 * 1024 else f"{new_size / (1024 * 1024):.1f} MB"
+                notification_msg = f"Saved board: {board.title} ({size_str})"
+                add_notification(current_user.id, notification_msg, 'save')
+                
+                print(f"[DEBUG] Board saved to database successfully")
+            except Exception as db_error:
+                print(f"[ERROR] Database error: {db_error}")
+                db.session.rollback()
+                return jsonify({"ok": False, "error": "Database save failed"}), 500
+            
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                # return the saved content so client can verify what was stored
+                # Sync session asset marks for updated boards similarly to new_board
+                try:
+                    marked = session.get('assets_marked_used', []) or []
+                    if marked:
+                        used_filenames = set()
+                        from .models import Note, Board as BoardModel
+                        from bs4 import BeautifulSoup as _BS
+                        for n in Note.query.filter_by(user_id=current_user.id).all():
+                            if n.content:
+                                soup = _BS(n.content, 'html.parser')
+                                for img in soup.find_all('img'):
+                                    src = img.get('src', '')
+                                    if '/static/uploads/images/' in src:
+                                        used_filenames.add(src.split('/')[-1])
+                        for b in BoardModel.query.filter_by(user_id=current_user.id).all():
+                            if b.content:
+                                soup2 = _BS(b.content, 'html.parser')
+                                for img in soup2.find_all('img'):
+                                    src = img.get('src', '')
+                                    if '/static/uploads/images/' in src:
+                                        used_filenames.add(src.split('/')[-1])
+                            if getattr(b, 'description', None):
+                                soup3 = _BS(b.description or '', 'html.parser')
+                                for img in soup3.find_all('img'):
+                                    src = img.get('src', '')
+                                    if '/static/uploads/images/' in src:
+                                        used_filenames.add(src.split('/')[-1])
+                        session['assets_marked_used'] = [m for m in marked if m in used_filenames]
+                        session.modified = True
+                except Exception:
+                    pass
+                return jsonify({"ok": True, "content_saved": bool(board.content), "content": board.content})
+            else:
+                # For form submissions, use telemetry notification instead of flash
+                size_str = format_file_size(new_size)
+                return redirect(url_for('boards.edit_board', board_id=board_id, saved='board', size=size_str))
+            
+        except Exception as e:
+            print(f"[ERROR] General error in edit_board: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    # GET request - loading existing board
+    print(f"[DEBUG] Loading board {board_id} for editing")
+    print(f"[DEBUG] Board title: {board.title}")
+    print(f"[DEBUG] Board content length: {len(board.content) if board.content else 0}")
+    print(f"[DEBUG] Board content preview: {board.content[:200] if board.content else 'None'}...")
+
+    return render_template('p2/mioboard_v4.html', board=board)
+
+

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit: {{ file.title }} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  
+  <!-- Editor.js Core -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+  
+  <!-- Editor.js Tools -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/warning@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/nested-list@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@latest"></script>
+  <!-- Simple Image Tool (no upload endpoint required) -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@latest"></script>
+  <!-- Undo Plugin for Ctrl+Z functionality -->
+  <script src="https://cdn.jsdelivr.net/npm/editorjs-undo"></script>
+  
+  <style>
+    body {
+      background-color: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    
+    .editor-container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .editor-header {
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-primary);
+    }
+    
+    .form-label {
+      color: var(--text-primary);
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    
+    .form-control {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      color: var(--text-primary);
+      border-radius: 8px;
+    }
+    
+    .form-control:focus {
+      background: var(--bg-secondary);
+      border-color: var(--accent);
+      color: var(--text-primary);
+      box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.25);
+    }
+    
+    .form-control::placeholder {
+      color: var(--text-muted);
+    }
+    
+    /* Editor.js Theming */
+    #editorjs {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: 8px;
+      padding: 1.5rem;
+      min-height: 500px;
+    }
+    
+    .codex-editor__redactor {
+      padding-bottom: 100px !important;
+    }
+    
+    .ce-block__content,
+    .ce-toolbar__content {
+      max-width: 100%;
+    }
+    
+    .ce-paragraph {
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    
+    .ce-header {
+      color: var(--text-primary);
+    }
+    
+    .ce-code__textarea {
+      background: var(--bg-tertiary) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-primary) !important;
+    }
+    
+    .ce-toolbar__plus,
+    .ce-toolbar__settings-btn {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    
+    .ce-toolbar__plus:hover,
+    .ce-toolbar__settings-btn:hover {
+      background: var(--hover-overlay);
+    }
+    
+    .ce-popover {
+      background: var(--bg-quaternary) !important;
+      border: 1px solid var(--border-primary) !important;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .ce-popover__item {
+      color: var(--text-primary) !important;
+    }
+    
+    .ce-popover__item:hover {
+      background: var(--hover-overlay) !important;
+    }
+    
+    .ce-popover__item-icon {
+      background: var(--bg-tertiary) !important;
+      border: 1px solid var(--border-primary) !important;
+    }
+    
+    .ce-inline-toolbar {
+      background: var(--bg-quaternary) !important;
+      border: 1px solid var(--border-primary) !important;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .ce-inline-tool {
+      color: var(--text-primary) !important;
+    }
+    
+    .ce-inline-tool:hover {
+      background: var(--hover-overlay) !important;
+    }
+    
+    .ce-conversion-toolbar {
+      background: var(--bg-quaternary) !important;
+      border: 1px solid var(--border-primary) !important;
+    }
+    
+    .ce-conversion-tool {
+      color: var(--text-primary) !important;
+    }
+    
+    .ce-conversion-tool:hover {
+      background: var(--hover-overlay) !important;
+    }
+    
+    .cdx-checklist__item-checkbox {
+      border-color: var(--border-primary) !important;
+    }
+    
+    .cdx-checklist__item-checkbox:checked {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+    }
+    
+    .cdx-quote {
+      border-left: 3px solid var(--accent);
+      background: rgba(20, 184, 166, 0.08);
+      color: var(--text-primary);
+    }
+    
+    .cdx-warning {
+      background: rgba(251, 191, 36, 0.08);
+      border-left: 3px solid #fbbf24;
+    }
+    
+    .tc-table {
+      border-color: var(--border-primary) !important;
+    }
+    
+    .tc-table__cell {
+      border-color: var(--border-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    .cdx-marker {
+      background: rgba(20, 184, 166, 0.3);
+      color: var(--text-primary);
+    }
+    
+    /* Action Buttons */
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--white);
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+    
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      border-color: var(--border-primary);
+      color: var(--text-primary);
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+    }
+    
+    .btn-secondary:hover {
+      background: var(--bg-quaternary);
+      border-color: var(--border-hover);
+    }
+    
+    .btn-danger {
+      background: var(--accent-red);
+      border-color: var(--accent-red);
+      color: var(--white);
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+    }
+    
+    .form-check-input:checked {
+      background-color: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    .page-title {
+      color: var(--text-primary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    .material-icons {
+      font-size: 2rem;
+      color: var(--accent);
+    }
+    
+    .save-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-primary);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+    }
+    
+    .save-indicator.saving {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(20, 184, 166, 0.1);
+    }
+    
+    .save-indicator.saving .material-icons {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    .save-indicator.saved {
+      color: #22c55e;
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
+    }
+    
+    .save-indicator.unsaved {
+      color: #fbbf24;
+      border-color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  {% include "/p2/folder_view_navbar_partial.html" %}
+  
+  <div class="container-fluid mt-4">
+    <div class="editor-container">
+      <div class="editor-header">
+        <h2 class="page-title">
+          <i class="material-icons">view_week</i>
+          Edit Blocks Document
+        </h2>
+        
+        <form method="POST" id="editForm" action="{{ url_for('file.edit_file', file_id=file.id) }}">
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <label for="title" class="form-label">Title</label>
+              <input type="text" class="form-control" id="title" name="title" value="{{ file.title }}" required>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="save-indicator" id="saveIndicator">
+                <i class="material-icons" style="font-size: 1rem;">cloud_upload</i>
+                <span id="saveText">Ready to save</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="description" class="form-label">Description (Optional)</label>
+            <textarea class="form-control" id="description" name="description" rows="2" placeholder="Brief description">{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}</textarea>
+          </div>
+          
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="is_public" name="is_public" {% if file.is_public %}checked{% endif %}>
+            <label class="form-check-label" for="is_public" style="color: var(--text-primary);">
+              Make this document public
+            </label>
+          </div>
+          
+          <input type="hidden" id="content" name="content">
+        </form>
+      </div>
+      
+      <div id="editorjs"></div>
+      
+      <div class="d-flex gap-2 justify-content-between mt-4">
+        <div>
+          <button type="button" class="btn btn-danger" onclick="deleteFile()">
+            <i class="material-icons" style="font-size: 1rem; vertical-align: middle;">delete</i>
+            Delete
+          </button>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('folders.view_folder', folder_id=file.folder_id) }}" class="btn btn-secondary">
+            <i class="material-icons" style="font-size: 1rem; vertical-align: middle;">arrow_back</i>
+            Cancel
+          </a>
+          <button type="button" class="btn btn-primary" onclick="saveDocument()">
+            <i class="material-icons" style="font-size: 1rem; vertical-align: middle;">save</i>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Delete Confirmation Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Delete</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete this blocks document? This action cannot be undone.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <form method="POST" action="{{ url_for('file.delete_file', file_id=file.id) }}" style="display: inline;">
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    let editor;
+    let autoSaveTimer = null;
+    const AUTO_SAVE_DELAY = 3000; // 3 seconds after last change
+    
+    // Initialize Editor.js
+    document.addEventListener('DOMContentLoaded', function() {
+      // Parse existing content
+      let initialData = {{ file.content_json | tojson | safe }};
+      
+      // Ensure proper Editor.js format
+      if (!initialData || typeof initialData !== 'object') {
+        initialData = {
+          time: Date.now(),
+          blocks: [
+            {
+              type: "paragraph",
+              data: { text: "" }
+            }
+          ],
+          version: "2.28.0"
+        };
+      }
+      
+      // Initialize Editor.js with all tools
+      editor = new EditorJS({
+        holder: 'editorjs',
+        autofocus: true,
+        placeholder: 'Start writing your blocks document...',
+        data: initialData,
+        logLevel: 'ERROR',  // Reduce console noise in production
+        
+        // Enable undo/redo functionality
+        onReady: () => {
+          new Undo({ editor });
+          console.log('✅ Blocks editor ready');
+        },
+        
+        // Track content changes for better UX
+        onChange: (api, event) => {
+          // Clear existing timer
+          if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+          }
+          
+          // Set save indicator to "unsaved changes"
+          updateSaveIndicator('unsaved');
+          
+          // Set new auto-save timer
+          autoSaveTimer = setTimeout(function() {
+            autoSave();
+          }, AUTO_SAVE_DELAY);
+        },
+        
+        tools: {
+          header: {
+            class: Header,
+            inlineToolbar: true,
+            config: {
+              placeholder: 'Enter a header',
+              levels: [1, 2, 3, 4, 5, 6],
+              defaultLevel: 2
+            }
+          },
+          list: {
+            class: NestedList,
+            inlineToolbar: true,
+            config: {
+              defaultStyle: 'unordered'
+            }
+          },
+          checklist: {
+            class: Checklist,
+            inlineToolbar: true
+          },
+          quote: {
+            class: Quote,
+            inlineToolbar: true,
+            shortcut: 'CMD+SHIFT+Q',
+            config: {
+              quotePlaceholder: 'Enter a quote',
+              captionPlaceholder: 'Quote author',
+              pasteHandler: {
+                tags: ['BLOCKQUOTE', 'P']
+              }
+            }
+          },
+          code: {
+            class: CodeTool,
+            placeholder: 'Enter code'
+          },
+          delimiter: Delimiter,
+          table: {
+            class: Table,
+            inlineToolbar: true,
+            config: {
+              rows: 2,
+              cols: 3
+            }
+          },
+          warning: {
+            class: Warning,
+            inlineToolbar: true,
+            shortcut: 'CMD+SHIFT+W',
+            config: {
+              titlePlaceholder: 'Title',
+              messagePlaceholder: 'Message',
+              pasteHandler: {
+                tags: ['DIV', 'P']
+              }
+            }
+          },
+          raw: RawTool,
+          embed: {
+            class: Embed,
+            config: {
+              services: {
+                youtube: true,
+                coub: true,
+                codepen: true,
+                imgur: true,
+                gfycat: true,
+                twitter: true,
+                instagram: true,
+                facebook: true
+              }
+            }
+          },
+          image: SimpleImage,
+          Marker: {
+            class: Marker,
+            shortcut: 'CMD+SHIFT+M'
+          },
+          inlineCode: {
+            class: InlineCode,
+            shortcut: 'CMD+SHIFT+C'
+          },
+          underline: Underline
+        }
+      });
+    });
+    
+    function updateSaveIndicator(state) {
+      const indicator = document.getElementById('saveIndicator');
+      const text = document.getElementById('saveText');
+      
+      indicator.classList.remove('saving', 'saved');
+      
+      if (state === 'saving') {
+        indicator.classList.add('saving');
+        text.textContent = 'Saving...';
+      } else if (state === 'saved') {
+        indicator.classList.add('saved');
+        text.textContent = 'Saved';
+        setTimeout(() => {
+          if (text.textContent === 'Saved') {
+            text.textContent = 'Ready to save';
+            indicator.classList.remove('saved');
+          }
+        }, 2000);
+      } else if (state === 'unsaved') {
+        text.textContent = 'Unsaved changes';
+      } else {
+        text.textContent = 'Ready to save';
+      }
+    }
+    
+    async function autoSave() {
+      try {
+        updateSaveIndicator('saving');
+        const outputData = await editor.save();
+        
+        // Create FormData for auto-save
+        const formData = new FormData();
+        formData.append('title', document.getElementById('title').value);
+        formData.append('description', document.getElementById('description').value);
+        formData.append('content', JSON.stringify(outputData));
+        if (document.getElementById('is_public').checked) {
+          formData.append('is_public', 'on');
+        }
+        
+        // Send auto-save request
+        const response = await fetch('{{ url_for("file.edit_file", file_id=file.id) }}', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          updateSaveIndicator('saved');
+        } else {
+          updateSaveIndicator('unsaved');
+          console.error('Auto-save failed:', response.statusText);
+        }
+      } catch (error) {
+        updateSaveIndicator('unsaved');
+        console.error('Auto-save error:', error);
+      }
+    }
+    
+    async function saveDocument() {
+      try {
+        // Trigger telemetry activity animation
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setActive('Saving blocks document...');
+        }
+        
+        updateSaveIndicator('saving');
+        const outputData = await editor.save();
+        
+        const formData = new FormData(document.getElementById('editForm'));
+        formData.set('content', JSON.stringify(outputData));
+        
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          updateSaveIndicator('saved');
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Saved ${result.file_type} (${result.size})`);
+          }
+        } else {
+          updateSaveIndicator('unsaved');
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Save failed: ${result.error}`);
+          } else {
+            alert('Error: ' + result.error);
+          }
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+        updateSaveIndicator('unsaved');
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle('Save failed: network error');
+        } else {
+          alert('Error saving document. Please try again.');
+        }
+      }
+    }
+    
+    function deleteFile() {
+      const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+      deleteModal.show();
+    }
+    
+    // Warn user before leaving with unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+      const saveText = document.getElementById('saveText').textContent;
+      if (saveText === 'Unsaved changes') {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Ctrl/Cmd + S to save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveDocument();
+      }
+    });
+  </script>
+</body>
+</html>

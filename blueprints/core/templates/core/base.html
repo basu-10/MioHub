@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #6ee7b7 0%, #3b82f6 100%);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Glassmorphism Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, rgba(110, 231, 183, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(110, 231, 183, 0.2);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+            animation: nav-float 4s ease-in-out infinite;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            position: relative;
+        }
+
+        /* Logo with shimmer effect */
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #059669, #10b981, #34d399);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            animation: logo-shimmer 3s ease-in-out infinite;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer-slide 2s infinite;
+        }
+
+        /* Menu toggle for mobile */
+        #menu-toggle {
+            display: none;
+        }
+
+        .menu-icon {
+            display: none;
+            font-size: 1.5rem;
+            color: #059669;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: rgba(110, 231, 183, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .menu-icon:hover {
+            background: rgba(110, 231, 183, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* Main menu */
+        .menu {
+            display: flex;
+            list-style: none;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .menu > li {
+            position: relative;
+        }
+
+        .menu > li > a,
+        .menu > li > label {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            color: #059669;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 12px;
+            background: rgba(110, 231, 183, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(110, 231, 183, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu > li > a::before,
+        .menu > li > label::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .menu > li > a:hover::before,
+        .menu > li > label:hover::before {
+            left: 100%;
+        }
+
+        .menu > li > a:hover,
+        .menu > li > label:hover {
+            background: rgba(110, 231, 183, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
+            border-color: rgba(110, 231, 183, 0.4);
+        }
+
+        /* Dropdown styles */
+        .dropdown {
+            position: relative;
+        }
+
+        #products-toggle {
+            display: none;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(110, 231, 183, 0.15);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(110, 231, 183, 0.3);
+            border-radius: 12px;
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 35px rgba(16, 185, 129, 0.15);
+            list-style: none;
+            padding: 0.5rem 0;
+            z-index: 100;
+        }
+
+        .dropdown:hover .dropdown-content {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-content li {
+            margin: 0;
+        }
+
+        .dropdown-content a {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            color: #059669;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            margin: 0.25rem 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dropdown-content a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+            transition: left 0.4s;
+        }
+
+        .dropdown-content a:hover::before {
+            left: 100%;
+        }
+
+        .dropdown-content a:hover {
+            background: rgba(110, 231, 183, 0.2);
+            transform: translateX(5px);
+            color: #047857;
+        }
+
+        /* Animations */
+        @keyframes nav-float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+        }
+
+        @keyframes logo-shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes shimmer-slide {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1); }
+            50% { box-shadow: 0 8px 40px rgba(16, 185, 129, 0.2); }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .menu-icon {
+                display: block;
+            }
+
+            .menu {
+                position: fixed;
+                top: 70px;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: rgba(110, 231, 183, 0.15);
+                backdrop-filter: blur(15px);
+                border-bottom: 1px solid rgba(110, 231, 183, 0.2);
+                padding: 1rem 0;
+                transform: translateY(-100%);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                gap: 0.5rem;
+            }
+
+            #menu-toggle:checked ~ .menu {
+                transform: translateY(0);
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .menu > li {
+                width: 90%;
+                margin: 0 auto;
+            }
+
+            .menu > li > a,
+            .menu > li > label {
+                width: 100%;
+                text-align: center;
+            }
+
+            .dropdown-content {
+                position: static;
+                opacity: 1;
+                visibility: visible;
+                transform: none;
+                background: rgba(16, 185, 129, 0.1);
+                margin-top: 0.5rem;
+                border-radius: 8px;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+            }
+
+            #products-toggle:checked ~ .dropdown-content {
+                max-height: 200px;
+            }
+
+            .dropdown-content a:hover {
+                transform: none;
+                background: rgba(110, 231, 183, 0.2);
+            }
+        }
+
+        /* Add breathing effect to nav */
+        nav {
+            animation: nav-float 4s ease-in-out infinite, pulse-glow 3s ease-in-out infinite;
+        }
+
+        /* Content spacing */
+        main {
+            margin-top: 70px;
+            padding: 2rem;
+        }
+
+        /* Flash message styling */
+        .alert {
+            background: rgba(251, 191, 36, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            color: #92400e;
+            font-weight: 500;
+        }
+
+        .alert-warning {
+            background: rgba(251, 191, 36, 0.15);
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="{{ url_for('core_blueprint.landing') }}" class="logo">MioHub</a>
+
+            <input type="checkbox" id="menu-toggle" />
+            <label for="menu-toggle" class="menu-icon">&#9776;</label>
+
+            <ul class="menu">
+                <li><a href="{{ url_for('core_blueprint.landing') }}">Home</a></li>
+                <li class="dropdown">
+                    <input type="checkbox" id="products-toggle" />
+                    <label for="products-toggle">Switch To</label>
+                    <ul class="dropdown-content">
+                        <li><a href="{{ url_for('p1_bp.product1') }}">MioCalc</a></li>
+                        <li><a href="{{ url_for('p2_bp.dashboard') }}">MioSpace</a></li>
+                    </ul>
+                </li>
+                <li><a href="{{ url_for('core_blueprint.about') }}">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-warning">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}
+
+        {% endblock %}
+    </main>
+</body>
+</html>

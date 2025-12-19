@@ -1,0 +1,48 @@
+<!-- Todo Block - Checkbox List with SortableJS -->
+<div class="block-item" data-type="todo" data-block-id="{{ block.id }}">
+    <div class="block-header">
+        <div class="drag-handle" title="Drag to reorder">
+            <i class="fas fa-grip-vertical"></i>
+        </div>
+        <button type="button" class="collapse-toggle-btn" onclick="toggleBlockCollapse(this)" title="Collapse/Expand">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="flex items-center gap-2">
+            <i class="fas fa-tasks text-yellow-400"></i>
+            <span class="block-type-label">Todo List</span>
+        </div>
+        <input type="text" class="block-title-input" placeholder="Block Title" 
+               value="{{ block.title if block.title else '' }}">
+        <div class="block-controls">
+            <button type="button" class="control-btn" onclick="moveBlockUp(this)" title="Move Up">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+            <button type="button" class="control-btn" onclick="moveBlockDown(this)" title="Move Down">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <button type="button" class="control-btn" onclick="deleteBlock(this)" title="Delete">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    <div class="block-content">
+        <div class="todo-list-wrapper">
+            <div class="todo-list" data-content="{{ block.content | tojson | forceescape }}">
+                {% if block.content %}
+                    {% for item in block.content %}
+                    <div class="todo-item">
+                        <input type="checkbox" class="todo-checkbox" {{ 'checked' if item.completed else '' }}>
+                        <input type="text" class="todo-text" value="{{ item.text }}" placeholder="Task...">
+                        <button type="button" class="todo-delete" onclick="deleteTodoItem(this)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <button type="button" class="add-todo-btn" onclick="addTodoItem(this)">
+                <i class="fas fa-plus"></i> Add Task
+            </button>
+        </div>
+    </div>
+</div>

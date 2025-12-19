@@ -1,0 +1,59 @@
+<!-- MioBook Card Partial (proprietary_blocks) -->
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" 
+       data-type="file" 
+       data-id="{{ file.id }}" 
+       data-file-type="proprietary_blocks"
+       data-file-description="{{ file.description }}" 
+       data-is-public="{{ '1' if file.is_public else '0' }}">
+    
+    <div class="badge-container">
+      {% if file.is_public %}
+        <span class="public-badge">
+          <i class="material-icons" aria-hidden="true">public</i>
+          <span class="visually-hidden">Public</span>
+        </span>
+      {% endif %}
+      <span class="type-badge">MioBook</span>
+    </div>
+    
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title mb-2">
+        <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">
+          {{ file.title }}
+        </a>
+      </h5>
+      
+      <!-- Description -->
+      {% if file.description and display_prefs.show_previews %}
+      <div class="file-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <span class="text-muted">{{ file.description }}</span>
+      </div>
+      {% endif %}
+      
+      <!-- Thumbnail Preview (if available) -->
+      {% if file.metadata_json and file.metadata_json.get('thumbnail_path') and display_prefs.show_previews %}
+      <div class="miobook-thumbnail mb-2">
+        <img src="{{ url_for('static', filename='uploads/thumbnails/' + file.metadata_json.get('thumbnail_path')) }}" 
+             alt="{{ file.title }} thumbnail" 
+             class="img-fluid rounded"
+             style="max-height: 150px; object-fit: cover; width: 100%;">
+      </div>
+      {% endif %}
+      
+      <!-- Block Count Info -->
+      {% if display_prefs.show_previews and file.content_json %}
+        {% set blocks = file.content_json.get('blocks', []) %}
+        {% if blocks %}
+        <div class="content-preview">
+          <div class="small text-muted">
+            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">view_module</i>
+            {{ blocks | length }} block{{ 's' if blocks | length != 1 else '' }}
+          </div>
+        </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>

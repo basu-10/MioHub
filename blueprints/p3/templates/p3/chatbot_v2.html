@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MioChat v2</title>
+
+  <!-- Tailwind (CDN as currently used in project) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <!-- Markdown + code highlighting -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0"></script>
+
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --card: #121516;
+      --muted: #9aa8ad;
+      --accent: #14b8a6;
+      --accent-strong: #0d9488;
+      --white: #ecffff;
+      --radius: 12px;
+      --sidebar: 280px;
+      --memory: 320px;
+    }
+
+    body { background: var(--bg); color: var(--white); min-height: 100vh; }
+    .glass { background: rgba(18,21,22,0.9); border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(8px); }
+    .bubble-user { background: linear-gradient(135deg, var(--accent), var(--accent-strong)); }
+    .bubble-ai { background: linear-gradient(180deg, rgba(18,21,22,0.95), rgba(12,14,15,0.95)); border: 1px solid rgba(255,255,255,0.05); }
+    .sidebar-open { transform: translateX(0); }
+    .sidebar-closed { transform: translateX(calc(-1 * var(--sidebar))); }
+    .memory-open { transform: translateX(0); }
+    .memory-closed { transform: translateX(var(--memory)); }
+    .scroll-slim::-webkit-scrollbar { width: 8px; }
+    .scroll-slim::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(20,184,166,0.6), rgba(20,184,166,0.4)); border-radius: 4px; }
+    
+    /* Modal styles */
+    .modal { 
+      padding: 1rem;
+    }
+    .modal-box { 
+      width: 90vw;
+      max-width: 1200px;
+      padding: 1.5rem;
+      border-radius: var(--radius);
+    }
+    #editMemoryModal .modal-box {
+      width: 90vw;
+      max-width: 1200px;
+      border: none;
+    }
+    #editMemoryModal h3 {
+      color: #d4af37;
+      border-bottom: 2px solid #d4af37;
+      padding-bottom: 0.5rem;
+    }
+    #editMemoryModal .btn-save {
+      background: linear-gradient(135deg, #d4af37, #b8941f);
+      color: #0a0a0b;
+      font-weight: 600;
+    }
+    #editMemoryModal .btn-save:hover {
+      background: linear-gradient(135deg, #e0c04d, #d4af37);
+    }
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+  <!-- Sidebar: Sessions -->
+  <aside id="sidebar" class="fixed z-30 left-0 top-0 h-full w-[var(--sidebar)] glass transition-transform duration-300 sidebar-open">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
+      <div>
+        <p class="text-xs text-[var(--muted)]">Conversations</p>
+        <h2 class="text-lg font-semibold">Chat History</h2>
+      </div>
+      <button class="p-2 rounded-full bg-[var(--accent)] text-white" onclick="newChat()" title="New chat">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      </button>
+    </div>
+    <div class="p-3 space-y-2 overflow-y-auto h-[calc(100%-64px)] scroll-slim">
+      {% for s in sessions %}
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition border border-transparent hover:border-white/5 {% if s.id == current_session %}bg-white/5{% else %}bg-white/2{% endif %}" onclick="switchSession({{ s.id }})">
+          <div class="flex-1 truncate">{{ s.title }}</div>
+          <button class="text-red-300 hover:text-red-200" onclick="deleteSession({{ s.id }}, event)" title="Delete conversation">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <!-- Main column -->
+  <div class="flex-1 flex flex-col ml-[var(--sidebar)] transition-all duration-300" id="main-column">
+    <!-- Header -->
+    <header class="flex items-center justify-between px-4 py-3 border-b border-white/5 glass">
+      <div class="flex items-center gap-3">
+        <button class="p-2 rounded-full bg-white/10" onclick="toggleSidebar()" title="Toggle sidebar">
+          <svg id="sidebar-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div>
+          <p class="text-xs text-[var(--muted)]">MioChat</p>
+          <h1 class="text-xl font-semibold">Chat</h1>
+        </div>
+        <div class="relative">
+          <button id="product-switcher-btn" class="px-3 py-2 rounded-lg bg-white/5 text-sm" aria-haspopup="true" aria-expanded="false">Switch</button>
+          <div id="product-switcher-list" class="hidden absolute mt-2 w-40 rounded-lg glass border border-white/5 shadow-lg">
+            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('core_blueprint.landing') }}">MioHub</a>
+            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('p2_bp.dashboard') }}">MioNotes</a>
+            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('p1_bp.product1') }}">MioCalc</a>
+            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('p4_bp.product4') }}">MioGames</a>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-3 py-2 rounded-lg bg-white/5 text-sm" onclick="toggleMemoryPanel()" title="Toggle memory">Memory</button>
+        <button class="px-3 py-2 rounded-lg bg-white/5 text-sm" onclick="openSettings()">Settings</button>
+      </div>
+    </header>
+
+    <!-- Chat area -->
+    <main class="flex-1 overflow-hidden flex flex-col">
+      <div id="chat-box" class="flex-1 overflow-y-auto p-4 scroll-slim">
+        <div class="max-w-4xl mx-auto space-y-4">
+          {% if current_session %}
+            {% for chat in chats %}
+              {% if chat.role == "user" %}
+              <div class="flex justify-end">
+                <div class="bubble-user text-white p-3 rounded-2xl max-w-[70%]">
+                  <div class="text-xs text-white/80 mb-1">You</div>
+                  <div class="whitespace-pre-wrap">{{ chat.content }}</div>
+                </div>
+              </div>
+              {% else %}
+              <div class="flex justify-start">
+                <div class="bubble-ai p-3 rounded-2xl max-w-[80%]">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
+                    {% if chat.model %}
+                    <span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">{{ chat.model }}</span>
+                    {% endif %}
+                  </div>
+                  <div class="prose prose-invert max-w-none" data-markdown="{{ chat.content|e }}"></div>
+                </div>
+              </div>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-[var(--muted)] py-20">Select a chat or start a new one.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="border-t border-white/5 glass px-4 py-3">
+        {% if current_session %}
+        <div class="max-w-4xl mx-auto flex gap-2 items-end">
+          <textarea id="user-input" rows="1" class="flex-1 rounded-xl bg-white/5 border border-white/10 p-3 resize-none focus:outline-none" placeholder="Type your message..."></textarea>
+          <button class="px-4 py-3 rounded-xl bg-[var(--accent)] text-white" onclick="sendMessage()">Send</button>
+        </div>
+        {% else %}
+        <div class="text-center text-sm text-[var(--muted)]">Open or create a conversation to start.</div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+
+  <!-- Memory panel -->
+  <aside id="memory-panel" class="fixed z-20 top-0 right-0 h-full w-[var(--memory)] glass border-l border-white/5 transition-transform duration-300 memory-closed">
+    <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+      <div>
+        <p class="text-xs text-[var(--muted)]">Context</p>
+        <h3 class="text-lg font-semibold">Memory</h3>
+      </div>
+      <button class="p-2 rounded-full bg-white/5" onclick="toggleMemoryPanel()">✕</button>
+    </div>
+    <div id="memory-content" class="p-3 space-y-2 overflow-y-auto h-[calc(100%-200px)] scroll-slim text-sm"></div>
+    <div class="p-3 border-t border-white/5 space-y-2">
+      <textarea id="new-memory-text" rows="3" class="w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm resize-none" placeholder="Add memory snippet..."></textarea>
+      <button class="w-full px-3 py-2 rounded-lg bg-[var(--accent)] text-white" onclick="addMemoryItem()">Add Memory</button>
+    </div>
+  </aside>
+
+  <!-- Settings Modal -->
+  <dialog id="settingsModal" class="modal">
+    <div class="modal-box glass text-sm">
+      <h3 class="text-lg font-semibold mb-3">Settings</h3>
+      <label class="block mb-2">Model</label>
+      <select id="model-select" class="w-full p-2 rounded bg-white/5 border border-white/10">
+        {% for model in models %}
+          <option value="{{ model }}" {% if model == current_model %}selected{% endif %}>{{ model }}</option>
+        {% endfor %}
+      </select>
+      <div class="modal-action mt-4">
+        <form method="dialog" class="flex gap-2">
+          <button class="px-3 py-2 rounded bg-white/10">Cancel</button>
+          <button type="button" class="px-3 py-2 rounded bg-[var(--accent)] text-white" onclick="saveSettings()">Save</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Edit Memory Modal -->
+  <dialog id="editMemoryModal" class="modal">
+    <div class="modal-box glass text-sm max-w-4xl">
+      <h3 class="text-lg font-semibold mb-3">Edit Memory</h3>
+      <textarea id="edit-memory-textarea" class="w-full p-2 rounded bg-white/5 border border-[var(--accent)] min-h-[400px]"></textarea>
+      <div class="modal-action mt-4">
+        <form method="dialog" class="flex gap-2">
+          <button type="button" class="px-3 py-2 rounded bg-white/10" onclick="document.getElementById('editMemoryModal').close()">Cancel</button>
+          <button type="button" class="px-3 py-2 rounded btn-save" onclick="saveMemoryEdit()">Save</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    // ========== STATE MANAGEMENT ==========
+    let memoryItems = [];
+    let sidebarOpen = true;
+    let memoryOpen = false;
+    let currentEditingIndex = null;
+    let currentModel = '{{ current_model|safe }}' || '{{ models[0]|safe }}';  // Track current model with fallback to first available
+
+    // ========== SIDEBAR MODULE ==========
+    function applySidebarState() {
+      const sidebar = document.getElementById('sidebar');
+      const main = document.getElementById('main-column');
+      if (sidebarOpen) {
+        sidebar.classList.remove('sidebar-closed');
+        sidebar.classList.add('sidebar-open');
+        main.style.marginLeft = 'var(--sidebar)';
+        document.getElementById('sidebar-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+      } else {
+        sidebar.classList.add('sidebar-closed');
+        sidebar.classList.remove('sidebar-open');
+        main.style.marginLeft = '0';
+        document.getElementById('sidebar-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>';
+      }
+    }
+
+    function toggleSidebar() { 
+      sidebarOpen = !sidebarOpen; 
+      applySidebarState(); 
+    }
+
+    // ========== MEMORY PANEL TOGGLE MODULE ==========
+    function toggleMemoryPanel() {
+      const panel = document.getElementById('memory-panel');
+      memoryOpen = !memoryOpen;
+      if (memoryOpen) {
+        panel.classList.remove('memory-closed');
+        panel.classList.add('memory-open');
+      } else {
+        panel.classList.add('memory-closed');
+        panel.classList.remove('memory-open');
+      }
+    }
+
+    // ========== MARKDOWN RENDERING MODULE ==========
+    function renderMarkdownContainers() {
+      document.querySelectorAll('[data-markdown]').forEach(el => {
+        const raw = el.getAttribute('data-markdown');
+        if (!raw) return;
+        const html = marked.parse(raw, {
+          highlight: function(code, lang) {
+            if (hljs && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+            if (hljs && hljs.highlightAuto) return hljs.highlightAuto(code).value;
+            return code;
+          }
+        });
+        el.innerHTML = html;
+      });
+      if (hljs && hljs.highlightAll) hljs.highlightAll();
+    }
+
+    // ========== UTILITY FUNCTIONS MODULE ==========
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ========== MEMORY LOAD/RENDER MODULE ==========
+    async function loadMemoryItems() {
+      try {
+        const res = await fetch('/get_memory');
+        const data = await res.json();
+        memoryItems = data.memory || [];
+        renderMemoryItems();
+      } catch (e) { 
+        console.error('Error loading memory items:', e); 
+      }
+    }
+
+    function renderMemoryItems() {
+      const container = document.getElementById('memory-content');
+      if (!memoryItems.length) { 
+        container.innerHTML = '<p class="text-[var(--muted)]">No memory yet</p>'; 
+        return; 
+      }
+      container.innerHTML = memoryItems.map((item, i) => `
+        <div class="rounded-lg border border-white/5 overflow-hidden ${item.enabled===false ? 'opacity-50' : ''}">
+          <div class="flex items-center justify-between gap-2 px-3 py-2 bg-white/5 border-b border-white/5">
+            <span class="text-xs text-[var(--muted)]">Memory #${i + 1}</span>
+            <div class="flex items-center gap-1">
+              <button class="p-1 hover:text-[var(--accent)] transition" title="Copy" onclick="copyMemoryText(${i}, event)">
+                <span class="material-icons" style="font-size: 16px;">content_copy</span>
+              </button>
+              <button class="p-1 hover:text-[var(--accent)] transition" title="Edit" onclick="editMemoryItem(${i})">
+                <span class="material-icons" style="font-size: 16px;">edit</span>
+              </button>
+              <button class="p-1 hover:text-[var(--accent)] transition" title="Summarize" onclick="summarizeMemoryItem(${i}, event)">
+                <span class="material-icons" style="font-size: 16px;">summarize</span>
+              </button>
+              <button class="p-1 hover:text-[var(--accent)] transition" title="${item.enabled===false ? 'Enable' : 'Disable'}" onclick="toggleMemoryItem(${i})">
+                <span class="material-icons" style="font-size: 16px;">${item.enabled===false ? 'toggle_off' : 'toggle_on'}</span>
+              </button>
+              <button class="p-1 hover:text-red-400 transition" title="Delete" onclick="deleteMemoryItem(${i})">
+                <span class="material-icons" style="font-size: 16px;">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="p-3 whitespace-pre-wrap break-words">${escapeHtml(item.text)}</div>
+        </div>
+      `).join('');
+    }
+
+    // ========== MEMORY ADD MODULE ==========
+    async function addMemoryItem() {
+      const text = document.getElementById('new-memory-text').value.trim();
+      if (!text) return;
+      try {
+        const res = await fetch('/add_memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+        const data = await res.json();
+        if (data.status==='ok') { 
+          document.getElementById('new-memory-text').value=''; 
+          loadMemoryItems(); 
+        }
+      } catch (e) {
+        console.error('Error adding memory item:', e);
+        alert('Failed to add memory item');
+      }
+    }
+
+    // ========== MEMORY COPY MODULE ==========
+    async function copyMemoryText(index, event) {
+      if (event) event.stopPropagation();
+      const text = memoryItems[index]?.text;
+      if (!text) {
+        alert('No text to copy');
+        return;
+      }
+      
+      const btn = event ? event.target.closest('button') : null;
+      const original = btn ? btn.textContent : '';
+      
+      try {
+        // Try modern Clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          // Fallback for older browsers or non-HTTPS contexts
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          const success = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          if (!success) throw new Error('execCommand failed');
+        }
+        
+        if (btn) {
+          btn.textContent = '✓';
+          setTimeout(() => { btn.textContent = original; }, 1000);
+        }
+      } catch (e) {
+        console.error('Error copying to clipboard:', e);
+        alert('Failed to copy text: ' + e.message);
+      }
+    }
+
+    // ========== MEMORY TOGGLE MODULE ==========
+    async function toggleMemoryItem(index) {
+      try {
+        const res = await fetch('/toggle_memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ index, enabled: !memoryItems[index].enabled })});
+        const data = await res.json();
+        if (data.status==='ok') loadMemoryItems();
+      } catch (e) {
+        console.error('Error toggling memory item:', e);
+        alert('Failed to toggle memory item');
+      }
+    }
+
+    // ========== MEMORY DELETE MODULE ==========
+    async function deleteMemoryItem(index) {
+      if (!confirm('Delete this memory item?')) return;
+      try {
+        const res = await fetch('/delete_memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ index })});
+        const data = await res.json();
+        if (data.status==='ok') loadMemoryItems();
+      } catch (e) {
+        console.error('Error deleting memory item:', e);
+        alert('Failed to delete memory item');
+      }
+    }
+
+    // ========== MEMORY EDIT MODULE ==========
+    function editMemoryItem(index) {
+      currentEditingIndex = index;
+      document.getElementById('edit-memory-textarea').value = memoryItems[index].text;
+      document.getElementById('editMemoryModal').showModal();
+    }
+
+    async function saveMemoryEdit() {
+      if (currentEditingIndex === null) return;
+      const text = document.getElementById('edit-memory-textarea').value.trim();
+      if (!text) { 
+        alert('Memory text cannot be empty'); 
+        return; 
+      }
+      try {
+        const res = await fetch('/update_memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ index: currentEditingIndex, text })});
+        const data = await res.json();
+        if (data.status==='ok') {
+          currentEditingIndex = null;
+          document.getElementById('editMemoryModal').close();
+          loadMemoryItems();
+        }
+      } catch (e) {
+        console.error('Error saving memory edit:', e);
+        alert('Failed to save changes');
+      }
+    }
+
+    // ========== MEMORY SUMMARIZE MODULE ==========
+    async function summarizeMemoryItem(index, event) {
+      const text = memoryItems[index]?.text || '';
+      if (text.length < 150) { 
+        alert('Text too short to summarize'); 
+        return; 
+      }
+      const btn = event.target.closest('button');
+      const iconSpan = btn.querySelector('.material-icons');
+      const originalIcon = iconSpan ? iconSpan.textContent : '';
+      if (iconSpan) iconSpan.textContent = 'hourglass_empty';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/summarize_memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ index })});
+        const data = await res.json();
+        if (data.status==='ok') {
+          await loadMemoryItems();
+          alert(`Summary created (from ${data.original_length} to ${data.summary_length} chars)`);
+        } else {
+          alert(`Summarization failed: ${data.message || 'Unknown error'}`);
+        }
+      } catch (e) { 
+        console.error('Error summarizing memory:', e); 
+        alert('Summarization error: ' + e.message); 
+      } finally {
+        if (iconSpan) iconSpan.textContent = originalIcon;
+        btn.disabled = false;
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('user-input');
+      const message = (input.value || '').trim();
+      if (!message) return;
+
+      const chatBox = document.getElementById('chat-box');
+      const container = chatBox.querySelector('.max-w-4xl');
+
+      const userDiv = document.createElement('div');
+      userDiv.className = 'flex justify-end';
+      userDiv.innerHTML = `<div class="bubble-user text-white p-3 rounded-2xl max-w-[70%]"><div class="text-xs text-white/80 mb-1">You</div><div class="whitespace-pre-wrap">${escapeHtml(message)}</div></div>`;
+      container.appendChild(userDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      input.value = '';
+
+      const activeMemory = memoryItems.filter(m => m.enabled !== false).map(m => m.text);
+      try {
+        const res = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ message, memory: activeMemory })});
+        const data = await res.json();
+        const html = marked.parse(data.reply || '', {
+          highlight: function(code, lang) {
+            if (hljs && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+            if (hljs && hljs.highlightAuto) return hljs.highlightAuto(code).value;
+            return code;
+          }
+        });
+        const aiDiv = document.createElement('div');
+        aiDiv.className = 'flex justify-start';
+        aiDiv.innerHTML = `
+          <div class="bubble-ai p-3 rounded-2xl max-w-[80%]">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
+              ${data.model ? `<span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">${data.model}</span>` : ''}
+            </div>
+            <div class="prose prose-invert max-w-none">${html}</div>
+          </div>`;
+        container.appendChild(aiDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (e) {
+        console.error('Send failed', e);
+        alert('Error sending message');
+      }
+    }
+
+    function openSettings() {
+      // Update select dropdown to reflect current model
+      const select = document.getElementById('model-select');
+      if (select) {
+        // If currentModel is set, use it; otherwise use the first selected option or first option
+        if (currentModel) {
+          select.value = currentModel;
+        } else {
+          // Try to get from selected option or fallback to first option
+          currentModel = select.value || (select.options.length > 0 ? select.options[0].value : '');
+        }
+      }
+      document.getElementById('settingsModal').showModal();
+    }
+
+    async function saveSettings() {
+      const model = document.getElementById('model-select').value;
+      try {
+        const res = await fetch('/set_model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ model })});
+        const data = await res.json();
+        if (data.status==='ok') {
+          currentModel = model;  // Update local state
+          document.getElementById('settingsModal').close();
+        }
+      } catch (e) { console.error(e); alert('Error saving settings'); }
+    }
+
+    async function switchSession(sessionId) {
+      const res = await fetch(`/switch_session/${sessionId}`,{method:'POST'});
+      const data = await res.json();
+      if (data.status==='ok') location.reload();
+    }
+
+    async function newChat() {
+      const res = await fetch('/new_session',{method:'POST'});
+      const data = await res.json();
+      if (data.status==='ok') location.reload();
+    }
+
+    async function deleteSession(sessionId, event) {
+      event.stopPropagation();
+      if (!confirm('Delete this conversation?')) return;
+      const res = await fetch(`/delete_session/${sessionId}`,{method:'POST'});
+      const data = await res.json();
+      if (data.status==='ok') location.reload();
+    }
+
+    function initProductSwitcher() {
+      const btn = document.getElementById('product-switcher-btn');
+      const list = document.getElementById('product-switcher-list');
+      if (!btn || !list) return;
+      btn.addEventListener('click', e => { e.stopPropagation(); list.classList.toggle('hidden'); });
+      document.addEventListener('click', () => { list.classList.add('hidden'); });
+    }
+
+    function initInputResize() {
+      const input = document.getElementById('user-input');
+      if (!input) return;
+      const maxHeight = 200;
+      function autoResize(el) {
+        el.style.height = 'auto';
+        const newH = Math.min(el.scrollHeight, maxHeight);
+        el.style.height = newH + 'px';
+        el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+      }
+      input.addEventListener('input', () => autoResize(input));
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+      });
+      setTimeout(() => autoResize(input), 0);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      applySidebarState();
+      toggleMemoryPanel(); // start closed
+      renderMarkdownContainers();
+      loadMemoryItems();
+      initProductSwitcher();
+      initInputResize();
+    });
+  </script>
+</body>
+</html>

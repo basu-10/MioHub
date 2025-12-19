@@ -1,0 +1,42 @@
+<!-- Board Card Partial (Whiteboard/MioDraw) -->
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" data-type="board" data-id="{{ board.id }}" data-board-description="{{ board.description_readable if board.description_readable else ('' if ((board.description or '').strip().startswith('[') or (board.description or '').strip().startswith('{')) else (board.description or '')) }}" data-is-public="{{ '1' if board.is_public else '0' }}">
+    <div class="badge-container">
+      {% if board.is_public %}
+        <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+      {% endif %}
+    </div>
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title">
+        <a href="{{ url_for('whiteboard.edit_board', board_id=board.id) }}" class="item-link">{{ board.title }}</a>
+      </h5>
+      
+      {% if board.descriptions and display_prefs.show_previews %}
+      <div class="board-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <div class="d-flex flex-column">
+          {% for key, val in board.descriptions %}
+            <div class="d-flex align-items-start gap-2 small">
+              <span class="badge rounded-pill bg-secondary">{{ key }}</span>
+              <span class="text-muted">{{ val }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% elif board.description and display_prefs.show_previews and board.description_parse_failed %}
+      <div class="board-description content-preview mb-2 text-warning small">
+        ⚠️ Description exists but is not in the expected JSON format. Check server logs.
+      </div>
+      {% endif %}
+      
+      {% if board.thumbnail_path and display_prefs.show_previews %}
+      <div class="board-thumbnail mb-2">
+        <img src="{{ url_for('static', filename='uploads/thumbnails/' + board.thumbnail_path) }}" 
+             alt="{{ board.title }} thumbnail" 
+             class="img-fluid rounded"
+             style="max-height: 150px; object-fit: cover; width: 100%;">
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

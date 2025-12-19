@@ -1,0 +1,63 @@
+<!-- 
+  Universal Item Wrapper Partial
+  
+  This partial automatically renders the correct card or table row
+  based on item type and view mode.
+  
+  Usage in routes:
+    render_template('p2/partials/item_wrapper.html', 
+                   item=obj, 
+                   item_type='folder|note|board|file',
+                   view_mode='grid|table',
+                   display_prefs={...})
+-->
+
+{% if view_mode == 'table' %}
+  {# Table Row Mode - Unified for all file types #}
+  {% if item_type == 'folder' %}
+    {% set folder = item %}
+    {% include 'p2/partials/folder_table_row.html' with context %}
+  {% else %}
+    {# All file types use unified table row #}
+    {% set file = item %}
+    {% include 'p2/partials/file_table_row.html' with context %}
+  {% endif %}
+{% else %}
+  {# Grid/Card Mode - Type-specific partials #}
+  {% if item_type == 'folder' %}
+    {% set folder = item %}
+    {% include 'p2/partials/folder_card.html' with context %}
+  {% else %}
+    {# Route to correct card based on file.type discriminator #}
+    {% set file = item %}
+    
+    {% if file.type == 'proprietary_note' %}
+      {% include 'p2/partials/card_mionote.html' with context %}
+    {% elif file.type == 'proprietary_whiteboard' %}
+      {% include 'p2/partials/card_miodraw.html' with context %}
+    {% elif file.type == 'proprietary_blocks' %}
+      {% include 'p2/partials/card_miobook.html' with context %}
+    {% elif file.type == 'proprietary_infinite_whiteboard' %}
+      {% include 'p2/partials/card_infinite_whiteboard.html' with context %}
+    {% elif file.type == 'proprietary_graph' %}
+      {% include 'p2/partials/card_graph.html' with context %}
+    {% elif file.type == 'markdown' %}
+      {% include 'p2/partials/card_markdown.html' with context %}
+    {% elif file.type == 'code' %}
+      {% include 'p2/partials/card_code.html' with context %}
+    {% elif file.type == 'todo' %}
+      {% include 'p2/partials/card_todo.html' with context %}
+    {% elif file.type == 'diagram' %}
+      {% include 'p2/partials/card_diagram.html' with context %}
+    {% elif file.type == 'table' %}
+      {% include 'p2/partials/card_table.html' with context %}
+    {% elif file.type == 'blocks' %}
+      {% include 'p2/partials/card_blocks.html' with context %}
+    {% elif file.type == 'pdf' %}
+      {% include 'p2/partials/card_pdf.html' with context %}
+    {% else %}
+      {# Fallback for unknown types #}
+      {% include 'p2/partials/card_diagram.html' with context %}
+    {% endif %}
+  {% endif %}
+{% endif %}

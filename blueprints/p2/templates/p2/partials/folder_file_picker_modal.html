@@ -1,0 +1,163 @@
+<!-- Folder/File Picker Modal -->
+<div class="modal fade" id="folderFilePickerModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select <span id="picker-item-type-display">Item</span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 text-sm text-muted" style="color: var(--muted) !important;">
+          Browse the folder tree, pick as many files as you need, or select everything visible in one click.
+        </div>
+
+        <!-- Breadcrumb navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+          <ol class="breadcrumb" id="picker-breadcrumb">
+            <li class="breadcrumb-item"><a href="#" data-folder-id="root">Home</a></li>
+          </ol>
+        </nav>
+
+        <!-- Loading spinner -->
+        <div id="picker-loading" class="text-center py-4" style="display: none;">
+          <div class="spinner-border text-accent" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Picker content -->
+        <div id="picker-content" style="max-height: 400px; overflow-y: auto;">
+          <!-- Dynamically populated folders and files -->
+        </div>
+
+        <!-- Selection display -->
+        <div id="picker-selection" class="mt-3 p-3 rounded" style="background: var(--card); border: 1px solid var(--border-primary); display: none;">
+          <small class="text-muted">Selected:</small>
+          <div id="picker-selected-info" class="mt-1"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-light" id="picker-select-all-btn" disabled>Select All In This Folder</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-accent" id="picker-confirm-btn" disabled>Confirm Selection</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Ensure picker modal appears above other modals */
+  #folderFilePickerModal.modal {
+    z-index: 1062 !important;
+  }
+
+  #folderFilePickerModal .modal-content {
+    background: var(--card);
+    color: var(--white);
+  }
+
+  #folderFilePickerModal .form-control {
+    background: var(--bg);
+    border: 1px solid var(--border-primary);
+    color: var(--white);
+  }
+
+  #folderFilePickerModal .form-control:focus {
+    background: var(--bg);
+    border-color: var(--accent);
+    color: var(--white);
+  }
+
+  #folderFilePickerModal .breadcrumb {
+    background: var(--bg);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+  }
+
+  #folderFilePickerModal .breadcrumb-item a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  #folderFilePickerModal .breadcrumb-item a:hover {
+    color: var(--accent-strong);
+    text-decoration: underline;
+  }
+
+  #folderFilePickerModal .breadcrumb-item.active {
+    color: var(--white);
+  }
+
+  .picker-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+
+  .picker-item:hover {
+    background: var(--bg);
+  }
+
+  .picker-item.selected {
+    background: rgba(20, 184, 166, 0.15);
+    border-color: var(--accent);
+  }
+
+  .picker-item-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: var(--accent);
+  }
+
+  .picker-item-info {
+    flex: 1;
+  }
+
+  .picker-item-title {
+    font-weight: 500;
+    color: var(--white);
+  }
+
+  .picker-item-meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .picker-folder-item .picker-item-icon {
+    color: #FFA500;
+  }
+
+  .picker-file-item .picker-item-icon {
+    color: var(--accent);
+  }
+
+  .btn-accent {
+    background: var(--accent);
+    border: none;
+    color: var(--white);
+  }
+
+  .btn-accent:hover {
+    background: var(--accent-strong);
+    color: var(--white);
+  }
+
+  .btn-accent:disabled {
+    background: var(--muted);
+    opacity: 0.5;
+  }
+
+  .text-accent {
+    color: var(--accent) !important;
+  }
+</style>

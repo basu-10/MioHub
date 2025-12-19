@@ -1,0 +1,301 @@
+
+<head>
+  <title>Edit Image - {{ filename }}</title>
+  <link rel="stylesheet" href="https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.css">
+  <link rel="stylesheet" href="https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.css">
+  <style>
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .editor-container {
+    position: fixed;
+    top: 0px; /* no navbar */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #2c3e50;
+    color: white;
+    border-bottom: 2px solid #34495e;
+  }
+  
+  .editor-toolbar h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+  
+  .editor-toolbar-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .editor-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .editor-btn-save {
+    background: #27ae60;
+    color: white;
+  }
+  
+  .editor-btn-save:hover {
+    background: #229954;
+  }
+  
+  .editor-btn-cancel {
+    background: #7f8c8d;
+    color: white;
+  }
+  
+  .editor-btn-cancel:hover {
+    background: #6c7a7b;
+  }
+  
+  .editor-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .editor-canvas {
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  #tui-image-editor {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .tui-image-editor-header-logo {
+    display: none;
+  }
+  
+  /* Status messages */
+  .editor-status {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    z-index: 10000;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  .editor-status.success {
+    background: #27ae60;
+    color: white;
+  }
+  
+  .editor-status.error {
+    background: #e74c3c;
+    color: white;
+  }
+  
+  .editor-status.info {
+    background: #3498db;
+    color: white;
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  </style>
+</head>
+
+<body>
+<div class="editor-container">
+  <div class="editor-toolbar">
+    <h1>Edit Image - {{ filename }}</h1>
+    <div class="editor-toolbar-actions">
+      <button id="cancelBtn" class="editor-btn editor-btn-cancel">Cancel</button>
+      <button id="saveBtn" class="editor-btn editor-btn-save">Save</button>
+    </div>
+  </div>
+  <div class="editor-canvas">
+    <div id="tui-image-editor"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js"></script>
+<script src="https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.js"></script>
+<script src="https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.js"></script>
+
+<script>
+  // Initialize TOAST UI Image Editor
+  const imageEditor = new tui.ImageEditor('#tui-image-editor', {
+    includeUI: {
+      loadImage: {
+        path: '{{ image_url }}',
+        name: '{{ filename }}'
+      },
+      theme: {
+        'common.bi.image': '',
+        'common.bisize.width': '0px',
+        'common.bisize.height': '0px',
+        'common.backgroundImage': 'none',
+        'common.backgroundColor': '#1e1e1e',
+        'common.border': '0px',
+        
+        // Header
+        'header.backgroundImage': 'none',
+        'header.backgroundColor': 'transparent',
+        'header.border': '0px',
+        
+        // Main icons
+        'menu.normalIcon.color': '#8a8a8a',
+        'menu.activeIcon.color': '#555555',
+        'menu.disabledIcon.color': '#434343',
+        'menu.hoverIcon.color': '#e9e9e9',
+        'menu.iconSize.width': '24px',
+        'menu.iconSize.height': '24px',
+        
+        // Submenu icons
+        'submenu.normalIcon.color': '#8a8a8a',
+        'submenu.activeIcon.color': '#e9e9e9',
+        'submenu.iconSize.width': '32px',
+        'submenu.iconSize.height': '32px',
+        
+        // Submenu primary color
+        'submenu.backgroundColor': '#1e1e1e',
+        'submenu.partition.color': '#858585',
+        
+        // Submenu labels
+        'submenu.normalLabel.color': '#858585',
+        'submenu.normalLabel.fontWeight': 'lighter',
+        'submenu.activeLabel.color': '#fff',
+        'submenu.activeLabel.fontWeight': 'lighter',
+        
+        // Checkbox style
+        'checkbox.border': '1px solid #ccc',
+        'checkbox.backgroundColor': '#fff',
+        
+        // Range style
+        'range.pointer.color': '#fff',
+        'range.bar.color': '#666',
+        'range.subbar.color': '#d1d1d1',
+        
+        'range.disabledPointer.color': '#414141',
+        'range.disabledBar.color': '#282828',
+        'range.disabledSubbar.color': '#414141',
+        
+        'range.value.color': '#fff',
+        'range.value.fontWeight': 'lighter',
+        'range.value.fontSize': '11px',
+        'range.value.border': '1px solid #353535',
+        'range.value.backgroundColor': '#151515',
+        'range.title.color': '#fff',
+        'range.title.fontWeight': 'lighter',
+        
+        // Colorpicker style
+        'colorpicker.button.border': '1px solid #1e1e1e',
+        'colorpicker.title.color': '#fff'
+      },
+      menu: ['crop', 'flip', 'rotate', 'draw', 'shape', 'icon', 'text', 'mask', 'filter'],
+      initMenu: 'filter',
+      uiSize: {
+        width: '100%',
+        height: '100%'
+      },
+      menuBarPosition: 'left'
+    },
+    cssMaxWidth: window.innerWidth,
+    cssMaxHeight: window.innerHeight - 120, // Account for navbar + toolbar
+    usageStatistics: false
+  });
+  
+  // Save button handler
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    
+    showStatus('Saving image...', 'info');
+    
+    try {
+      // Get edited image as data URL
+      const dataURL = imageEditor.toDataURL();
+      
+      // Send to server
+      const response = await fetch('{{ url_for("p2_bp.save_image", filename=filename) }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ image: dataURL })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        showStatus('Image saved successfully! You can keep editing.', 'success');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      } else {
+        throw new Error(result.error || 'Failed to save image');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      showStatus('Error: ' + error.message, 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  });
+  
+  // Cancel button handler
+  document.getElementById('cancelBtn').addEventListener('click', () => {
+    if (confirm('Discard changes and return to assets?')) {
+      window.location.href = '{{ url_for("p2_bp.assets") }}';
+    }
+  });
+  
+  // Helper to show status messages
+  function showStatus(message, type = 'info') {
+    // Remove existing status
+    const existing = document.querySelector('.editor-status');
+    if (existing) existing.remove();
+    
+    // Create new status
+    const status = document.createElement('div');
+    status.className = `editor-status ${type}`;
+    status.textContent = message;
+    document.body.appendChild(status);
+    
+    // Auto-remove after 3 seconds (except for info during save)
+    if (type !== 'info') {
+      setTimeout(() => status.remove(), 3000);
+    }
+  }
+  
+  // Handle window resize
+  window.addEventListener('resize', () => {
+    const newHeight = window.innerHeight - 120;
+    imageEditor.ui.resizeEditor({ imageSize: { oldWidth: window.innerWidth, oldHeight: newHeight, newWidth: window.innerWidth, newHeight: newHeight } });
+  });
+</script>
+</body>
+</html>

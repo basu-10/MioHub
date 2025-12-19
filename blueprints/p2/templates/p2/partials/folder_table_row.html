@@ -1,0 +1,32 @@
+<!-- Folder Table Row Partial -->
+<tr class="item-row" data-type="folder" data-id="{{ folder.id }}" data-folder-name="{{ folder.name }}" data-folder-description="{{ folder.description or '' }}" data-is-public="{{ '1' if folder.is_public else '0' }}" tabindex="0">
+  <td>
+    <span style="font-size: 1.25rem;">📁</span>
+  </td>
+  <td>
+    <a href="{{ url_for('folders.view_folder', folder_id=folder.id) }}" class="text-decoration-none fw-semibold item-link">
+      {{ folder.name }}
+    </a>
+    {% if folder.is_public %}
+      <span class="badge bg-success ms-2" style="font-size: 0.7rem;"><i class="material-icons" style="font-size: 12px; vertical-align: middle;">public</i> Public</span>
+    {% endif %}
+    {% if folder.description %}
+      <div class="text-muted small mt-1">{{ folder.description }}</div>
+    {% endif %}
+  </td>
+  <td>
+    <button class="btn btn-sm btn-outline-secondary calculate-size-btn" data-folder-id="{{ folder.id }}">
+      <i class="material-icons" style="font-size: 14px; vertical-align: middle;">calculate</i>
+      Calculate
+    </button>
+    <span class="size-display-{{ folder.id }}" style="display: none;"></span>
+  </td>
+  <td class="text-muted small">
+    {{ folder.created_at.strftime('%Y-%m-%d %H:%M') if folder.created_at else 'N/A' }}
+  </td>
+  <td>
+    <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('folders.view_folder', folder_id=folder.id) }}'">
+      <i class="material-icons" style="font-size: 14px;">open_in_new</i>
+    </button>
+  </td>
+</tr>

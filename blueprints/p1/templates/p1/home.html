@@ -1,0 +1,410 @@
+
+{% block head %}
+    <style>
+        /* Adopted Carbon Teal theme from register.html + calculator-specific layout */
+        :root{
+            --bg:#0a0a0b;
+            --card:#121516;
+            --muted:#9aa8ad;
+            --accent:#14b8a6;
+            --accent-strong:#0d9488;
+            --white:#ECFFFF;
+            --radius:12px;
+        }
+
+        html,body{
+            height:100%;
+            min-height:100vh;
+            margin:0;
+            padding:0;
+            font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            color:var(--white);
+            background-color:var(--bg);
+            background-image:
+                radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),
+                linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+            background-size:cover;
+            background-repeat:no-repeat;
+            background-attachment:fixed;
+            background-position:center top;
+        }
+
+        /* Centered card layout (from register) */
+        .center{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px}
+        .card{background:linear-gradient(180deg, rgba(18,21,22,0.98), rgba(10,10,11,0.98));border:1px solid rgba(255,255,255,0.04);padding:28px;max-width:960px;width:100%;border-radius:var(--radius);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+
+        h2{margin:0 0 8px 0;font-size:28px;font-weight:700;color:var(--white);text-align:center}
+        p.lead{margin:0 0 18px 0;color:var(--muted);font-size:14px;text-align:center}
+
+        /* Keep the interactive bubbles but place them behind card */
+        .bubble-bg {position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none}
+        .bubble {position: absolute;border-radius: 50%;opacity: 0.06;animation: float 6s ease-in-out infinite}
+        .bubble:nth-child(1) { top: 12%; left: 6%; width: 140px; height: 140px; background: var(--accent); animation-delay: 0s }
+        .bubble:nth-child(2) { top: 60%; right: 10%; width: 100px; height: 100px; background: rgba(20,184,166,0.9); animation-delay: -2s }
+        .bubble:nth-child(3) { top: 30%; left: 60%; width: 80px; height: 80px; background: rgba(16,185,129,0.9); animation-delay: -4s }
+
+        /* Calculator container inside card */
+        .container { position: relative; z-index: 10; padding: 1.5rem; background: transparent; border-radius: 12px }
+
+        /* Expression Input */
+        #expression { width:100%; padding:14px; font-size:1.05rem; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.02); color:var(--white); box-sizing:border-box }
+        #expression:focus { outline:none; box-shadow:0 6px 18px rgba(20,184,166,0.06) }
+
+        /* Button Grid from previous design kept, but recolored to match theme */
+        .button-grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:0.75rem; margin-bottom:1.25rem }
+        .btn { padding:0.85rem; border-radius:10px; border:none; cursor:pointer; font-weight:600; position:relative; overflow:hidden; background:linear-gradient(180deg, rgba(20,184,166,0.12), rgba(13,148,136,0.06)); color:var(--white) }
+        .btn::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent); transition:left .15s }
+        .btn:hover::before{ left:100% }
+        .btn:hover{ transform:translateY(-3px) scale(1.02) }
+
+        /* button categories adapted to muted/accent palette */
+        .number{ background: rgba(255,255,255,0.02); color:var(--white) }
+        .operator{ background: rgba(255,255,255,0.03) }
+        .sci{ background: rgba(255,255,255,0.03) }
+        .brackets{ background: rgba(255,255,255,0.03) }
+        .fixed{ background: rgba(255,255,255,0.03) }
+        .to_the_power{ background: rgba(255,255,255,0.03) }
+        .finance{ background: rgba(255,255,255,0.03) }
+        .action{ background: rgba(255,255,255,0.04); color:var(--white); font-weight:700 }
+        .equals{ background: linear-gradient(135deg, var(--accent), var(--accent-strong)); color:var(--white); font-weight:700 }
+
+        .half-width-btn { font-size:0.9rem }
+        .space { background: transparent; border: none }
+
+        /* Result and history styling simplified to match card */
+        h3 { color: var(--white); font-size:1.1rem; margin:1rem 0 0.5rem; font-weight:600 }
+        #result { color: var(--accent); font-weight:700; font-size:1.05rem; background: rgba(20,184,166,0.04); padding:0.5rem 0.75rem; border-radius:8px; display:inline-block }
+
+        #history-table { width:100%; background:transparent; border-radius:8px; color:var(--muted); border-collapse:collapse }
+        #history-table th, #history-table td { padding:0.75rem; text-align:left; border-bottom:1px solid rgba(255,255,255,0.02) }
+
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-18px)} }
+
+        @media (max-width:768px){ .button-grid{ grid-template-columns: repeat(4,1fr) } .card{ padding:20px } }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Interactive Background Bubbles -->
+    <div class="bubble-bg">
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+    </div>
+    <div class="center">
+        <div class="card">
+            <div class="container">
+                <!-- Navbar: branding + product switcher -->
+                <div class="navbar" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px">
+                    <!-- Branding -->
+                    <div class="flex items-center gap-3" style="display:flex;align-items:center;gap:12px">
+                        <div class="avatar">
+                            <div class="w-10 h-10 rounded-lg" style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#10b981);display:flex;align-items:center;justify-content:center;">
+                                <span style="color:white;font-weight:700;font-size:14px">Mio</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h1 style="margin:0;font-size:18px;font-weight:700;line-height:1;background:linear-gradient(90deg,#059669,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent">MioChat</h1>
+                        </div>
+                    </div>
+
+                    <!-- Product switcher dropdown -->
+                    <div class="relative mr-2" id="product-switcher" style="position:relative">
+                        <button id="product-switcher-btn" class="btn-ghost btn-sm" aria-haspopup="true" aria-expanded="false" style="display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.02);">
+                          <svg class="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h3l2 3h8a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/></svg>
+                          <span class="text-sm" style="color:var(--muted);font-size:13px">Switch to</span>
+                        </button>
+                        <div id="product-switcher-list" class="hidden" style="display:none;position:absolute;margin-top:8px;left:0;min-width:180px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.6);z-index:40;background:linear-gradient(180deg, rgba(18,21,22,0.99), rgba(10,10,11,0.99));border:1px solid rgba(255,255,255,0.04);">
+                          <a class="block" style="display:block;padding:8px 12px;color:var(--white);font-size:14px;text-decoration:none" href="{{ url_for('core_blueprint.landing') }}">MioHub</a>
+                          <a class="block" style="display:block;padding:8px 12px;color:var(--white);font-size:14px;text-decoration:none" href="{{ url_for('p2_bp.dashboard') }}">MioNotes</a>
+                          <a class="block" style="display:block;padding:8px 12px;color:var(--white);font-size:14px;text-decoration:none" href="{{ url_for('p1_bp.product1') }}">MioCalc</a>
+                          <a class="block" style="display:block;padding:8px 12px;color:var(--white);font-size:14px;text-decoration:none" href="{{ url_for('p4_bp.product4') }}">MioGames</a>
+                        </div>
+                    </div>
+                </div>
+
+                <h2>MioCalc</h2>
+                <p class="lead">Supports paste, nested (), full keyboard input, history. Press Enter to evaluate.</p>
+
+                <input type="text" id="expression" placeholder="Type or click below" autofocus>
+        
+        <div class="button-grid">
+            <!-- Row 1 -->
+            <button class="btn number" onclick="append('1')">1</button>
+            <button class="btn number" onclick="append('2')">2</button>
+            <button class="btn number" onclick="append('3')">3</button>
+            <button class="btn operator" onclick="append('+')">+</button>
+            <button class="btn sci" onclick="append('log(')">log</button>
+
+            <!-- Row 2 -->
+            <button class="btn number" onclick="append('4')">4</button>
+            <button class="btn number" onclick="append('5')">5</button>
+            <button class="btn number" onclick="append('6')">6</button>
+            <button class="btn operator" onclick="append('-')">-</button>
+            <button class="btn sci" onclick="append('ln(')">ln</button>
+
+            <!-- Row 3 -->
+            <button class="btn number" onclick="append('7')">7</button>
+            <button class="btn number" onclick="append('8')">8</button>
+            <button class="btn number" onclick="append('9')">9</button>
+            <button class="btn operator" onclick="append('*')">*</button>
+            <button class="btn sci" onclick="append('*10^')">exp</button>
+
+            <!-- Row 4 -->
+            <button class="btn number" onclick="append('0')">0</button>
+            <button class="btn number" onclick="append('.')">.</button>
+            <button class="btn number" onclick="append(',')">,</button>
+            <button class="btn operator" onclick="append('/')">/</button>
+            <button class="btn operator" onclick="append('%')">mod</button>
+
+            <!-- Row 5 -->
+            <button class="btn brackets" onclick="append('(')">(</button>
+            <button class="btn brackets" onclick="append('|')">|</button>
+            <button class="btn brackets" onclick="append(')')">)</button>
+            <button class="space"></button>
+            <button class="btn fixed" onclick="append('pi')">π</button>
+            
+            <!-- Row 6 -->
+            <button class="btn to_the_power half-width-btn" onclick="append('**2')">x²</button>
+            <button class="btn to_the_power half-width-btn" onclick="append('^')">xʸ</button>
+            <button class="btn to_the_power half-width-btn" onclick="append('**3')">x³</button>
+            <button class="btn to_the_power half-width-btn" onclick="append('sqrt(')">√</button>
+            <button class="btn to_the_power half-width-btn" onclick="append('cbrt(')">3√</button>
+            
+            <button class="space"></button>
+            <button class="space"></button>
+
+            <!-- Row 7 -->
+            <button class="btn finance" onclick="append('profit('); showTooltip('💡 Tip: Use <code>|</code> to separate values. Example: <b>profit(cp|sp)</b>');">profit</button>
+            <button class="btn finance" onclick="append('tax('); showTooltip('💡 Tip: Use <code>|</code> to separate values. Example: <b>tax(amount, rate)</b>');">tax</button>
+            <button class="btn finance" onclick="append('markup('); showTooltip('💡 Tip: Use <code>|</code> to separate values. Example: <b>markup(cp, percent)</b>');">markup</button>
+
+            <button class="space"></button>
+            <button class="space"></button>
+            
+            <!-- Row 8: Actions -->
+            <button class="btn action" onclick="clearInput()">C</button>
+            <button class="btn action" onclick="backspace()">⌫</button>
+            <button class="space"></button>
+            <button class="space"></button>
+            <button class="btn equals" onclick="submitExpression()">=</button>
+        </div>
+
+        <div id="tooltip" style="display: none;">
+            💡 dummy text
+        </div>
+        
+        <h3>Result: <span id="result"></span></h3>
+
+        <h3>History</h3>
+        <form method="post" action="/clear" onsubmit="clearHistoryCookie()">
+            <button type="submit" class="btn_tb_clear">Clear History</button>
+        </form>
+
+        <table id="history-table">
+            <thead>
+                <tr><th>Expression</th><th>Result</th></tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                <tr>
+                    <td>{{ entry.expression }}</td>
+                    <td>{{ entry.result }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Product switcher dropdown behavior
+        (function(){
+            var btn = document.getElementById('product-switcher-btn');
+            var list = document.getElementById('product-switcher-list');
+            if(!btn || !list) return;
+            btn.addEventListener('click', function(e){
+                e.stopPropagation();
+                var shown = list.style.display !== 'none';
+                list.style.display = shown ? 'none' : 'block';
+                btn.setAttribute('aria-expanded', String(!shown));
+            });
+            // prevent clicks inside list from closing it
+            list.addEventListener('click', function(e){ e.stopPropagation(); });
+            // close on outside click or escape
+            document.addEventListener('click', function(){ list.style.display = 'none'; btn.setAttribute('aria-expanded','false'); });
+            document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ list.style.display = 'none'; btn.setAttribute('aria-expanded','false'); } });
+        })();
+
+        // Cookie functions for history persistence
+        function setCookie(name, value, days = 365) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+            document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + expires.toUTCString() + ';path=/';
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + '=';
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+            }
+            return null;
+        }
+
+        function saveHistoryToCookie() {
+            const historyTable = document.querySelector("#history-table tbody");
+            const rows = historyTable.querySelectorAll('tr');
+            const history = [];
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 2) {
+                    history.push({
+                        expression: cells[0].textContent,
+                        result: cells[1].textContent,
+                        timestamp: Date.now()
+                    });
+                }
+            });
+
+            // Keep only the last 100 entries to avoid cookie size limits
+            const recentHistory = history.slice(-100);
+            setCookie('calculator_history', JSON.stringify(recentHistory));
+        }
+
+        function loadHistoryFromCookie() {
+            const historyData = getCookie('calculator_history');
+            if (historyData) {
+                try {
+                    const history = JSON.parse(historyData);
+                    const historyTable = document.querySelector("#history-table tbody");
+
+                    history.forEach(item => {
+                        const newRow = historyTable.insertRow();
+                        const exprCell = newRow.insertCell(0);
+                        const resultCell = newRow.insertCell(1);
+                        exprCell.textContent = item.expression;
+                        resultCell.textContent = item.result;
+                    });
+                } catch (e) {
+                    console.error('Error loading history from cookie:', e);
+                }
+            }
+        }
+
+        function showTooltip(message, timeout = 30000) {
+            const tip = document.getElementById("tooltip");
+            tip.innerHTML = message;
+            tip.style.display = "block";
+
+            setTimeout(() => {
+                tip.style.display = "none";
+            }, timeout);
+        }
+
+        function append(val) {
+            document.getElementById('expression').value += val;
+        }
+
+        function backspace() {
+            const input = document.getElementById('expression');
+            input.value = input.value.slice(0, -1);
+        }
+
+        function clearHistoryCookie() {
+            setCookie('calculator_history', '', -1); // Set cookie to expire immediately
+        }
+
+        function clearInput() {
+            document.getElementById('expression').value = '';
+            document.getElementById('result').innerText = '';
+        }
+
+        function submitExpression() {
+            const inputElem = document.getElementById('expression');
+            const expression = inputElem.value;
+
+            fetch('/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ expression })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = data.result;
+                inputElem.value = data.result;
+
+                const historyTable = document.querySelector("#history-table tbody");
+                const newRow = historyTable.insertRow();
+                const exprCell = newRow.insertCell(0);
+                const resultCell = newRow.insertCell(1);
+                exprCell.textContent = expression;
+                resultCell.textContent = data.result;
+
+                // Save updated history to cookie
+                saveHistoryToCookie();
+            });
+        }
+
+        // Load history when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistoryFromCookie();
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                submitExpression();
+            }
+        });
+
+        // Add ripple effect to buttons
+        document.querySelectorAll('.btn:not(.space)').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+
+                const ripple = document.createElement('div');
+                ripple.style.cssText = `
+                    position: absolute;
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${x}px;
+                    top: ${y}px;
+                    background: rgba(255, 255, 255, 0.3);
+                    border-radius: 50%;
+                    transform: scale(0);
+                    animation: button-ripple 0.6s ease-out;
+                    pointer-events: none;
+                `;
+
+                this.style.position = 'relative';
+                this.style.overflow = 'hidden';
+                this.appendChild(ripple);
+
+                setTimeout(() => {
+                    if (ripple.parentNode) {
+                        ripple.parentNode.removeChild(ripple);
+                    }
+                }, 600);
+            });
+        });
+
+        // Add button ripple animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes button-ripple {
+                0% { transform: scale(0); opacity: 0.5; }
+                100% { transform: scale(2); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+{% endblock %}

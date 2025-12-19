@@ -1,0 +1,56 @@
+<!-- MioNote Card Partial (proprietary_note) -->
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" 
+       data-type="file" 
+       data-id="{{ file.id }}" 
+       data-file-type="proprietary_note"
+       data-file-description="{{ file.description }}" 
+       data-is-public="{{ '1' if file.is_public else '0' }}">
+    
+    <div class="badge-container">
+      {% if file.is_public %}
+        <span class="public-badge">
+          <i class="material-icons" aria-hidden="true">public</i>
+          <span class="visually-hidden">Public</span>
+        </span>
+      {% endif %}
+      <span class="type-badge">MioNote</span>
+    </div>
+    
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title">
+        <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">
+          {{ file.title }}
+        </a>
+      </h5>
+      
+      <!-- Description List (only MioNote has this feature) -->
+      {% if file.metadata_json and file.metadata_json.get('descriptions') and display_prefs.show_previews %}
+      <div class="note-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <div class="d-flex flex-column">
+          {% for key, val in file.metadata_json.get('descriptions', {}).items() %}
+            <div class="d-flex align-items-start gap-2 small">
+              <span class="badge rounded-pill bg-secondary">{{ key }}</span>
+              <span class="text-muted">{{ val }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% elif file.description and display_prefs.show_previews %}
+      <div class="note-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <span class="text-muted">{{ file.description }}</span>
+      </div>
+      {% endif %}
+      
+      <!-- HTML Content Preview -->
+      {% if display_prefs.show_previews and file.content_html %}
+      <div class="card-text overflow-auto hide-scrollbar flex-grow-1 mb-3 content-preview" 
+           style="max-height: 200px;">
+        {{ file.content_html | safe }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

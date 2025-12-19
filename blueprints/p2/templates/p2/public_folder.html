@@ -1,0 +1,117 @@
+{% include "/p2/folder_view_navbar_partial.html" %}
+
+<head>
+  <title>{{ folder.name }} - Public Folder - MioSpace</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+</head>
+
+<div class="min-h-screen bg-gray-900 text-gray-200 pt-28 flex justify-center">
+  <div class="bg-gray-800 rounded-lg p-6 shadow-lg w-full max-w-5xl mx-4">
+    <div class="mb-4 flex items-center justify-between">
+      <a href="javascript:history.back()" class="text-gray-400 hover:text-gray-200 inline-flex items-center">
+        <i class="material-icons mr-1">arrow_back</i>
+        Back
+      </a>
+      {% if current_user.is_authenticated %}
+      <button class="btn btn-copy-public px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-md inline-flex items-center gap-2" data-folder-id="{{ folder.id }}" data-item-type="folder">
+        <i class="material-icons" style="font-size: 18px;">content_copy</i>
+        Copy to My Profile
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl text-white font-semibold">{{ folder.name }}</h1>
+        <p class="text-gray-400 text-sm">By {{ folder.user.username }} • {{ folder.created_at.strftime('%Y-%m-%d') if folder.created_at else '' }}</p>
+      </div>
+      <div>
+        {# Viewing a public folder — all content is public here, so no need for an explicit "Public" tag #}
+      </div>
+    </div>
+
+    {% if folder.description %}
+    <div class="mt-4 text-gray-300">{{ folder.description }}</div>
+    {% endif %}
+
+    <hr class="my-4 border-gray-700">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <h4 class="text-white">Public Subfolders</h4>
+        <ul class="text-gray-300 mt-2 list-disc list-inside">
+          {% for f in subfolders %}
+            <li><a class="text-gray-200" href="{{ url_for('p2_bp.public_view_folder', folder_id=f.id) }}">{{ f.name }}</a></li>
+          {% else %}
+            <li class="text-gray-500">No public subfolders</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-white">Public Notes</h4>
+        <ul class="text-gray-300 mt-2 space-y-2">
+          {% for n in notes %}
+            <li>
+              <a class="font-medium text-white" href="{{ url_for('p2_bp.public_view_note', note_id=n.id) }}">{{ n.title or '(untitled)' }}</a>
+            </li>
+          {% else %}
+            <li class="text-gray-500">No public notes</li>
+          {% endfor %}
+        </ul>
+
+        <h4 class="text-white mt-4">Public Boards</h4>
+        <ul class="text-gray-300 mt-2 list-disc list-inside">
+          {% for b in boards %}
+            <li><a class="text-gray-200" href="{{ url_for('p2_bp.public_view_board', board_id=b.id) }}">{{ b.title }}</a></li>
+          {% else %}
+            <li class="text-gray-500">No public boards</li>
+          {% endfor %}
+        </ul>
+
+        <h4 class="text-white mt-4">Public Files</h4>
+        <ul class="text-gray-300 mt-2 list-disc list-inside">
+          {% for file in files %}
+            <li>
+              <a class="text-gray-200" href="{{ url_for('file.public_file', file_id=file.id) }}">{{ file.title or '(untitled)' }}</a>
+              <span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">{{ file.type }}</span>
+            </li>
+          {% else %}
+            <li class="text-gray-500">No public files</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Copy to profile functionality
+  document.querySelectorAll('.btn-copy-public').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const folderId = btn.dataset.folderId;
+      btn.disabled = true;
+      btn.textContent = 'Copying...';
+      
+      fetch('/folders/public/copy/folder/' + folderId, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.target_folder_id) {
+            window.location.href = '/folders/' + data.target_folder_id;
+          } else {
+            alert('Copy failed: ' + (data.message || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="material-icons" style="font-size: 18px;">content_copy</i> Copy to My Profile';
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Copy failed');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="material-icons" style="font-size: 18px;">content_copy</i> Copy to My Profile';
+        });
+    });
+  });
+</script>

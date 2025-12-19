@@ -1,0 +1,44 @@
+<!-- Diagram Card Partial (diagram) -->
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" 
+       data-type="file" 
+       data-id="{{ file.id }}" 
+       data-file-type="diagram"
+       data-file-description="{{ file.description }}" 
+       data-is-public="{{ '1' if file.is_public else '0' }}">
+    
+    <div class="badge-container">
+      {% if file.is_public %}
+        <span class="public-badge">
+          <i class="material-icons" aria-hidden="true">public</i>
+          <span class="visually-hidden">Public</span>
+        </span>
+      {% endif %}
+      <span class="type-badge">Diagram</span>
+    </div>
+    
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title mb-2">
+        <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">
+          {{ file.title }}
+        </a>
+      </h5>
+      
+      <!-- Description -->
+      {% if file.description and display_prefs.show_previews %}
+      <div class="file-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <span class="text-muted">{{ file.description }}</span>
+      </div>
+      {% endif %}
+      
+      <!-- No preview for diagrams (JSON schema) -->
+      <div class="content-preview">
+        <div class="text-muted small fst-italic">
+          <i class="material-icons" style="font-size: 14px; vertical-align: middle;">account_tree</i>
+          Diagram schema (JSON)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

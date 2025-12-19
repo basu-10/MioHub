@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreamy Green Navigation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dreamyGreen: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    },
+                    backgroundImage: {
+                        'dreamy-gradient': 'linear-gradient(135deg, #059669 0%, #10b981 25%, #34d399 50%, #6ee7b7 75%, #a7f3d0 100%)',
+                        'dreamy-gradient-hover': 'linear-gradient(135deg, #047857 0%, #059669 25%, #10b981 50%, #34d399 75%, #86efac 100%)',
+                    },
+                    backdropBlur: {
+                        'xs': '2px',
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        glow: {
+                            'from': { boxShadow: '0 0 20px #10b981' },
+                            'to': { boxShadow: '0 0 30px #34d399, 0 0 40px #6ee7b7' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+/* CSS Variables for Enterprise Dark Theme (Notion/GitHub Style) */
+:root {
+  /* Primary Dark Theme Colors */
+  --bg-primary: #0d1117;          /* GitHub dark background */
+  --bg-secondary: #161b22;        /* Secondary background */
+  --bg-tertiary: #21262d;         /* Card/surface background */
+  --bg-quaternary: #30363d;       /* Elevated surfaces */
+  
+  /* Text Colors */
+  --text-primary: #f0f6fc;        /* Primary text */
+  --text-secondary: #7d8590;      /* Secondary text */
+  --text-muted: #656d76;          /* Muted text */
+  
+  /* Border Colors */
+  --border-primary: #30363d;      /* Primary borders */
+  --border-secondary: #21262d;    /* Secondary borders */
+  --border-hover: #484f58;        /* Hover state borders */
+  
+  /* Interactive Colors - Only for important actions */
+  --accent-blue: #238be6;         /* Primary accent */
+  --accent-blue-hover: #1f79db;   /* Hover state */
+  --accent-green: #2ea043;        /* Success/positive actions */
+  --accent-green-hover: #2c974b;  /* Success hover */
+  --accent-red: #da3633;          /* Danger/delete actions */
+  --accent-red-hover: #c93c37;    /* Danger hover */
+  
+  /* Subtle Hover States */
+  --hover-overlay: rgba(255, 255, 255, 0.05);
+  --hover-border: rgba(255, 255, 255, 0.1);
+}
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* Glass morphism effect */
+        .glass {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        /* Custom dropdown animation */
+        .dropdown-content {
+            transform: translateY(-10px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .dropdown:hover .dropdown-content {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Mobile menu animation */
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        #menu-toggle:checked ~ .mobile-menu {
+            transform: translateX(0);
+        }
+        
+        /* Floating particles background */
+        .particles::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-primary);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen" style="background: var(--bg-primary);">
+    <nav class="relative particles overflow-hidden">
+        <!-- Background with dark theme -->
+        <div class="absolute inset-0" style="background: var(--bg-secondary);"></div>
+        
+        <!-- Glass morphism overlay -->
+        <div class="absolute inset-0 glass"></div>
+        
+        <!-- Navigation content -->
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <a href="#" class="flex items-center space-x-2 group">
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white border-opacity-30 group-hover:animate-glow transition-all duration-300">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-2xl font-bold text-white drop-shadow-lg group-hover:text-dreamyGreen-100 transition-colors duration-300">
+                        MioHub
+                    </span>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <!-- Home -->
+                        <a href="#" class="text-white hover:text-dreamyGreen-100 px-4 py-2 rounded-full transition-all duration-300 hover:bg-white hover:bg-opacity-20 hover:backdrop-blur-sm border border-transparent hover:border-white hover:border-opacity-30 font-medium">
+                            Home
+                        </a>
+
+                        <!-- Dropdown -->
+                        <div class="relative dropdown group">
+                            <button class="text-white hover:text-dreamyGreen-100 px-4 py-2 rounded-full transition-all duration-300 hover:bg-white hover:bg-opacity-20 hover:backdrop-blur-sm border border-transparent hover:border-white hover:border-opacity-30 font-medium flex items-center space-x-1">
+                                <span>Switch To</span>
+                                <svg class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <!-- Dropdown Content -->
+                            <div class="dropdown-content absolute top-full left-0 mt-2 w-56 bg-white bg-opacity-95 backdrop-blur-lg rounded-2xl shadow-xl border border-white border-opacity-30 overflow-hidden">
+                                <div class="py-2">
+                                    <a href="#" class="block px-6 py-3 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-900 transition-all duration-200 font-medium">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                                </svg>
+                                            </div>
+                                            <span>MioCalc</span>
+                                        </div>
+                                    </a>
+                                    <a href="#" class="block px-6 py-3 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-900 transition-all duration-200 font-medium">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                            </div>
+                                            <span>MioSpace</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- About -->
+                        <a href="#" class="text-white hover:text-dreamyGreen-100 px-4 py-2 rounded-full transition-all duration-300 hover:bg-white hover:bg-opacity-20 hover:backdrop-blur-sm border border-transparent hover:border-white hover:border-opacity-30 font-medium">
+                            About
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <label for="menu-toggle" class="text-white hover:text-dreamyGreen-100 cursor-pointer p-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </label>
+                    <input type="checkbox" id="menu-toggle" class="hidden">
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <input type="checkbox" id="menu-toggle-mobile" class="hidden">
+        <div class="mobile-menu fixed top-0 left-0 h-full w-full bg-dreamy-gradient bg-opacity-95 backdrop-blur-lg z-20 md:hidden">
+            <div class="flex flex-col h-full">
+                <!-- Mobile header -->
+                <div class="flex items-center justify-between p-4 border-b border-white border-opacity-20">
+                    <span class="text-2xl font-bold text-white">MioHub</span>
+                    <label for="menu-toggle" class="text-white cursor-pointer p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </label>
+                </div>
+
+                <!-- Mobile menu items -->
+                <div class="flex-1 px-4 py-6 space-y-4">
+                    <a href="#" class="block text-white text-xl py-4 px-4 rounded-xl hover:bg-white hover:bg-opacity-20 transition-all duration-300 font-medium">
+                        Home
+                    </a>
+                    
+                    <div class="space-y-2">
+                        <div class="text-white text-xl py-4 px-4 font-medium">Switch To</div>
+                        <a href="#" class="block text-white text-lg py-3 px-8 ml-4 rounded-xl hover:bg-white hover:bg-opacity-20 transition-all duration-300">
+                            MioCalc
+                        </a>
+                        <a href="#" class="block text-white text-lg py-3 px-8 ml-4 rounded-xl hover:bg-white hover:bg-opacity-20 transition-all duration-300">
+                            MioSpace
+                        </a>
+                    </div>
+                    
+                    <a href="#" class="block text-white text-xl py-4 px-4 rounded-xl hover:bg-white hover:bg-opacity-20 transition-all duration-300 font-medium">
+                        About
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-0">
+        <div class="max-w-4xl mx-auto px-4 py-16 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold text-emerald-800 mb-6">
+                Welcome to MioHub
+            </h1>
+            <p class="text-xl text-emerald-600 mb-8 max-w-2xl mx-auto">
+                Experience the magic of our dreamy green navigation bar with glass morphism effects, smooth animations, and beautiful gradients.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+                <div class="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl p-8 border border-emerald-200">
+                    <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-emerald-800 mb-4">MioCalc</h3>
+                    <p class="text-emerald-600">Advanced calculations with a beautiful interface</p>
+                </div>
+                <div class="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl p-8 border border-emerald-200">
+                    <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-emerald-800 mb-4">MioSpace</h3>
+                    <p class="text-emerald-600">Keep your thoughts organized with MioWord, MioBoard & MioWork</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

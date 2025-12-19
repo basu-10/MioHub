@@ -1,0 +1,26 @@
+{% extends "core/base.html" %}
+
+{% block title %}MioGames - Coming Soon{% endblock %}
+
+{% block content %}
+<style>
+    /* Carbon Teal theme variables (copied from p2 register.html) */
+    :root{
+        --bg:#0a0a0b;
+        --card:#121516;
+        --muted:#9aa8ad;
+        --accent:#14b8a6;
+        --accent-strong:#0d9488;
+        --white:#ECFFFF;
+        --radius:10px;
+    }
+    body { background: linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%); color:var(--white); }
+    .p4-heading { color:var(--accent); }
+    .p4-sub { color:var(--muted); }
+</style>
+
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold text-center mb-8 p4-heading">MioGames</h1>
+    <p class="text-center text-lg p4-sub">This is the scaffold for MioGames. Coming soon!</p>
+</div>
+{% endblock %}

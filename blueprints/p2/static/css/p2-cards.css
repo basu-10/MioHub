@@ -1,0 +1,166 @@
+/* Modernized card styling for p2 public profile */
+
+/* Variables for quick theming */
+:root{
+  --card-bg-0: rgba(6,22,16,0.85);
+  --card-bg-1: rgba(3,18,12,0.9);
+  --muted: #9aa4ad;
+  --accent: #38bdf8; /* sky-400 */
+}
+
+/* Container tweaks: reduce spacing so more cards fit */
+#public-content-grid {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Card sizing and visual compactness */
+.item-card {
+  border-radius: 12px;
+  transition: transform 180ms cubic-bezier(.2,.9,.2,1), box-shadow 180ms ease;
+  cursor: pointer;
+  overflow: hidden;
+  min-height: 120px;
+  background: linear-gradient(180deg, var(--card-bg-0), var(--card-bg-1));
+  border: 1px solid rgba(255,255,255,0.03);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-card:hover {
+  transform: translateY(-6px) scale(1.002);
+  box-shadow: 0 14px 40px rgba(2,6,23,0.5);
+}
+
+/* Compact body area inside the card */
+.item-card .item-body {
+  padding: 0.7rem 0.8rem;
+  /* allow the body to take available vertical space so footer can stick to bottom */
+  flex: 1 1 auto;
+  min-height: 0; /* required so overflow:auto works inside flex children */
+  overflow: auto;
+  color: #dbeafe;
+}
+
+.item-card .card-title {
+  font-size: 1.02rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.15;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-card p.text-muted.small,
+.item-card .small {
+  font-size: 0.8rem;
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Footer compactness and layout */
+.item-card .card-footer {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+
+/* Public badge */
+.item-card .public-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255,255,255,0.06);
+  color: #e6edf3;
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(4px);
+}
+
+/* Make grid gutters a touch narrower so cards feel denser */
+#public-content-grid > div {
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+}
+
+/* Button styles (small, modern) to cover projects that don't include bootstrap) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1;
+  text-decoration: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #e6edf3;
+  cursor: pointer;
+}
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-sm { padding: 5px 8px; font-size: 0.8rem; border-radius: 6px; }
+.btn-outline-primary { border-color: rgba(56,189,248,0.18); color: var(--accent); }
+.btn-outline-primary:hover { background: rgba(56,189,248,0.06); }
+.dropdown-menu input.btn-check:checked + .btn-outline-primary,
+.dropdown-menu input.btn-check:checked + .btn-outline-primary:focus,
+.dropdown-menu input.btn-check:checked + .btn-outline-primary:hover,
+.dropdown-menu input.btn-check:active + .btn-outline-primary,
+.dropdown-menu input.btn-check:focus + .btn-outline-primary {
+  background: rgba(56,189,248,0.18) !important;
+  border-color: rgba(56,189,248,0.28) !important;
+  color: white !important;
+  box-shadow: 0 6px 18px rgba(56,189,248,0.08);
+}
+
+.dropdown-menu input.btn-check:checked + .btn-outline-primary .material-icons {
+  color: white !important;
+}
+
+/* Improve dropdown text contrast */
+.dropdown-menu {
+  color: var(--white) !important; /* Primary text color: explicit use of --white to ensure high contrast */
+}
+
+.dropdown-menu .dropdown-header,
+.dropdown-menu .form-label,
+.dropdown-menu label.btn {
+  color: var(--white) !important;
+}
+
+.dropdown-menu .btn-outline-primary {
+  color: var(--white) !important; /* make the label text white on dark backgrounds */
+  border-color: var(--accent-green) !important; /* keep accent border */
+  background: transparent !important;
+}
+
+.dropdown-menu .form-check-label,
+.dropdown-menu .muted,
+.dropdown-menu .text-muted {
+  color: var(--white) !important; /* make helper text readable in dropdowns */
+}
+
+.dropdown-menu .material-icons {
+  color: var(--white) !important;
+}
+.btn-outline-success { border-color: rgba(34,197,94,0.14); color: #86efac; }
+.btn-outline-success:hover { background: rgba(34,197,94,0.05); }
+.btn-copy { background: transparent; }
+
+/* Slightly smaller on very small screens */
+@media (max-width: 576px) {
+  .item-card { min-height: 100px; }
+  .item-card .item-body { padding: 0.5rem; }
+  .item-card .card-title { font-size: 0.98rem; }
+}

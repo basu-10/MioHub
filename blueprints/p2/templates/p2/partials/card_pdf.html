@@ -1,0 +1,54 @@
+<!-- PDF Card Partial (pdf) -->
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" 
+       data-type="file" 
+       data-id="{{ file.id }}" 
+       data-file-type="pdf"
+       data-file-description="{{ file.description }}" 
+       data-is-public="{{ '1' if file.is_public else '0' }}">
+    
+    <div class="badge-container">
+      {% if file.is_public %}
+        <span class="public-badge">
+          <i class="material-icons" aria-hidden="true">public</i>
+          <span class="visually-hidden">Public</span>
+        </span>
+      {% endif %}
+      <span class="type-badge">PDF</span>
+    </div>
+    
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title mb-2">
+        <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">
+          {{ file.title }}
+        </a>
+      </h5>
+      
+      <!-- Description -->
+      {% if file.description and display_prefs.show_previews %}
+      <div class="file-description content-preview mb-2">
+        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+        <span class="text-muted">{{ file.description }}</span>
+      </div>
+      {% endif %}
+      
+      <!-- File Size Display -->
+      <div class="content-preview">
+        <div class="small text-muted">
+          <i class="material-icons" style="font-size: 14px; vertical-align: middle;">picture_as_pdf</i>
+          PDF Document ({{ (file.get_content_size() / 1024) | round(2) }} KB)
+        </div>
+      </div>
+      
+      <!-- Download Link -->
+      <div class="mt-auto pt-2">
+        <a href="{{ url_for('file.download_file', file_id=file.id) }}" 
+           class="btn btn-sm btn-outline-primary" 
+           onclick="event.stopPropagation();">
+          <i class="material-icons" style="font-size: 14px; vertical-align: middle;">download</i>
+          Download
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

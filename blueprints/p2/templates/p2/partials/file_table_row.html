@@ -1,0 +1,90 @@
+<!-- Unified File Table Row Partial - Handles ALL file types (note, board, and all file types) -->
+<tr class="item-row" 
+    data-type="file" 
+    data-id="{{ file.id }}" 
+    data-file-type="{{ file.type }}" 
+    data-file-description="{{ file.description }}" 
+    data-is-public="{{ '1' if file.is_public else '0' }}" 
+    tabindex="0">
+  
+  <!-- Icon Column -->
+  <td>
+    <i class="material-icons" style="color: var(--accent);">
+      {% if file.type == 'proprietary_note' %}description
+      {% elif file.type == 'proprietary_whiteboard' %}dashboard
+      {% elif file.type == 'proprietary_blocks' %}auto_stories
+      {% elif file.type == 'proprietary_infinite_whiteboard' %}grid_on
+      {% elif file.type == 'proprietary_graph' %}account_tree
+      {% elif file.type == 'markdown' %}text_fields
+      {% elif file.type == 'code' %}code
+      {% elif file.type == 'todo' %}checklist
+      {% elif file.type == 'diagram' %}account_tree
+      {% elif file.type == 'table' %}table_chart
+      {% elif file.type == 'blocks' %}view_week
+      {% elif file.type == 'pdf' %}picture_as_pdf
+      {% else %}insert_drive_file
+      {% endif %}
+    </i>
+  </td>
+  
+  <!-- Title Column (with type badge, public badge, and description) -->
+  <td>
+    <a href="{{ url_for('file.view_file', file_id=file.id) }}" 
+       class="text-decoration-none fw-semibold item-link">
+      {{ file.title }}
+    </a>
+    
+    <!-- Type Badge -->
+    <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">
+      {% if file.type == 'proprietary_note' %}MioNote
+      {% elif file.type == 'proprietary_whiteboard' %}MioDraw
+      {% elif file.type == 'proprietary_blocks' %}MioBook
+      {% elif file.type == 'proprietary_infinite_whiteboard' %}Infinite Canvas
+      {% elif file.type == 'proprietary_graph' %}Graph
+      {% else %}{{ file.type | title }}
+      {% endif %}
+    </span>
+    
+    <!-- Public Badge -->
+    {% if file.is_public %}
+      <span class="badge bg-success ms-2" style="font-size: 0.7rem;">
+        <i class="material-icons" style="font-size: 12px; vertical-align: middle;">public</i> Public
+      </span>
+    {% endif %}
+    
+    <!-- Language Badge for Code Files -->
+    {% if file.type == 'code' and file.metadata_json and file.metadata_json.get('language') %}
+      <span class="badge bg-info ms-2" style="font-size: 0.7rem;">
+        {{ file.metadata_json.get('language') | title }}
+      </span>
+    {% endif %}
+    
+    <!-- Description (shown for all types) -->
+    {% if file.description %}
+      <div class="text-muted small mt-1">{{ file.description }}</div>
+    {% endif %}
+  </td>
+  
+  <!-- Size Column -->
+  <td class="text-muted small">
+    {{ (file.get_content_size() / 1024) | round(2) }} KB
+  </td>
+  
+  <!-- Created Column -->
+  <td class="text-muted small">
+    {{ file.created_at.strftime('%Y-%m-%d %H:%M') if file.created_at else 'N/A' }}
+  </td>
+  
+  <!-- Modified Column -->
+  <td class="text-muted small">
+    {{ file.last_modified.strftime('%Y-%m-%d %H:%M') if file.last_modified else 'N/A' }}
+  </td>
+  
+  <!-- Actions Column -->
+  <td>
+    <button class="btn btn-sm btn-outline-primary" 
+            onclick="event.stopPropagation(); window.location.href='{{ url_for('file.view_file', file_id=file.id) }}'">
+      <i class="material-icons" style="font-size: 14px;">edit</i>
+    </button>
+  </td>
+</tr>

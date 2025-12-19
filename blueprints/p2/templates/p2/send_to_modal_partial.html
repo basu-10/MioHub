@@ -1,0 +1,262 @@
+<!-- send_to_modal_partial.html -->
+<div class="modal fade" id="sendToModal" tabindex="-1" aria-labelledby="sendToModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="sendToModalLabel">Send to</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="sendToModalClose"></button>
+      </div>
+      <div class="modal-body">
+        <p id="sendToModalDescription">Select a pinned user to send this item to:</p>
+        <div id="sendToPinnedUsers" class="d-flex flex-wrap gap-2">
+          {% if pinned_users %}
+            {% for pu in pinned_users %}
+              <button type="button" class="btn btn-outline-primary btn-sm send-to-user-btn" data-user-id="{{ pu.id }}">{{ pu.username }}</button>
+            {% endfor %}
+          {% else %}
+            <div class="text-muted small">No pinned users available.</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="sendToModalCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+<br>
+<script>
+(function(){
+  // Attach delegated handler for send buttons
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('sendToModal');
+    if (!modal) return;
+    const descriptionEl = document.getElementById('sendToModalDescription');
+
+    function resetModalDatasets() {
+      modal.dataset.selectedId = '';
+      modal.dataset.selectedType = '';
+      modal.dataset.batchMode = 'false';
+      modal.dataset.batchItems = '[]';
+    }
+
+    function openSendToModalWithItems(items, options = {}) {
+      const normalized = (Array.isArray(items) ? items : [items])
+        .filter(Boolean)
+        .map(entry => ({ type: entry.type, id: entry.id }))
+        .filter(entry => entry.type && entry.id !== undefined && entry.id !== null);
+
+      if (!normalized.length) {
+        console.warn('[SEND MODAL] No items provided to openSendToModalWithItems');
+        return false;
+      }
+
+      const mode = options.mode === 'batch'
+        ? 'batch'
+        : (options.mode === 'single' ? 'single' : (normalized.length > 1 ? 'batch' : 'single'));
+
+      resetModalDatasets();
+
+      if (mode === 'batch') {
+        modal.dataset.batchMode = 'true';
+        modal.dataset.batchItems = JSON.stringify(normalized);
+      } else {
+        modal.dataset.selectedType = normalized[0].type;
+        modal.dataset.selectedId = normalized[0].id;
+      }
+
+      if (descriptionEl) {
+        descriptionEl.textContent = options.description || 'Select a pinned user to send this item to:';
+      }
+
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+      modal.style.zIndex = '3000';
+
+      try {
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+      } catch (err) {
+        try {
+          const bs = new bootstrap.Modal(modal);
+          bs.show();
+        } catch (e) {
+          modal.classList.add('show');
+          modal.style.display = 'block';
+        }
+      }
+
+      return true;
+    }
+
+    window.openSendToModalWithItems = openSendToModalWithItems;
+
+    function hideModal() {
+      try {
+        var existing = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+        existing.hide();
+      } catch(e) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+      }
+    }
+
+    function setTelemetryActive(message) {
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setActive(message || 'Copying...');
+      }
+    }
+
+    function setTelemetryIdle(message) {
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle(message);
+      }
+    }
+
+    document.querySelectorAll('.send-to-user-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        const recipientId = btn.dataset.userId;
+        const recipientName = btn.textContent.trim();
+        
+        // Check if we're in batch mode or single mode
+        const batchMode = modal.dataset.batchMode === 'true';
+        
+        if (batchMode) {
+          // Batch mode: send multiple items
+          let batchItems = [];
+          try {
+            batchItems = JSON.parse(modal.dataset.batchItems || '[]');
+          } catch(e) {
+            console.error('Failed to parse batch items:', e);
+            alert('Failed to parse selected items.');
+            return;
+          }
+          
+          if (!batchItems || batchItems.length === 0) {
+            alert('No items selected to send.');
+            return;
+          }
+          
+          const payload = { 
+            items: batchItems,
+            recipient_id: recipientId 
+          };
+          
+          // Append the modal to body (in case it's placed inside other stacking contexts)
+          if (modal.parentElement !== document.body) document.body.appendChild(modal);
+          // Ensure the modal has a sufficiently high z-index to appear above UI elements like action bar
+          modal.style.zIndex = '3000';
+          hideModal();
+
+          // Trigger TelemetryPanel active state
+          const itemCount = batchItems.length;
+          setTelemetryActive(`Copying ${itemCount} item${itemCount > 1 ? 's' : ''} to ${recipientName || 'user'}...`);
+
+          fetch('/folders/batch_send_to', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload) 
+          })
+          .then(r => r.json())
+          .then(resp => {
+            if (resp && resp.success) {
+              setTelemetryIdle(`Transfer complete: ${itemCount} item${itemCount > 1 ? 's' : ''} sent`);
+              return;
+            }
+
+            let errorMessage = 'Batch send failed';
+            if (resp && resp.message) {
+              errorMessage = resp.message;
+            }
+            if (resp && typeof resp.available_space !== 'undefined' && typeof resp.required_space !== 'undefined') {
+              const availMB = Math.round(resp.available_space / 1024 / 1024 * 100) / 100;
+              const reqMB = Math.round(resp.required_space / 1024 / 1024 * 100) / 100;
+              errorMessage += ` (Avail ${availMB} MB / Need ${reqMB} MB)`;
+            }
+            console.error(errorMessage);
+            setTelemetryIdle(errorMessage);
+          }).catch(err => {
+            console.error(err);
+            setTelemetryIdle('Batch send failed: network error');
+          });
+          
+        } else {
+          // Single mode: send one item
+          const selectedType = modal.dataset.selectedType || window.selected && window.selected.type;
+          const selectedId = modal.dataset.selectedId || window.selected && window.selected.id;
+          if (!selectedType || !selectedId || !recipientId) { 
+            alert('Missing data to send.'); 
+            return; 
+          }
+          
+          const payload = { 
+            item_type: selectedType, 
+            item_id: selectedId, 
+            recipient_id: recipientId 
+          };
+          
+          // Append the modal to body (in case it's placed inside other stacking contexts)
+          if (modal.parentElement !== document.body) document.body.appendChild(modal);
+          // Ensure the modal has a sufficiently high z-index to appear above UI elements like action bar
+          modal.style.zIndex = '3000';
+          hideModal();
+
+          // Trigger TelemetryPanel active state
+          const typeLabel = selectedType ? selectedType.charAt(0).toUpperCase() + selectedType.slice(1) : 'Item';
+          setTelemetryActive(`Copying ${typeLabel} to ${recipientName || 'user'}...`);
+
+          fetch('/folders/send_to', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload) 
+          })
+          .then(r => r.json())
+          .then(resp => {
+            if (resp && resp.success) {
+              setTelemetryIdle('Transfer complete');
+              return;
+            }
+
+            let errorMessage = 'Send failed';
+            if (resp && resp.message) {
+              errorMessage = resp.message;
+            }
+            if (resp && typeof resp.available_space !== 'undefined' && typeof resp.required_space !== 'undefined') {
+              const availMB = Math.round(resp.available_space / 1024 / 1024 * 100) / 100;
+              const reqMB = Math.round(resp.required_space / 1024 / 1024 * 100) / 100;
+              errorMessage += ` (Avail ${availMB} MB / Need ${reqMB} MB)`;
+            }
+            console.error(errorMessage);
+            setTelemetryIdle(errorMessage);
+          }).catch(err => {
+            console.error(err);
+            setTelemetryIdle('Send failed: network error');
+          });
+        }
+      });
+    });
+
+    // When close/cancel clicked, clear modal data - use event delegation and bootstrap modal if available
+    try {
+      const bsModal = new bootstrap.Modal(modal);
+      modal.addEventListener('hidden.bs.modal', function () { 
+        resetModalDatasets();
+        if (!modal.classList.contains('show') && window.selected && window.selected.card) { 
+          window.selected.card.classList.remove('selected-item'); 
+          window.selected = null; 
+        } 
+      });
+    } catch (err) {
+      const closeBtn = document.getElementById('sendToModalClose');
+      const cancelBtn = document.getElementById('sendToModalCancel');
+      if (closeBtn) closeBtn.addEventListener('click', function(){ 
+        resetModalDatasets();
+      });
+      if (cancelBtn) cancelBtn.addEventListener('click', function(){ 
+        resetModalDatasets();
+      });
+    }
+  });
+})();
+</script>

@@ -1,0 +1,191 @@
+<!-- Description stub partial: moved from mionote_v2.html -->
+<div class="mb-3 description-section">
+  <label class="form-label">Description stubs</label>
+  <div class="d-flex align-items-start gap-2" id="descriptionRow">
+      <div id="descriptionFields" class="description-grid" style="flex:1"></div>
+  </div>
+  <small class="form-text text-muted">Add a brief description to help identify this note. You can create multiple description stubs for saving urls, tags, etc.</small>
+</div>
+<!-- Hidden combined description JSON (serialized before submit / autosave) -->
+<input type="hidden" name="description" id="description" value="{{ (note.metadata_json.description if note and note.metadata_json and note.metadata_json.description else '') }}">
+
+<script>
+/* Description stub helper functions and initialization. These are executed after the main document ready
+   (the main template exposes scheduleAutosave to window so these functions can call it). */
+document.addEventListener('DOMContentLoaded', function () {
+  // defer to ensure the editor code has been loaded and scheduleAutosave is available
+  function safeCallSchedule() {
+    if (window.scheduleAutosave) window.scheduleAutosave();
+  }
+
+  function createDescriptionStub(value = '') {
+    const container = document.getElementById('descriptionFields');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'description-stub d-flex align-items-start';
+    // Layout sizes are controlled via CSS variables and grid, so avoid inline width overrides
+
+    const numberBadge = document.createElement('span');
+    numberBadge.className = 'badge bg-secondary me-2 description-number-badge';
+    // Badge size controlled by CSS (.description-number-badge)
+    numberBadge.style.display = 'inline-flex';
+    numberBadge.style.alignItems = 'center';
+    numberBadge.style.justifyContent = 'center';
+    numberBadge.style.fontSize = '0.8rem';
+    numberBadge.textContent = '1';
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'form-control description-item';
+    textarea.rows = 2;
+    textarea.maxLength = 500;
+    textarea.style.resize = 'vertical';
+    textarea.value = value || '';
+    textarea.placeholder = 'Description (optional)';
+    textarea.addEventListener('input', safeCallSchedule);
+
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-outline-danger ms-2 remove-description-btn';
+    // Remove button size controlled by CSS (.remove-description-btn)
+    removeBtn.title = 'Remove this description';
+    removeBtn.textContent = '×';
+    removeBtn.addEventListener('click', function() {
+      wrapper.remove();
+      updateDescriptionStubNumbers();
+      setCombinedDescriptionHidden();
+      safeCallSchedule();
+    });
+
+    wrapper.appendChild(numberBadge);
+    wrapper.appendChild(textarea);
+    wrapper.appendChild(removeBtn);
+    // Insert new stub before the addCard so the add button remains at the end
+    const addCardEl = document.getElementById('add-description-card');
+    if (addCardEl && addCardEl.parentElement === container) {
+      container.insertBefore(wrapper, addCardEl);
+    } else {
+      container.appendChild(wrapper);
+    }
+    updateDescriptionStubNumbers();
+    return textarea;
+  }
+
+  function updateDescriptionStubNumbers() {
+    const badges = document.querySelectorAll('.description-number-badge');
+    badges.forEach((badge, idx) => {
+      badge.textContent = String(idx + 1);
+    });
+    const maxIdx = Math.max(1, badges.length);
+    // Compute base badge size from CSS variable or computed style, fallback to 26
+    const baseSizeStr = getComputedStyle(document.documentElement).getPropertyValue('--desc-badge-size') || getComputedStyle(badges[0] || document.body).width;
+    let baseSize = 26;
+    try {
+      baseSize = Math.max(12, Math.round(parseFloat(baseSizeStr)));
+    } catch (e) { baseSize = 26; }
+    // Add a small offset for multi-digit numbers
+    const width = maxIdx > 99 ? baseSize + 8 : (maxIdx > 9 ? baseSize + 2 : baseSize);
+    badges.forEach(b => {
+      b.style.width = width + 'px';
+      b.style.height = width + 'px';
+      b.style.lineHeight = width + 'px';
+    });
+  }
+
+  function getAllDescriptions() {
+    const items = document.querySelectorAll('.description-item');
+    const out = {};
+    let i = 1;
+    items.forEach(it => {
+      out[String(i)] = it.value.trim();
+      i++;
+    });
+    return out;
+  }
+
+  function setCombinedDescriptionHidden() {
+    const obj = getAllDescriptions();
+    document.getElementById('description').value = JSON.stringify(obj);
+  }
+
+  // Create add card if missing
+  const container = document.getElementById('descriptionFields');
+  let addCard = document.getElementById('add-description-card');
+  // Create a hidden grid-based add card in case it is required for layout or fallback
+  if (!addCard) {
+    addCard = document.createElement('div');
+    addCard.id = 'add-description-card';
+    addCard.className = 'add-description-card sticky';
+    addCard.innerHTML = '<button type="button" id="addDescriptionBtn" class="btn btn-outline-secondary" title="Add description field">+</button>';
+    // Hide the grid add card; we'll use a small header button instead
+    addCard.style.display = 'none';
+    container.appendChild(addCard);
+  }
+  // Create header add button (small & sticky) near the section heading if missing
+  const section = container.closest('.description-section') || container.parentElement;
+  let headerAddBtn = section ? document.getElementById('addDescriptionHeaderBtn') : null;
+  if (!headerAddBtn && section) {
+    headerAddBtn = document.createElement('button');
+    headerAddBtn.id = 'addDescriptionHeaderBtn';
+    headerAddBtn.type = 'button';
+    headerAddBtn.className = 'btn btn-outline-secondary small-add-description-btn';
+    headerAddBtn.title = 'Add description field';
+    headerAddBtn.innerHTML = '<span class="material-icons">add</span>';
+    section.appendChild(headerAddBtn);
+    headerAddBtn.setAttribute('aria-label', 'Add description field');
+    headerAddBtn.addEventListener('click', function() {
+      const t = createDescriptionStub('');
+      setCombinedDescriptionHidden();
+      safeCallSchedule();
+      if (t && typeof t.focus === 'function') t.focus();
+      setTimeout(() => { const lastStub = container.querySelector('.description-stub:last-child'); if (lastStub) lastStub.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 50);
+    });
+  }
+
+  // Initialize description fields from the hidden input value
+  (function initializeDescriptionStubs() {
+    const descEl = document.getElementById('description');
+    const initialRaw = descEl ? descEl.value : null;
+    try {
+      let parsed = null;
+      if (initialRaw === null) {
+        parsed = null;
+      } else if (typeof initialRaw === 'object') {
+        parsed = initialRaw;
+      } else if (typeof initialRaw === 'string') {
+        const txt = initialRaw.trim();
+        if (txt.startsWith('{') || txt.startsWith('[')) {
+          try {
+            parsed = JSON.parse(initialRaw);
+          } catch (e) {
+            parsed = null;
+          }
+        } else {
+          parsed = null;
+        }
+      }
+      if (!parsed) {
+        createDescriptionStub('');
+      } else {
+        const keys = Object.keys(parsed).sort((a,b) => Number(a) - Number(b));
+        if (keys.length === 0) {
+          createDescriptionStub('');
+        } else {
+          keys.forEach(k => createDescriptionStub(parsed[k] || ''));
+        }
+      }
+      setCombinedDescriptionHidden();
+      // keep lastSavedDescription in sync if present
+      if (window.lastSavedDescription === undefined) window.lastSavedDescription = document.getElementById('description').value || '';
+    } catch (err) {
+      console.error('Failed to initialize description stubs', err);
+      createDescriptionStub('');
+      setCombinedDescriptionHidden();
+    }
+  })();
+
+  // Expose helper functions to window for main script to use (if needed)
+  window.createDescriptionStub = createDescriptionStub;
+  window.getAllDescriptions = getAllDescriptions;
+  window.setCombinedDescriptionHidden = setCombinedDescriptionHidden;
+});
+</script>

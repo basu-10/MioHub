@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ document.title if document else 'Edit MioBook' }} - MioBook Editor</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'graphite': {
+                            50: '#f6f6f7',
+                            100: '#e1e3e5',
+                            200: '#c3c6cb',
+                            300: '#9fa3ab',
+                            400: '#7a7f8a',
+                            500: '#5f646f',
+                            600: '#4a4d56',
+                            700: '#3d4047',
+                            800: '#2a2c31',
+                            900: '#1a1b1f',
+                            950: '#0d0e10',
+                        },
+                        'teal': {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        'dirty-yellow': {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            200: '#fef08a',
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                            800: '#854d0e',
+                            900: '#713f12',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Toast UI Editor -->
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css" />
+    
+    <!-- Monaco Editor -->
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css">
+    
+    <style>
+        body {
+            background: #0d0e10;
+            color: #e1e3e5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+        }
+        
+        /* Block Styles */
+        .block-item {
+            background: #1a1b1f;
+            border: 1px solid #2a2c31;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .block-item:hover {
+            border-color: #3d4047;
+        }
+        
+        .block-header {
+            background: #2a2c31;
+            border-bottom: 1px solid #3d4047;
+            padding: 8px 12px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .block-type-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #c3c6cb;
+            white-space: nowrap;
+        }
+        
+        .block-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin-left: auto;
+        }
+        
+        .control-btn {
+            background: transparent;
+            border: none;
+            color: #7a7f8a;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #c3c6cb;
+        }
+        
+        /* Insert Separator Line */
+        .insert-separator {
+            position: relative;
+            height: 2px;
+            margin: 16px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .insert-separator-line {
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #3d4047 20%, #3d4047 80%, transparent);
+            opacity: 0.3;
+            transition: all 0.2s ease;
+        }
+        
+        .insert-separator:hover .insert-separator-line {
+            opacity: 1;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #14b8a6 20%, #14b8a6 80%, transparent);
+        }
+        
+        .insert-separator-trigger {
+            position: relative;
+            background: #1a1b1f;
+            border: 1px solid #3d4047;
+            color: #7a7f8a;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .insert-separator:hover .insert-separator-trigger {
+            opacity: 1;
+            border-color: #14b8a6;
+            color: #14b8a6;
+            background: #2a2c31;
+        }
+        
+        .insert-separator-trigger:hover {
+            background: rgba(20, 184, 166, 0.1);
+            transform: scale(1.05);
+        }
+        
+        .drag-handle {
+            cursor: move;
+            color: #5f646f;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .drag-handle:hover {
+            color: #14b8a6;
+            background: rgba(20, 184, 166, 0.1);
+        }
+        
+        .block-content {
+            padding: 20px;
+        }
+
+        /* Progressive init (avoid blank page while heavy editors boot) */
+        .block-item[data-init-state="pending"] .block-content {
+            position: relative;
+            min-height: 120px;
+        }
+
+        .block-item[data-init-state="pending"] .block-content::before {
+            content: "Loading editor…";
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            color: #7a7f8a;
+            font-size: 13px;
+            pointer-events: none;
+        }
+        
+        .block-title-input {
+            flex: 1;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #e1e3e5;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 150px;
+        }
+        
+        .block-title-input:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: #3d4047;
+        }
+        
+        .block-title-input:focus {
+            outline: none;
+            background: #1a1b1f;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+        }
+        
+        .block-title-input::placeholder {
+            color: #5f646f;
+        }
+        
+        /* Todo Styles */
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: #0d0e10;
+            border: 1px solid #2a2c31;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .todo-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        
+        .todo-text {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #e1e3e5;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .todo-text::placeholder {
+            color: #5f646f;
+        }
+        
+        .todo-delete {
+            background: transparent;
+            border: none;
+            color: #7a7f8a;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        
+        .todo-delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+        
+        .add-todo-btn {
+            margin-top: 12px;
+            width: 100%;
+            padding: 10px;
+            background: #2a2c31;
+            border: 1px dashed #3d4047;
+            color: #7a7f8a;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .add-todo-btn:hover {
+            border-color: #14b8a6;
+            color: #14b8a6;
+            background: rgba(20, 184, 166, 0.05);
+        }
+        
+        /* Language Selector */
+        .language-selector {
+            background: rgba(13, 14, 16, 0.8);
+            border: 1px solid #3d4047;
+            color: #c3c6cb;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .language-selector:hover {
+            border-color: #5f646f;
+            background: #1a1b1f;
+        }
+        
+        .language-selector:focus {
+            outline: none;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+        }
+        
+        /* Editor Wrappers */
+        .markdown-editor-wrapper,
+        .code-editor-wrapper,
+        .editorjs-wrapper {
+            border: 1px solid #2a2c31;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .monaco-editor {
+            min-height: 300px;
+        }
+        
+        /* Toast UI Editor Dark Theme Override */
+        .toastui-editor-defaultUI {
+            border: none !important;
+        }
+        
+        .toastui-editor-defaultUI .ProseMirror {
+            background: #1a1b1f !important;
+            color: #e1e3e5 !important;
+        }
+        
+        /* Add Block Menu */
+        .add-block-menu {
+            position: relative;
+        }
+        
+        .add-block-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 8px;
+            background: #2a2c31;
+            border: 1px solid #3d4047;
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 200px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .add-block-dropdown.active {
+            display: block;
+        }
+        
+        /* Insert Block Menu */
+        .insert-block-menu {
+            position: fixed;
+            background: #2a2c31;
+            border: 1px solid #3d4047;
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 200px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: none;
+        }
+        
+        .insert-block-menu.active {
+            display: block;
+        }
+        
+        .block-type-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            color: #c3c6cb;
+        }
+        
+        .block-type-option:hover {
+            background: rgba(20, 184, 166, 0.1);
+            color: #14b8a6;
+        }
+        
+        .block-type-option i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Sortable Ghost */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #14b8a6;
+        }
+        
+        /* Sticky Header */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #0d0e10;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+        
+        .document-title-input {
+            background: #1a1b1f;
+            border: 1px solid #2a2c31;
+            color: #e1e3e5;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            width: 100%;
+        }
+        
+        .document-title-input:focus {
+            outline: none;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-5xl mx-auto px-4 py-6">
+        <!-- Sticky Header -->
+        <div class="sticky-header">
+            <div class="flex items-center gap-4">
+                <input type="text" 
+                       id="documentTitle" 
+                       class="document-title-input flex-1" 
+                       placeholder="Untitled Document" 
+                       value="{{ document.title if document else '' }}">
+                
+                <button onclick="window.MioBook.saveDocument()" 
+                        class="save-document-btn px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-all flex items-center gap-2">
+                    <i class="fas fa-save"></i>
+                    <span>Save</span>
+                </button>
+                
+                <button onclick="window.MioBook.goBack()" 
+                        class="px-4 py-3 bg-graphite-800 hover:bg-graphite-700 text-graphite-200 rounded-lg transition-all">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Content Blocks Container -->
+        <div id="contentBlocks">
+            <!-- Initial insert separator -->
+            <div class="insert-separator" onclick="showInsertMenuAtSeparator(event, 0)">
+                <div class="insert-separator-line"></div>
+                <div class="insert-separator-trigger">
+                    <i class="fas fa-plus"></i>
+                    <span>Insert Block</span>
+                </div>
+            </div>
+            
+            {% if document and document.content_json %}
+                {% set content_data = document.content_json if document.content_json is mapping else (document.content_json | tojson | safe | from_json) %}
+                {% if content_data and content_data.blocks %}
+                    {% for block in content_data.blocks %}
+                        {% if block.type == 'markdown' %}
+                            {% include 'p2/blocks/markdown_block.html' %}
+                        {% elif block.type == 'todo' %}
+                            {% include 'p2/blocks/todo_block.html' %}
+                        {% elif block.type == 'code' %}
+                            {% include 'p2/blocks/code_block.html' %}
+                        {% elif block.type == 'blocks' %}
+                            {% include 'p2/blocks/editorjs_block.html' %}
+                        {% elif block.type == 'whiteboard' %}
+                            {% include 'p2/blocks/atrament_block.html' %}
+                        {% endif %}
+                        
+                        <!-- Insert separator after each block -->
+                        <div class="insert-separator" onclick="showInsertMenuAtSeparator(event, {{ loop.index }})">
+                            <div class="insert-separator-line"></div>
+                            <div class="insert-separator-trigger">
+                                <i class="fas fa-plus"></i>
+                                <span>Insert Block</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endif %}
+        </div>
+        
+        <!-- Empty State -->
+        {% if not document or not document.content_json or (document.content_json.blocks | length == 0 if document.content_json.blocks is defined else true) %}
+        <div class="text-center py-20 text-graphite-400">
+            <i class="fas fa-file-alt text-6xl mb-4 text-graphite-700"></i>
+            <h3 class="text-xl font-medium mb-2">Start building your document</h3>
+            <p class="mb-6">Click the "Insert Block" line above to add your first content block</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+    
+    <!-- Editor.js - MUST load before Monaco to avoid AMD conflicts -->
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/nested-list@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@latest"></script>
+    
+    <!-- Monaco Editor - Loaded via AMD (after Editor.js to prevent conflicts) -->
+    <script>
+        var require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <script>
+        // Load Monaco Editor using AMD loader
+        require(['vs/editor/editor.main'], function() {
+            console.log('[Monaco] Editor loaded successfully');
+        });
+    </script>
+    
+    <!-- MioBook Modules -->
+    <script src="{{ url_for('static', filename='js/miobook/miobook_core.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/miobook/markdown_handler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/miobook/todo_handler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/miobook/code_handler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/miobook/editorjs_handler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/miobook/atrament_handler.js') }}"></script>
+    
+    <script>
+        // Global variables
+        const currentDocumentId = {{ document.id if document else 'null' }};
+        const currentFolderId = {{ folder_id if folder_id else 'null' }};
+        
+        // Initialize MioBook
+        let MioBook;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('[MioBook] Initializing...');
+            
+            // Create MioBook instance
+            window.MioBook = new MioBookCore(currentDocumentId, currentFolderId);
+            
+            // Initialize existing blocks
+            await initializeExistingBlocks();
+        });
+        
+        async function initializeExistingBlocks() {
+            const blocks = Array.from(document.querySelectorAll('#contentBlocks .block-item'));
+            console.log(`[MioBook] Found ${blocks.length} existing blocks`);
+
+            if (blocks.length === 0) return;
+
+            const heavyTypes = new Set(['markdown', 'code', 'blocks', 'whiteboard']);
+
+            const yieldToBrowser = () => new Promise((resolve) => {
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => resolve());
+                } else {
+                    setTimeout(resolve, 0);
+                }
+            });
+
+            const scheduleIdle = (fn) => {
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(() => fn(), { timeout: 800 });
+                } else {
+                    setTimeout(fn, 0);
+                }
+            };
+
+            const initBlock = async (blockEl) => {
+                if (!blockEl) return;
+
+                const already = blockEl.dataset.mbInit;
+                if (already === '1' || already === 'in-progress') return;
+
+                const type = blockEl.dataset.type;
+                blockEl.dataset.mbInit = 'in-progress';
+
+                if (heavyTypes.has(type) && blockEl.dataset.initState !== 'ready') {
+                    blockEl.dataset.initState = 'pending';
+                }
+
+                try {
+                    console.log(`[MioBook] Initializing ${type} block`, blockEl.dataset.blockId);
+                    switch (type) {
+                        case 'markdown':
+                            await window.MarkdownHandler?.initialize(blockEl);
+                            break;
+                        case 'todo':
+                            await window.TodoHandler?.initialize(blockEl);
+                            break;
+                        case 'code':
+                            await window.CodeHandler?.initialize(blockEl);
+                            break;
+                        case 'blocks':
+                            await window.EditorJSHandler?.initialize(blockEl);
+                            break;
+                        case 'whiteboard':
+                            await window.AtramentHandler?.initialize(blockEl);
+                            break;
+                    }
+                } catch (e) {
+                    console.error('[MioBook] Block init error:', e);
+                } finally {
+                    blockEl.dataset.mbInit = '1';
+                    if (heavyTypes.has(type)) {
+                        blockEl.dataset.initState = 'ready';
+                    }
+                }
+            };
+
+            // Mark heavy blocks as pending right away (so the page isn't blank)
+            for (const b of blocks) {
+                if (heavyTypes.has(b.dataset.type)) {
+                    b.dataset.initState = 'pending';
+                }
+            }
+
+            // Eager init: initialize a small number of blocks near the viewport, yielding between each
+            const eagerBlocks = [];
+            const eagerMax = 3;
+            const eagerViewportFactor = 1.25;
+
+            for (const b of blocks) {
+                if (eagerBlocks.length >= eagerMax) break;
+                const rect = b.getBoundingClientRect();
+                if (rect.top < window.innerHeight * eagerViewportFactor) {
+                    eagerBlocks.push(b);
+                }
+            }
+
+            if (eagerBlocks.length === 0) {
+                eagerBlocks.push(blocks[0]);
+            }
+
+            console.log(`[MioBook] Eager-initializing ${eagerBlocks.length} blocks`);
+            const eagerSet = new Set(eagerBlocks);
+            for (const b of eagerBlocks) {
+                await initBlock(b);
+                await yieldToBrowser();
+            }
+
+            // Lazy init the rest as they come near the viewport
+            const observer = new IntersectionObserver((entries) => {
+                for (const entry of entries) {
+                    if (!entry.isIntersecting) continue;
+                    observer.unobserve(entry.target);
+                    scheduleIdle(() => initBlock(entry.target));
+                }
+            }, {
+                root: null,
+                rootMargin: '800px 0px',
+                threshold: 0.01
+            });
+
+            for (const b of blocks) {
+                if (eagerSet.has(b)) continue;
+                if (b.dataset.mbInit === '1') continue;
+                observer.observe(b);
+            }
+
+            // If the user clicks into a not-yet-initialized heavy block, initialize immediately
+            const contentBlocks = document.getElementById('contentBlocks');
+            if (contentBlocks && !contentBlocks.dataset.mbLazyInitHooked) {
+                contentBlocks.dataset.mbLazyInitHooked = '1';
+                contentBlocks.addEventListener('click', (e) => {
+                    const blockEl = e.target.closest('.block-item');
+                    if (!blockEl) return;
+                    if (blockEl.dataset.mbInit === '1') return;
+                    scheduleIdle(() => initBlock(blockEl));
+                }, { capture: true });
+            }
+        }
+        
+        function addBlock(type, position = null, referenceBlockId = null) {
+            console.log('[MioBook] Adding block:', type, 'position:', position, 'ref:', referenceBlockId);
+            window.MioBook.addBlock(type, position, referenceBlockId);
+            closeInsertMenu();
+        }
+        
+        // Global wrapper functions for block manipulation
+        function moveBlockUp(button) {
+            if (window.MioBook) {
+                window.MioBook.moveBlockUp(button);
+            }
+        }
+        
+        function moveBlockDown(button) {
+            if (window.MioBook) {
+                window.MioBook.moveBlockDown(button);
+            }
+        }
+        
+        function deleteBlock(button) {
+            if (window.MioBook) {
+                window.MioBook.deleteBlock(button);
+            }
+        }
+        
+        // Global wrapper functions for block manipulation
+        function moveBlockUp(button) {
+            if (window.MioBook) {
+                window.MioBook.moveBlockUp(button);
+            }
+        }
+        
+        function moveBlockDown(button) {
+            if (window.MioBook) {
+                window.MioBook.moveBlockDown(button);
+            }
+        }
+        
+        function deleteBlock(button) {
+            if (window.MioBook) {
+                window.MioBook.deleteBlock(button);
+            }
+        }
+        
+        // Insert block menu handling
+        let currentInsertMenu = null;
+        let currentInsertPosition = null;
+        let currentInsertReference = null;
+        
+        function showInsertMenuAtSeparator(event, blockIndex) {
+            event.stopPropagation();
+            
+            // Close existing menu
+            closeInsertMenu();
+            closeAddBlockMenu();
+            
+            // Store the block index for insertion
+            currentInsertPosition = blockIndex;
+            
+            // Create menu if not exists
+            let menu = document.getElementById('insertBlockMenu');
+            if (!menu) {
+                menu = createInsertBlockMenu();
+                document.body.appendChild(menu);
+            }
+            
+            // Position menu near the separator
+            const separator = event.currentTarget;
+            const rect = separator.getBoundingClientRect();
+            menu.style.position = 'fixed';
+            
+            // Make menu visible temporarily to get its height
+            menu.style.visibility = 'hidden';
+            menu.classList.add('active');
+            const menuHeight = menu.offsetHeight;
+            menu.style.visibility = 'visible';
+            
+            // Calculate available space below and above
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            
+            // Position menu above if not enough space below
+            if (spaceBelow < menuHeight + 10 && spaceAbove > menuHeight + 10) {
+                // Position above
+                menu.style.top = `${rect.top - menuHeight - 5}px`;
+            } else {
+                // Position below (default)
+                menu.style.top = `${rect.bottom + 5}px`;
+            }
+            
+            menu.style.left = `${rect.left + rect.width / 2 - 100}px`; // Center the menu
+            
+            currentInsertMenu = menu;
+        }
+        
+        function showInsertMenu(event, position, referenceBlockId) {
+            // Legacy function kept for compatibility
+            event.stopPropagation();
+            showInsertMenuAtSeparator(event, position === 'before' ? 0 : 1);
+        }
+        
+        function createInsertBlockMenu() {
+            const menu = document.createElement('div');
+            menu.id = 'insertBlockMenu';
+            menu.className = 'insert-block-menu';
+            menu.innerHTML = `
+                <div class="block-type-option" onclick="insertBlockHere('markdown')">
+                    <i class="fas fa-markdown text-teal-400"></i>
+                    <div>
+                        <div class="font-medium">Markdown</div>
+                        <div class="text-xs text-graphite-400">Rich text with markdown</div>
+                    </div>
+                </div>
+                <div class="block-type-option" onclick="insertBlockHere('todo')">
+                    <i class="fas fa-tasks text-dirty-yellow-400"></i>
+                    <div>
+                        <div class="font-medium">Todo List</div>
+                        <div class="text-xs text-graphite-400">Checkable task list</div>
+                    </div>
+                </div>
+                <div class="block-type-option" onclick="insertBlockHere('code')">
+                    <i class="fas fa-code text-teal-400"></i>
+                    <div>
+                        <div class="font-medium">Code</div>
+                        <div class="text-xs text-graphite-400">Syntax highlighted code</div>
+                    </div>
+                </div>
+                <div class="block-type-option" onclick="insertBlockHere('blocks')">
+                    <i class="fas fa-th-large text-dirty-yellow-400"></i>
+                    <div>
+                        <div class="font-medium">Rich Blocks</div>
+                        <div class="text-xs text-graphite-400">Editor.js block editor</div>
+                    </div>
+                </div>
+                <div class="block-type-option" onclick="insertBlockHere('whiteboard')">
+                    <i class="fas fa-draw-polygon text-teal-400"></i>
+                    <div>
+                        <div class="font-medium">Whiteboard</div>
+                        <div class="text-xs text-graphite-400">Freehand drawing canvas</div>
+                    </div>
+                </div>
+            `;
+            return menu;
+        }
+        
+        function insertBlockHere(type) {
+            window.MioBook.addBlockAtIndex(type, currentInsertPosition);
+            closeInsertMenu();
+        }
+        
+        function closeInsertMenu() {
+            if (currentInsertMenu) {
+                currentInsertMenu.classList.remove('active');
+                currentInsertMenu = null;
+                currentInsertPosition = null;
+                currentInsertReference = null;
+            }
+        }
+        
+        function closeAddBlockMenu() {
+            const dropdown = document.getElementById('addBlockDropdown');
+            if (dropdown) {
+                dropdown.classList.remove('active');
+            }
+        }
+        
+        // Close insert menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const insertMenu = document.getElementById('insertBlockMenu');
+            
+            // Close insert menu
+            if (insertMenu && !insertMenu.contains(e.target) && !e.target.closest('.insert-separator')) {
+                closeInsertMenu();
+            }
+        });
+    </script>
+</body>
+</html>

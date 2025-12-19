@@ -1,0 +1,2168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{ note.title if note else 'Create New Note' }}</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <!-- Suppress CDN Permissions-Policy console warnings -->
+  <script>
+    (function(){const e=console.error,w=console.warn,s=['Permissions-Policy','browsing-topics','run-ad-auction','join-ad-interest-group','private-state-token','private-aggregation','attribution-reporting'];console.error=function(...a){const m=a.join(' ');s.some(k=>m.includes(k))||e.apply(console,a)};console.warn=function(...a){const m=a.join(' ');s.some(k=>m.includes(k))||w.apply(console,a)}})();
+  </script>
+
+  <!-- Summernote Editor CSS -->
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.css" rel="stylesheet">
+
+  <!-- Shepherd.js Tutorial CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/css/shepherd.css"/>
+  <link rel="stylesheet" href="{{ url_for('p2_bp.static', filename='css/tutorial-theme.css') }}">
+
+  <!-- Carbon Teal theme variables (only used for editor modals) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+
+  <!-- Theme-specific modal styling is provided by static/css/theme_colors_carbon_teal.css -->
+
+  <style>
+/* CSS Variables for Enterprise Dark Theme (Notion/GitHub Style) */
+:root {
+  /* Primary Dark Theme Colors */
+  --bg-primary: #0d1117;          /* GitHub dark background */
+  --bg-secondary: #161b22;        /* Secondary background */
+  --bg-tertiary: #21262d;         /* Card/surface background */
+  --bg-quaternary: #30363d;       /* Elevated surfaces */
+  
+  /* Text Colors */
+  --text-primary: #f0f6fc;        /* Primary text */
+  --text-secondary: #7d8590;      /* Secondary text */
+  --text-muted: #656d76;          /* Muted text */
+  
+  /* Border Colors */
+  --border-primary: #30363d;      /* Primary borders */
+  --border-secondary: #21262d;    /* Secondary borders */
+  --border-hover: #484f58;        /* Hover state borders */
+  
+  /* Interactive Colors - Only for important actions */
+  --accent-blue: #238be6;         /* Primary accent */
+  --accent-blue-hover: #1f79db;   /* Hover state */
+  --accent-green: #2ea043;        /* Success/positive actions */
+  --accent-green-hover: #2c974b;  /* Success hover */
+  --accent-red: #da3633;          /* Danger/delete actions */
+  --accent-red-hover: #c93c37;    /* Danger hover */
+  
+  /* Subtle Hover States */
+  --hover-overlay: rgba(255, 255, 255, 0.05);
+  --hover-border: rgba(255, 255, 255, 0.1);
+  /* Description stub sizing tokens (mobile-first) */
+  --desc-min: 220px; /* base min for stub textarea */
+  --desc-max: 420px; /* base max for stub textarea */
+  --desc-card-min: 240px; /* base minimum width for grid cards */
+  --desc-badge-size: 26px; /* badge diameter */
+  --add-btn-size: 42px; /* add button size */
+  --add-btn-size-sm: 36px; /* small header add button */
+}
+
+body {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+.editor-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* For sticky toolbar positioning */
+}
+
+.note-editor {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+}
+
+.note-editable {
+  flex-grow: 1;
+  min-height: 200px; /* allow shrinking in flexbox */
+  max-height: none !important; /* Remove any max-height */
+  overflow-y: auto; /* scroll if content is taller than viewport */
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: none;
+}
+
+/* Form Controls Dark Theme */
+.form-control {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  border-radius: 8px;
+}
+
+.form-control:focus {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 0.2rem rgba(35, 139, 230, 0.25);
+}
+
+.form-control::placeholder {
+  color: var(--text-muted);
+}
+
+  /* Multi description stub styling */
+  .description-stub {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  /* Description stub textarea sizing controlled by CSS variables */
+  .description-stub textarea {
+    min-width: var(--desc-min);
+    max-width: var(--desc-max);
+  }
+  
+    /* Scope the description-section to host the header button */
+    .description-section { position: relative; }
+    /* Ensure the label doesn't overlap the small header add button */
+    .description-section > .form-label { padding-right: calc(var(--add-btn-size-sm) + 16px); }
+
+  /* Grid layout for description stubs */
+  .description-grid {
+    display: grid;
+    /* Card width controlled by CSS variable; breakpoints can adjust this */
+    grid-template-columns: repeat(auto-fill, minmax(var(--desc-card-min), 1fr));
+    grid-auto-rows: auto;
+    gap: 10px;
+    align-items: start;
+    width: 100%;
+    max-height: 250px; /* limit height to keep layout tidy; users can scroll */
+    overflow-y: auto;
+    padding-right: 8px; /* allow space for scrollbar */
+  }
+
+  .add-description-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--border-primary);
+    background: var(--bg-tertiary);
+    min-height: 60px;
+    min-width: var(--desc-card-min);
+    padding: 8px;
+    border-radius: 6px;
+  }
+
+  /* Hide the large grid-based add card; we provide a small sticky add button in the section header */
+  .add-description-card { display: none; }
+
+  /* Small add button that will be appended to the description section heading */
+  .small-add-description-btn {
+    position: sticky; /* remain visible while scrolling; anchored to top of parent */
+    top: 8px;
+    z-index: 110;
+    min-width: var(--add-btn-size-sm);
+    min-height: var(--add-btn-size-sm);
+    font-size: calc(var(--add-btn-size-sm) / 2.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    float: right;
+    border-radius: 8px;
+  }
+    /* For very small screens, scale the small header add button down a bit and avoid overlap */
+    @media (max-width: 480px) {
+      .small-add-description-btn { right: 6px; top: 6px; min-width: 30px; min-height: 30px; font-size: 14px; }
+    }
+
+  /* Sticky add card that remains visible when the grid scrolls */
+  .add-description-card.sticky {
+    position: sticky;
+    bottom: 8px; /* Keep 8px above bottom of scroll container */
+    justify-self: end; /* Align to the right within grid cell */
+    z-index: 25;
+    align-self: end; /* Align to bottom row */
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  }
+
+  .description-stub {
+    position: relative; /* for delete button */
+    background: var(--bg-quaternary);
+    padding: 6px 32px 6px calc(var(--desc-badge-size) + 12px); /* leave room for remove button and badge */
+    border-radius: 6px;
+    border: 1px solid var(--border-primary);
+  }
+
+  .description-stub .description-number-badge {
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    width: var(--desc-badge-size);
+    height: var(--desc-badge-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .description-stub textarea {
+    margin-left: calc(var(--desc-badge-size) + 10px); /* ensure text doesn't underlap the badge */
+    width: calc(100% - (var(--desc-badge-size) + 10px) - (var(--add-btn-size) + 8px)); /* badge + spacing + remove button */
+  }
+
+  /* Responsive breakpoints - adjust card sizes by viewport width */
+  @media (max-width: 767px) {
+    :root {
+      --desc-min: 220px;
+      --desc-max: 420px;
+      --desc-card-min: 240px;
+      --desc-badge-size: 22px;
+      --add-btn-size: 42px;
+    }
+    .description-grid { grid-template-columns: repeat(auto-fill, minmax(var(--desc-card-min), 1fr)); }
+  }
+
+  @media (min-width: 768px) and (max-width: 991px) {
+    :root {
+      --desc-min: 360px;
+      --desc-max: 720px;
+      --desc-card-min: 360px;
+      --desc-badge-size: 24px;
+      --add-btn-size: 48px;
+    }
+    .description-grid { grid-template-columns: repeat(auto-fill, minmax(var(--desc-card-min), 1fr)); }
+  }
+
+  @media (min-width: 992px) and (max-width: 1439px) {
+    :root {
+      --desc-min: 660px;
+      --desc-max: 1260px;
+      --desc-card-min: 720px;
+      --desc-badge-size: 26px;
+      --add-btn-size: 64px;
+    }
+    .description-grid { grid-template-columns: repeat(auto-fit, minmax(var(--desc-card-min), 1fr)); }
+  }
+
+  @media (min-width: 1440px) {
+    :root {
+      /* Keep same as large, allow more columns when space allows */
+      --desc-min: 660px;
+      --desc-max: 1260px;
+      --desc-card-min: 720px;
+      --desc-badge-size: 26px;
+      --add-btn-size: 64px;
+    }
+    .description-grid { grid-template-columns: repeat(auto-fit, minmax(var(--desc-card-min), 1fr)); }
+  }
+
+  .remove-description-btn {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    z-index: 5;
+    width: calc(var(--add-btn-size) * 0.45);
+    height: calc(var(--add-btn-size) * 0.45);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  /* Keep add button consistent size with stub cards */
+  .add-description-card button#addDescriptionBtn {
+    /* Scales with the add btn size token */
+    min-width: var(--add-btn-size);
+    min-height: var(--add-btn-size);
+    font-size: calc(var(--add-btn-size) / 3);
+    border-radius: 8px;
+  }
+    
+    .btn:hover {
+      background-color: var(--bg-quaternary);
+      color: var(--text-primary);
+      transform: scale(1.05);
+      transition: all 0.2s ease-in-out;
+    }
+    .position-fixed-save {
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+
+  /* Floating mode (default) */
+  .floating-toolbar {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 2000; /* Higher than toasts/dropdowns; raise if you have modals */
+    padding: 6px 8px;
+    background: var(--bg-quaternary);
+    backdrop-filter: saturate(140%) blur(6px);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+  .floating-toolbar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    border-color: var(--border-hover);
+  }
+
+  /* Pinned mode (fixed positioning for full scroll coverage) */
+  .floating-toolbar.pinned {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: auto;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    padding: 8px 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1100; /* Higher than Summernote toolbar to appear on top */
+    background: var(--bg-secondary);
+    backdrop-filter: saturate(140%) blur(6px);
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  /* When pinned, we’ll add body padding-top dynamically to avoid covering content */
+  @media (prefers-reduced-motion: reduce) {
+    .floating-toolbar { transition: none; }
+  }
+
+  /* Make Summernote toolbar sticky */
+  .note-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: var(--bg-secondary);
+    backdrop-filter: saturate(140%) blur(6px);
+    border-bottom: 1px solid var(--border-primary);
+    padding: 4px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Summernote editor dark theme */
+  .note-editor .note-toolbar {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  .note-editor .note-toolbar .btn-group .btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+  }
+
+  .note-editor .note-toolbar .btn-group .btn:hover {
+    background: var(--bg-quaternary);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+  }
+
+  .note-editor .note-toolbar .btn-group .btn.active {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: white;
+  }
+
+  /* Summernote dropdown styling */
+  .note-editor .note-toolbar .dropdown-menu {
+    background: var(--bg-quaternary);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+
+  .note-editor .note-toolbar .dropdown-item {
+    color: var(--text-primary);
+    background: transparent;
+  }
+
+  .note-editor .note-toolbar .dropdown-item:hover {
+    background: var(--hover-overlay);
+    color: var(--text-primary);
+  }
+
+  /* When custom toolbar is pinned, adjust Summernote toolbar position */
+  body.custom-toolbar-pinned .note-toolbar {
+    top: var(--custom-toolbar-height, 70px) !important; /* Position below the custom toolbar with fallback */
+  }
+  
+  /* Alternative selector for more specificity */
+  .floating-toolbar.pinned ~ * .note-toolbar {
+    top: var(--custom-toolbar-height, 70px); /* Position below the custom toolbar with fallback */
+  }
+
+  /* Remove this rule as it conflicts with Summernote's internal .note-editing-area class */
+  /* .note-editing-area {
+    padding-top: 50px; 
+  } */
+
+  /* Keyboard shortcut styling */
+  kbd {
+    background-color: var(--bg-quaternary);
+    border: 1px solid var(--border-primary);
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0,0,0,.2), 0 0 0 2px var(--bg-tertiary) inset;
+    color: var(--text-primary);
+    display: inline-block;
+    font-size: .75rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    white-space: nowrap;
+  }
+
+  /* Table styling improvements */
+  .note-editable table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    margin: 15px 0 !important;
+    background: var(--bg-tertiary);
+  }
+
+  .note-editable table td, 
+  .note-editable table th {
+    border: 1px solid var(--border-primary) !important;
+    padding: 8px 12px !important;
+    vertical-align: top !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    min-width: 50px !important;
+    max-width: none !important;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .note-editable table th {
+    background-color: var(--bg-quaternary) !important;
+    font-weight: 600 !important;
+    color: var(--text-primary);
+  }
+
+  /* Prevent table overflow */
+  .note-editable {
+    overflow-x: auto !important;
+  }
+
+  /* Table editing controls */
+  .note-table .note-table-popover {
+    min-width: 200px !important;
+  }
+
+  /* Fix for table cell editing */
+  .note-editable table td:focus,
+  .note-editable table th:focus {
+    outline: 2px solid var(--accent-blue) !important;
+    outline-offset: -2px !important;
+  }
+
+  /* Ensure tables maintain structure during undo/redo */
+  .note-editable table {
+    -webkit-user-modify: read-write !important;
+  }
+
+  /* Prevent table corruption during undo operations */
+  .note-editable table * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+
+  /* Image aspect ratio and responsive sizing */
+  .note-editable img {
+    height: auto !important;
+    max-width: 100% !important;
+    object-fit: contain;
+  }
+
+  /* Word count styling */
+  .text-muted {
+    color: var(--text-secondary) !important;
+  }
+
+  .border-top {
+    border-color: var(--border-primary) !important;
+  }
+
+</style>
+
+
+
+
+
+</head>
+<body>
+
+{% include "/p2/note_toolbar_partial.html" %}
+
+
+
+
+
+
+<main class="d-flex flex-column h-100">
+  <div class="ql-container container-fluid d-flex flex-column h-100 py-3">
+    <div class="w-100 d-flex flex-column h-100 p-2">
+
+      <!-- 📝 FORM WRAPS EVERYTHING -->
+      <form method="POST" enctype="multipart/form-data" id="form" class="d-flex flex-column h-100">
+
+        <!-- Title -->
+        <div class="mb-3">
+          <input type="text" name="title" class="form-control" placeholder="Note Title"
+                 value="{{ note.title if note else '' }}" >
+        </div>
+        
+        <!-- Description (multi-stub) -->
+        {% include "/p2/note_description_partial.html" %}
+		
+		<!-- Editor -->
+		<div class="editor-wrapper flex-grow-1 mb-3 d-flex flex-column">
+		  <textarea id="editor" name="editor">{{ note.content_html if note else '' }}</textarea>
+
+		  <div class="text-start text-muted mt-2 pt-2 border-top">
+			<small id="wordCount">Words: 0 | Characters: 0</small>
+		  </div>
+		</div>
+
+
+        <!-- Hidden HTML output -->
+        <input type="hidden" name="content" id="hidden-content">
+        <input type="hidden" name="note_id" id="note_id" value="{{ note.id if note else '' }}">
+
+
+      </form>
+
+{% include "/p2/note_floating_toolbar_for_tools_partial.html" %}
+
+    </div>
+  </div>
+</main>
+
+<!-- core  -->
+<!-- Scripts -->
+<!-- Summernote JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.js"></script>
+
+<!-- Shepherd.js Tutorial -->
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/js/shepherd.min.js"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/tutorial.js') }}"></script>
+
+<script>
+let lastSavedContent = '';
+let lastSavedTitle = '';
+let lastSavedDescription = '';
+let idleTimer = null;
+const AUTOSAVE_IDLE_MS = 2000;
+const SAVE_ENDPOINT = '/autosave';
+const DRAFT_ENDPOINT = '/autosave_draft';
+
+/**
+ * Smart HTML cleaner for pasted web content
+ * Removes junk but preserves useful formatting and images
+ */
+function cleanPastedHTML(html) {
+  // Create a temporary container to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  // Remove problematic elements entirely
+  const removeSelectors = [
+    'script', 'style', 'iframe', 'object', 'embed', 'applet',
+    'meta', 'link[rel="stylesheet"]', 'noscript', 'base',
+    '[data-ad]', '[class*="ad-"]', '[id*="ad-"]', // Ad elements
+    'nav', 'header', 'footer', 'aside', // Navigation/structure
+    '.advertisement', '.social-share', '.cookie-banner'
+  ];
+  
+  removeSelectors.forEach(selector => {
+    tempDiv.querySelectorAll(selector).forEach(el => el.remove());
+  });
+  
+  // Attributes to preserve (whitelist approach)
+  const allowedAttributes = {
+    'a': ['href', 'title', 'target'],
+    'img': ['src', 'alt', 'title', 'width', 'height'],
+    'table': ['border', 'cellpadding', 'cellspacing'],
+    'td': ['colspan', 'rowspan'],
+    'th': ['colspan', 'rowspan'],
+    'col': ['span', 'width'],
+    'colgroup': ['span']
+  };
+  
+  // Clean all elements
+  function cleanElement(element) {
+    // Remove all inline styles (major source of issues)
+    element.removeAttribute('style');
+    element.removeAttribute('class');
+    element.removeAttribute('id');
+    
+    // Remove data attributes
+    Array.from(element.attributes).forEach(attr => {
+      if (attr.name.startsWith('data-') || attr.name.startsWith('on')) {
+        element.removeAttribute(attr.name);
+      }
+    });
+    
+    // Only keep whitelisted attributes for specific tags
+    const tagName = element.tagName.toLowerCase();
+    if (allowedAttributes[tagName]) {
+      Array.from(element.attributes).forEach(attr => {
+        if (!allowedAttributes[tagName].includes(attr.name)) {
+          element.removeAttribute(attr.name);
+        }
+      });
+    } else {
+      // For other tags, remove most attributes
+      Array.from(element.attributes).forEach(attr => {
+        element.removeAttribute(attr.name);
+      });
+    }
+    
+    // Recursively clean child elements
+    Array.from(element.children).forEach(child => cleanElement(child));
+  }
+  
+  // Start cleaning from root
+  Array.from(tempDiv.children).forEach(child => cleanElement(child));
+  
+  // Unwrap excessive nested divs and spans (keep content, remove wrapper)
+  function unwrapUnnecessaryTags(container) {
+    const unnecessaryTags = ['div', 'span', 'font', 'center'];
+    
+    unnecessaryTags.forEach(tagName => {
+      let elements = container.querySelectorAll(tagName);
+      // Process in reverse to handle nested elements properly
+      Array.from(elements).reverse().forEach(el => {
+        // If the element has no meaningful attributes and isn't a semantic container, unwrap it
+        if (el.attributes.length === 0) {
+          while (el.firstChild) {
+            el.parentNode.insertBefore(el.firstChild, el);
+          }
+          el.remove();
+        }
+      });
+    });
+  }
+  
+  unwrapUnnecessaryTags(tempDiv);
+  
+  // Convert problematic elements to semantic equivalents
+  tempDiv.querySelectorAll('b').forEach(el => {
+    const strong = document.createElement('strong');
+    strong.innerHTML = el.innerHTML;
+    el.replaceWith(strong);
+  });
+  
+  tempDiv.querySelectorAll('i').forEach(el => {
+    const em = document.createElement('em');
+    em.innerHTML = el.innerHTML;
+    el.replaceWith(em);
+  });
+  
+  // Clean up whitespace and empty elements
+  function removeEmptyElements(container) {
+    const elements = container.querySelectorAll('*');
+    Array.from(elements).reverse().forEach(el => {
+      // Don't remove images, br, hr
+      if (['img', 'br', 'hr', 'input'].includes(el.tagName.toLowerCase())) {
+        return;
+      }
+      
+      // Remove if completely empty (no text, no children, no images)
+      if (el.textContent.trim() === '' && 
+          el.querySelectorAll('img, br, hr').length === 0) {
+        el.remove();
+      }
+    });
+  }
+  
+  removeEmptyElements(tempDiv);
+  
+  return tempDiv.innerHTML;
+}
+
+$(document).ready(function() {
+  $('#editor').summernote({
+    // Ensure Summernote dialogs are appended to the document body so they overlay
+    // fixed navbars and other positioned elements (prevents being obscured)
+    dialogsInBody: true,
+    minHeight: 200,
+    maxHeight: null,
+    toolbar: [
+      ['style', ['style']],
+      ['font', ['bold', 'italic', 'underline', 'clear']],
+      ['fontname', ['fontname']],
+      ['fontsize', ['fontsize']],
+      ['color', ['color']],
+      ['para', ['ul', 'ol', 'paragraph']],
+      ['table', ['table']],
+      ['insert', ['link', 'picture', 'video']],
+      ['view', ['fullscreen', 'codeview', 'help']]
+    ],
+    // Better table configuration
+    table: {
+      className: 'table table-bordered table-striped',
+      tableClassName: 'table table-bordered table-striped'
+    },
+    // Enhanced undo/redo settings
+    historyLimit: 50, // Increase undo history
+    // Configure image upload
+    callbacks: {
+      onChange: function(contents) {
+        updateWordCount();
+        scheduleAutosave();
+      },
+      onImageUpload: function(files) {
+        // Handle multiple files
+        for (let i = 0; i < files.length; i++) {
+          uploadImage(files[i]);
+        }
+      },
+      // Improve table editing
+      onTableCreate: function(table) {
+        // Add Bootstrap classes to newly created tables
+        $(table).addClass('table table-bordered table-striped');
+        // Ensure proper cell padding and styling
+        $(table).find('td, th').css({
+          'padding': '8px',
+          'border': '1px solid #dee2e6',
+          'vertical-align': 'top'
+        });
+        
+        // Add proper spacing around the table
+        setTimeout(function() {
+          const $table = $(table);
+          const $prev = $table.prev();
+          const $next = $table.next();
+          
+          // Add blank line before table if not already present
+          if ($prev.length === 0 || !$prev.is('br')) {
+            $table.before('<br>');
+          }
+          
+          // Add blank line after table if not already present
+          if ($next.length === 0 || !$next.is('br')) {
+            $table.after('<br>');
+          }
+        }, 50);
+      },
+      // Save undo state before table operations
+      onBeforeCommand: function(cmd, ui, value) {
+        // Save undo state before any table-related commands
+        if (cmd.includes('table') || cmd.includes('Table')) {
+          $('#editor').summernote('saveRange');
+        }
+      }
+    },
+    // Image upload settings
+    maximumImageFileSize: 5 * 1024 * 1024, // 5MB
+    acceptImageFileTypes: /\.(gif|jpe?g|png|webp|bmp|tiff?)$/i,
+    imageTitle: {
+      specificAltField: true,
+    },
+    lang: 'en-US',
+    // Add custom popover for table editing and images
+    popover: {
+      image: [
+        ['image', ['resizeFull', 'resizeHalf', 'resizeQuarter', 'resizeNone']],
+        ['float', ['floatLeft', 'floatRight', 'floatNone']],
+        ['remove', ['removeMedia']]
+      ],
+      table: [
+        ['add', ['addRowDown', 'addRowUp', 'addColLeft', 'addColRight']],
+        ['delete', ['deleteRow', 'deleteCol', 'deleteTable']],
+        ['custom', ['tableHeaders', 'tableStyles']]
+      ]
+    }
+  });
+
+  // Add Carbon Teal theming to Summernote modals when they are shown so they inherit the
+  // color variables and styles scoped inside .theme-carbon-teal without changing global :root.
+  document.addEventListener('show.bs.modal', function (e) {
+    try {
+      const el = e.target;
+      if (el && el.classList && el.classList.contains('note-modal')) {
+        el.classList.add('theme-carbon-teal');
+      }
+    } catch (err) {
+      // ignore errors from non-modal events
+    }
+  });
+  
+// Function to upload image to server
+  function uploadImage(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Show loading indicator
+    const $editor = $('#editor');
+    $editor.summernote('disable');
+    
+    fetch('/upload_image', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+      $editor.summernote('enable');
+      
+      if (data.url) {
+        // Insert image into editor
+        $editor.summernote('insertImage', data.url, function($image) {
+          // Set image attributes
+          $image.css('max-width', '100%');
+          $image.css('height', 'auto');
+          $image.attr('alt', file.name);
+        });
+        window.showToast('Image uploaded successfully', 'success', 1500);
+        // Mark asset as used in session so the assets modal updates quickly
+        try {
+          const filename = (data.url || '').split('/').pop();
+          if (filename) {
+            fetch('{{ url_for("p2_bp.assets_mark_used") }}', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename }) }).catch(e => console.warn('assets_mark_used failed', e));
+          }
+        } catch (e) { console.warn('Failed to mark asset as used', e); }
+      } else {
+        window.showToast('Image upload failed: ' + (data.error || 'Unknown error'), 'danger', 3000);
+      }
+    })
+    .catch(error => {
+      $editor.summernote('enable');
+      console.error('Error uploading image:', error);
+      window.showToast('Image upload failed', 'danger', 3000);
+    });
+  }
+
+  // Function to maintain image aspect ratio after resize
+  function maintainImageAspectRatio() {
+    const $editor = $('#editor');
+    
+    // Monitor for any changes to images
+    $editor.on('summernote.change', function() {
+      // Find all images and ensure they maintain aspect ratio
+      $editor.find('img').each(function() {
+        const $img = $(this);
+        
+        // Remove any explicit height attribute to let height: auto work
+        if ($img.attr('height')) {
+          $img.removeAttr('height');
+        }
+        
+        // Ensure height is auto in inline styles
+        const currentStyle = $img.attr('style') || '';
+        if (!currentStyle.includes('height: auto') && !currentStyle.includes('height:auto')) {
+          $img.css('height', 'auto');
+        }
+        
+        // Ensure max-width is set for responsiveness
+        if (!$img.css('max-width') || $img.css('max-width') === 'none') {
+          $img.css('max-width', '100%');
+        }
+      });
+    });
+
+    // Override Summernote's resize buttons to maintain aspect ratio
+    $('.note-editor').on('click', '.note-image-popover button', function() {
+      setTimeout(function() {
+        $editor.find('img').each(function() {
+          const $img = $(this);
+          $img.css('height', 'auto');
+          $img.removeAttr('height');
+        });
+      }, 10);
+    });
+  }
+
+  // Track images currently inside the editor and notify server when removed/added
+  function trackImagesInEditor() {
+    const $editor = $('#editor');
+    if (!$editor || !$editor.length) return;
+
+    function getFilenamesFromEditor() {
+      const set = new Set();
+      $editor.find('img').each(function() {
+        try {
+          const src = $(this).attr('src') || '';
+          if (!src) return;
+          if (src.includes('/static/uploads/images/')) {
+            const parts = src.split('/');
+            const filename = parts[parts.length-1];
+            if (filename) set.add(filename);
+          }
+        } catch (e) { /* ignore */ }
+      });
+      return set;
+    }
+
+    let currentSet = getFilenamesFromEditor();
+    // Ensure server session marks current images as 'used' for unsaved notes so the modal reflects state
+    currentSet.forEach(fn => {
+      try { fetch('{{ url_for("p2_bp.assets_mark_used") }}', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: fn }) }).catch(e => console.warn('initial mark failed', e)); } catch (e) { /* ignore */ }
+    });
+    $editor.on('summernote.change', function() {
+      try {
+        const newSet = getFilenamesFromEditor();
+        // compute removed filenames
+        const removed = [];
+        currentSet.forEach(fn => { if (!newSet.has(fn)) removed.push(fn); });
+        const added = [];
+        newSet.forEach(fn => { if (!currentSet.has(fn)) added.push(fn); });
+        // unmark removed
+        if (removed.length) {
+          removed.forEach(fn => {
+            try { fetch('{{ url_for("p2_bp.assets_unmark_used") }}', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: fn }) }).catch(e => console.warn('unmark failed', e)); } catch (e) { console.warn('unmark failed', e); }
+          });
+          // Notify other UI components to refresh if needed
+          try { document.dispatchEvent(new Event('mio:asset-change')); } catch (e) { /* ignore */ }
+        }
+        // mark added (for uploads or copy/paste)
+        if (added.length) {
+          added.forEach(fn => {
+            try { fetch('{{ url_for("p2_bp.assets_mark_used") }}', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: fn }) }).catch(e => console.warn('mark failed', e)); } catch (e) { console.warn('mark failed', e); }
+          });
+          try { document.dispatchEvent(new Event('mio:asset-change')); } catch (e) { /* ignore */ }
+        }
+        currentSet = newSet;
+      } catch (e) { console.warn('trackImagesInEditor failed', e); }
+    });
+  }
+
+  // Enhanced table handling with better undo support
+  function enhanceTableEditing() {
+    const $editor = $('#editor');
+    
+    // Monitor for table creation and modification
+    $editor.on('summernote.change', function(e, contents) {
+      // Find all tables and ensure proper styling
+      $(contents).find('table').each(function() {
+        const $table = $(this);
+        
+        // Add Bootstrap classes if missing
+        if (!$table.hasClass('table')) {
+          $table.addClass('table table-bordered table-striped');
+        }
+        
+        // Ensure proper cell attributes
+        $table.find('td, th').each(function() {
+          const $cell = $(this);
+          if (!$cell.attr('style') || !$cell.attr('style').includes('padding')) {
+            $cell.css({
+              'padding': '8px 12px',
+              'border': '1px solid #dee2e6',
+              'vertical-align': 'top',
+              'word-wrap': 'break-word'
+            });
+          }
+        });
+      });
+    });
+
+    // Handle paste events for better table formatting and smart HTML cleaning
+    $editor.on('summernote.paste', function(e, pasteEvent) {
+      // Get the clipboard data
+      const clipboardData = (pasteEvent.originalEvent || pasteEvent).clipboardData;
+      
+      // Check if it's HTML content (from web pages)
+      if (clipboardData && clipboardData.types.indexOf('text/html') > -1) {
+        const htmlContent = clipboardData.getData('text/html');
+        
+        // If it looks like complex web content (has lots of inline styles or divs), clean it
+        if (htmlContent.includes('style=') || (htmlContent.match(/<div/g) || []).length > 3) {
+          // Prevent the default paste from the native and jQuery events so only cleaned HTML is inserted
+          try {
+            if (typeof e.preventDefault === 'function') { e.preventDefault(); }
+            if (typeof e.stopPropagation === 'function') { e.stopPropagation(); }
+            if (typeof e.stopImmediatePropagation === 'function') { e.stopImmediatePropagation(); }
+            if (pasteEvent && typeof pasteEvent.preventDefault === 'function') { pasteEvent.preventDefault(); }
+            if (pasteEvent && typeof pasteEvent.stopImmediatePropagation === 'function') { pasteEvent.stopImmediatePropagation(); }
+            if (pasteEvent && pasteEvent.originalEvent) {
+              const orig = pasteEvent.originalEvent;
+              if (typeof orig.preventDefault === 'function') { orig.preventDefault(); }
+              if (typeof orig.stopImmediatePropagation === 'function') { orig.stopImmediatePropagation(); }
+            }
+          } catch (err) {
+            // If anything goes wrong here, log but continue to insert cleaned content
+            console.warn('Could not fully cancel native paste event:', err);
+          }
+          
+          // Clean the HTML
+          const cleanedHtml = cleanPastedHTML(htmlContent);
+          
+          // Insert cleaned HTML
+          $editor.summernote('pasteHTML', cleanedHtml);
+          
+          // Trigger change for autosave
+          setTimeout(function() {
+            $editor.trigger('summernote.change');
+          }, 50);
+          
+          return;
+        }
+      }
+      
+      // For normal pastes or plain text, use standard cleanup
+      setTimeout(function() {
+        // Clean up any pasted tables and add proper spacing
+        $editor.find('table').each(function() {
+          const $table = $(this);
+          $table.addClass('table table-bordered table-striped');
+          
+          // Remove any problematic styles that might cause overflow
+          $table.css({
+            'width': '100%',
+            'table-layout': 'fixed',
+            'border-collapse': 'collapse'
+          });
+          
+          $table.find('td, th').css({
+            'word-wrap': 'break-word',
+            'overflow-wrap': 'break-word',
+            'max-width': 'none'
+          });
+          
+          // Ensure proper spacing around tables
+          const $prev = $table.prev();
+          const $next = $table.next();
+          
+          // Add blank line before table if not already present
+          if ($prev.length === 0 || !$prev.is('br')) {
+            $table.before('<br>');
+          }
+          
+          // Add blank line after table if not already present
+          if ($next.length === 0 || !$next.is('br')) {
+            $table.after('<br>');
+          }
+        });
+      }, 100);
+    });
+
+    // Add custom undo/redo handling for table operations and paste as plaintext
+    $editor.on('keydown', function(e) {
+      // Check if we're inside a table
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const tableElement = $(range.commonAncestorContainer).closest('table')[0];
+        
+        // Handle Ctrl+Shift+V for paste as plaintext in table cells
+        if (tableElement && (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v') {
+          e.preventDefault();
+          
+          // Access clipboard and paste as plain text
+          navigator.clipboard.readText().then(function(text) {
+            if (text) {
+              // Get current selection and insert plain text
+              const currentRange = window.getSelection().getRangeAt(0);
+              
+              // Delete any selected content first
+              if (!currentRange.collapsed) {
+                currentRange.deleteContents();
+              }
+              
+              // Create a text node and insert it
+              const textNode = document.createTextNode(text);
+              currentRange.insertNode(textNode);
+              
+              // Move cursor to end of inserted text
+              currentRange.setStartAfter(textNode);
+              currentRange.setEndAfter(textNode);
+              
+              // Update selection
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(currentRange);
+              
+              // Trigger change event for autosave
+              $editor.trigger('summernote.change');
+            }
+          }).catch(function(err) {
+            console.warn('Could not read clipboard for plaintext paste:', err);
+            // Fallback: let the browser handle it normally
+            document.execCommand('insertText', false, '');
+          });
+          
+          return false;
+        }
+        
+        if (tableElement && (e.ctrlKey || e.metaKey) && e.key === 'z') {
+          // We're in a table and user pressed Ctrl+Z
+          // Let Summernote handle it normally, but ensure table integrity afterwards
+          setTimeout(function() {
+            const $table = $(tableElement);
+            if ($table.length) {
+              // Reapply table classes and styling if they were lost
+              if (!$table.hasClass('table')) {
+                $table.addClass('table table-bordered table-striped');
+              }
+              
+              $table.find('td, th').each(function() {
+                const $cell = $(this);
+                if (!$cell.css('padding') || $cell.css('padding') === '0px') {
+                  $cell.css({
+                    'padding': '8px 12px',
+                    'border': '1px solid #dee2e6',
+                    'vertical-align': 'top'
+                  });
+                }
+              });
+            }
+          }, 50);
+        }
+      }
+    });
+  }
+
+  // Initialize enhanced table editing
+  enhanceTableEditing();
+
+  // Initialize image aspect ratio maintenance
+  maintainImageAspectRatio();
+  // Initialize editor image tracking to sync session-used assets when user deletes images
+  if (typeof trackImagesInEditor === 'function') try { trackImagesInEditor(); } catch(e) { console.warn('trackImagesInEditor init failed', e); }
+
+  updateWordCount();
+
+  $('form').on('submit', function() {
+    $('#hidden-content').val($('#editor').summernote('code'));
+    // Ensure combined description is serialized into hidden input before submit
+    if (typeof setCombinedDescriptionHidden === 'function') setCombinedDescriptionHidden();
+  });
+
+  $('input[name="title"]').on('input', scheduleAutosave);
+  // bind scheduleAutosave to any dynamic description items
+  // we'll attach events when we create the items
+
+  function updateWordCount() {
+    const text = $('<div>').html($('#editor').summernote('code')).text().trim();
+    const charCount = text.length;
+    const wordCount = text === '' ? 0 : text.split(/\s+/).length;
+    $('#wordCount').text(`Words: ${wordCount} | Characters: ${charCount}`);
+  }
+
+  function scheduleAutosave() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(saveNow, AUTOSAVE_IDLE_MS);
+  }
+  // Expose for description partial and external callers
+  window.scheduleAutosave = scheduleAutosave;
+
+  // Description helper functions moved to partial `note_description_partial.html` and are initialized there.
+  // Ensure lastSavedDescription (used for autosave comparisons) initializes with current hidden value
+  try {
+    const descEl = document.getElementById('description');
+    if (descEl && descEl.value) lastSavedDescription = descEl.value;
+  } catch (e) {
+    // ignore
+  }
+
+  async function createDraftIfNeeded() {
+    if ($('#note_id').val()) return true;
+    const html = $('#editor').summernote('code');
+    const title = $('input[name="title"]').val();
+    // Make sure combined description is up to date
+    if (typeof setCombinedDescriptionHidden === 'function') setCombinedDescriptionHidden();
+    const description = document.getElementById('description').value;
+    const fd = new FormData();
+    fd.append('title', title);
+    fd.append('description', description);
+    fd.append('content', html);
+    
+    try {
+      // Add timeout for server idle scenarios
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
+      
+      const resp = await fetch(DRAFT_ENDPOINT, { 
+        method: 'POST', 
+        body: fd, 
+        credentials: 'same-origin',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.note_id) {
+          $('#note_id').val(data.note_id);
+          if (data.edit_url) history.replaceState(null, '', data.edit_url);
+          lastSavedContent = html;
+          lastSavedTitle = title;
+          lastSavedDescription = description;
+          window.showToast('Draft created', 'info', 1200);
+          return true;
+        }
+      }
+      throw new Error(`HTTP ${resp.status}`);
+    } catch (error) {
+      console.error('Draft creation failed:', error);
+      
+      if (error.name === 'AbortError') {
+        window.showToast('Draft creation timeout - server may be starting up. Please wait...', 'warning', 3000);
+      } else {
+        window.showToast('Draft creation failed - will retry', 'danger', 1800);
+      }
+      return false;
+    }
+  }
+
+  async function saveNow() {
+    const html = $('#editor').summernote('code');
+    const title = $('input[name="title"]').val();
+    // Update combined description
+    if (typeof setCombinedDescriptionHidden === 'function') setCombinedDescriptionHidden();
+    const description = document.getElementById('description').value;
+    if (html === lastSavedContent && title === lastSavedTitle && description === lastSavedDescription) {
+      window.showToast('Already saved ✓', 'success', 1000);
+      return;
+    }
+    if (!$('#note_id').val()) {
+      await createDraftIfNeeded();
+      return;
+    }
+    const fd = new FormData();
+    fd.append('note_id', $('#note_id').val());
+    fd.append('title', title);
+    fd.append('description', description);
+    fd.append('content', html);
+    
+    try {
+      // Add timeout for server idle scenarios
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
+      
+      const resp = await fetch(SAVE_ENDPOINT, { 
+        method: 'POST', 
+        body: fd, 
+        credentials: 'same-origin',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (resp.ok) {
+        lastSavedContent = html;
+        lastSavedTitle = title;
+        lastSavedDescription = description;
+        window.showToast('Saved', 'success', 1000);
+      } else {
+        throw new Error(`HTTP ${resp.status}`);
+      }
+    } catch (error) {
+      console.error('Autosave failed:', error);
+      
+      if (error.name === 'AbortError') {
+        window.showToast('Save timeout - server may be starting up. Please wait...', 'warning', 3000);
+      } else {
+        window.showToast('Autosave failed - will retry on next change', 'danger', 2000);
+      }
+      
+      // Don't update lastSavedContent/Title so it will retry on next change
+    }
+  }
+
+  $(document).on('keydown', function(e) {
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    
+    // Handle Ctrl+S for save
+    if ((isMac && e.metaKey && e.key.toLowerCase() === 's') ||
+        (!isMac && e.ctrlKey && e.key.toLowerCase() === 's')) {
+      e.preventDefault();
+      clearTimeout(idleTimer);
+      saveNow();
+      return;
+    }
+    
+    // Handle Ctrl+Shift+V for paste as plaintext (fallback for non-table areas)
+    if ((isMac && e.metaKey && e.shiftKey && e.key.toLowerCase() === 'v') ||
+        (!isMac && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v')) {
+      
+      // Check if we're inside the editor but not in a table (table case is handled by editor-specific handler)
+      const activeElement = document.activeElement;
+      const editorElement = $('#editor').next('.note-editor')[0];
+      
+      if (editorElement && (editorElement.contains(activeElement) || activeElement === editorElement)) {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const tableElement = $(range.commonAncestorContainer).closest('table')[0];
+          
+          // Only handle if we're NOT in a table (table case handled by editor keydown handler)
+          if (!tableElement) {
+            e.preventDefault();
+            
+            navigator.clipboard.readText().then(function(text) {
+              if (text) {
+                // Use Summernote's pasteHTML with escaped text to maintain editor state
+                const escapedText = $('<div>').text(text).html(); // HTML escape the text
+                $('#editor').summernote('pasteHTML', escapedText);
+              }
+            }).catch(function(err) {
+              console.warn('Could not read clipboard for plaintext paste:', err);
+            });
+            
+            return false;
+          }
+        }
+      }
+    }
+  });
+});
+</script>
+<!-- /core  -->
+
+
+<!-- other non core functions -->
+<script>
+  // Calculator evaluation functionality - select math expressions and evaluate them
+  const evalBtn = document.getElementById('evalBtn');
+  if (evalBtn) {
+    evalBtn.addEventListener('click', function () {
+      const $editor = $('#editor');
+      const selectedText = $editor.summernote('createRange').toString().trim();
+
+      if (!selectedText) {
+          window.showToast('Please select some mathematical expression to evaluate.', 'warning', 3000);
+          return;
+      }
+
+      fetch('/eval_expression', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ expression: selectedText })
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.error) {
+            window.showToast("⚠️ Error: " + data.error, 'danger', 4000);
+          } else {
+            const result = data.result;
+            const resultText = `${selectedText} = ${result}`;
+
+            // Get the current selection range
+            const range = $editor.summernote('createRange');
+            
+            if (range) {
+                // Delete the selected text
+                range.deleteContents();
+                
+                // Insert the result
+                $editor.summernote('insertText', resultText);
+                
+                window.showToast(`Evaluated: ${resultText}`, 'success', 3000);
+            } else {
+                window.showToast('Could not determine cursor position. Please try again.', 'warning', 3000);
+            }
+          }
+      })
+      .catch(error => {
+          console.error('Evaluation error:', error);
+          window.showToast("⚠️ Failed to evaluate: " + error.message, 'danger', 4000);
+      });
+    });
+  }
+</script>
+
+
+<script>
+  // Table formatting functionality with delimiter selection
+  document.addEventListener('DOMContentLoaded', function () {
+    const insertTableBtn = document.getElementById('insertTableBtn');
+    const tabularModal = new bootstrap.Modal(document.getElementById('tabularModal'));
+    const $editor = $('#editor');
+    let textToFormat = '';
+
+    if (insertTableBtn) {
+      insertTableBtn.addEventListener('click', async function () {
+        // Try to read from clipboard first (preferred method for terminal output)
+        try {
+          const clipboardText = await navigator.clipboard.readText();
+          if (clipboardText && clipboardText.trim()) {
+            textToFormat = clipboardText.trim();
+            tabularModal.show();
+            return;
+          }
+        } catch (err) {
+          console.log('Clipboard access not available, trying selection...');
+        }
+
+        // Fallback: try to get selected text
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+          textToFormat = selection.toString().trim();
+          tabularModal.show();
+          return;
+        }
+
+        // Last resort: try Summernote's selection
+        try {
+          const summernoteSelection = $editor.summernote('createRange').toString().trim();
+          if (summernoteSelection) {
+            textToFormat = summernoteSelection;
+            tabularModal.show();
+            return;
+          }
+        } catch (err) {
+          console.log('Summernote selection failed:', err);
+        }
+
+        window.showToast('Please copy tabular text to clipboard or select text in the editor first.', 'warning', 3000);
+      });
+    }
+
+    // Handle delimiter selection buttons
+    document.querySelectorAll('.delimiter-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const delimiter = this.dataset.delimiter;
+        formatAsTable(textToFormat, delimiter);
+        tabularModal.hide();
+      });
+    });
+
+    // Handle custom delimiter button
+    document.getElementById('customDelimiterBtn').addEventListener('click', function() {
+      const customDelimiter = document.getElementById('customDelimiterInput').value;
+      if (!customDelimiter) {
+        window.showToast('Please enter a custom delimiter.', 'warning', 2000);
+        return;
+      }
+      formatAsTable(textToFormat, 'custom', customDelimiter);
+      tabularModal.hide();
+    });
+
+    // Handle Enter key in custom delimiter input
+    document.getElementById('customDelimiterInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('customDelimiterBtn').click();
+      }
+    });
+
+    function formatAsTable(text, delimiter, customDelimiterValue = null) {
+      try {
+        // Split text into lines (keep empty lines)
+        const lines = text.split('\n');
+        
+        if (lines.length === 0) {
+          window.showToast('No valid lines found in text.', 'warning', 2000);
+          return;
+        }
+
+        // Determine actual delimiter to use
+        let delimiterStr;
+        let delimiterPattern;
+        
+        if (delimiter === 'whitespace') {
+          // For whitespace, we'll use regex split
+          delimiterPattern = /\s+/;
+          delimiterStr = ' '; // For display purposes
+        } else if (delimiter === 'tab') {
+          delimiterStr = '\t';
+        } else if (delimiter === 'comma') {
+          delimiterStr = ',';
+        } else if (delimiter === 'pipe') {
+          delimiterStr = '|';
+        } else if (delimiter === 'semicolon') {
+          delimiterStr = ';';
+        } else if (delimiter === 'custom' && customDelimiterValue) {
+          delimiterStr = customDelimiterValue;
+        } else {
+          window.showToast('Invalid delimiter selected.', 'warning', 2000);
+          return;
+        }
+
+        // Find the position of the first delimiter in each line
+        const positions = [];
+        lines.forEach(line => {
+          if (line.trim() === '') return; // Skip empty lines
+          
+          let pos = -1;
+          if (delimiter === 'whitespace') {
+            const match = line.match(/\s+/);
+            pos = match ? match.index : -1;
+          } else {
+            pos = line.indexOf(delimiterStr);
+          }
+          
+          if (pos !== -1) {
+            positions.push(pos);
+          }
+        });
+
+        if (positions.length === 0) {
+          window.showToast('No delimiter found in any line.', 'warning', 2000);
+          return;
+        }
+
+        // Find max position to align all delimiters
+        const maxPos = Math.max(...positions);
+
+        // Align each line
+        const alignedLines = [];
+        lines.forEach(line => {
+          if (line.trim() === '') {
+            alignedLines.push(line); // Keep empty lines as is
+            return;
+          }
+
+          let delimiterIndex = -1;
+          if (delimiter === 'whitespace') {
+            const match = line.match(/\s+/);
+            delimiterIndex = match ? match.index : -1;
+          } else {
+            delimiterIndex = line.indexOf(delimiterStr);
+          }
+
+          if (delimiterIndex !== -1) {
+            // Split at first delimiter only
+            let left, right;
+            if (delimiter === 'whitespace') {
+              const parts = line.split(/\s+/, 2);
+              left = parts[0] || '';
+              right = line.substring(left.length).trimStart();
+            } else {
+              const parts = line.split(delimiterStr);
+              left = parts[0];
+              right = parts.slice(1).join(delimiterStr);
+            }
+            
+            // Pad the left part so all delimiters align
+            const paddedLeft = left.trimEnd().padEnd(maxPos, ' ');
+            alignedLines.push(`${paddedLeft} ${delimiterStr} ${right.trim()}`);
+          } else {
+            // No delimiter in this line, keep as is
+            alignedLines.push(line);
+          }
+        });
+
+        // Create formatted text
+        const formattedText = alignedLines.join('\n');
+
+        // Escape HTML entities to prevent interpretation
+        const escapedText = formattedText
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+
+        // Insert at cursor position using pasteHTML (more reliable)
+        const preFormattedText = `<pre style="background: var(--bg-quaternary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-primary); color: var(--text-primary); overflow-x: auto; font-family: 'Courier New', monospace; white-space: pre; font-size: 14px;">${escapedText}</pre><p><br></p>`;
+        
+        $editor.summernote('focus');
+        $editor.summernote('pasteHTML', preFormattedText);
+        
+        window.showToast(`Aligned ${positions.length} lines with delimiter "${delimiterStr}"`, 'success', 2000);
+
+      } catch (error) {
+        console.error('Delimiter alignment error:', error);
+        window.showToast(`Failed to align delimiters: ${error.message}`, 'danger', 3000);
+      }
+    }
+  });
+</script>
+
+<script>
+  // Find and Replace functionality
+  document.addEventListener('DOMContentLoaded', function () {
+    const findReplaceBtn = document.getElementById('findReplaceBtn');
+    const findReplaceModal = new bootstrap.Modal(document.getElementById('findReplaceModal'));
+    const findTextInput = document.getElementById('findText');
+    const replaceTextInput = document.getElementById('replaceText');
+    const matchCaseCheckbox = document.getElementById('matchCase');
+    const matchWholeWordCheckbox = document.getElementById('matchWholeWord');
+    const replaceNextBtn = document.getElementById('replaceNextBtn');
+    const replaceAllBtn = document.getElementById('replaceAllBtn');
+    const statusDiv = document.getElementById('findReplaceStatus');
+    const $editor = $('#editor');
+
+    // Open modal when button is clicked
+    if (findReplaceBtn) {
+      findReplaceBtn.addEventListener('click', function () {
+        // Clear previous values
+        findTextInput.value = '';
+        replaceTextInput.value = '';
+        matchCaseCheckbox.checked = false;
+        matchWholeWordCheckbox.checked = false;
+        statusDiv.textContent = '';
+        
+        // Show modal
+        findReplaceModal.show();
+        
+        // Focus on find input after modal is shown
+        setTimeout(() => findTextInput.focus(), 300);
+      });
+    }
+
+    // Helper function to get editor content as text
+    function getEditorText() {
+      return $editor.summernote('code');
+    }
+
+    // Helper function to set editor content
+    function setEditorText(html) {
+      $editor.summernote('code', html);
+    }
+
+    // Helper function to create regex pattern
+    function createSearchPattern(searchText, matchCase, matchWholeWord) {
+      let pattern = searchText;
+      
+      // Escape special regex characters
+      pattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Add word boundaries if matching whole word
+      if (matchWholeWord) {
+        pattern = '\\b' + pattern + '\\b';
+      }
+      
+      const flags = matchCase ? 'g' : 'gi';
+      return new RegExp(pattern, flags);
+    }
+
+    // Replace Next functionality
+    replaceNextBtn.addEventListener('click', function () {
+      const findText = findTextInput.value;
+      const replaceText = replaceTextInput.value;
+      
+      if (!findText) {
+        window.showToast('Please enter text to find', 'warning', 2000);
+        statusDiv.textContent = '⚠️ Please enter text to find';
+        return;
+      }
+
+      const matchCase = matchCaseCheckbox.checked;
+      const matchWholeWord = matchWholeWordCheckbox.checked;
+      const content = getEditorText();
+      
+      try {
+        const regex = createSearchPattern(findText, matchCase, matchWholeWord);
+        const match = regex.exec(content);
+        
+        if (match) {
+          // Replace the first occurrence
+          const newContent = content.replace(regex, replaceText);
+          setEditorText(newContent);
+          
+          statusDiv.textContent = '✅ Replaced 1 occurrence';
+          window.showToast('Replaced 1 occurrence', 'success', 2000);
+        } else {
+          statusDiv.textContent = '❌ No matches found';
+          window.showToast('No matches found', 'warning', 2000);
+        }
+      } catch (error) {
+        console.error('Replace next error:', error);
+        statusDiv.textContent = '❌ Error: ' + error.message;
+        window.showToast('Error: ' + error.message, 'danger', 2000);
+      }
+    });
+
+    // Replace All functionality
+    replaceAllBtn.addEventListener('click', function () {
+      const findText = findTextInput.value;
+      const replaceText = replaceTextInput.value;
+      
+      if (!findText) {
+        window.showToast('Please enter text to find', 'warning', 2000);
+        statusDiv.textContent = '⚠️ Please enter text to find';
+        return;
+      }
+
+      const matchCase = matchCaseCheckbox.checked;
+      const matchWholeWord = matchWholeWordCheckbox.checked;
+      const content = getEditorText();
+      
+      try {
+        const regex = createSearchPattern(findText, matchCase, matchWholeWord);
+        const matches = content.match(regex);
+        const count = matches ? matches.length : 0;
+        
+        if (count > 0) {
+          const newContent = content.replace(regex, replaceText);
+          setEditorText(newContent);
+          
+          statusDiv.textContent = `✅ Replaced ${count} occurrence${count > 1 ? 's' : ''}`;
+          window.showToast(`Replaced ${count} occurrence${count > 1 ? 's' : ''}`, 'success', 2000);
+        } else {
+          statusDiv.textContent = '❌ No matches found';
+          window.showToast('No matches found', 'warning', 2000);
+        }
+      } catch (error) {
+        console.error('Replace all error:', error);
+        statusDiv.textContent = '❌ Error: ' + error.message;
+        window.showToast('Error: ' + error.message, 'danger', 2000);
+      }
+    });
+
+    // Allow Enter key to trigger Replace Next
+    findTextInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        replaceNextBtn.click();
+      }
+    });
+
+    replaceTextInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        replaceNextBtn.click();
+      }
+    });
+  });
+</script>
+
+<script>
+  // Scroll to top and bottom functionality
+  document.addEventListener('DOMContentLoaded', function () {
+    const scrollTopBtn = document.getElementById('scrollTopBtn');
+    const scrollBottomBtn = document.getElementById('scrollBottomBtn');
+
+    if (scrollTopBtn) {
+      scrollTopBtn.addEventListener('click', function () {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+    }
+
+    if (scrollBottomBtn) {
+      scrollBottomBtn.addEventListener('click', function () {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: 'smooth'
+        });
+      });
+    }
+  });
+</script>
+
+<script>
+  // pin logic
+document.addEventListener('DOMContentLoaded', function () {
+  // Elements
+  const toolbar = document.querySelector('.floating-toolbar') || document.getElementById('floatingToolbar');
+  const pinBtn  = document.getElementById('pinBtn');
+
+  // Guards
+  if (!toolbar) {
+    console.warn('[pin] .floating-toolbar not found; pin feature disabled.');
+    return;
+  }
+  if (!pinBtn) {
+    console.warn('[pin] #pinBtn not found; pin feature disabled.');
+    return;
+  }
+
+  const LS_KEY = 'toolbarPinned';
+
+  // If you have a fixed navbar, account for its height when pinned
+  function getTopOffset() {
+    const nav = document.querySelector('.navbar.fixed-top, .navbar.navbar-fixed-top, .navbar.sticky-top');
+    return nav ? nav.offsetHeight : 0;
+  }
+
+  function applyPinnedState(pinned, { persist = true } = {}) {
+    if (pinned) {
+      toolbar.classList.add('pinned');
+      pinBtn.setAttribute('aria-pressed', 'true');
+      pinBtn.title = 'Unpin toolbar';
+
+      // Position custom toolbar at the top of viewport (fixed positioning)
+      const top = getTopOffset();
+      toolbar.style.top = top + 'px';
+      
+      // Add class to body for CSS targeting
+      document.body.classList.add('custom-toolbar-pinned');
+      
+      // Set CSS custom property for Summernote toolbar positioning
+      // Use requestAnimationFrame to ensure height is calculated after positioning
+      requestAnimationFrame(() => {
+        const customToolbarHeight = toolbar.offsetHeight;
+        document.documentElement.style.setProperty('--custom-toolbar-height', customToolbarHeight + 'px');
+        
+        // Also directly set the Summernote toolbar position as a fallback
+        const noteToolbar = document.querySelector('.note-toolbar');
+        if (noteToolbar) {
+          noteToolbar.style.top = customToolbarHeight + 'px';
+        }
+      });
+
+      // Add body padding so content isn't covered by the toolbar
+      requestAnimationFrame(() => {
+        const h = toolbar.offsetHeight;
+        document.body.style.paddingTop = (top + h) + 'px';
+      });
+    } else {
+      toolbar.classList.remove('pinned');
+      pinBtn.setAttribute('aria-pressed', 'false');
+      pinBtn.title = 'Pin toolbar to top';
+      
+      // Reset positioning
+      toolbar.style.top = '';
+      document.body.classList.remove('custom-toolbar-pinned');
+      document.documentElement.style.removeProperty('--custom-toolbar-height');
+      document.body.style.paddingTop = '';
+      
+      // Reset Summernote toolbar position
+      const noteToolbar = document.querySelector('.note-toolbar');
+      if (noteToolbar) {
+        noteToolbar.style.top = '';
+      }
+    }
+    if (persist) localStorage.setItem(LS_KEY, pinned ? '1' : '0');
+  }
+
+  // Restore saved state
+  const saved = localStorage.getItem(LS_KEY);
+  applyPinnedState(saved === '1', { persist: false });
+
+  // Toggle on click
+  pinBtn.addEventListener('click', () => {
+    const nowPinned = !toolbar.classList.contains('pinned');
+    applyPinnedState(nowPinned);
+  });
+
+  // Recompute toolbar positioning on resize (height may change)
+  window.addEventListener('resize', () => {
+    if (toolbar.classList.contains('pinned')) {
+      const top = getTopOffset();
+      toolbar.style.top = top + 'px';
+      
+      // Update CSS custom property for Summernote toolbar positioning
+      requestAnimationFrame(() => {
+        const customToolbarHeight = toolbar.offsetHeight;
+        document.documentElement.style.setProperty('--custom-toolbar-height', customToolbarHeight + 'px');
+        
+        // Also directly set the Summernote toolbar position as a fallback
+        const noteToolbar = document.querySelector('.note-toolbar');
+        if (noteToolbar) {
+          noteToolbar.style.top = customToolbarHeight + 'px';
+        }
+        
+        // Update body padding
+        document.body.style.paddingTop = (top + customToolbarHeight) + 'px';
+      });
+    }
+  });
+});
+
+
+</script>
+
+
+
+
+
+
+
+
+
+<!-- Toast stack (top-right) -->
+<div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 2100;"></div>
+
+<!-- Shortcuts and Tips Modal -->
+<div class="modal fade" id="shortcutsModal" tabindex="-1" aria-labelledby="shortcutsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="shortcutsModalLabel">📖 Keyboard Shortcuts & Tips</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="accordion" id="shortcutsAccordion">
+
+          <!-- Keyboard Shortcuts -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#shortcuts" aria-expanded="true" aria-controls="shortcuts">
+                ⌨️ Keyboard Shortcuts
+              </button>
+            </h2>
+            <div id="shortcuts" class="accordion-collapse collapse show" data-bs-parent="#shortcutsAccordion">
+              <div class="accordion-body">
+                <ul class="list-unstyled">
+                  <li><kbd>Ctrl</kbd> + <kbd>S</kbd> / <kbd>Cmd</kbd> + <kbd>S</kbd> - Save note immediately</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>B</kbd> - Bold text</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>I</kbd> - Italic text</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>U</kbd> - Underline text</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>Z</kbd> - Undo</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>Y</kbd> - Redo</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>K</kbd> - Insert link</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> - Insert unordered list</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>N</kbd> - Insert ordered list</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Saving & Autosave -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#saving" aria-expanded="false" aria-controls="saving">
+                💾 Saving & Autosave
+              </button>
+            </h2>
+            <div id="saving" class="accordion-collapse collapse" data-bs-parent="#shortcutsAccordion">
+              <div class="accordion-body">
+                <ul class="list-unstyled">
+                  <li><strong>Autosave:</strong> Changes are automatically saved every 2 seconds when you're idle</li>
+                  <li><strong>Manual Save:</strong> Click the 💾 button or press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save immediately</li>
+                  <li><strong>Drafts:</strong> New notes are automatically saved as drafts</li>
+                  <li><strong>Toast Notifications:</strong> Green "Saved" toast appears when autosave completes</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Editor Features -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#editor" aria-expanded="false" aria-controls="editor">
+                ✏️ Editor Features
+              </button>
+            </h2>
+            <div id="editor" class="accordion-collapse collapse" data-bs-parent="#shortcutsAccordion">
+              <div class="accordion-body">
+                <ul class="list-unstyled">
+                  <li><strong>Rich Text Editing:</strong> Bold, italic, underline, font styles, colors, and sizes</li>
+                  <li><strong>Lists:</strong> Bulleted and numbered lists with nesting support</li>
+                  <li><strong>Tables:</strong> Insert and edit tables with the table toolbar</li>
+                  <li><strong>Links & Media:</strong> Insert links, images, and videos</li>
+                  <li><strong>Code View:</strong> Toggle between visual and HTML code editing</li>
+                  <li><strong>Fullscreen Mode:</strong> Expand editor to full screen for distraction-free writing</li>
+                  <li><strong>Word Count:</strong> Live character and word count at the bottom</li>
+                  <li><strong>Image Upload:</strong> Drag & drop or paste images (max 5MB, supports GIF, JPEG, PNG, WebP, BMP, TIFF)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Utilities -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#utilities" aria-expanded="false" aria-controls="utilities">
+                🧰 Utilities
+              </button>
+            </h2>
+            <div id="utilities" class="accordion-collapse collapse" data-bs-parent="#shortcutsAccordion">
+              <div class="accordion-body">
+                <ul class="list-unstyled">
+                  <li><strong>Evaluate Selection:</strong> Select mathematical expressions and click 🧮 to calculate them</li>
+                  <li><strong>Explain with AI:</strong> Select text and click 🤖 to get AI-powered explanations</li>
+                  <li><strong>Tabular Format:</strong> Copy terminal output (or select text), click 📊, choose delimiter to format as aligned columns in a code block</li>
+                  <li><strong>Calculator Integration:</strong> Mathematical expressions are sent to MioCalc for evaluation</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navigation & UI -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#navigation" aria-expanded="false" aria-controls="navigation">
+                🧭 Navigation & UI
+              </button>
+            </h2>
+            <div id="navigation" class="accordion-collapse collapse" data-bs-parent="#shortcutsAccordion">
+              <div class="accordion-body">
+                <ul class="list-unstyled">
+                  <li><strong>Floating Toolbar:</strong> Appears when scrolling, contains save, scroll, and utility buttons</li>
+                  <li><strong>Pin Toolbar:</strong> Click 📌 to pin the toolbar below the editor toolbar</li>
+                  <li><strong>Scroll Controls:</strong> ⬆️ and ⬇️ buttons to quickly jump to top/bottom</li>
+                  
+                  <li><strong>Breadcrumbs:</strong> Navigate folder hierarchy with the breadcrumb trail</li>
+                  <li><strong>Product Switcher:</strong> Dropdown menu to switch between MioCalc, MioChat, and Home</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tips & Best Practices -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tips" aria-expanded="false" aria-controls="tips">
+                💡 Tips & Best Practices
+              </button>
+            </h2>
+            <div id="tips" class="accordion-collapse collapse" data-bs-parent="#shortcutsAccordion">
+              <div class="accordion-body">
+                <ul class="list-unstyled">
+                  <li><strong>Autosave Reliability:</strong> Don't worry about losing work - autosave happens continuously</li>
+                  <li><strong>Image Optimization:</strong> Large images are automatically resized and converted to WebP format</li>
+                  <li><strong>Keyboard Efficiency:</strong> Use keyboard shortcuts for common formatting tasks</li>
+                  <li><strong>Selection Tools:</strong> Select text before using utilities like evaluate or explain</li>
+                  
+                  <li><strong>Toolbar Pinning:</strong> Pin the toolbar for consistent access while writing long documents</li>
+                  <li><strong>Cross-Product Integration:</strong> Calculator expressions can be evaluated directly from notes</li>
+                  <li><strong>AI Assistance:</strong> Use the AI explain feature to understand complex text or get writing help</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Find and Replace Modal -->
+<div class="modal fade" id="findReplaceModal" tabindex="-1" aria-labelledby="findReplaceModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-primary);">
+        <h5 class="modal-title" id="findReplaceModalLabel">🔍 Find and Replace</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="findText" class="form-label">Find:</label>
+          <input type="text" class="form-control" id="findText" placeholder="Enter text to find" style="background: var(--bg-quaternary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+        </div>
+        <div class="mb-3">
+          <label for="replaceText" class="form-label">Replace with:</label>
+          <input type="text" class="form-control" id="replaceText" placeholder="Enter replacement text" style="background: var(--bg-quaternary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+        </div>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="matchCase" style="background: var(--bg-quaternary); border: 1px solid var(--border-primary);">
+          <label class="form-check-label" for="matchCase">
+            Match case
+          </label>
+        </div>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="matchWholeWord" style="background: var(--bg-quaternary); border: 1px solid var(--border-primary);">
+          <label class="form-check-label" for="matchWholeWord">
+            Match whole word
+          </label>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-primary flex-fill" id="replaceNextBtn" style="background: var(--accent-blue); border-color: var(--accent-blue);">Replace Next</button>
+          <button type="button" class="btn btn-success flex-fill" id="replaceAllBtn" style="background: var(--accent-green); border-color: var(--accent-green);">Replace All</button>
+        </div>
+        <div id="findReplaceStatus" class="mt-3 text-center text-muted small"></div>
+      </div>
+      <div class="modal-footer" style="border-top: 1px solid var(--border-primary);">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabular Delimiter Selection Modal -->
+<div class="modal fade" id="tabularModal" tabindex="-1" aria-labelledby="tabularModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-primary);">
+        <h5 class="modal-title" id="tabularModalLabel">📊 Format Tabular Text</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Choose the delimiter used in your text:</p>
+        
+        <!-- Predefined Delimiters -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <button type="button" class="btn btn-sm btn-outline-primary delimiter-btn" data-delimiter="whitespace" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">
+            Whitespace
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary delimiter-btn" data-delimiter="tab" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">
+            Tab
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary delimiter-btn" data-delimiter="comma" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">
+            Comma (,)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary delimiter-btn" data-delimiter="pipe" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">
+            Pipe (|)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary delimiter-btn" data-delimiter="semicolon" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">
+            Semicolon (;)
+          </button>
+        </div>
+
+        <!-- Custom Delimiter Option -->
+        <div class="mt-3">
+          <label for="customDelimiterInput" class="form-label text-muted small">Or enter a custom delimiter:</label>
+          <div class="input-group">
+            <input type="text" class="form-control form-control-sm" id="customDelimiterInput" placeholder="e.g., :: or ---" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">
+            <button type="button" class="btn btn-sm btn-primary" id="customDelimiterBtn" style="background: var(--accent-blue); border-color: var(--accent-blue);">
+              Apply Custom
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top: 1px solid var(--border-primary);">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: var(--bg-quaternary); border-color: var(--border-primary); color: var(--text-primary);">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Minimal, non-interactive Bootstrap 5 toast (auto-dismiss only)
+  window.showToast = function (message, type = 'secondary', delay = 2000) {
+    const container = document.getElementById('toastContainer');
+    const html = `
+      <div class="toast text-bg-${type} border-0 shadow-sm mb-2"
+           role="status" aria-live="polite" aria-atomic="true"
+           data-bs-delay="${delay}" data-bs-autohide="true">
+        <div class="toast-body small fw-medium">${message}</div>
+      </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+    const el = container.lastElementChild;
+    const t = new bootstrap.Toast(el);
+    t.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+  };
+</script>
+
+<!-- Tutorial System Initialization -->
+<script>
+  // Initialize tutorial system when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the tutorial (will auto-start if not completed)
+    if (typeof window.initializeTutorialSystem === 'function') {
+      window.initializeTutorialSystem();
+    }
+    
+    // Add click handler for tutorial button
+    const tutorialBtn = document.getElementById('tutorialBtn');
+    if (tutorialBtn && typeof window.startTutorial === 'function') {
+      tutorialBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.startTutorial();
+      });
+    }
+  });
+</script>
+
+</body>
+</html>

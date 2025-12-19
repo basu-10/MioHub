@@ -1,0 +1,223 @@
+<!-- folder_view_settings_partial.html -->
+
+<!-- Settings Modal (partial) -->
+<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center" style="z-index: 11500;">
+  <div class=" rounded-lg shadow-xl max-w-md w-full mx-4" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary);">
+    <div class="flex items-center justify-between p-4" style="border-bottom:1px solid var(--border-primary);">
+      <h5 class="text-lg font-semibold" style="color:var(--text-primary);">
+        <i class="material-icons mr-2" style="color:var(--text-secondary);">settings</i> Settings
+      </h5>
+      <button type="button" style="color:var(--text-secondary);" onclick="closeSettingsModal()">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+    
+    <div class="p-4">
+      <div id="settingsError" class="alert alert-danger mb-3" style="display: none;"></div>
+      <div id="settingsSuccess" class="alert alert-success mb-3" style="display: none;"></div>
+      
+      <!-- Theme Selection -->
+      <div class="mb-4">
+        <label for="themeSelect" class="block text-sm font-medium mb-2" style="color:var(--text-secondary)">
+          <i class="material-icons mr-1 text-sm">palette</i> Theme
+        </label>
+        <select class="w-full px-3 py-2 border rounded-md" id="themeSelect" style="background:var(--bg-tertiary);border:1px solid var(--border-primary);color:var(--text-primary);">
+          <option value="flatly" {% if current_user.user_prefs.theme == 'flatly' %}selected{% endif %}>Flatly (Default)</option>
+          <option value="darkly" {% if current_user.user_prefs.theme == 'darkly' %}selected{% endif %}>Darkly</option>
+          <option value="slate" {% if current_user.user_prefs.theme == 'slate' %}selected{% endif %}>Slate</option>
+          <option value="superhero" {% if current_user.user_prefs.theme == 'superhero' %}selected{% endif %}>Superhero</option>
+          <option value="solar" {% if current_user.user_prefs.theme == 'solar' %}selected{% endif %}>Solar</option>
+          <option value="cyborg" {% if current_user.user_prefs.theme == 'cyborg' %}selected{% endif %}>Cyborg</option>
+          <option value="vapor" {% if current_user.user_prefs.theme == 'vapor' %}selected{% endif %}>Vapor</option>
+          <option value="lux" {% if current_user.user_prefs.theme == 'lux' %}selected{% endif %}>Lux</option>
+          <option value="minty" {% if current_user.user_prefs.theme == 'minty' %}selected{% endif %}>Minty</option>
+          <option value="journal" {% if current_user.user_prefs.theme == 'journal' %}selected{% endif %}>Journal</option>
+        </select>
+        <div class="text-xs text-gray-500 mt-1">Choose your preferred color theme</div>
+      </div>
+      
+      <!-- User Type Display -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2" style="color:var(--text-secondary)">
+          <i class="material-icons mr-1 text-sm">account_circle</i> Account Type
+        </label>
+        <div class="px-3 py-2 rounded-md text-sm" style="background:var(--bg-tertiary);border:1px solid var(--border-primary);color:var(--text-primary);">
+          <span class="capitalize font-medium">{{ current_user.user_type }}</span>
+          {% if current_user.user_type == 'guest' %}
+            <span class="ml-2" style="color:var(--text-secondary)">(50MB storage limit)</span>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Storage Usage (for guest users) -->
+      {% if current_user.user_type == 'guest' %}
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2" style="color:var(--text-secondary)">
+          <i class="material-icons mr-1 text-sm">storage</i> Storage Usage
+        </label>
+        {% set used_mb = (current_user.total_data_size or 0) / (1024 * 1024) %}
+        {% set total_mb = 50 %}
+        {% set percentage = ((current_user.total_data_size or 0) / (50 * 1024 * 1024)) * 100 %}
+        <div class="px-3 py-2 rounded-md text-sm" style="background:var(--bg-tertiary);border:1px solid var(--border-primary);color:var(--text-primary);">
+          <div class="flex justify-between items-center mb-1">
+            <span>{{ "%.1f"|format(used_mb) }} MB / {{ total_mb }} MB</span>
+            <span style="color:var(--text-secondary)">{{ "%.1f"|format(percentage) }}%</span>
+          </div>
+          <div class="w-full" style="background:rgba(255,255,255,0.03);border-radius:999px;height:8px;">
+            <div class="h-2 rounded-full transition-all duration-300" style="height:8px;width: {{ [percentage, 100]|min }}%; background: var(--accent);"></div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    
+    <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
+      <button type="button" class="px-4 py-2 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-md transition duration-200" onclick="closeSettingsModal()">
+        <i class="material-icons mr-1 text-sm">close</i> Cancel
+      </button>
+      <button type="button" id="saveSettingsBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200">
+        <span class="spinner-border spinner-border-sm" id="settingsSpinner" style="display: none;" role="status" aria-hidden="true"></span>
+        <i class="material-icons mr-1 text-sm">save</i> Save Settings
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Settings modal specific styles moved here */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.05) 100%);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: #16a34a;
+}
+
+.spinner-border {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: text-bottom;
+  border: 0.15em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+.spinner-border-sm {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-width: 0.1em;
+}
+
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Save settings (theme) handler
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      const themeSelect = document.getElementById('themeSelect');
+      const settingsError = document.getElementById('settingsError');
+      const settingsSuccess = document.getElementById('settingsSuccess');
+      const settingsSpinner = document.getElementById('settingsSpinner');
+      
+      if (!themeSelect) return;
+      
+      const selectedTheme = themeSelect.value;
+      
+      // Show loading spinner
+      settingsSpinner.style.display = 'inline-block';
+      saveSettingsBtn.disabled = true;
+      
+      // Hide previous messages
+      settingsError.style.display = 'none';
+      settingsSuccess.style.display = 'none';
+      
+      // Send AJAX request to update user preferences
+      const formData = new FormData();
+      formData.append('theme', selectedTheme);
+      
+      fetch('/update_settings', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          return response.text().then(text => { throw new Error(`HTTP ${response.status}: ${text}`); });
+        }
+      })
+      .then(data => {
+        if (data.success) {
+          settingsSuccess.textContent = 'Settings saved successfully!';
+          settingsSuccess.style.display = 'block';
+          if (data.reload_required) {
+            setTimeout(() => location.reload(), 1500);
+          }
+        } else {
+          throw new Error(data.message || 'Failed to update settings');
+        }
+      })
+      .catch(error => {
+        settingsError.textContent = 'Failed to save settings. Please try again.';
+        settingsError.style.display = 'block';
+        console.error('Settings update error:', error);
+      })
+      .finally(() => {
+        settingsSpinner.style.display = 'none';
+        saveSettingsBtn.disabled = false;
+      });
+    });
+  }
+
+  // Settings modal helpers
+  window.openSettingsModal = function() {
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      const settingsError = document.getElementById('settingsError');
+      const settingsSuccess = document.getElementById('settingsSuccess');
+      if (settingsError) settingsError.style.display = 'none';
+      if (settingsSuccess) settingsSuccess.style.display = 'none';
+    }
+  };
+
+  window.closeSettingsModal = function() {
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  };
+
+  // Close settings modal when clicking outside
+  document.addEventListener('click', function(e) {
+    const modal = document.getElementById('settingsModal');
+    if (modal && !modal.classList.contains('hidden')) {
+      if (e.target === modal) {
+        closeSettingsModal();
+      }
+    }
+  });
+});
+</script>

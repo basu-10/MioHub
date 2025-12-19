@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ file.title }} - Graph Workspace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <style>
+    body { 
+      background: var(--bg); 
+      color: var(--white); 
+      margin: 0; 
+      overflow: hidden; 
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    
+    #graph-container {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+    }
+
+    #canvas-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #graph-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      cursor: grab; /* Default to pan mode (grab hand) */
+    }
+
+    /* Ensure workspace modals stay above canvas and toolbars */
+    #createNodeModal.modal,
+    #editNodeModal.modal,
+    #attachmentModal.modal {
+      z-index: 1070;
+    }
+
+    /* Backdrop for any modal on this page */
+    .modal-backdrop {
+      z-index: 1065;
+    }
+    
+    /* Top navbar */
+    #top-navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border-primary);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 1000;
+    }
+    
+    .navbar-title {
+      flex: 1;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .navbar-pill {
+      background: var(--accent);
+      color: var(--white);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 12px;
+      margin-left: 12px;
+    }
+    
+    /* Toolbar */
+    #toolbar {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      z-index: 100;
+    }
+    
+    .toolbar-btn {
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      color: var(--white);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .toolbar-btn:hover:not(:disabled) {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    .toolbar-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .toolbar-btn .material-icons {
+      font-size: 18px;
+    }
+    
+    /* Node info panel */
+    #node-info-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 320px;
+      max-height: calc(100vh - 100px);
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      overflow: visible;
+      display: none;
+      z-index: 100;
+      transition: transform 0.3s ease;
+      transform: translateX(0);
+      --panel-handle-width: 56px;
+    }
+    
+    #node-info-panel.collapsed {
+      /* Slide out, but keep a visible handle for the toggle button */
+      transform: translateX(calc(100% - var(--panel-handle-width)));
+    }
+    
+    #panel-toggle-btn {
+      position: absolute;
+      top: 50%;
+      left: -44px;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 70px;
+      background: var(--accent);
+      border: 2px solid var(--accent-strong);
+      border-right: none;
+      border-radius: 12px 0 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--white);
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    #panel-toggle-btn:hover {
+      background: var(--accent-strong);
+      transform: translateY(-50%) scale(1.06);
+    }
+    
+    #panel-toggle-btn .material-icons {
+      font-size: 20px;
+      transition: transform 0.3s ease;
+    }
+    
+    #node-info-panel.collapsed #panel-toggle-btn .material-icons {
+      transform: rotate(180deg);
+    }
+    
+    .panel-content {
+      margin-top: 0;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+    }
+    
+    .node-info-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+    
+    .node-info-summary {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    
+    .attachments-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: space-between;
+    }
+
+    /* Create menu (inside node info panel) */
+    .graph-create-wrap {
+      position: relative;
+      margin: 10px 0 14px 0;
+    }
+
+    .graph-create-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      width: 260px;
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 10px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.38);
+      padding: 8px;
+      display: none;
+      z-index: 120;
+    }
+
+    .graph-create-menu.show {
+      display: block;
+    }
+
+    .graph-create-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--border-primary);
+      background: var(--bg);
+      color: var(--white);
+      border-radius: 8px;
+      padding: 10px 10px;
+      margin: 6px 0;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+
+    .graph-create-item:hover:not(:disabled) {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .graph-create-item:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .graph-create-item .material-icons {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    
+    /* Modal styling */
+    .modal-content {
+      background: var(--card);
+      color: var(--white);
+      border: 1px solid var(--border-primary);
+    }
+    
+    .modal-header {
+      border-bottom: 1px solid var(--border-primary);
+    }
+    
+    .modal-footer {
+      border-top: 1px solid var(--border-primary);
+    }
+    
+    .form-control, .form-select {
+      background: var(--bg);
+      color: var(--white);
+      border: 1px solid var(--border-primary);
+    }
+    
+    .form-control:focus, .form-select:focus {
+      background: var(--bg);
+      color: var(--white);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.25);
+    }
+    
+    .form-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    
+    .btn-accent {
+      background: var(--accent);
+      color: var(--white);
+      border: none;
+    }
+    
+    .btn-accent:hover {
+      background: var(--accent-strong);
+      color: var(--white);
+    }
+    
+    .list-group-item {
+      background: var(--bg);
+      color: var(--white);
+      border: 1px solid var(--border-primary);
+    }
+    
+    /* Attachment list item styling */
+    .attachment-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    
+    .attachment-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    
+    .attachment-info .material-icons {
+      flex-shrink: 0;
+      font-size: 20px;
+      margin-top: 2px;
+    }
+    
+    .attachment-label {
+      flex: 1;
+      word-wrap: break-word;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+    
+    .attachment-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    
+    .btn-icon {
+      padding: 6px 8px;
+      min-width: unset;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-primary);
+      background: var(--bg);
+      color: var(--white);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-icon:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.05);
+    }
+    
+    .btn-icon.btn-danger:hover {
+      background: #dc3545;
+      border-color: #dc3545;
+    }
+    
+    .btn-icon .material-icons {
+      font-size: 18px;
+    }
+    
+    /* Panel sections */
+    .panel-section {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border-primary);
+    }
+    
+    .panel-section:last-child {
+      border-bottom: none;
+    }
+    
+    .panel-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    
+    .node-actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .node-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      color: var(--white);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+    
+    .node-action-btn:hover:not(:disabled) {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+    }
+    
+    .node-action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .node-action-btn .material-icons {
+      font-size: 18px;
+    }
+    
+    .node-action-btn.btn-danger:hover:not(:disabled) {
+      background: #dc3545;
+      border-color: #dc3545;
+      box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+    
+    /* Modal z-index fixes to ensure they appear above everything */
+    .modal {
+      z-index: 1055 !important;
+    }
+    
+    .modal-backdrop {
+      z-index: 1050 !important;
+    }
+    
+    .modal-dialog {
+      z-index: 1056 !important;
+    }
+    
+    /* Connection mode notification */
+    #connection-mode-notification {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: var(--white);
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4);
+      display: none;
+      z-index: 200;
+      max-width: 500px;
+      text-align: center;
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+    
+    #connection-mode-notification .notification-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    #connection-mode-notification .notification-text {
+      font-size: 13px;
+      opacity: 0.95;
+      line-height: 1.5;
+    }
+    
+    #connection-mode-notification .material-icons {
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body data-graph-folder-id="{{ file.folder_id }}">
+  <!-- Top Navbar -->
+  <div id="top-navbar">
+    <div class="navbar-title">
+      {{ file.title }}
+      <span class="navbar-pill">Graph Workspace</span>
+      {% if file.is_public %}
+        <span class="badge bg-success ms-2">Public</span>
+      {% else %}
+        <span class="badge bg-secondary ms-2">Private</span>
+      {% endif %}
+    </div>
+    <a class="btn btn-sm btn-outline-light me-2" href="{{ url_for('folders.view_folder', folder_id=file.folder_id) }}">
+      <i class="material-icons" style="font-size: 18px;">arrow_back</i> Back
+    </a>
+    <button class="btn btn-sm btn-outline-info" onclick="window.GraphStorage.exportJSONL()">
+      <i class="material-icons" style="font-size: 18px;">download</i> Export JSONL
+    </button>
+  </div>
+
+  <!-- Graph Container -->
+  <div id="graph-container">
+    <div id="canvas-wrapper">
+      <canvas id="graph-canvas"></canvas>
+      
+      <!-- Connection Mode Notification -->
+      <div id="connection-mode-notification">
+        <div class="notification-title">
+          <i class="material-icons">timeline</i>
+          Connection Mode Active
+        </div>
+        <div class="notification-text">
+          Select pairs of nodes to connect them. First click = source, second click = target.<br>
+          Click "Done" when finished making connections.
+        </div>
+      </div>
+      
+      <!-- Toolbar -->
+      <div id="toolbar">
+        <button id="btn-add-node" class="toolbar-btn" title="Add Node">
+          <i class="material-icons">add_circle</i>
+          <span>Add Node</span>
+        </button>
+        <button id="btn-connect-nodes" class="toolbar-btn" title="Connect Nodes" disabled>
+          <i class="material-icons">timeline</i>
+          <span>Connect</span>
+        </button>
+        <button id="btn-done-connecting" class="toolbar-btn" title="Done Connecting" style="display: none; background: var(--accent); border-color: var(--accent);">
+          <i class="material-icons">check_circle</i>
+          <span>Done</span>
+        </button>
+        <button id="btn-add-attachment" class="toolbar-btn" title="Add Attachment" disabled>
+          <i class="material-icons">attach_file</i>
+          <span>Manage</span>
+        </button>
+        <button id="btn-delete-node" class="toolbar-btn" title="Delete Node" disabled>
+          <i class="material-icons">delete</i>
+          <span>Delete</span>
+        </button>
+        <button id="btn-edit-arrow" class="toolbar-btn" title="Edit Arrow" disabled>
+          <i class="material-icons">edit</i>
+          <span>Edit Arrow</span>
+        </button>
+        <button id="btn-delete-arrow" class="toolbar-btn" title="Delete Arrow" disabled>
+          <i class="material-icons">delete_outline</i>
+          <span>Delete Arrow</span>
+        </button>
+        <button id="btn-refresh-names" class="toolbar-btn" title="Refresh File Names">
+          <i class="material-icons">refresh</i>
+          <span>Refresh</span>
+        </button>
+        <button id="btn-fit-all" class="toolbar-btn" title="Fit All Items">
+          <i class="material-icons">fit_screen</i>
+          <span>Fit All</span>
+        </button>
+        <button id="btn-reset-view" class="toolbar-btn" title="Reset View">
+          <i class="material-icons">center_focus_strong</i>
+          <span>Reset</span>
+        </button>
+      </div>
+      
+      <!-- Node Info Panel -->
+      <div id="node-info-panel">
+        <button id="panel-toggle-btn" title="Collapse panel" >
+          <i class="material-icons">chevron_right</i>
+        </button>
+        <div class="panel-content">
+          <!-- Section 1: Node Information -->
+          <div class="panel-section">
+            <div class="panel-section-title">Node Information</div>
+            <div class="node-info-title" id="selected-node-title">Node Title</div>
+            <div class="node-info-summary" id="selected-node-summary">Description</div>
+          </div>
+
+          <!-- Section 2: Node Actions -->
+          <div class="panel-section">
+            <div class="panel-section-title">Node Actions</div>
+            <div class="node-actions-grid">
+              <button class="node-action-btn" id="btn-panel-manage" title="Manage node details and attachments" disabled>
+                <i class="material-icons">settings</i>
+                <span>Manage</span>
+              </button>
+              <button class="node-action-btn btn-danger" id="btn-panel-delete" title="Delete this node" disabled>
+                <i class="material-icons">delete</i>
+                <span>Delete</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section 3: Create Files -->
+          <div class="panel-section">
+            <div class="graph-create-wrap">
+            <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <div class="panel-section-title" style="margin: 0;">Create Files In This Folder</div>
+              <button class="btn-icon" id="btn-graph-create" title="Create a new item in the same folder as this graph">
+                <i class="material-icons">add_circle</i>
+              </button>
+            </div>
+            <div class="graph-create-menu" id="graph-create-menu" aria-label="Create menu">
+              <!-- Universal file types (match Folder View FAB list) -->
+              <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="markdown">
+                <i class="material-icons">text_fields</i>
+                📝 Markdown
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="code">
+                <i class="material-icons">code</i>
+                💻 Code
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="todo">
+                <i class="material-icons">checklist</i>
+                ✅ Todo List
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="diagram">
+                <i class="material-icons">account_tree</i>
+                🔷 Diagram
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="table">
+                <i class="material-icons">table_chart</i>
+                📊 Table
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="blocks">
+                <i class="material-icons">view_week</i>
+                🧱 Blocks
+              </button>
+
+              <button type="button" class="graph-create-item" data-create-kind="infinite_whiteboard">
+                <i class="material-icons">explore</i>
+                🌌 Infinite Whiteboard
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="proprietary_graph">
+                <i class="material-icons">device_hub</i>
+                🕸️ Graph Workspace
+              </button>
+
+              <button type="button" class="graph-create-item" data-create-kind="mionote">
+                <i class="material-icons">description</i>
+                📝 New MioNote
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="miodraw">
+                <i class="material-icons">dashboard</i>
+                🎨 New MioDraw
+              </button>
+              <button type="button" class="graph-create-item" data-create-kind="miobook">
+                <i class="material-icons">article</i>
+                📄 New MioBook
+              </button>
+            </div>
+            </div>
+          </div>
+          
+          <!-- Section 4: Attachments -->
+          <div class="panel-section">
+            <div class="attachments-header">
+              <div class="d-flex align-items-center gap-2">
+                <i class="material-icons">attach_file</i>
+                <span class="panel-section-title" style="margin: 0;">All Attachments</span>
+              </div>
+              <span class="badge bg-info" id="node-attachments-count">0</span>
+            </div>
+            <div id="node-attachments-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Node Modal -->
+  <div class="modal fade" id="createNodeModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create New Node</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="create-node-title" class="form-label">Title *</label>
+            <input type="text" class="form-control" id="create-node-title" placeholder="Enter node title" required>
+          </div>
+          <div class="mb-3">
+            <label for="create-node-summary" class="form-label">Description (optional)</label>
+            <textarea class="form-control" id="create-node-summary" rows="3" placeholder="Brief description of this concept"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-accent" id="create-node-submit">Create Node</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include Folder/File Picker Modal -->
+  {% include 'p2/partials/folder_file_picker_modal.html' %}
+
+  <!-- Edit Arrow Modal -->
+  <div class="modal fade" id="editArrowModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Customize Arrow</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-arrow-id">
+          <div class="mb-3">
+            <label for="arrow-label" class="form-label">Label (optional)</label>
+            <input type="text" class="form-control" id="arrow-label" placeholder="Edge label">
+          </div>
+          <div class="mb-3">
+            <label for="arrow-color" class="form-label">Color</label>
+            <input type="color" class="form-control form-control-color" id="arrow-color" value="#9aa8ad">
+          </div>
+          <div class="mb-3">
+            <label for="arrow-thickness" class="form-label">Thickness: <span id="thickness-value">2</span>px</label>
+            <input type="range" class="form-range" id="arrow-thickness" min="1" max="10" value="2">
+          </div>
+          <div class="mb-3">
+            <label for="arrow-direction" class="form-label">Direction</label>
+            <div class="btn-group w-100" role="group" aria-label="Arrow direction">
+              <button type="button" class="btn btn-outline-light arrow-direction-btn" data-arrow-direction="directed" title="One Way">
+                <span class="material-icons">arrow_forward</span>
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-direction-btn" data-arrow-direction="bidirectional" title="Two Way">
+                <span class="material-icons">swap_horiz</span>
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-direction-btn" data-arrow-direction="undirected" title="No Arrows">
+                <span class="material-icons">remove</span>
+              </button>
+            </div>
+          </div>
+          <div class="mb-3" id="arrow-oneway-orientation-group" style="display:none;">
+            <label class="form-label">One Way Arrow Orientation</label>
+            <div class="btn-group w-100" role="group" aria-label="Arrow orientation">
+              <button type="button" class="btn btn-outline-light arrow-orientation-btn" data-arrow-orientation="forward" title="Source to Target">
+                <span class="material-icons">arrow_forward</span> Src → Tgt
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-orientation-btn" data-arrow-orientation="backward" title="Target to Source">
+                <span class="material-icons">arrow_back</span> Tgt → Src
+              </button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="arrow-dash" class="form-label">Line Style</label>
+            <div class="btn-group w-100" role="group" aria-label="Line dash">
+              <button type="button" class="btn btn-outline-light arrow-dash-btn" data-arrow-dash="solid">Solid</button>
+              <button type="button" class="btn btn-outline-light arrow-dash-btn" data-arrow-dash="dashed">Dashed</button>
+              <button type="button" class="btn btn-outline-light arrow-dash-btn" data-arrow-dash="dotted">Dotted</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="arrow-line-style" class="form-label">Line Shape</label>
+            <div class="btn-group w-100" role="group" aria-label="Line shape">
+              <button type="button" class="btn btn-outline-light arrow-line-style-btn" data-arrow-line-style="straight" title="Straight">
+                <span class="material-icons">trending_flat</span>
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-line-style-btn" data-arrow-line-style="wavy" title="Wavy">
+                <span class="material-icons">gesture</span>
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-line-style-btn" data-arrow-line-style="elbow_hvh" title="Elbow H-V-H (3-segment)">
+                <span class="material-icons">turn_slight_right</span>
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-line-style-btn" data-arrow-line-style="elbow_vhv" title="Elbow V-H-V (3-segment)">
+                <span class="material-icons">turn_left</span>
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-line-style-btn" data-arrow-line-style="elbow_hv" title="Elbow H-V (2-segment)">
+                <span class="material-icons">subdirectory_arrow_right</span>
+              </button>
+              <button type="button" class="btn btn-outline-light arrow-line-style-btn" data-arrow-line-style="elbow_vh" title="Elbow V-H (2-segment)">
+                <span class="material-icons">call_received</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-accent" id="save-arrow-submit">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Node Modal (old attachment modal taht was revamped) -->
+  <div class="modal fade" id="attachmentModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Manage Node: <span id="attachment-node-name"></span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="attachment-node-id">
+          
+          <!-- Node Details Section -->
+          <div class="mb-4 pb-3 border-bottom" style="border-color: var(--border-primary) !important;">
+            <h6 class="mb-3" style="color: var(--accent); font-weight: 600;">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">edit</i>
+              Node Details
+            </h6>
+            <div class="mb-3">
+              <label for="attachment-node-title" class="form-label">Node Title</label>
+              <input type="text" class="form-control" id="attachment-node-title" placeholder="Enter node title">
+            </div>
+            <div class="mb-3">
+              <label for="attachment-node-description" class="form-label">Node Description</label>
+              <textarea class="form-control" id="attachment-node-description" rows="2" placeholder="Brief description"></textarea>
+            </div>
+                      <button type="button" class="btn btn-accent" id="save-node-details-btn">Save Node Details</button>
+
+          </div>
+          
+          <!-- Attachment Section -->
+          <h6 class="mb-3" style="color: var(--accent); font-weight: 600;">
+            <i class="material-icons" style="font-size: 18px; vertical-align: middle;">attach_file</i>
+            Add Attachment
+          </h6>
+          <div class="mb-3">
+            <label for="attachment-type" class="form-label">Attachment Type</label>
+            <select class="form-select" id="attachment-type">
+              <option value="file_folder">File / Folder</option>
+              <option value="url">URL</option>
+            </select>
+          </div>
+          <div class="mb-3" id="attachment-file-group">
+            <label class="form-label">Select Files or Folders</label>
+            <div class="d-flex gap-2">
+              <input type="text" class="form-control" id="attachment-file-display" placeholder="No item selected" readonly>
+              <input type="hidden" id="attachment-file-id">
+              <button type="button" class="btn btn-accent" id="btn-pick-file">
+                <i class="material-icons">folder_open</i>
+                Browse
+              </button>
+            </div>
+          </div>
+          <div class="mb-3" id="attachment-url-group" style="display: none;">
+            <label for="attachment-url" class="form-label">URL</label>
+            <input type="url" class="form-control" id="attachment-url" placeholder="https://example.com">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-accent" id="add-attachment-submit">Add Attachment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Folder/File Picker -->
+  <script src="{{ url_for('p2_bp.static', filename='js/folder_file_picker.js') }}"></script>
+
+  <!-- Graph Workspace Modules -->
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_canvas.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_nodes.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_edges.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_storage.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_attachments.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_toolbar.js') }}"></script>
+
+  <!-- Initialize Graph Workspace -->
+  <script>
+    const GRAPH_FILE_ID = {{ file.id }};
+    const IS_OWNER = {{ 'true' if is_owner else 'false' }};
+
+    // Initialize all modules
+    document.addEventListener('DOMContentLoaded', async function() {
+      const GRAPH_FOLDER_ID = Number(document.body?.dataset?.graphFolderId);
+      const canvas = document.getElementById('graph-canvas');
+      
+      // Initialize modules in dependency order
+      window.GraphCanvas.init(canvas, GRAPH_FILE_ID);
+      window.GraphNodes.init(canvas, GRAPH_FILE_ID);
+      window.GraphEdges.init(canvas, GRAPH_FILE_ID);
+      window.GraphStorage.init(GRAPH_FILE_ID);
+      window.GraphAttachments.init(GRAPH_FILE_ID);
+      window.GraphToolbar.init(GRAPH_FILE_ID);
+
+      // Load graph data
+      await window.GraphStorage.loadGraph();
+      
+      // Panel toggle functionality
+      const panel = document.getElementById('node-info-panel');
+      const toggleBtn = document.getElementById('panel-toggle-btn');
+      
+      toggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        panel.classList.toggle('collapsed');
+      });
+
+      // Create menu in node info panel
+      const createBtn = document.getElementById('btn-graph-create');
+      const createMenu = document.getElementById('graph-create-menu');
+
+      function closeCreateMenu() {
+        if (createMenu) createMenu.classList.remove('show');
+      }
+
+      function toggleCreateMenu() {
+        if (!createMenu) return;
+        createMenu.classList.toggle('show');
+      }
+
+      function navigateTo(url) {
+        window.location.href = url;
+      }
+
+      function createFile(fileType) {
+        const folderParam = encodeURIComponent(String(GRAPH_FOLDER_ID));
+        navigateTo(`/p2/files/new/${encodeURIComponent(fileType)}?folder_id=${folderParam}`);
+      }
+
+      function createMioNote() {
+        const folderParam = encodeURIComponent(String(GRAPH_FOLDER_ID));
+        navigateTo(`/new_note?folder_id=${folderParam}`);
+      }
+
+      function createMioBook() {
+        const folderParam = encodeURIComponent(String(GRAPH_FOLDER_ID));
+        navigateTo(`/combined/new?folder_id=${folderParam}`);
+      }
+
+      function createInfiniteWhiteboard() {
+        const folderParam = encodeURIComponent(String(GRAPH_FOLDER_ID));
+        navigateTo(`/infinite_boards/new?folder_id=${folderParam}`);
+      }
+
+      function createMioDraw() {
+        // /boards/new expects POST with folder_id
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/boards/new';
+
+        const titleField = document.createElement('input');
+        titleField.type = 'hidden';
+        titleField.name = 'title';
+        titleField.value = 'Untitled Board';
+        form.appendChild(titleField);
+
+        const contentField = document.createElement('input');
+        contentField.type = 'hidden';
+        contentField.name = 'content';
+        contentField.value = '{}';
+        form.appendChild(contentField);
+
+        const folderField = document.createElement('input');
+        folderField.type = 'hidden';
+        folderField.name = 'folder_id';
+        folderField.value = String(GRAPH_FOLDER_ID);
+        form.appendChild(folderField);
+
+        document.body.appendChild(form);
+        form.submit();
+      }
+
+      // Disable create menu for non-owners (prevents confusing permission errors)
+      if (!IS_OWNER) {
+        if (createBtn) {
+          createBtn.disabled = true;
+          createBtn.title = 'Only the owner can create items here';
+          createBtn.style.opacity = '0.6';
+          createBtn.style.cursor = 'not-allowed';
+        }
+        if (createMenu) {
+          createMenu.querySelectorAll('button').forEach(btn => (btn.disabled = true));
+        }
+      }
+
+      if (createBtn) {
+        createBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!IS_OWNER) return;
+          toggleCreateMenu();
+        });
+      }
+
+      if (createMenu) {
+        createMenu.addEventListener('click', function(e) {
+          const btn = e.target.closest('button.graph-create-item');
+          if (!btn) return;
+          if (!IS_OWNER) return;
+
+          const kind = btn.getAttribute('data-create-kind');
+          const fileType = btn.getAttribute('data-file-type');
+          closeCreateMenu();
+
+          if (kind === 'file' && fileType) return createFile(fileType);
+          if (kind === 'mionote') return createMioNote();
+          if (kind === 'miodraw') return createMioDraw();
+          if (kind === 'miobook') return createMioBook();
+          if (kind === 'infinite_whiteboard') return createInfiniteWhiteboard();
+        });
+      }
+
+      document.addEventListener('click', function() {
+        closeCreateMenu();
+      });
+
+      // Panel action buttons - delegate to toolbar buttons
+      const panelManageBtn = document.getElementById('btn-panel-manage');
+      const panelDeleteBtn = document.getElementById('btn-panel-delete');
+      const toolbarManageBtn = document.getElementById('btn-add-attachment');
+      const toolbarDeleteBtn = document.getElementById('btn-delete-node');
+
+      if (panelManageBtn && toolbarManageBtn) {
+        panelManageBtn.addEventListener('click', function() {
+          if (!panelManageBtn.disabled) {
+            toolbarManageBtn.click();
+          }
+        });
+      }
+
+      if (panelDeleteBtn && toolbarDeleteBtn) {
+        panelDeleteBtn.addEventListener('click', function() {
+          if (!panelDeleteBtn.disabled) {
+            toolbarDeleteBtn.click();
+          }
+        });
+      }
+
+      // Sync button states: when toolbar buttons change state, update panel buttons
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'disabled') {
+            if (mutation.target === toolbarManageBtn && panelManageBtn) {
+              panelManageBtn.disabled = toolbarManageBtn.disabled;
+            }
+            if (mutation.target === toolbarDeleteBtn && panelDeleteBtn) {
+              panelDeleteBtn.disabled = toolbarDeleteBtn.disabled;
+            }
+          }
+        });
+      });
+
+      if (toolbarManageBtn) observer.observe(toolbarManageBtn, { attributes: true });
+      if (toolbarDeleteBtn) observer.observe(toolbarDeleteBtn, { attributes: true });
+      
+      // Connection mode state management
+      let connectionModeActive = false;
+      let connectionSourceNode = null;
+      const btnConnect = document.getElementById('btn-connect-nodes');
+      const btnDone = document.getElementById('btn-done-connecting');
+      const notification = document.getElementById('connection-mode-notification');
+      
+      // Expose connection mode state globally so modules can check it
+      window.graphConnectionModeActive = false;
+      
+      function enterConnectionMode() {
+        connectionModeActive = true;
+        window.graphConnectionModeActive = true;
+        connectionSourceNode = null;
+        
+        // Update UI
+        if (btnConnect) {
+          btnConnect.style.display = 'none';
+        }
+        if (btnDone) {
+          btnDone.style.display = 'flex';
+        }
+        if (notification) {
+          notification.style.display = 'block';
+        }
+        
+        // Disable other toolbar buttons during connection mode
+        document.querySelectorAll('.toolbar-btn').forEach(btn => {
+          if (btn.id !== 'btn-done-connecting' && btn.id !== 'btn-reset-view' && btn.id !== 'btn-fit-all') {
+            btn.disabled = true;
+          }
+        });
+        
+        // Update canvas cursor
+        canvas.style.cursor = 'crosshair';
+        
+        console.log('Connection mode activated');
+      }
+      
+      function exitConnectionMode() {
+        connectionModeActive = false;
+        window.graphConnectionModeActive = false;
+        connectionSourceNode = null;
+        
+        // Update UI
+        if (btnConnect) {
+          btnConnect.style.display = 'flex';
+        }
+        if (btnDone) {
+          btnDone.style.display = 'none';
+        }
+        if (notification) {
+          notification.style.display = 'none';
+        }
+        
+        // Re-enable toolbar buttons
+        document.querySelectorAll('.toolbar-btn').forEach(btn => {
+          // Let individual button logic handle their enabled/disabled state
+          if (btn.id === 'btn-connect-nodes') {
+            btn.disabled = false; // Re-enable connect button
+          }
+        });
+        
+        // Restore canvas cursor
+        canvas.style.cursor = 'grab';
+        
+        console.log('Connection mode deactivated');
+      }
+      
+      // Handle connection mode node selection
+      window.addEventListener('graph:nodeSelected', function(event) {
+        if (!connectionModeActive) return;
+        
+        const nodeId = event.detail.nodeId;
+        
+        if (!connectionSourceNode) {
+          // First node selected - set as source
+          connectionSourceNode = nodeId;
+          console.log('Connection source selected:', nodeId);
+          
+          // Visual feedback (optional - could highlight the source node)
+          if (notification) {
+            notification.querySelector('.notification-text').innerHTML = 
+              `Source node selected! Now click the target node.<br>Click "Done" to exit connection mode.`;
+          }
+        } else {
+          // Second node selected - create connection
+          const targetNode = nodeId;
+          
+          if (connectionSourceNode === targetNode) {
+            console.log('Cannot connect node to itself');
+            alert('Cannot connect a node to itself. Please select a different target node.');
+            connectionSourceNode = null;
+            return;
+          }
+          
+          console.log('Creating connection:', connectionSourceNode, '->', targetNode);
+          
+          // Create the edge
+          window.GraphEdges.createEdge(connectionSourceNode, targetNode);
+          
+          // Reset for next pair
+          connectionSourceNode = null;
+          
+          // Reset notification text
+          if (notification) {
+            notification.querySelector('.notification-text').innerHTML = 
+              `Select pairs of nodes to connect them. First click = source, second click = target.<br>Click "Done" when finished making connections.`;
+          }
+        }
+      });
+      
+      // Connect button - enter connection mode
+      if (btnConnect) {
+        btnConnect.addEventListener('click', function() {
+          enterConnectionMode();
+        });
+      }
+      
+      // Done button - exit connection mode
+      if (btnDone) {
+        btnDone.addEventListener('click', function() {
+          exitConnectionMode();
+        });
+      }
+      
+      console.log('Graph Workspace initialized');
+    });
+  </script>
+</body>
+</html>

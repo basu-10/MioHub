@@ -1,0 +1,405 @@
+<!-- Edit diagram with JSON editor (Monaco Editor) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if file %}Edit: {{ file.title }}{% else %}New Diagram{% endif %} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+    
+    .editor-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .editor-header {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    
+    .editor-panel {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    #monaco-editor {
+      height: 500px;
+      border: 1px solid var(--border-primary);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    #preview-canvas {
+      width: 100%;
+      height: 500px;
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      border-radius: 8px;
+    }
+    
+    .template-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .template-btn {
+      padding: 0.4rem 0.8rem;
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    
+    .template-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(20, 184, 166, 0.1);
+    }
+    
+    .form-control, .form-select {
+      background: var(--bg);
+      color: var(--white);
+      border: 1px solid var(--border-primary);
+    }
+    
+    .form-control:focus {
+      background: var(--bg);
+      color: var(--white);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 0.2rem rgba(20, 184, 166, 0.25);
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-strong);
+    }
+    
+    @media (max-width: 992px) {
+      .editor-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-container">
+    <div class="editor-header">
+      <form id="diagram-form" method="POST">
+        <div class="row mb-3">
+          <div class="col-md-8">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" name="title" 
+                   value="{% if file %}{{ file.title }}{% endif %}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label d-block">&nbsp;</label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="is_public" name="is_public" 
+                     {% if file and file.is_public %}checked{% endif %}>
+              <label class="form-check-label" for="is_public">
+                <i class="material-icons" style="font-size: 16px; vertical-align: middle;">public</i>
+                Make Public
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="description" class="form-label">Description (optional)</label>
+          <input type="text" class="form-control" id="description" name="description" 
+                 value="{% if file and file.metadata_json %}{{ file.metadata_json.get('description', '') }}{% endif %}"
+                 placeholder="Brief description">
+        </div>
+        
+        <input type="hidden" id="content" name="content" value="">
+        
+        <div class="d-flex justify-content-between">
+          <div>
+            <button type="submit" class="btn btn-primary">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">save</i>
+              Save
+            </button>
+            <a href="{{ url_for('folders.view_folder', folder_id=session.get('current_folder_id', 1)) }}" class="btn btn-outline-secondary ms-2">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">close</i>
+              Cancel
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <div class="editor-layout">
+      <!-- JSON Editor Panel -->
+      <div class="editor-panel">
+        <div class="panel-title">
+          <i class="material-icons">code</i>
+          JSON Editor
+        </div>
+        <div class="template-buttons">
+          <button type="button" class="template-btn" onclick="loadTemplate('flowchart')">Flowchart</button>
+          <button type="button" class="template-btn" onclick="loadTemplate('mindmap')">Mind Map</button>
+          <button type="button" class="template-btn" onclick="loadTemplate('network')">Network</button>
+          <button type="button" class="template-btn" onclick="loadTemplate('blank')">Blank</button>
+        </div>
+        <div id="monaco-editor"></div>
+      </div>
+      
+      <!-- Preview Panel -->
+      <div class="editor-panel">
+        <div class="panel-title">
+          <i class="material-icons">visibility</i>
+          Preview
+        </div>
+        <canvas id="preview-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Monaco Editor -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+  
+  <script>
+    const templates = {
+      flowchart: {
+        nodes: [
+          {id: 'start', label: 'Start', x: 100, y: 50, color: '#14b8a6'},
+          {id: 'process', label: 'Process', x: 100, y: 150, color: '#3b82f6'},
+          {id: 'decision', label: 'Decision?', x: 100, y: 250, color: '#f59e0b'},
+          {id: 'end', label: 'End', x: 100, y: 350, color: '#ef4444'}
+        ],
+        edges: [
+          {from: 'start', to: 'process'},
+          {from: 'process', to: 'decision'},
+          {from: 'decision', to: 'end', label: 'Yes'}
+        ]
+      },
+      mindmap: {
+        nodes: [
+          {id: 'root', label: 'Main Idea', x: 250, y: 250, color: '#14b8a6', size: 60},
+          {id: 'branch1', label: 'Branch 1', x: 150, y: 150, color: '#3b82f6', size: 40},
+          {id: 'branch2', label: 'Branch 2', x: 350, y: 150, color: '#8b5cf6', size: 40},
+          {id: 'branch3', label: 'Branch 3', x: 150, y: 350, color: '#f59e0b', size: 40},
+          {id: 'branch4', label: 'Branch 4', x: 350, y: 350, color: '#ec4899', size: 40}
+        ],
+        edges: [
+          {from: 'root', to: 'branch1'},
+          {from: 'root', to: 'branch2'},
+          {from: 'root', to: 'branch3'},
+          {from: 'root', to: 'branch4'}
+        ]
+      },
+      network: {
+        nodes: [
+          {id: 'server', label: 'Server', x: 250, y: 100, color: '#14b8a6'},
+          {id: 'db', label: 'Database', x: 150, y: 250, color: '#3b82f6'},
+          {id: 'cache', label: 'Cache', x: 350, y: 250, color: '#8b5cf6'},
+          {id: 'client', label: 'Client', x: 250, y: 400, color: '#f59e0b'}
+        ],
+        edges: [
+          {from: 'server', to: 'db', label: 'Query'},
+          {from: 'server', to: 'cache', label: 'Store'},
+          {from: 'client', to: 'server', label: 'Request'}
+        ]
+      },
+      blank: {
+        nodes: [],
+        edges: []
+      }
+    };
+    
+    let editor;
+    // Load saved content if exists, otherwise use flowchart template
+    let currentData = {% if file and file.content_json %}{{ file.content_json|tojson|safe }}{% else %}null{% endif %};
+    if (!currentData) {
+      currentData = templates.flowchart;
+    }
+    
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
+    
+    require(['vs/editor/editor.main'], function() {
+      editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+        value: JSON.stringify(currentData, null, 2),
+        language: 'json',
+        theme: 'vs-dark',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        fontSize: 14
+      });
+      
+      // Update preview on edit
+      editor.onDidChangeModelContent(function() {
+        try {
+          currentData = JSON.parse(editor.getValue());
+          renderPreview(currentData);
+        } catch(e) {
+          console.log('Invalid JSON');
+        }
+      });
+      
+      // Initial render
+      renderPreview(currentData);
+    });
+    
+    function loadTemplate(name) {
+      const template = templates[name];
+      currentData = template;
+      editor.setValue(JSON.stringify(template, null, 2));
+      renderPreview(template);
+    }
+    
+    function renderPreview(data) {
+      const canvas = document.getElementById('preview-canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Set canvas size
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      if (!data || !data.nodes) return;
+      
+      // Draw edges first
+      if (data.edges) {
+        ctx.strokeStyle = '#14b8a6';
+        ctx.lineWidth = 2;
+        data.edges.forEach(edge => {
+          const from = data.nodes.find(n => n.id === edge.from);
+          const to = data.nodes.find(n => n.id === edge.to);
+          if (from && to) {
+            ctx.beginPath();
+            ctx.moveTo(from.x + 50, from.y + 25);
+            ctx.lineTo(to.x + 50, to.y + 25);
+            ctx.stroke();
+            
+            // Draw label if exists
+            if (edge.label) {
+              ctx.fillStyle = '#9aa8ad';
+              ctx.font = '12px Arial';
+              ctx.fillText(edge.label, (from.x + to.x) / 2 + 50, (from.y + to.y) / 2 + 20);
+            }
+          }
+        });
+      }
+      
+      // Draw nodes
+      data.nodes.forEach(node => {
+        const size = node.size || 50;
+        const radius = size / 2;
+        
+        // Node circle/rect
+        ctx.fillStyle = node.color || '#14b8a6';
+        ctx.beginPath();
+        ctx.roundRect(node.x, node.y, size * 2, size, 8);
+        ctx.fill();
+        
+        // Node label
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(node.label, node.x + size, node.y + radius);
+      });
+    }
+    
+    // Form submit
+    document.getElementById('diagram-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      saveFile();
+    });
+    
+    // Keyboard shortcut
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveFile();
+      }
+    });
+    
+    // AJAX save function to stay on page
+    async function saveFile() {
+      try {
+        // Trigger telemetry activity animation
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setActive('Saving diagram...');
+        }
+        
+        const jsonData = JSON.parse(editor.getValue());
+        const formData = new FormData(document.getElementById('diagram-form'));
+        formData.set('content', JSON.stringify(jsonData));
+        
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Saved ${result.file_type} (${result.size})`);
+          }
+        } else {
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Save failed: ${result.error}`);
+          } else {
+            alert('Error: ' + result.error);
+          }
+        }
+      } catch(err) {
+        if (err instanceof SyntaxError) {
+          alert('Invalid JSON! Please fix errors before saving.');
+        } else {
+          console.error('Save error:', err);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle('Save failed: network error');
+          } else {
+            alert('Error saving file');
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

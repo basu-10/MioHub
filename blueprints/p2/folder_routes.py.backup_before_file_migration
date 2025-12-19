@@ -1,0 +1,2102 @@
+#folder routes
+from flask import Blueprint, request, redirect, url_for, flash, render_template, session, jsonify, current_app
+from flask_login import login_required, current_user
+from blueprints.p2.models import Folder, File, db, User
+from . import folder_bp  # Import the blueprint instance
+
+
+from blueprints.p2.folder_ops import (
+    create_folder,
+    rename_folder,
+    delete_folder,
+    build_folder_breadcrumb, copy_folder_recursive, move_folder,
+    get_or_create_folder_path, copy_folder_to_user, copy_note_to_user, copy_board_to_user
+)
+from blueprints.p2.utils import collect_images_from_content, get_image_hash, get_existing_image_by_hash
+from values_main import UPLOAD_FOLDER
+import os
+import json
+
+
+
+def compute_folder_depths(folders):
+    def dfs(folder, depth):
+        folder.depth = depth
+        result = [folder]
+        for child in folder.children:
+            result.extend(dfs(child, depth + 1))
+        return result
+
+    root_folders = [f for f in folders if f.parent_id is None]
+    all_ordered = []
+    for root in root_folders:
+        all_ordered.extend(dfs(root, 0))
+    return all_ordered
+
+
+# @folder_bp.route('/product2')
+# def product2():
+#     print("Rendering product2 page")
+#     return render_template('p2/home.html')
+
+
+
+
+
+
+
+
+## view_folder ----------------------------------------------------------
+@folder_bp.route('/<int:folder_id>')
+@login_required
+def view_folder(folder_id):
+    folder = Folder.query.get_or_404(folder_id)
+    if folder.user_id != current_user.id:
+        flash("Access denied.")
+        return redirect(url_for('p2_bp.dashboard'))
+
+    # Get sort parameter
+    sort_by = request.args.get('sort', 'name')  # default to 'name'
+    
+    # Get items - query File table with type discriminator
+    notes = File.query.filter_by(folder_id=folder.id, owner_id=current_user.id, type='note').all()
+    subfolders = folder.children
+    boards = File.query.filter_by(folder_id=folder.id, owner_id=current_user.id, type='whiteboard').all()
+    
+    # Get MioBook documents (Files with type='book')
+    books = File.query.filter_by(folder_id=folder.id, owner_id=current_user.id, type='book').all()
+    
+    # Get regular files (exclude MioBooks which are shown in dedicated section)
+    files = File.query.filter(
+        File.folder_id == folder.id,
+        File.owner_id == current_user.id,
+        File.type != 'book'
+    ).all()
+    
+    # DEBUG: Print all notes and files found
+    print(f"\n{'='*80}")
+    print(f"DEBUG view_folder - Folder ID: {folder.id}, Name: '{folder.name}'")
+    print(f"Total notes from query: {len(notes)}")
+    print(f"Total files from query: {len(files)}")
+    print(f"Total books from query: {len(books)}")
+    for note in notes:
+        print(f"  - Note ID: {note.id}, Title: '{note.title}', Content length: {len(note.content or '')}")
+    for file_obj in files:
+        print(f"  - File ID: {file_obj.id}, Type: '{file_obj.type}', Title: '{file_obj.title}'")
+    for book in books:
+        print(f"  - Book ID: {book.id}, Title: '{book.title}', Blocks: {len(book.content_json or [])}")
+    print(f"{'='*80}\n")
+    
+    # Combined docs are now only MioBooks (File with type='book')
+    combined_docs = books
+    
+    # Regular notes are all File objects with type='note'
+    regular_notes = notes
+    
+    # DEBUG: Print split results
+    print(f"DEBUG: Regular notes: {len(regular_notes)}, Combined docs: {len(combined_docs)}")
+    print(f"Regular note IDs: {[n.id for n in regular_notes]}")
+    print(f"Combined doc IDs: {[n.id for n in combined_docs]}\n")
+    
+    breadcrumb = build_folder_breadcrumb(folder)
+    
+    # Sort items based on sort_by parameter
+    def sort_items(items, sort_by, item_type):
+        if sort_by == 'name':
+            if item_type == 'folder':
+                return sorted(items, key=lambda x: x.name.lower())
+            elif item_type in ['note', 'board', 'combined', 'file']:
+                return sorted(items, key=lambda x: (x.title or '').lower())
+        elif sort_by == 'created':
+            return sorted(items, key=lambda x: x.created_at or x.id)
+        elif sort_by == 'modified':
+            return sorted(items, key=lambda x: x.last_modified or x.created_at or x.id, reverse=True)
+        elif sort_by == 'size':
+            if item_type == 'folder':
+                # For folders, count total items (notes + boards + subfolders)
+                return sorted(items, key=lambda x: len(x.notes) + len(x.boards) + len(x.children), reverse=True)
+            elif item_type in ['note', 'board']:
+                # For notes/boards, use content length
+                return sorted(items, key=lambda x: len(x.content or ''), reverse=True)
+            elif item_type in ['combined', 'file']:
+                # For combined (books) and files, use get_content_size() method if available
+                # Legacy notes in combined list may not have this method
+                return sorted(items, key=lambda x: x.get_content_size() if hasattr(x, 'get_content_size') else len(x.content or ''), reverse=True)
+        return items  # fallback
+    
+    regular_notes = sort_items(regular_notes, sort_by, 'note')
+    subfolders = sort_items(subfolders, sort_by, 'folder')
+    boards = sort_items(boards, sort_by, 'board')
+    combined_docs = sort_items(combined_docs, sort_by, 'combined')
+    files = sort_items(files, sort_by, 'file')
+    
+    # Group files by type for separate sections
+    files_by_type = {}
+    for file_obj in files:
+        file_type = file_obj.type or 'other'
+        if file_type not in files_by_type:
+            files_by_type[file_type] = []
+        files_by_type[file_type].append(file_obj)
+    
+    # Get recently modified items if viewing root folder
+    recent_items = []
+    is_root_folder = folder.parent_id is None
+    if is_root_folder:
+        # Collect all items from across the user's workspace
+        from datetime import datetime
+        from sqlalchemy import desc
+        
+        recent_candidates = []
+        
+        # Get recent Files (all types: note, whiteboard, markdown, todo, etc.)
+        for file_obj in File.query.filter_by(owner_id=current_user.id).order_by(desc(File.last_modified)).limit(30).all():
+            recent_candidates.append({
+                'item': file_obj,
+                'type': 'file',
+                'file_type': file_obj.type,
+                'last_modified': file_obj.last_modified or file_obj.created_at,
+                'title': file_obj.title,
+                'folder_id': file_obj.folder_id
+            })
+        
+        # Sort all candidates by last_modified and take top 10
+        recent_candidates.sort(key=lambda x: x['last_modified'] or datetime.utcnow(), reverse=True)
+        recent_items = recent_candidates[:10]
+    
+    # store folder_id and breadcrumb in session
+    session['current_folder_id'] = folder.id
+    session['current_breadcrumb'] = [(f.id, f.name) for f in breadcrumb]
+
+    all_folders_raw = Folder.query.filter_by(user_id=current_user.id).all()
+    all_folders = compute_folder_depths(all_folders_raw)
+
+    # Get display preferences from user_prefs
+    user_prefs = current_user.user_prefs or {}
+    display_prefs = user_prefs.get('display', {})
+    
+    # Set default display preferences if not set
+    display_prefs.setdefault('columns', 3)
+    display_prefs.setdefault('view_mode', 'grid')
+    display_prefs.setdefault('card_size', 'normal')
+    display_prefs.setdefault('show_previews', True)
+
+    # DEBUG: Final counts being sent to template
+    print(f"DEBUG: Sending to template - Regular notes: {len(regular_notes)}, Combined docs: {len(combined_docs)}")
+    print(f"DEBUG: Regular note IDs being sent: {[n.id for n in regular_notes]}")
+    print(f"DEBUG: Combined doc IDs being sent: {[n.id for n in combined_docs]}")
+    print(f"{'='*80}\n")
+
+    # Parse description JSON for notes: supply note.descriptions as a list, or None if invalid
+    import json as _json
+    for note in regular_notes:
+        note.descriptions = None
+        note.description_parse_failed = False
+        if note.description:
+            try:
+                parsed = _json.loads(note.description)
+                # Accept dict or list; convert dict to ordered list by numeric keys
+                if isinstance(parsed, dict):
+                    try:
+                        # Try sorting keys as integers when they are number-like strings
+                        keys = sorted(parsed.keys(), key=lambda k: int(k))
+                    except Exception:
+                        keys = sorted(parsed.keys())
+                    # Build key/value pairs preserving original keys in order
+                    kv_pairs = [(k, parsed[k].strip()) for k in keys if isinstance(parsed[k], str) and parsed[k].strip()]
+                    if kv_pairs:
+                        note.descriptions = kv_pairs
+                        note.description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
+                        print(f"DEBUG: Note {note.id} descriptions parsed (dict): count={len(kv_pairs)}")
+                    else:
+                        note.descriptions = None
+                elif isinstance(parsed, list):
+                    # Convert list into (index, value) pairs and filter empty ones
+                    kv_pairs = [(str(i + 1), v.strip()) for i, v in enumerate(parsed) if isinstance(v, str) and v.strip()]
+                    if kv_pairs:
+                        note.descriptions = kv_pairs
+                        note.description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
+                        print(f"DEBUG: Note {note.id} descriptions parsed (list): count={len(kv_pairs)}")
+                    else:
+                        note.descriptions = None
+                else:
+                    # Not a dict/list; treat as invalid for our new format
+                    print(f"DEBUG: Note {note.id} description is not a JSON object/list; ignoring for display.")
+                    note.descriptions = None
+                    note.description_parse_failed = True
+            except Exception:
+                preview = (note.description or '')[:200]
+                print(f"DEBUG: Failed to parse JSON description for Note {note.id}; preview={preview!r}; ignoring description.")
+                note.descriptions = None
+                note.description_parse_failed = True
+
+    # Also provide pinned users (pull from current_user.user_prefs 'pinned_users' list)
+    pinned_users = []
+    try:
+        prefs = current_user.user_prefs or {}
+        pinned_ids = prefs.get('pinned_users', []) if isinstance(prefs, dict) else []
+        if pinned_ids:
+            # Preserve pinned order while resolving to User objects
+            pinned_users = [User.query.get(int(uid)) for uid in pinned_ids if User.query.get(int(uid))]
+    except Exception:
+        pinned_users = []
+
+    return render_template('p2/folder_view.html', folder=folder, notes=regular_notes, combined_docs=combined_docs, subfolders=subfolders, files=files, files_by_type=files_by_type, folder_breadcrumb=breadcrumb, all_folders=all_folders, current_sort=sort_by, display_prefs=display_prefs, pinned_users=pinned_users, recent_items=recent_items, is_root_folder=is_root_folder)
+
+
+@folder_bp.route('/create', methods=['POST'])
+@login_required
+def create_folder_route():
+    from blueprints.p2.utils import add_notification
+    
+    # Safely extract form fields and coerce parent_id to int when possible.
+    name = (request.form.get('name') or '').strip()
+    description = (request.form.get('description') or '').strip()
+    parent_id_raw = request.form.get('parent_id')
+
+    # Normalize parent_id: treat empty, 'None', or virtual ids like 'home' as None
+    if parent_id_raw in (None, '', 'None', 'home'):
+        parent_id = None
+    else:
+        try:
+            parent_id = int(parent_id_raw)
+        except (ValueError, TypeError):
+            parent_id = None
+
+    if not name:
+        flash("Folder name cannot be empty.")
+        return redirect(request.referrer or url_for('p2_bp.dashboard'))
+
+    # Debug log to help trace parent_id issues during development
+    print(f"DEBUG create_folder_route - name={name!r}, parent_id_raw={parent_id_raw!r}, parent_id_coerced={parent_id!r}")
+
+    new_folder = create_folder(name, parent_id, description if description else None)
+    
+    # Add notification instead of flash message
+    add_notification(current_user.id, f"Created folder '{name}'", 'info')
+    
+    return redirect(request.referrer or url_for('p2_bp.dashboard'))
+
+
+@folder_bp.route('/rename/<int:folder_id>', methods=['POST'])
+@login_required
+def rename_folder_route(folder_id):
+    new_name = request.form.get("name")
+    new_description = request.form.get("description")
+    success = rename_folder(folder_id, new_name, new_description)
+    
+    # Check if this is an AJAX request (check for fetch API characteristic)
+    if request.content_type == 'application/x-www-form-urlencoded':
+        if success:
+            return jsonify({'success': True, 'message': 'Folder updated successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Update failed'}), 400
+    
+    # Regular form submission
+    flash("Folder updated!" if success else "Update failed.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/delete/<int:folder_id>', methods=['POST'])
+@login_required
+def delete_folder_route(folder_id):
+    # Calculate total size to subtract for all notes and boards in folder (recursive)
+    from blueprints.p2.models import Folder, Note, Board
+    def calculate_content_size(content):
+        return len(content.encode('utf-8')) if content else 0
+    folder = Folder.query.get(folder_id)
+    size_to_subtract = 0
+    def recursive_size(f):
+        nonlocal size_to_subtract
+        for note in f.notes:
+            size_to_subtract += calculate_content_size(note.content)
+        for board in f.boards:
+            size_to_subtract += calculate_content_size(board.content)
+        for child in f.children:
+            recursive_size(child)
+    user_id = current_user.id
+    if folder and folder.user_id == current_user.id:
+        recursive_size(folder)
+    success = delete_folder(folder_id)
+    # Update user data size
+    user = current_user
+    if success and user:
+        user.total_data_size = (user.total_data_size or 0) - size_to_subtract
+        db.session.commit()
+    
+    # Clean up orphaned images after folder deletion
+    if success:
+        from .utils import cleanup_orphaned_images_for_user
+        try:
+            deleted_count, freed_bytes = cleanup_orphaned_images_for_user(user_id)
+            if deleted_count > 0:
+                print(f"[DELETE FOLDER] Cleaned up {deleted_count} orphaned images, freed {freed_bytes} bytes")
+        except Exception as e:
+            print(f"[DELETE FOLDER] Image cleanup failed: {e}")
+    
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.accept_json
+    if is_ajax:
+        if success:
+            return jsonify({'success': True, 'message': 'Folder deleted successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Could not delete folder'}), 400
+    # Regular form submission
+    flash("Folder deleted." if success else "Could not delete folder.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/move/<int:folder_id>', methods=['POST'])
+@login_required
+def move_folder_route(folder_id):
+    target_parent_id = request.form.get("target_folder")
+    success = move_folder(folder_id, int(target_parent_id))
+    
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if success:
+            folder = Folder.query.get(folder_id)
+            return jsonify({
+                'success': True,
+                'message': 'Folder moved successfully',
+                'folder': {
+                    'id': folder.id,
+                    'name': folder.name,
+                    'type': 'folder'
+                }
+            })
+        return jsonify({'success': False, 'message': 'Move failed'}), 500
+    
+    flash("Folder moved!" if success else "Move failed.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/copy/<int:folder_id>', methods=['POST'])
+@login_required
+def copy_folder_route(folder_id):
+    from blueprints.p2.utils import add_notification
+    
+    # Verify folder ownership
+    folder = Folder.query.get_or_404(folder_id)
+    if folder.user_id != current_user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+    
+    target_parent_id = request.form.get("target_folder")
+    copied = copy_folder_recursive(folder_id, int(target_parent_id))
+    
+    # Add notification
+    if copied:
+        original_folder = Folder.query.get(folder_id)
+        target_folder = Folder.query.get(int(target_parent_id))
+        if original_folder and target_folder:
+            notif_msg = f"Copied folder '{original_folder.name}' to '{target_folder.name}'"
+            add_notification(current_user.id, notif_msg, 'transfer')
+    
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if copied:
+            response_data = {
+                'success': True,
+                'message': 'Folder copied successfully',
+                'folder': {
+                    'id': copied.id,
+                    'name': copied.name,
+                    'type': 'folder'
+                }
+            }
+            
+            # HTMX support: return HTML fragment for dynamic insertion
+            if request.form.get('htmx') == 'true':
+                display_prefs = current_user.user_prefs.get('display', {}) if current_user.user_prefs else {
+                    'view_mode': 'grid',
+                    'columns': 3,
+                    'card_size': 'normal',
+                    'show_previews': True
+                }
+                
+                new_item_html = render_template(
+                    'p2/partials/folder_card.html',
+                    sub=copied,
+                    display_prefs=display_prefs
+                )
+                
+                response_data['new_item_html'] = new_item_html
+                response_data['new_item_id'] = copied.id
+                response_data['item_type'] = 'folder'
+            
+            return jsonify(response_data)
+        return jsonify({'success': False, 'message': 'Copy failed'}), 500
+
+    flash("Folder copied!" if copied else "Copy failed.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+@folder_bp.route('/send_to', methods=['POST'])
+@login_required
+def send_to_user_route():
+    # Accept either form-encoded or JSON
+    data = request.get_json(force=False, silent=True) or request.form
+    item_type = (data.get('item_type') or '').lower()
+    try:
+        item_id = int(data.get('item_id'))
+    except Exception:
+        return jsonify({'success': False, 'message': 'Invalid item_id'}), 400
+    try:
+        recipient_id = int(data.get('recipient_id'))
+    except Exception:
+        return jsonify({'success': False, 'message': 'Invalid recipient_id'}), 400
+
+    # VALIDATION 1: Check recipient exists BEFORE expensive operations
+    receiver = User.query.get(recipient_id)
+    if not receiver:
+        return jsonify({'success': False, 'message': 'Recipient not found'}), 404
+    
+    # VALIDATION 2: Prevent sending to self
+    if recipient_id == current_user.id:
+        return jsonify({'success': False, 'message': 'Cannot send items to yourself'}), 400
+
+    # VALIDATION 3: Ensure current user owns the item
+    if item_type == 'folder':
+        original = Folder.query.get(item_id)
+        if not original or original.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Access denied to folder'}), 403
+    elif item_type == 'note':
+        original = Note.query.get(item_id)
+        if not original or original.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Access denied to note'}), 403
+    elif item_type == 'board':
+        original = Board.query.get(item_id)
+        if not original or original.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Access denied to board'}), 403
+    else:
+        return jsonify({'success': False, 'message': 'Unsupported item_type'}), 400
+
+    # Calculate expected size (for quota pre-check)
+    from blueprints.p2.utils import calculate_copy_size_for_item
+    estimated_size, breakdown = calculate_copy_size_for_item(item_type, original, recipient_id)
+    print(f"DEBUG send_to - estimated size: {estimated_size} (content={breakdown.get('content_bytes')} image={breakdown.get('image_bytes')} images={breakdown.get('images_count')})")
+
+    # VALIDATION 4: Check guest limits BEFORE starting copy
+    if getattr(receiver, 'user_type', None) == 'guest':
+        content_limit = 50 * 1024 * 1024
+        available = content_limit - (receiver.total_data_size or 0)
+        if (receiver.total_data_size or 0) + estimated_size > content_limit:
+            return jsonify({'success': False, 'message': 'Recipient data limit exceeded (guest)', 'required_space': estimated_size, 'available_space': available}), 400
+
+    # Track copied files for cleanup on failure
+    copied_files = []
+    
+    # Wrap entire copy operation in transaction with rollback
+    try:
+        # Perform copy (copy functions now return tuple: (item, actual_bytes_written))
+        if item_type == 'folder':
+            result = copy_folder_to_user(item_id, recipient_id, sender_username=current_user.username)
+            if not result or result[0] is None:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': 'Failed to copy folder'}), 500
+            cloned, actual_bytes = result
+            
+            # Update receiver's total data size with ACTUAL bytes written
+            receiver.total_data_size = (receiver.total_data_size or 0) + actual_bytes
+            db.session.commit()
+            
+            size_diff = actual_bytes - estimated_size
+            if abs(size_diff) > 1024:  # Log if difference > 1KB
+                print(f"DEBUG send_to - size difference: estimated={estimated_size}, actual={actual_bytes}, diff={size_diff}")
+            
+            print(f"DEBUG send_to - folder copy result: original {item_id} -> new {cloned.id}; receiver.total_data_size updated to {receiver.total_data_size}")
+            current_app.logger.info("Folder %s sent to %s", original.name, receiver.username)
+            
+            # Add notification
+            from blueprints.p2.utils import add_notification, format_bytes
+            notif_msg = f"Sent folder '{original.name}' to {receiver.username} ({format_bytes(actual_bytes)})"
+            add_notification(current_user.id, notif_msg, 'transfer')
+            
+            return jsonify({'success': True, 'message': 'Folder sent', 'new_folder_id': cloned.id})
+            
+        elif item_type == 'note':
+            result = copy_note_to_user(item_id, recipient_id, sender_username=current_user.username)
+            if not result or result[0] is None:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': 'Failed to copy note'}), 500
+            new_note, actual_bytes = result
+            
+            # Update receiver's total data size with ACTUAL bytes written
+            receiver.total_data_size = (receiver.total_data_size or 0) + actual_bytes
+            db.session.commit()
+            
+            size_diff = actual_bytes - estimated_size
+            if abs(size_diff) > 1024:
+                print(f"DEBUG send_to - size difference: estimated={estimated_size}, actual={actual_bytes}, diff={size_diff}")
+            
+            print(f"DEBUG send_to - note copy result: original {item_id} -> new {new_note.id}; receiver.total_data_size updated to {receiver.total_data_size}")
+            current_app.logger.info("Note %s sent to %s", original.title, receiver.username)
+            
+            # Add notification
+            from blueprints.p2.utils import add_notification, format_bytes
+            notif_msg = f"Sent note '{original.title}' to {receiver.username} ({format_bytes(actual_bytes)})"
+            add_notification(current_user.id, notif_msg, 'transfer')
+            
+            return jsonify({'success': True, 'message': 'Note sent', 'new_note_id': new_note.id})
+            
+        elif item_type == 'board':
+            result = copy_board_to_user(item_id, recipient_id, sender_username=current_user.username)
+            if not result or result[0] is None:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': 'Failed to copy board'}), 500
+            new_board, actual_bytes = result
+            
+            # Update receiver's total data size with ACTUAL bytes written
+            receiver.total_data_size = (receiver.total_data_size or 0) + actual_bytes
+            db.session.commit()
+            
+            size_diff = actual_bytes - estimated_size
+            if abs(size_diff) > 1024:
+                print(f"DEBUG send_to - size difference: estimated={estimated_size}, actual={actual_bytes}, diff={size_diff}")
+            
+            print(f"DEBUG send_to - board copy result: original {item_id} -> new {new_board.id}; receiver.total_data_size updated to {receiver.total_data_size}")
+            current_app.logger.info("Board %s sent to %s", original.title, receiver.username)
+            
+            # Add notification
+            from blueprints.p2.utils import add_notification, format_bytes
+            notif_msg = f"Sent board '{original.title}' to {receiver.username} ({format_bytes(actual_bytes)})"
+            add_notification(current_user.id, notif_msg, 'transfer')
+            
+            return jsonify({'success': True, 'message': 'Board sent', 'new_board_id': new_board.id})
+        else:
+            return jsonify({'success': False, 'message': 'Unhandled item type'}), 400
+            
+    except Exception as e:
+        # Rollback database changes
+        db.session.rollback()
+        print(f"ERROR send_to - exception during copy: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({'success': False, 'message': f'Copy operation failed: {str(e)}'}), 500
+
+
+
+@folder_bp.route('/move_note/<int:note_id>', methods=['POST'])
+@login_required
+def move_note_route(note_id):
+    from blueprints.p2.models import Note, Folder
+    note = Note.query.get_or_404(note_id)
+    
+    if note.user_id != current_user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+
+    target_folder_id = request.form.get("target_folder")
+    target_folder = Folder.query.get(target_folder_id)
+
+    if not target_folder or target_folder.user_id != current_user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Invalid target folder'}), 400
+        flash("Invalid target folder.")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    note.folder_id = target_folder.id
+    db.session.commit()
+    
+    # Add notification
+    from blueprints.p2.utils import add_notification
+    notif_msg = f"Moved note '{note.title}' to '{target_folder.name}'"
+    add_notification(current_user.id, notif_msg, 'transfer')
+    
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': f"Moved note '{note.title}' to '{target_folder.name}'",
+            'note': {
+                'id': note.id,
+                'title': note.title,
+                'type': 'note'
+            }
+        })
+    
+    flash(f"Moved note '{note.title}' to folder '{target_folder.name}'.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/duplicate_note/<int:note_id>', methods=['POST'])
+@login_required
+def duplicate_note(note_id):
+    original = Note.query.get_or_404(note_id)
+
+    if original.user_id != current_user.id:
+        flash("Unauthorized duplication attempt.")
+        return redirect(url_for('dashboard'))
+
+    target_folder_id = request.form.get("target_folder")
+    target_folder = Folder.query.get(target_folder_id)
+
+    if not target_folder or target_folder.user_id != current_user.id:
+        flash("Invalid target folder.")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    # Create a new note with the same data
+    new_title = original.title + " (copy)"
+    duplicate = Note(
+        title=new_title,
+        content=original.content,
+        description=getattr(original, 'description', None),
+        user_id=current_user.id,
+        folder_id=target_folder.id
+    )
+    
+    # Calculate size and check cap
+    def calculate_content_size(content):
+        return len(content.encode('utf-8')) if content else 0
+    content_size = calculate_content_size(original.content)
+    def check_guest_limit(user, additional_size):
+        if getattr(user, 'user_type', None) == 'guest':
+            max_size = 50 * 1024 * 1024
+            if (user.total_data_size or 0) + additional_size > max_size:
+                flash("Data limit exceeded (50MB max for guests). Please delete some data or upgrade your account.", "danger")
+                return False
+        return True
+    def update_user_data_size(user, delta):
+        user.total_data_size = (user.total_data_size or 0) + delta
+        db.session.commit()
+    if not check_guest_limit(current_user, content_size):
+        return redirect(request.referrer or url_for('dashboard'))
+    
+    db.session.add(duplicate)
+    db.session.commit()
+    update_user_data_size(current_user, content_size)
+    
+    # Add notification
+    from blueprints.p2.utils import add_notification, format_bytes
+    notif_msg = f"Duplicated note '{original.title}' to '{target_folder.name}' ({format_bytes(content_size)})"
+    add_notification(current_user.id, notif_msg, 'transfer')
+
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        response_data = {
+            'success': True,
+            'message': f"Duplicated note as '{new_title}'",
+            'note': {
+                'id': duplicate.id,
+                'title': duplicate.title,
+                'type': 'note'
+            }
+        }
+        
+        # HTMX support: return HTML fragment for dynamic insertion
+        if request.form.get('htmx') == 'true':
+            display_prefs = current_user.user_prefs.get('display', {}) if current_user.user_prefs else {
+                'view_mode': 'grid',
+                'columns': 3,
+                'card_size': 'normal',
+                'show_previews': True
+            }
+            
+            new_item_html = render_template(
+                'p2/partials/note_card.html',
+                note=duplicate,
+                display_prefs=display_prefs
+            )
+            
+            response_data['new_item_html'] = new_item_html
+            response_data['new_item_id'] = duplicate.id
+            response_data['item_type'] = 'note'
+        
+        return jsonify(response_data)
+
+    flash(f"Duplicated note as '{new_title}'")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+# for whiteboard
+
+
+@folder_bp.route('/rename_board/<int:board_id>', methods=['POST'])
+@login_required
+def rename_board_route(board_id):
+    from blueprints.p2.models import Board  # Adjust import based on your Board model location
+    
+    board = Board.query.get_or_404(board_id)
+    
+    if board.user_id != current_user.id:
+        if request.content_type == 'application/x-www-form-urlencoded':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+
+    new_title = request.form.get("new_name") or request.form.get("title", "")
+    new_title = new_title.strip()
+    new_description = request.form.get("description", "")
+    
+    if not new_title:
+        if request.content_type == 'application/x-www-form-urlencoded':
+            return jsonify({'success': False, 'message': 'MioDraw title cannot be empty'}), 400
+        flash("MioDraw title cannot be empty.")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    board.title = new_title
+    board.description = new_description
+    db.session.commit()
+    if request.content_type == 'application/x-www-form-urlencoded':
+        return jsonify({'success': True, 'message': 'MioDraw renamed successfully'})
+    flash(f"MioDraw renamed to '{new_title}'.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/move_board/<int:board_id>', methods=['POST'])
+@login_required
+def move_board_route(board_id):
+    from blueprints.p2.models import Board, Folder  # Adjust imports based on your model locations
+    
+    board = Board.query.get_or_404(board_id)
+    
+    if board.user_id != current_user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+
+    target_folder_id = request.form.get("target_folder")
+    target_folder = Folder.query.get(target_folder_id)
+
+    if not target_folder or target_folder.user_id != current_user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Invalid target folder'}), 400
+        flash("Invalid target folder.")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    board.folder_id = target_folder.id
+    db.session.commit()
+    
+    # Add notification
+    from blueprints.p2.utils import add_notification
+    notif_msg = f"Moved board '{board.title}' to '{target_folder.name}'"
+    add_notification(current_user.id, notif_msg, 'transfer')
+    
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': f"Moved MioDraw '{board.title}' to '{target_folder.name}'",
+            'board': {
+                'id': board.id,
+                'title': board.title,
+                'type': 'board'
+            }
+        })
+    
+    flash(f"Moved MioDraw '{board.title}' to folder '{target_folder.name}'.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/duplicate_board/<int:board_id>', methods=['POST'])
+@login_required
+def duplicate_board_route(board_id):
+    from blueprints.p2.models import Board  # Adjust import based on your Board model location
+    
+    original = Board.query.get_or_404(board_id)
+
+    if original.user_id != current_user.id:
+        flash("Unauthorized duplication attempt.")
+        return redirect(url_for('dashboard'))
+
+    target_folder_id = request.form.get("target_folder")
+    target_folder = Folder.query.get(target_folder_id)
+
+    if not target_folder or target_folder.user_id != current_user.id:
+        flash("Invalid target folder.")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    # Create a new board with the same data
+    new_title = original.title + " (copy)"
+    duplicate = Board(
+        title=new_title,
+        content=original.content if hasattr(original, 'content') else None,
+        description=getattr(original, 'description', None),
+        user_id=current_user.id,
+        folder_id=target_folder.id
+    )
+    
+    # Calculate size and check cap
+    def calculate_content_size(content):
+        return len(content.encode('utf-8')) if content else 0
+    content_size = calculate_content_size(original.content)
+    def check_guest_limit(user, additional_size):
+        if getattr(user, 'user_type', None) == 'guest':
+            max_size = 50 * 1024 * 1024
+            if (user.total_data_size or 0) + additional_size > max_size:
+                flash("Data limit exceeded (50MB max for guests). Please delete some data or upgrade your account.", "danger")
+                return False
+        return True
+    def update_user_data_size(user, delta):
+        user.total_data_size = (user.total_data_size or 0) + delta
+        db.session.commit()
+    if not check_guest_limit(current_user, content_size):
+        return redirect(request.referrer or url_for('dashboard'))
+    
+    db.session.add(duplicate)
+    db.session.commit()
+    update_user_data_size(current_user, content_size)
+    
+    # Add notification
+    from blueprints.p2.utils import add_notification, format_bytes
+    notif_msg = f"Duplicated board '{original.title}' to '{target_folder.name}' ({format_bytes(content_size)})"
+    add_notification(current_user.id, notif_msg, 'transfer')
+
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        response_data = {
+            'success': True,
+            'message': f"Duplicated MioDraw as '{new_title}'",
+            'board': {
+                'id': duplicate.id,
+                'title': duplicate.title,
+                'type': 'board'
+            }
+        }
+        
+        # HTMX support: return HTML fragment for dynamic insertion
+        if request.form.get('htmx') == 'true':
+            display_prefs = current_user.user_prefs.get('display', {}) if current_user.user_prefs else {
+                'view_mode': 'grid',
+                'columns': 3,
+                'card_size': 'normal',
+                'show_previews': True
+            }
+            
+            new_item_html = render_template(
+                'p2/partials/board_card.html',
+                board=duplicate,
+                display_prefs=display_prefs
+            )
+            
+            response_data['new_item_html'] = new_item_html
+            response_data['new_item_id'] = duplicate.id
+            response_data['item_type'] = 'board'
+        
+        return jsonify(response_data)
+
+    flash(f"Duplicated MioDraw as '{new_title}'")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/delete_board/<int:board_id>', methods=['POST'])
+@login_required
+def delete_board_route(board_id):
+    from blueprints.p2.models import Board  # Adjust import based on your Board model location
+    
+    board = Board.query.get_or_404(board_id)
+    
+    if board.user_id != current_user.id:
+        if request.content_type == 'application/x-www-form-urlencoded':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+
+    board_title = board.title
+    user_id = board.user_id
+    def calculate_content_size(content):
+        return len(content.encode('utf-8')) if content else 0
+    size_to_subtract = calculate_content_size(board.content)
+    board_user = board.user
+    db.session.delete(board)
+    db.session.commit()
+    # Update user data size
+    if board_user:
+        board_user.total_data_size = (board_user.total_data_size or 0) - size_to_subtract
+        db.session.commit()
+    
+    # Clean up orphaned images
+    from .utils import cleanup_orphaned_images_for_user
+    try:
+        deleted_count, freed_bytes = cleanup_orphaned_images_for_user(user_id)
+        if deleted_count > 0:
+            print(f"[DELETE BOARD] Cleaned up {deleted_count} orphaned images, freed {freed_bytes} bytes")
+    except Exception as e:
+        print(f"[DELETE BOARD] Image cleanup failed: {e}")
+    
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.accept_json
+    if is_ajax:
+        return jsonify({'success': True, 'message': f"Deleted MioDraw '{board_title}'"})
+    flash(f"Deleted MioDraw '{board_title}'.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/rename_note/<int:note_id>', methods=['POST'])
+@login_required
+def rename_note_route(note_id):
+    from blueprints.p2.models import Note
+    
+    note = Note.query.get_or_404(note_id)
+    
+    if note.user_id != current_user.id:
+        if request.content_type == 'application/x-www-form-urlencoded':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+
+    new_title = request.form.get("new_name") or request.form.get("title")
+    new_description = request.form.get("description", "")
+    
+    if new_title:
+        note.title = new_title
+        note.description = new_description
+        db.session.commit()
+        if request.content_type == 'application/x-www-form-urlencoded':
+            return jsonify({'success': True, 'message': 'Note renamed successfully'})
+        flash(f"Note renamed to '{new_title}'.")
+    else:
+        if request.content_type == 'application/x-www-form-urlencoded':
+            return jsonify({'success': False, 'message': 'Invalid note title'}), 400
+        flash("Invalid note title.")
+    
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/delete_note/<int:note_id>', methods=['POST'])
+@login_required
+def delete_note_route(note_id):
+    from blueprints.p2.models import Note
+    
+    note = Note.query.get_or_404(note_id)
+    
+    if note.user_id != current_user.id:
+        if request.content_type == 'application/x-www-form-urlencoded':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        flash("Access denied.")
+        return redirect(url_for('dashboard'))
+
+    note_title = note.title
+    user_id = note.user_id
+    db.session.delete(note)
+    db.session.commit()
+    
+    # Clean up orphaned images
+    from .utils import cleanup_orphaned_images_for_user
+    try:
+        deleted_count, freed_bytes = cleanup_orphaned_images_for_user(user_id)
+        if deleted_count > 0:
+            print(f"[DELETE NOTE] Cleaned up {deleted_count} orphaned images, freed {freed_bytes} bytes")
+    except Exception as e:
+        print(f"[DELETE NOTE] Image cleanup failed: {e}")
+    
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.accept_json
+    if is_ajax:
+        return jsonify({'success': True, 'message': f"Deleted note '{note_title}'"})
+    
+    flash(f"Deleted note '{note_title}'.")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@folder_bp.route('/set_public', methods=['POST'])
+@login_required
+def set_public_route():
+    """Set the is_public flag for a folder, note, board, or file.
+
+    POST parameters (form or JSON):
+      - item_type: 'folder' | 'note' | 'board' | 'file' | 'markdown' | 'todo' | 'diagram' | 'book' | 'blocks' | 'table'
+      - item_id: integer
+      - public: '1'|'0' or true/false
+    If item_type == 'folder', the change is applied recursively to children, notes, boards, and files.
+    """
+    data = request.form if request.form else (request.get_json() or {})
+    item_type = data.get('item_type') or data.get('type')
+    item_id = data.get('item_id') or data.get('id')
+    public_val = data.get('public')
+
+    if not item_type or not item_id:
+        return jsonify({'success': False, 'message': 'Missing parameters'}), 400
+
+    try:
+        item_id = int(item_id)
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Invalid item id'}), 400
+
+    is_public = str(public_val).lower() in ('1', 'true', 'yes', 'on')
+
+    # Folder
+    if item_type == 'folder':
+        folder = Folder.query.get_or_404(item_id)
+        if folder.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+
+        affected = {'folders': [], 'notes': [], 'boards': [], 'files': []}
+
+        def recurse_set(f):
+            f.is_public = is_public
+            affected['folders'].append(f.id)
+            # set notes and boards in this folder
+            for n in f.notes:
+                try:
+                    n.is_public = is_public
+                    affected['notes'].append(n.id)
+                except Exception:
+                    pass
+            for b in f.boards:
+                try:
+                    b.is_public = is_public
+                    affected['boards'].append(b.id)
+                except Exception:
+                    pass
+            # set files in this folder
+            for file_obj in f.files:
+                try:
+                    file_obj.is_public = is_public
+                    affected['files'].append(file_obj.id)
+                except Exception:
+                    pass
+            for child in f.children:
+                recurse_set(child)
+
+        recurse_set(folder)
+        db.session.commit()
+        return jsonify({'success': True, 'message': f"Folder {'public' if is_public else 'private'} set", 'affected': affected, 'is_public': is_public})
+
+    # Note
+    elif item_type == 'note':
+        note = Note.query.get_or_404(item_id)
+        if note.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        note.is_public = is_public
+        db.session.commit()
+        return jsonify({'success': True, 'message': f"Note {'public' if is_public else 'private'} set", 'affected': {'notes': [note.id], 'folders': [], 'boards': [], 'files': []}, 'is_public': is_public})
+
+    # Board
+    elif item_type == 'board':
+        board = Board.query.get_or_404(item_id)
+        if board.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        board.is_public = is_public
+        db.session.commit()
+        return jsonify({'success': True, 'message': f"Board {'public' if is_public else 'private'} set", 'affected': {'boards': [board.id], 'notes': [], 'folders': [], 'files': []}, 'is_public': is_public})
+
+    # File (covers markdown, todo, diagram, book/MioBook, blocks, table, and other file types)
+    elif item_type in ['file', 'markdown', 'todo', 'diagram', 'book', 'blocks', 'table', 'note_file', 'whiteboard']:
+        file_obj = File.query.get_or_404(item_id)
+        if file_obj.owner_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        file_obj.is_public = is_public
+        db.session.commit()
+        return jsonify({'success': True, 'message': f"File {'public' if is_public else 'private'} set", 'affected': {'files': [file_obj.id], 'notes': [], 'boards': [], 'folders': []}, 'is_public': is_public})
+
+    else:
+        return jsonify({'success': False, 'message': f'Unknown item type: {item_type}'}), 400
+
+
+@folder_bp.route('/public/copy/note/<int:note_id>', methods=['POST'])
+@login_required
+def public_copy_note(note_id):
+    """Copy a public note into the current user's folder (or root)."""
+    from blueprints.p2.models import Note, Folder
+    note = Note.query.get_or_404(note_id)
+    if not getattr(note, 'is_public', False) and note.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Not allowed'}), 403
+
+    # Determine target folder: use session current_folder_id or user's root
+    target_folder_id = session.get('current_folder_id')
+    target_folder = None
+    if target_folder_id:
+        target_folder = Folder.query.get(target_folder_id)
+    if not target_folder or target_folder.user_id != current_user.id:
+        # fallback to first root folder for user
+        target_folder = Folder.query.filter_by(user_id=current_user.id).first()
+    if not target_folder:
+        # create a root folder
+        target_folder = create_folder('root', None, None)
+
+    # duplicate note
+    # quota checks (guest limit)
+    def calculate_content_size(content):
+        return len(content.encode('utf-8')) if content else 0
+
+    size = calculate_content_size(note.content)
+
+    def check_guest_limit(user, additional_size):
+        if getattr(user, 'user_type', None) == 'guest':
+            max_size = 50 * 1024 * 1024
+            if (user.total_data_size or 0) + additional_size > max_size:
+                return False
+        return True
+
+    if not check_guest_limit(current_user, size):
+        # return quota info as well
+        def quota_info(user):
+            if getattr(user, 'user_type', None) == 'guest':
+                total = 50 * 1024 * 1024
+                used = user.total_data_size or 0
+                remaining = max(0, total - used)
+                return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+            else:
+                return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+        print(f"[DEBUG public_copy_note] quota exceeded for user {getattr(current_user,'id',None)}; size requested: {size}")
+        return jsonify({'success': False, 'message': 'Storage quota exceeded (50MB for guests)', 'quota': quota_info(current_user)}), 403
+
+    duplicate = Note(
+        title=(note.title or '') + ' (copy)',
+        content=note.content,
+        description=getattr(note, 'description', None),
+        user_id=current_user.id,
+        folder_id=target_folder.id
+    )
+    try:
+        db.session.add(duplicate)
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        print(f"[ERROR public_copy_note] Failed to create duplicate note for note_id={note_id} user_id={getattr(current_user,'id',None)}: {e}")
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Copy failed (db error)'}), 500
+
+    # update user data size and return quota info
+    try:
+        current_user.total_data_size = (current_user.total_data_size or 0) + size
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        print(f"[ERROR public_copy_note] Failed updating total_data_size after copy for user_id={getattr(current_user,'id',None)}: {e}")
+        traceback.print_exc()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+    # build quota info
+    def quota_info(user):
+        if getattr(user, 'user_type', None) == 'guest':
+            total = 50 * 1024 * 1024
+            used = user.total_data_size or 0
+            remaining = max(0, total - used)
+            return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+        else:
+            return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+    print(f"[INFO public_copy_note] Note {note_id} copied -> new_id={duplicate.id} for user {getattr(current_user,'id',None)} folder={duplicate.folder_id}")
+    return jsonify({'success': True, 'message': 'Note copied', 'new_id': duplicate.id, 'quota': quota_info(current_user)})
+
+
+@folder_bp.route('/public/copy/board/<int:board_id>', methods=['POST'])
+@login_required
+def public_copy_board(board_id):
+    """Copy a public board into the current user's folder (or root)."""
+    from blueprints.p2.models import Board, Folder
+    board = Board.query.get_or_404(board_id)
+    if not getattr(board, 'is_public', False) and board.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Not allowed'}), 403
+
+    target_folder_id = session.get('current_folder_id')
+    target_folder = None
+    if target_folder_id:
+        target_folder = Folder.query.get(target_folder_id)
+    if not target_folder or target_folder.user_id != current_user.id:
+        target_folder = Folder.query.filter_by(user_id=current_user.id).first()
+    if not target_folder:
+        target_folder = create_folder('root', None, None)
+
+    duplicate = Board(
+        title=(board.title or '') + ' (copy)',
+        content=board.content,
+        description=getattr(board, 'description', None),
+        user_id=current_user.id,
+        folder_id=target_folder.id
+    )
+    # quota checks
+    def calculate_content_size(content):
+        return len(content.encode('utf-8')) if content else 0
+
+    size = calculate_content_size(board.content)
+
+    def check_guest_limit(user, additional_size):
+        if getattr(user, 'user_type', None) == 'guest':
+            max_size = 50 * 1024 * 1024
+            if (user.total_data_size or 0) + additional_size > max_size:
+                return False
+        return True
+
+    if not check_guest_limit(current_user, size):
+        def quota_info(user):
+            if getattr(user, 'user_type', None) == 'guest':
+                total = 50 * 1024 * 1024
+                used = user.total_data_size or 0
+                remaining = max(0, total - used)
+                return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+            else:
+                return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+        print(f"[DEBUG public_copy_board] quota exceeded for user {getattr(current_user,'id',None)}; size requested: {size}")
+        return jsonify({'success': False, 'message': 'Storage quota exceeded (50MB for guests)', 'quota': quota_info(current_user)}), 403
+
+    try:
+        db.session.add(duplicate)
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        print(f"[ERROR public_copy_board] Failed to create duplicate board for board_id={board_id} user_id={getattr(current_user,'id',None)}: {e}")
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Copy failed (db error)'}), 500
+
+    try:
+        current_user.total_data_size = (current_user.total_data_size or 0) + size
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        print(f"[ERROR public_copy_board] Failed updating total_data_size after copy for user_id={getattr(current_user,'id',None)}: {e}")
+        traceback.print_exc()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+    def quota_info(user):
+        if getattr(user, 'user_type', None) == 'guest':
+            total = 50 * 1024 * 1024
+            used = user.total_data_size or 0
+            remaining = max(0, total - used)
+            return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+        else:
+            return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+    print(f"[INFO public_copy_board] Board {board_id} copied -> new_id={duplicate.id} for user {getattr(current_user,'id',None)} folder={duplicate.folder_id}")
+    return jsonify({'success': True, 'message': 'Board copied', 'new_id': duplicate.id, 'quota': quota_info(current_user)})
+
+
+@folder_bp.route('/public/copy/folder/<int:folder_id>', methods=['POST'])
+@login_required
+def public_copy_folder(folder_id):
+    """Attempt to copy a public folder recursively into current user's folder.
+    This will try to reuse copy_folder_recursive. If that fails, return error."""
+    from blueprints.p2.models import Folder
+    folder = Folder.query.get_or_404(folder_id)
+    if not getattr(folder, 'is_public', False) and folder.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Not allowed'}), 403
+
+    # target parent is user's root
+    target_parent = Folder.query.filter_by(user_id=current_user.id).first()
+    if not target_parent:
+        target_parent = create_folder('root', None, None)
+
+    # compute total size of notes and boards in the folder tree
+    def calculate_folder_size(f):
+        total = 0
+        for n in f.notes:
+            if getattr(n, 'content', None):
+                total += len(n.content.encode('utf-8'))
+        for b in f.boards:
+            if getattr(b, 'content', None):
+                total += len(b.content.encode('utf-8'))
+        for child in f.children:
+            total += calculate_folder_size(child)
+        return total
+
+    try:
+        size_to_add = calculate_folder_size(folder)
+
+        def check_guest_limit(user, additional_size):
+            if getattr(user, 'user_type', None) == 'guest':
+                max_size = 50 * 1024 * 1024
+                if (user.total_data_size or 0) + additional_size > max_size:
+                    return False
+            return True
+
+        if not check_guest_limit(current_user, size_to_add):
+            def quota_info(user):
+                if getattr(user, 'user_type', None) == 'guest':
+                    total = 50 * 1024 * 1024
+                    used = user.total_data_size or 0
+                    remaining = max(0, total - used)
+                    return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+                else:
+                    return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+            return jsonify({'success': False, 'message': 'Storage quota exceeded (50MB for guests)', 'quota': quota_info(current_user)}), 403
+
+        copied = copy_folder_recursive(folder_id, target_parent.id, allow_external=True)
+        if not copied:
+            print(f"[ERROR public_copy_folder] copy_folder_recursive returned False for folder {folder_id}")
+            return jsonify({'success': False, 'message': 'Copy failed'}), 500
+
+        # update user data size
+        try:
+            current_user.total_data_size = (current_user.total_data_size or 0) + size_to_add
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        def quota_info(user):
+            if getattr(user, 'user_type', None) == 'guest':
+                total = 50 * 1024 * 1024
+                used = user.total_data_size or 0
+                remaining = max(0, total - used)
+                return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+            else:
+                return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+        print(f"[INFO public_copy_folder] Folder {folder_id} copied into target_parent={target_parent.id} for user {getattr(current_user,'id',None)} size_added={size_to_add}")
+        return jsonify({'success': True, 'message': 'Folder copied', 'quota': quota_info(current_user), 'target_folder_id': target_parent.id})
+    except Exception as e:
+        import traceback
+        # Ensure session is clean before doing any ORM attribute access
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        # Use get_id() to avoid triggering lazy loads on the user object
+        try:
+            uid = current_user.get_id()
+        except Exception:
+            uid = None
+        print(f"[EXCEPTION public_copy_folder] Exception copying folder {folder_id} for user {uid}: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': 'Copy failed due to internal error'}), 500
+
+
+@folder_bp.route('/public/copy/file/<int:file_id>', methods=['POST'])
+@login_required
+def public_copy_file(file_id):
+    """Copy a public file into the current user's folder (or root)."""
+    from blueprints.p2.models import File, Folder
+    file = File.query.get_or_404(file_id)
+    if not getattr(file, 'is_public', False) and file.owner_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Not allowed'}), 403
+
+    # Determine target folder: use session current_folder_id or user's root
+    target_folder_id = session.get('current_folder_id')
+    target_folder = None
+    if target_folder_id:
+        target_folder = Folder.query.get(target_folder_id)
+    if not target_folder or target_folder.user_id != current_user.id:
+        # fallback to first root folder for user
+        target_folder = Folder.query.filter_by(user_id=current_user.id).first()
+    if not target_folder:
+        # create a root folder
+        target_folder = create_folder('root', None, None)
+
+    # Calculate file size for quota check
+    size = file.get_content_size()
+
+    def check_guest_limit(user, additional_size):
+        if getattr(user, 'user_type', None) == 'guest':
+            max_size = 50 * 1024 * 1024
+            if (user.total_data_size or 0) + additional_size > max_size:
+                return False
+        return True
+
+    if not check_guest_limit(current_user, size):
+        def quota_info(user):
+            if getattr(user, 'user_type', None) == 'guest':
+                total = 50 * 1024 * 1024
+                used = user.total_data_size or 0
+                remaining = max(0, total - used)
+                return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+            else:
+                return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+        print(f"[DEBUG public_copy_file] quota exceeded for user {getattr(current_user,'id',None)}; size requested: {size}")
+        return jsonify({'success': False, 'message': 'Storage quota exceeded (50MB for guests)', 'quota': quota_info(current_user)}), 403
+
+    # Create duplicate file
+    duplicate = File(
+        title=(file.title or '') + ' (copy)',
+        type=file.type,
+        content_text=file.content_text,
+        content_html=file.content_html,
+        content_json=file.content_json,
+        content_blob=file.content_blob,
+        metadata_json=file.metadata_json.copy() if file.metadata_json else {},
+        owner_id=current_user.id,
+        folder_id=target_folder.id
+    )
+    try:
+        db.session.add(duplicate)
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        print(f"[ERROR public_copy_file] Failed to create duplicate file for file_id={file_id} user_id={getattr(current_user,'id',None)}: {e}")
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Copy failed (db error)'}), 500
+
+    # Update user data size
+    try:
+        current_user.total_data_size = (current_user.total_data_size or 0) + size
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        print(f"[ERROR public_copy_file] Failed updating total_data_size after copy for user_id={getattr(current_user,'id',None)}: {e}")
+        traceback.print_exc()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+    # Build quota info
+    def quota_info(user):
+        if getattr(user, 'user_type', None) == 'guest':
+            total = 50 * 1024 * 1024
+            used = user.total_data_size or 0
+            remaining = max(0, total - used)
+            return {'is_guest': True, 'quota_total': total, 'quota_used': used, 'quota_remaining': remaining}
+        else:
+            return {'is_guest': False, 'quota_total': None, 'quota_used': None, 'quota_remaining': None}
+
+    print(f"[INFO public_copy_file] File {file_id} copied -> new_id={duplicate.id} for user {getattr(current_user,'id',None)} folder={duplicate.folder_id}")
+    return jsonify({'success': True, 'message': 'File copied', 'new_id': duplicate.id, 'quota': quota_info(current_user)})
+
+
+@folder_bp.route('/api/save-display-preferences', methods=['POST'])
+@login_required
+def save_display_preferences():
+    """Save user display preferences for folder view"""
+    from blueprints.p2.models import User
+    
+    data = request.get_json()
+    # Debug: log incoming payload
+    #print('[save_display_preferences] Incoming request content_type:', request.content_type)
+    #print('[save_display_preferences] Raw JSON payload:', data)
+    if not data:
+        print('[save_display_preferences] No data provided in request')
+        return jsonify({'success': False, 'message': 'No data provided'}), 400
+
+    # Get current user preferences or initialize
+    user_prefs = current_user.user_prefs or {}
+
+    # Update display preferences (merge incoming keys)
+    if 'display' not in user_prefs:
+        user_prefs['display'] = {}
+
+    # Make a shallow copy for debug comparison
+    before_display = dict(user_prefs.get('display', {}))
+    #print(f"[save_display_preferences] user_prefs before update (display): {before_display}")
+
+    # Update individual settings with type coercion and debug prints
+    if 'columns' in data:
+        try:
+            user_prefs['display']['columns'] = int(data['columns'])
+            #print(f"[save_display_preferences] Set columns -> {user_prefs['display']['columns']}")
+        except Exception as e:
+            print('[save_display_preferences] Failed to parse columns:', data.get('columns'), 'error:', e)
+    if 'view_mode' in data:
+        user_prefs['display']['view_mode'] = data['view_mode']
+        #print(f"[save_display_preferences] Set view_mode -> {user_prefs['display']['view_mode']}")
+    if 'card_size' in data:
+        user_prefs['display']['card_size'] = data['card_size']
+        #print(f"[save_display_preferences] Set card_size -> {user_prefs['display']['card_size']}")
+    if 'show_previews' in data:
+        # handle string booleans too
+        val = data['show_previews']
+        if isinstance(val, str):
+            val_l = val.lower()
+            parsed = val_l in ['1', 'true', 'yes', 'on']
+        else:
+            parsed = bool(val)
+        user_prefs['display']['show_previews'] = parsed
+        #print(f"[save_display_preferences] Set show_previews -> {user_prefs['display']['show_previews']}")
+
+    after_display = dict(user_prefs.get('display', {}))
+    #print(f"[save_display_preferences] user_prefs after update (display): {after_display}")
+
+    # Save to database
+    try:
+        #print('[save_display_preferences] Attempting to save preferences to current_user and commit...')
+        # Ensure we assign a fresh object so SQLAlchemy detects the change
+        try:
+            import copy
+            prefs_to_save = copy.deepcopy(user_prefs)
+        except Exception:
+            # Fallback to JSON round-trip if deepcopy fails for any reason
+            import json
+            prefs_to_save = json.loads(json.dumps(user_prefs))
+
+        current_user.user_prefs = prefs_to_save
+        # Flag modified to ensure SQLAlchemy sees the JSON column change
+        try:
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(current_user, 'user_prefs')
+            #print('[save_display_preferences] flag_modified called for user_prefs')
+        except Exception as e:
+            print('[save_display_preferences] flag_modified failed:', e)
+        #print('[save_display_preferences] Assigned prefs_to_save (id={}): {}'.format(id(prefs_to_save), prefs_to_save))
+        db.session.commit()
+        #print('[save_display_preferences] Commit successful')
+        # Refresh current_user from db to reflect persisted state
+        try:
+            from sqlalchemy import inspect
+            db.session.refresh(current_user)
+            #print('[save_display_preferences] Refreshed current_user from DB')
+        except Exception as e:
+            print('[save_display_preferences] Could not refresh current_user:', e)
+
+            # Also explicitly re-query the user to guarantee we read DB value
+        try:
+            from blueprints.p2.models import User
+            user_from_db = User.query.get(current_user.id)
+            if user_from_db is not None:
+                print('[save_display_preferences] Queried user_from_db.user_prefs:', user_from_db.user_prefs)
+            else:
+                print('[save_display_preferences] Queried user_from_db is None')
+        except Exception as e:
+            print('[save_display_preferences] Could not query user from DB:', e)
+
+        #print('[save_display_preferences] Persisted user_prefs (current_user):', current_user.user_prefs)
+        return jsonify({'success': True, 'message': 'Display preferences saved', 'preferences': current_user.user_prefs.get('display')})
+    except Exception as e:
+        import traceback
+        print('[save_display_preferences] Exception during save/commit:', str(e))
+        traceback.print_exc()
+        try:
+            db.session.rollback()
+            print('[save_display_preferences] Rolled back session after exception')
+        except Exception as rb_err:
+            print('[save_display_preferences] Exception during rollback:', rb_err)
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@folder_bp.route('/api/folder-tree', methods=['GET'])
+@login_required
+def get_folder_tree():
+    """Get complete folder tree structure for the folder browser"""
+    
+    def build_tree_recursive(folder):
+        """Recursively build folder tree with counts"""
+        children_data = []
+        for child in sorted(folder.children, key=lambda x: x.name.lower()):
+            children_data.append(build_tree_recursive(child))
+        
+        folder_data = {
+            'id': folder.id,
+            'name': folder.name,
+            'parent_id': folder.parent_id,
+            'children': children_data,
+            'note_count': len(folder.notes),
+            'board_count': len(folder.boards),
+            'subfolder_count': len(folder.children),
+            'created_at': folder.created_at.isoformat() if folder.created_at else None
+        }
+        
+        return folder_data
+    
+    # Get all root folders (folders with no parent) for current user
+    root_folders = Folder.query.filter_by(
+        user_id=current_user.id, 
+        parent_id=None
+    ).order_by(Folder.name).all()
+    
+    tree_data = []
+    for root in root_folders:
+        tree_data.append(build_tree_recursive(root))
+    
+    total_folders = Folder.query.filter_by(user_id=current_user.id).count()
+    
+    return jsonify({
+        'success': True,
+        'folders': tree_data,
+        'total_count': total_folders,
+        'user_id': current_user.id,
+        'username': current_user.username
+    })
+
+
+@folder_bp.route('/api/folder/<int:folder_id>', methods=['GET'])
+@login_required
+def get_folder_api(folder_id):
+    """Return minimal folder details as JSON (used by client-side UI)."""
+    folder = Folder.query.get_or_404(folder_id)
+    if folder.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+
+    return jsonify({
+        'success': True,
+        'folder': {
+            'id': folder.id,
+            'name': folder.name,
+            'parent_id': folder.parent_id,
+            'description': folder.description
+        }
+    })
+
+
+@folder_bp.route('/api/folder/<int:folder_id>/size', methods=['GET'])
+@login_required
+def calculate_folder_size(folder_id):
+    """Calculate total size of a folder recursively (all notes, boards, and subfolders)."""
+    folder = Folder.query.get_or_404(folder_id)
+    if folder.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    def format_bytes(bytes_size):
+        """Convert bytes to human-readable format."""
+        if bytes_size < 1024:
+            return f"{bytes_size} B"
+        elif bytes_size < 1024 * 1024:
+            return f"{bytes_size / 1024:.2f} KB"
+        elif bytes_size < 1024 * 1024 * 1024:
+            return f"{bytes_size / (1024 * 1024):.2f} MB"
+        else:
+            return f"{bytes_size / (1024 * 1024 * 1024):.2f} GB"
+    
+    def calculate_recursive(folder):
+        """Recursively calculate total size of folder and its descendants."""
+        total_size = 0
+        item_counts = {'notes': 0, 'boards': 0, 'subfolders': 0}
+        
+        # Add size from notes in this folder
+        for note in folder.notes:
+            total_size += len(note.content or '')
+            item_counts['notes'] += 1
+        
+        # Add size from boards in this folder
+        for board in folder.boards:
+            total_size += len(board.content or '')
+            item_counts['boards'] += 1
+        
+        # Recursively add size from subfolders
+        for subfolder in folder.children:
+            subfolder_size, subfolder_counts = calculate_recursive(subfolder)
+            total_size += subfolder_size
+            item_counts['notes'] += subfolder_counts['notes']
+            item_counts['boards'] += subfolder_counts['boards']
+            item_counts['subfolders'] += subfolder_counts['subfolders'] + 1
+        
+        return total_size, item_counts
+    
+    total_bytes, counts = calculate_recursive(folder)
+    
+    return jsonify({
+        'success': True,
+        'folder_id': folder_id,
+        'folder_name': folder.name,
+        'total_bytes': total_bytes,
+        'formatted_size': format_bytes(total_bytes),
+        'counts': counts
+    })
+
+
+@folder_bp.route('/batch_paste', methods=['POST'])
+@login_required
+def batch_paste_route():
+    """Batch paste operation for multiple items (cut or copy)"""
+    from blueprints.p2.utils import add_notification
+    
+    try:
+        items_json = request.form.get('items')
+        action = request.form.get('action')  # 'cut' or 'copy'
+        target_folder_id = request.form.get('target_folder')
+        
+        if not items_json or not action or not target_folder_id:
+            return jsonify({'success': False, 'message': 'Missing parameters'}), 400
+        
+        items = json.loads(items_json)
+        target_folder_id = int(target_folder_id)
+        
+        # Verify target folder ownership
+        target_folder = Folder.query.get(target_folder_id)
+        if not target_folder or target_folder.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Invalid target folder'}), 403
+        
+        success_count = 0
+        failed_items = []
+        
+        for item in items:
+            item_type = item.get('type')
+            item_id = item.get('id')
+            
+            try:
+                if action == 'cut':
+                    # Move operation
+                    if item_type == 'folder':
+                        if move_folder(item_id, target_folder_id):
+                            success_count += 1
+                        else:
+                            failed_items.append(f"folder {item_id}")
+                    elif item_type == 'note':
+                        note = Note.query.get(item_id)
+                        if note and note.user_id == current_user.id:
+                            note.folder_id = target_folder_id
+                            db.session.commit()
+                            success_count += 1
+                        else:
+                            failed_items.append(f"note {item_id}")
+                    elif item_type == 'board':
+                        board = Board.query.get(item_id)
+                        if board and board.user_id == current_user.id:
+                            board.folder_id = target_folder_id
+                            db.session.commit()
+                            success_count += 1
+                        else:
+                            failed_items.append(f"board {item_id}")
+                    elif item_type == 'file' or item_type == 'book':
+                        # Handle both generic 'file' type and specific 'book' type (MioBooks are Files with type='book')
+                        file_obj = File.query.get(item_id)
+                        if file_obj and file_obj.owner_id == current_user.id:
+                            file_obj.folder_id = target_folder_id
+                            file_obj.last_modified = datetime.utcnow()
+                            db.session.commit()
+                            success_count += 1
+                        else:
+                            failed_items.append(f"{item_type} {item_id}")
+                            
+                elif action == 'copy':
+                    # Copy/duplicate operation
+                    if item_type == 'folder':
+                        if copy_folder_recursive(item_id, target_folder_id):
+                            success_count += 1
+                        else:
+                            failed_items.append(f"folder {item_id}")
+                    elif item_type == 'note':
+                        original = Note.query.get(item_id)
+                        if original and original.user_id == current_user.id:
+                            # Check guest limit
+                            content_size = len((original.content or '').encode('utf-8'))
+                            if getattr(current_user, 'user_type', None) == 'guest':
+                                max_size = 50 * 1024 * 1024
+                                if (current_user.total_data_size or 0) + content_size > max_size:
+                                    failed_items.append(f"note {item_id} (quota exceeded)")
+                                    continue
+                            
+                            new_note = Note(
+                                title=(original.title or '') + ' (copy)',
+                                content=original.content,
+                                description=getattr(original, 'description', None),
+                                user_id=current_user.id,
+                                folder_id=target_folder_id
+                            )
+                            db.session.add(new_note)
+                            db.session.commit()
+                            current_user.total_data_size = (current_user.total_data_size or 0) + content_size
+                            db.session.commit()
+                            success_count += 1
+                        else:
+                            failed_items.append(f"note {item_id}")
+                    elif item_type == 'board':
+                        original = Board.query.get(item_id)
+                        if original and original.user_id == current_user.id:
+                            # Check guest limit
+                            content_size = len((original.content or '').encode('utf-8'))
+                            if getattr(current_user, 'user_type', None) == 'guest':
+                                max_size = 50 * 1024 * 1024
+                                if (current_user.total_data_size or 0) + content_size > max_size:
+                                    failed_items.append(f"board {item_id} (quota exceeded)")
+                                    continue
+                            
+                            new_board = Board(
+                                title=(original.title or '') + ' (copy)',
+                                content=original.content,
+                                description=getattr(original, 'description', None),
+                                user_id=current_user.id,
+                                folder_id=target_folder_id
+                            )
+                            db.session.add(new_board)
+                            db.session.commit()
+                            current_user.total_data_size = (current_user.total_data_size or 0) + content_size
+                            db.session.commit()
+                            success_count += 1
+                        else:
+                            failed_items.append(f"board {item_id}")
+                    elif item_type == 'file' or item_type == 'book':
+                        # Handle both generic 'file' type and specific 'book' type (MioBooks are Files with type='book')
+                        original = File.query.get(item_id)
+                        if original and original.owner_id == current_user.id:
+                            # Check guest limit
+                            content_size = original.get_content_size()
+                            if getattr(current_user, 'user_type', None) == 'guest':
+                                max_size = 50 * 1024 * 1024
+                                if (current_user.total_data_size or 0) + content_size > max_size:
+                                    failed_items.append(f"{item_type} {item_id} (quota exceeded)")
+                                    continue
+                            
+                            new_file = File(
+                                owner_id=current_user.id,
+                                folder_id=target_folder_id,
+                                type=original.type,
+                                title=(original.title or '') + ' (copy)',
+                                content_text=original.content_text,
+                                content_html=original.content_html,
+                                content_json=original.content_json,
+                                content_blob=original.content_blob,
+                                metadata_json=original.metadata_json.copy() if original.metadata_json else {},
+                                is_public=False
+                            )
+                            db.session.add(new_file)
+                            db.session.commit()
+                            current_user.total_data_size = (current_user.total_data_size or 0) + content_size
+                            db.session.commit()
+                            success_count += 1
+                        else:
+                            failed_items.append(f"{item_type} {item_id}")
+            except Exception as e:
+                print(f"Error processing {item_type} {item_id}: {e}")
+                failed_items.append(f"{item_type} {item_id}")
+                continue
+        
+        message = f"Successfully processed {success_count} items"
+        if failed_items:
+            message += f". Failed: {', '.join(failed_items)}"
+        
+        # Add notification for batch operation
+        operation_type = 'cut' if action == 'cut' else 'copy'
+        notif_msg = f"Batch {operation_type}: {success_count} items to '{target_folder.name}'"
+        if failed_items:
+            notif_msg += f" ({len(failed_items)} failed)"
+        add_notification(current_user.id, notif_msg, 'transfer')
+        
+        # Fetch the pasted items to return their HTML for AJAX insertion
+        pasted_items = {
+            'folders': [],
+            'notes': [],
+            'boards': [],
+            'files': []
+        }
+        
+        if action == 'copy':
+            # For copy operations, we need to fetch the newly created items
+            # Get items created in the target folder in the last few seconds
+            for item in items:
+                item_type = item.get('type')
+                if item_type == 'folder':
+                    # Get latest subfolder in target
+                    latest = Folder.query.filter_by(
+                        user_id=current_user.id,
+                        parent_id=target_folder_id
+                    ).order_by(Folder.created_at.desc()).first()
+                    if latest:
+                        pasted_items['folders'].append(latest)
+                elif item_type == 'note':
+                    latest = Note.query.filter_by(
+                        user_id=current_user.id,
+                        folder_id=target_folder_id
+                    ).order_by(Note.created_at.desc()).first()
+                    if latest:
+                        pasted_items['notes'].append(latest)
+                elif item_type == 'board':
+                    latest = Board.query.filter_by(
+                        user_id=current_user.id,
+                        folder_id=target_folder_id
+                    ).order_by(Board.created_at.desc()).first()
+                    if latest:
+                        pasted_items['boards'].append(latest)
+                elif item_type in ['file', 'book']:
+                    latest = File.query.filter_by(
+                        owner_id=current_user.id,
+                        folder_id=target_folder_id
+                    ).order_by(File.created_at.desc()).first()
+                    if latest:
+                        pasted_items['files'].append(latest)
+        
+        # Render HTML for each pasted item
+        from flask import render_template_string
+        pasted_html = {
+            'folders': [],
+            'notes': [],
+            'boards': [],
+            'files': []
+        }
+        
+        # Get display preferences
+        display_prefs = current_user.user_prefs.get('display', {
+            'columns': 3,
+            'view_mode': 'grid',
+            'card_size': 'normal',
+            'show_previews': True
+        }) if current_user.user_prefs else {
+            'columns': 3,
+            'view_mode': 'grid',
+            'card_size': 'normal',
+            'show_previews': True
+        }
+        
+        for folder in pasted_items['folders']:
+            html = render_template('p2/partials/folder_card.html', folder=folder, display_prefs=display_prefs)
+            pasted_html['folders'].append(html)
+        
+        for note in pasted_items['notes']:
+            html = render_template('p2/partials/note_card.html', note=note, display_prefs=display_prefs)
+            pasted_html['notes'].append(html)
+        
+        for board in pasted_items['boards']:
+            html = render_template('p2/partials/board_card.html', board=board, display_prefs=display_prefs)
+            pasted_html['boards'].append(html)
+        
+        for file_obj in pasted_items['files']:
+            html = render_template('p2/partials/file_card.html', file=file_obj, display_prefs=display_prefs)
+            pasted_html['files'].append(html)
+        
+        # Build response
+        response_data = {
+            'success': True,
+            'message': message,
+            'success_count': success_count,
+            'failed_count': len(failed_items),
+            'failed_items': failed_items,
+            'pasted_html': pasted_html
+        }
+        
+        # HTMX support: return array of HTML fragments for dynamic insertion
+        if request.form.get('htmx') == 'true':
+            new_items_html = []
+            
+            # Add folders
+            for folder in pasted_items['folders']:
+                html = render_template('p2/partials/folder_card.html', sub=folder, display_prefs=display_prefs)
+                new_items_html.append({
+                    'html': html,
+                    'type': 'folder',
+                    'id': folder.id
+                })
+            
+            # Add notes
+            for note in pasted_items['notes']:
+                html = render_template('p2/partials/note_card.html', note=note, display_prefs=display_prefs)
+                new_items_html.append({
+                    'html': html,
+                    'type': 'note',
+                    'id': note.id
+                })
+            
+            # Add boards
+            for board in pasted_items['boards']:
+                html = render_template('p2/partials/board_card.html', board=board, display_prefs=display_prefs)
+                new_items_html.append({
+                    'html': html,
+                    'type': 'board',
+                    'id': board.id
+                })
+            
+            # Add files (including books, markdown, todo, etc.)
+            for file_obj in pasted_items['files']:
+                html = render_template('p2/partials/file_card.html', file=file_obj, display_prefs=display_prefs)
+                new_items_html.append({
+                    'html': html,
+                    'type': file_obj.type,  # Use specific file type (markdown, todo, diagram, etc.)
+                    'id': file_obj.id
+                })
+            
+            response_data['new_items_html'] = new_items_html
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Batch paste failed: {str(e)}'}), 500
+
+
+@folder_bp.route('/batch_delete', methods=['POST'])
+@login_required
+def batch_delete_route():
+    """Batch delete operation for multiple items"""
+    try:
+        items_json = request.form.get('items')
+        if not items_json:
+            return jsonify({'success': False, 'message': 'Missing items parameter'}), 400
+        
+        items = json.loads(items_json)
+        success_count = 0
+        failed_items = []
+        total_size_freed = 0
+        
+        for item in items:
+            item_type = item.get('type')
+            item_id = item.get('id')
+            
+            try:
+                if item_type == 'folder':
+                    folder = Folder.query.get(item_id)
+                    if folder and folder.user_id == current_user.id:
+                        # Calculate size to subtract
+                        def calculate_folder_size_recursive(f):
+                            size = 0
+                            for note in f.notes:
+                                size += len((note.content or '').encode('utf-8'))
+                            for board in f.boards:
+                                size += len((board.content or '').encode('utf-8'))
+                            for file_obj in f.files:
+                                size += file_obj.get_content_size()
+                            for child in f.children:
+                                size += calculate_folder_size_recursive(child)
+                            return size
+                        
+                        size_to_subtract = calculate_folder_size_recursive(folder)
+                        if delete_folder(item_id):
+                            total_size_freed += size_to_subtract
+                            success_count += 1
+                        else:
+                            failed_items.append(f"folder {item_id}")
+                    else:
+                        failed_items.append(f"folder {item_id}")
+                        
+                elif item_type == 'note':
+                    note = Note.query.get(item_id)
+                    if note and note.user_id == current_user.id:
+                        size = len((note.content or '').encode('utf-8'))
+                        db.session.delete(note)
+                        db.session.commit()
+                        total_size_freed += size
+                        success_count += 1
+                    else:
+                        failed_items.append(f"note {item_id}")
+                        
+                elif item_type == 'board':
+                    board = Board.query.get(item_id)
+                    if board and board.user_id == current_user.id:
+                        size = len((board.content or '').encode('utf-8'))
+                        db.session.delete(board)
+                        db.session.commit()
+                        total_size_freed += size
+                        success_count += 1
+                    else:
+                        failed_items.append(f"board {item_id}")
+                        
+                elif item_type == 'file' or item_type == 'book':
+                    # Handle both generic 'file' type and specific 'book' type (MioBooks are Files with type='book')
+                    file_obj = File.query.get(item_id)
+                    if file_obj and file_obj.owner_id == current_user.id:
+                        size = file_obj.get_content_size()
+                        db.session.delete(file_obj)
+                        db.session.commit()
+                        total_size_freed += size
+                        success_count += 1
+                    else:
+                        failed_items.append(f"{item_type} {item_id}")
+            except Exception as e:
+                print(f"Error deleting {item_type} {item_id}: {e}")
+                failed_items.append(f"{item_type} {item_id}")
+                continue
+        
+        # Update user data size
+        if total_size_freed > 0:
+            current_user.total_data_size = (current_user.total_data_size or 0) - total_size_freed
+            db.session.commit()
+        
+        # Clean up orphaned images
+        from .utils import cleanup_orphaned_images_for_user
+        try:
+            deleted_count, freed_bytes = cleanup_orphaned_images_for_user(current_user.id)
+            if deleted_count > 0:
+                print(f"[BATCH DELETE] Cleaned up {deleted_count} orphaned images, freed {freed_bytes} bytes")
+        except Exception as e:
+            print(f"[BATCH DELETE] Image cleanup failed: {e}")
+        
+        message = f"Successfully deleted {success_count} items"
+        if failed_items:
+            message += f". Failed: {', '.join(failed_items)}"
+        
+        return jsonify({
+            'success': True,
+            'message': message,
+            'success_count': success_count,
+            'failed_count': len(failed_items),
+            'failed_items': failed_items
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Batch delete failed: {str(e)}'}), 500
+
+

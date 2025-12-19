@@ -1,0 +1,788 @@
+<!-- folder_view_left_sidebar_partial.html -->
+<!-- Full-featured Windows Explorer-style folder browser sidebar -->
+
+<style>
+/* Folder Browser Sidebar Styles */
+.folder-browser-sidebar {
+  position: fixed;
+  left: 0;
+  top: 70px;
+  width: 280px;
+  height: calc(100vh - 70px);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-primary);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+  overflow: hidden;
+}
+
+.folder-browser-sidebar.collapsed {
+  transform: translateX(-280px);
+}
+
+.folder-browser-header {
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.folder-browser-header h6 {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Tab styles */
+.folder-browser-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+}
+.folder-browser-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.folder-browser-tab-btn.active {
+  background: var(--accent, #14b8a6);
+  color: white;
+}
+
+.folder-browser-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.folder-browser-actions button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.folder-browser-actions button:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+.folder-tree-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 4px;
+}
+
+.folder-tree {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.folder-tree-item {
+  position: relative;
+  user-select: none;
+}
+
+.folder-tree-node {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  margin: 2px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.folder-tree-node:hover {
+  background: var(--hover-overlay);
+}
+
+.folder-tree-node.active {
+  /* Use site accent (Carbon Teal) for highlighted/active folder */
+  /* Prefer site accent, fallback to Carbon Teal hex if not defined on the page */
+  background: var(--accent, #14b8a6);
+  color: white;
+}
+
+.folder-tree-node.active .folder-icon,
+.folder-tree-node.active .folder-name,
+.folder-tree-node.active .folder-count {
+  color: white !important;
+}
+
+.folder-tree-node.drag-over {
+  /* Use site accent for drag-over visual too */
+  /* Prefer site accent, fallback to Carbon Teal hex if not defined on the page */
+  background: var(--accent, #14b8a6);
+  opacity: 0.5;
+}
+
+.folder-expand-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.folder-expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.folder-expand-icon.empty {
+  opacity: 0;
+}
+
+.folder-icon {
+  margin-right: 8px;
+  font-size: 18px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.folder-name {
+  flex: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.folder-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  background: var(--bg-quaternary);
+  padding: 2px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.folder-tree-node.active .folder-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.folder-tree-children {
+  list-style: none;
+  padding-left: 20px;
+  margin: 0;
+  display: none;
+}
+
+.folder-tree-children.expanded {
+  display: block;
+}
+
+/* Context Menu */
+.folder-context-menu {
+  position: fixed;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 980;
+  min-width: 180px;
+  display: none;
+}
+
+.folder-context-menu.show {
+  display: block;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  font-size: 13px;
+}
+
+.context-menu-item:hover {
+  background: var(--hover-overlay);
+}
+
+.context-menu-item.danger:hover {
+  background: var(--accent-red);
+  color: white;
+}
+
+.context-menu-item i {
+  margin-right: 12px;
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--border-primary);
+  margin: 4px 0;
+}
+
+/* Toggle Buttons - Dual Arrow System */
+.sidebar-toggles-container {
+  position: fixed;
+  left: 0;
+  top: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  z-index: 999;
+  transition: left 0.3s ease;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  border-radius: 0 8px 8px 0;
+  overflow: hidden;
+}
+
+.sidebar-toggles-container.sidebar-open {
+  left: 280px;
+}
+
+.folder-browser-toggle {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-left: none;
+  padding: 14px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.folder-browser-toggle:first-child {
+  border-bottom: 0.5px solid var(--border-primary);
+}
+
+.folder-browser-toggle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+
+.folder-browser-toggle.active {
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: var(--white);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.4);
+}
+
+.folder-browser-toggle.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--white);
+  opacity: 0.8;
+}
+
+.folder-browser-toggle .material-icons {
+  font-size: 22px;
+  transition: transform 0.2s ease;
+}
+
+.folder-browser-toggle:hover .material-icons {
+  transform: scale(1.1);
+}
+
+/* Loading State */
+.folder-tree-loading {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+}
+
+/* Empty State */
+.folder-tree-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+}
+
+/* Scrollbar Styling */
+.folder-tree-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.folder-tree-container::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.folder-tree-container::-webkit-scrollbar-thumb {
+  background: var(--bg-quaternary);
+  border-radius: 4px;
+}
+
+.folder-tree-container::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .folder-browser-sidebar {
+    width: 240px;
+  }
+  
+  .folder-browser-sidebar.collapsed {
+    transform: translateX(-240px);
+  }
+  
+  .sidebar-toggles-container.sidebar-open {
+    left: 240px;
+  }
+}
+
+/* Hide native search clear button so our external clear button is used */
+/* Only target the sidebar input */
+#sidebarUserSearch::-webkit-search-cancel-button,
+#sidebarUserSearch::-webkit-search-decoration,
+#sidebarUserSearch::-webkit-search-results-button,
+#sidebarUserSearch::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  display: none;
+}
+/* IE/Edge */
+#sidebarUserSearch::-ms-clear,
+#sidebarUserSearch::-ms-reveal {
+  display: none;
+  width: 0;
+  height: 0;
+}
+#sidebarUserSearch {
+  -webkit-appearance: textfield;
+  appearance: textfield;
+}
+
+/* New Folder Input */
+.new-folder-input {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  margin: 2px 0;
+}
+
+.new-folder-input input {
+  flex: 1;
+  background: var(--bg-quaternary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.new-folder-input button {
+  background: var(--accent-blue);
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.new-folder-input button:hover {
+  background: var(--accent-blue-hover);
+}
+
+.new-folder-input button.cancel {
+  background: var(--bg-quaternary);
+  color: var(--text-primary);
+}
+
+.new-folder-input button.cancel:hover {
+  background: var(--border-hover);
+}
+
+/* Pinned users heading uses white variant from theme_colors_carbon_teal.css */
+.pinned-heading {
+  color: var(--ct-white) !important;
+}
+</style>
+
+<!-- Toggle Buttons - Dual Arrow System -->
+<div class="sidebar-toggles-container" id="sidebarTogglesContainer">
+  <div class="folder-browser-toggle" id="foldersToggleBtn" onclick="openFolderBrowserTab('folders')" title="Folders">
+    <i class="material-icons">folder</i>
+  </div>
+  <div class="folder-browser-toggle" id="socialToggleBtn" onclick="openFolderBrowserTab('pinned')" title="Social">
+    <i class="material-icons">people</i>
+  </div>
+</div>
+
+<!-- Folder Browser Sidebar -->
+<div class="folder-browser-sidebar collapsed" id="folderBrowserSidebar">
+  <div class="folder-browser-header">
+    <h6>
+      Hi, {{ current_user.username }}
+      </small>
+    </h6>
+    <div class="folder-browser-actions">
+      <button onclick="refreshFolderTree()" title="Refresh">
+        <i class="material-icons" style="font-size: 18px;">refresh</i>
+      </button>
+      <button onclick="(typeof openCreateFolderDescModal === 'function' ? openCreateFolderDescModal() : createNewFolder())" title="New Folder">
+        <i class="material-icons" style="font-size: 18px;">create_new_folder</i>
+      </button>
+      <button onclick="closeFolderBrowser()" title="Close">
+        <i class="material-icons" style="font-size: 18px;">close</i>
+      </button>
+    </div>
+  </div>
+  <div class="folder-browser-tabs" role="tablist" aria-label="Folder sidebar tabs">
+    <button class="folder-browser-tab-btn active" id="foldersTabBtn" onclick="switchFolderBrowserTab('folders')">Folders</button>
+    <button class="folder-browser-tab-btn" id="pinnedTabBtn" onclick="switchFolderBrowserTab('pinned')">Social</button>
+  </div>
+  <div class="tab-content">
+    <div class="folder-tree-container" id="foldersTabContent">
+      {% include 'p2/folder_view_folders_tab.html' %}
+    </div>
+    
+    <div class="folder-tree-container" id="pinnedTabContent" style="display:none;">
+      {% include 'p2/folder_view_social_tab.html' %}
+    </div>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div class="folder-context-menu" id="folderContextMenu">
+  <div class="context-menu-item" onclick="contextMenuAction('open')">
+    <i class="material-icons">folder_open</i>
+    <span>Open</span>
+  </div>
+  <div class="context-menu-item" onclick="contextMenuAction('new')">
+    <i class="material-icons">create_new_folder</i>
+    <span>New Subfolder</span>
+  </div>
+  <div class="context-menu-divider"></div>
+  <div class="context-menu-item" onclick="contextMenuAction('rename')">
+    <i class="material-icons">edit</i>
+    <span>Rename</span>
+  </div>
+  <div class="context-menu-divider"></div>
+  <div class="context-menu-item" onclick="contextMenuAction('send')">
+    <i class="material-icons">send</i>
+    <span>Send to User</span>
+  </div>
+  <div class="context-menu-divider"></div>
+  <div class="context-menu-item danger" onclick="contextMenuAction('delete')">
+    <i class="material-icons">delete</i>
+    <span>Delete</span>
+  </div>
+</div>
+
+<script>
+// Folder Browser State
+let contextMenuFolder = null;
+
+// Initialize folder browser
+document.addEventListener('DOMContentLoaded', function() {
+  // Load sidebar state from localStorage (default: collapsed)
+  const sidebarState = localStorage.getItem('folderBrowserState');
+  const activeTab = localStorage.getItem('folderBrowserActiveTab') || 'folders';
+  
+  if (sidebarState === 'open') {
+    openFolderBrowser(activeTab, false);
+  } else {
+    // Ensure collapsed state on load
+    const sidebar = document.getElementById('folderBrowserSidebar');
+    const togglesContainer = document.getElementById('sidebarTogglesContainer');
+    sidebar.classList.add('collapsed');
+    togglesContainer.classList.remove('sidebar-open');
+    updateToggleButtonStates(null);
+  }
+  
+  // Close context menu on click outside
+  // Close context menu when interacting anywhere outside the menu.
+  // Use pointerdown to catch mouse/touch before focus changes, and also handle
+  // contextmenu (right-click) elsewhere so the menu reliably disappears.
+  function globalCloseContextHandler(e) {
+    try {
+      if (!e.target.closest('.folder-context-menu')) {
+        closeContextMenu();
+      }
+    } catch (err) {
+      // defensive: if closest() is undefined for some node, just close
+      closeContextMenu();
+    }
+  }
+
+  document.addEventListener('pointerdown', globalCloseContextHandler);
+
+  // If the user right-clicks somewhere that's NOT a folder node (i.e. any other part
+  // of the UI), close our custom menu. If they right-click a folder node, that node's
+  // contextmenu handler will show the menu instead.
+  document.addEventListener('contextmenu', function(e) {
+    if (!e.target.closest('.folder-context-menu') && !e.target.closest('.folder-tree-node')) {
+      closeContextMenu();
+    }
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeContextMenu();
+    }
+  });
+
+  // Prevent the browser default context menu inside the folder tree area so our
+  // custom menu can be used instead. We still allow contextmenu events to bubble
+  // (so the document contextmenu handler above can close the menu when appropriate).
+  const folderTreeContainer = document.getElementById('foldersTabContent');
+  if (folderTreeContainer) {
+    folderTreeContainer.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+    });
+  }
+});
+
+// Update toggle button states based on active tab
+function updateToggleButtonStates(activeTab) {
+  const foldersBtn = document.getElementById('foldersToggleBtn');
+  const socialBtn = document.getElementById('socialToggleBtn');
+  
+  if (!foldersBtn || !socialBtn) return;
+  
+  // Reset all buttons
+  foldersBtn.classList.remove('active');
+  socialBtn.classList.remove('active');
+  
+  // Highlight the active tab button
+  if (activeTab === 'folders') {
+    foldersBtn.classList.add('active');
+  } else if (activeTab === 'pinned') {
+    socialBtn.classList.add('active');
+  }
+}
+
+// Close the folder browser sidebar
+function closeFolderBrowser() {
+  const sidebar = document.getElementById('folderBrowserSidebar');
+  const togglesContainer = document.getElementById('sidebarTogglesContainer');
+  sidebar.classList.add('collapsed');
+  togglesContainer.classList.remove('sidebar-open');
+  localStorage.setItem('folderBrowserState', 'closed');
+  updateToggleButtonStates(null);
+}
+
+// Open folder browser to a specific tab (replaces toggleFolderBrowser)
+function openFolderBrowserTab(tabName) {
+  const sidebar = document.getElementById('folderBrowserSidebar');
+  const togglesContainer = document.getElementById('sidebarTogglesContainer');
+  const isCurrentlyOpen = !sidebar.classList.contains('collapsed');
+  const currentTab = localStorage.getItem('folderBrowserActiveTab');
+  
+  // If clicking the same tab that's already open, close the sidebar
+  if (isCurrentlyOpen && currentTab === tabName) {
+    sidebar.classList.add('collapsed');
+    togglesContainer.classList.remove('sidebar-open');
+    localStorage.setItem('folderBrowserState', 'closed');
+    updateToggleButtonStates(null);
+  } else {
+    // Open sidebar and switch to the requested tab
+    sidebar.classList.remove('collapsed');
+    togglesContainer.classList.add('sidebar-open');
+    localStorage.setItem('folderBrowserState', 'open');
+    localStorage.setItem('folderBrowserActiveTab', tabName);
+    switchFolderBrowserTab(tabName);
+    updateToggleButtonStates(tabName);
+  }
+}
+
+// Legacy function for compatibility - opens to folders tab
+function toggleFolderBrowser() {
+  openFolderBrowserTab('folders');
+}
+
+function openFolderBrowser(tabName = 'folders', saveState = true) {
+  const sidebar = document.getElementById('folderBrowserSidebar');
+  const togglesContainer = document.getElementById('sidebarTogglesContainer');
+  sidebar.classList.remove('collapsed');
+  togglesContainer.classList.add('sidebar-open');
+  if (saveState) {
+    localStorage.setItem('folderBrowserState', 'open');
+    localStorage.setItem('folderBrowserActiveTab', tabName);
+  }
+  switchFolderBrowserTab(tabName);
+  updateToggleButtonStates(tabName);
+}
+
+// Switch between the 'Folders' and 'Pinned' tabs in the sidebar
+function switchFolderBrowserTab(tabName) {
+  const tabs = ['folders', 'pinned'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(t + 'TabBtn');
+    const content = document.getElementById(t + 'TabContent');
+    if (!btn || !content) return;
+    if (t === tabName) {
+      btn.classList.add('active');
+      content.style.display = 'block';
+    } else {
+      btn.classList.remove('active');
+      content.style.display = 'none';
+    }
+  });
+  
+  // Update toggle button states
+  updateToggleButtonStates(tabName);
+  
+  // Save active tab preference
+  localStorage.setItem('folderBrowserActiveTab', tabName);
+}
+
+// Context Menu Actions
+function contextMenuAction(action) {
+  if (!contextMenuFolder) return;
+  
+  switch(action) {
+    case 'open':
+      navigateToFolder(contextMenuFolder.id);
+      break;
+    case 'new':
+      // Prefer the richer create-folder-with-description modal used elsewhere.
+      if (typeof openCreateFolderDescModal === 'function') {
+        openCreateFolderDescModal(contextMenuFolder.id);
+      } else {
+        createNewFolder(contextMenuFolder.id);
+      }
+      break;
+    case 'rename':
+      // Use the same folder-description modal used by the action bar (allows editing description too)
+      if (typeof openRenameFolderDescModal === 'function') {
+        // If the tree payload included description, use it; otherwise fetch latest details
+        const nameFromTree = contextMenuFolder.name || '';
+        const descFromTree = contextMenuFolder.description;
+
+        if (typeof descFromTree !== 'undefined') {
+          openRenameFolderDescModal(contextMenuFolder.id, nameFromTree, descFromTree || '');
+        } else {
+          // Fetch folder details (name + description) from server then open modal
+          fetch(`/folders/api/folder/${contextMenuFolder.id}`)
+            .then(resp => resp.json())
+            .then(body => {
+              if (body && body.success && body.folder) {
+                openRenameFolderDescModal(body.folder.id, body.folder.name || '', body.folder.description || '');
+              } else {
+                // Fallback: open modal with available name
+                openRenameFolderDescModal(contextMenuFolder.id, nameFromTree, '');
+              }
+            })
+            .catch(err => {
+              console.error('Failed to fetch folder details for rename:', err);
+              // Fallback to basic rename if fetch fails
+              openRenameFolderDescModal(contextMenuFolder.id, nameFromTree, '');
+            });
+        }
+      } else {
+        renameFolder(contextMenuFolder.id);
+      }
+      break;
+    // copy/move options removed from context menu; drag-and-drop is used for moving folders
+    case 'delete':
+      deleteFolder(contextMenuFolder.id);
+      break;
+    case 'send':
+      // Open send to modal
+      try {
+        const folderName = contextMenuFolder.name || 'Folder';
+        if (typeof window.openSendToModalWithItems === 'function') {
+          window.openSendToModalWithItems([
+            { type: 'folder', id: contextMenuFolder.id }
+          ], {
+            mode: 'single',
+            description: `Select a pinned user to send "${folderName}" to:`
+          });
+        } else {
+          const modalEl = document.getElementById('sendToModal');
+          if (modalEl) {
+            modalEl.dataset.selectedType = 'folder';
+            modalEl.dataset.selectedId = contextMenuFolder.id;
+            try { if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl); modalEl.style.zIndex = '3000'; } catch (err) { console.warn('Failed to append modal to body', err); }
+            const bs = new bootstrap.Modal(modalEl);
+            bs.show();
+          } else {
+            alert('Send modal not available');
+          }
+        }
+      } catch(e) { console.error('Failed to open send modal', e); }
+      break;
+  }
+  
+  closeContextMenu();
+}
+
+// Show Context Menu
+function showContextMenu(event, folder) {
+  const menu = document.getElementById('folderContextMenu');
+  contextMenuFolder = folder;
+  // Show menu then position using viewport coordinates (clientX/clientY)
+  // Use clientX/Y because the menu is position:fixed (viewport-relative).
+  menu.style.display = 'block';
+  menu.classList.add('show');
+
+  // Position in next frame so width/height are available for clamping
+  requestAnimationFrame(() => {
+    const rect = menu.getBoundingClientRect();
+    const margin = 8;
+    let left = event.clientX;
+    let top = event.clientY;
+
+    const maxLeft = window.innerWidth - rect.width - margin;
+    const maxTop = window.innerHeight - rect.height - margin;
+
+    if (left < margin) left = margin;
+    if (left > maxLeft) left = maxLeft;
+    if (top < margin) top = margin;
+    if (top > maxTop) top = maxTop;
+
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  });
+}
+
+function closeContextMenu() {
+  const menu = document.getElementById('folderContextMenu');
+  if (!menu) return;
+  // Remove visible class and any inline positioning so the menu is fully hidden
+  menu.classList.remove('show');
+  menu.style.display = 'none';
+  menu.style.left = '';
+  menu.style.top = '';
+  contextMenuFolder = null;
+}
+
+// Per-line pinning only. Bulk functions removed.
+
+</script>

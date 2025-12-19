@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create account</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+    <style>
+        /* Page background: layered gradient with subtle teal radial highlight */
+        html,body{
+            /* ensure the background covers the full viewport and any extra page height */
+            height:100%;
+            min-height:100vh;
+            margin:0;
+            padding:0;
+            font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            color:var(--white);
+            background-color:var(--bg);
+            background-image:
+                radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),
+                linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+            /* Keep the gradient anchored and scaled consistently across viewport sizes */
+            background-size:cover;
+            background-repeat:no-repeat;
+            background-attachment:fixed;
+            background-position:center top;
+        }
+    .center{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:12px}
+        .card{background:linear-gradient(180deg, rgba(18,21,22,0.98), rgba(10,10,11,0.98));border:1px solid rgba(255,255,255,0.04);padding:28px;max-width:480px;width:100%;border-radius:var(--radius);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+        h1{margin:0 0 8px 0;font-size:22px;font-weight:600;color:var(--white)}
+        p.lead{margin:0 0 18px 0;color:var(--muted);font-size:14px}
+        label{display:block;font-size:13px;margin-bottom:6px;color:var(--muted)}
+        input[type="text"],input[type="password"],input[type="email"]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--white);font-size:14px;box-sizing:border-box}
+        .row{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+        .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:10px 12px;border-radius:8px;border:none;background:var(--accent);color:var(--white);font-weight:600;cursor:pointer}
+        .btn:active{background:var(--accent-strong)}
+        .small{font-size:13px;color:var(--muted)}
+        .link{color:var(--accent);text-decoration:none}
+        .flash{padding:10px;border-radius:8px;margin-bottom:12px;background:rgba(255,255,255,0.03);color:var(--white);border:1px solid rgba(255,255,255,0.04);font-size:13px}
+        .flash-success{background:rgba(16,185,129,0.12);border-left:4px solid rgba(16,185,129,0.7);color:#e6fff3}
+        .flash-error{background:rgba(220,38,38,0.12);border-left:4px solid rgba(220,38,38,0.7);color:#ffdcdc}
+        @media (max-width:520px){.card{padding:20px}}
+    </style>
+</head>
+<body>
+    <div class="center">
+        <!-- Form elements laid bare on the background (no card) -->
+        <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:600;color:var(--white)">Create your account</h1>
+        <p class="lead" style="margin:0 0 18px 0;color:var(--muted);font-size:14px">Sign up to start using MioSpace.</p>
+
+        {# Flash messages #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if category in ['error','danger','warning'] %}
+                        <div class="flash flash-error">{{ message }}</div>
+                    {% elif category == 'success' %}
+                        <div class="flash flash-success">{{ message }}</div>
+                    {% else %}
+                        <div class="flash">{{ message }}</div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="registerForm" method="POST" novalidate style="width:100%;max-width:640px;margin-top:14px">
+
+            <!-- Username (required) -->
+            <div style="margin-top:8px">
+                <label for="username" class="small">Username <span style="color:#ff6b6b">*</span></label>
+                <input id="username" name="username" type="text" autocomplete="username" placeholder="Username" required>
+            </div>
+
+            <!-- Email (optional) -->
+            <div style="margin-top:8px">
+                <label for="email" class="small">Email <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+                <input id="email" name="email" type="email" autocomplete="email" placeholder="Email">
+                <div class="small" style="margin-top:6px;color:var(--muted)">Providing an email lets you reset your password later. If you don't submit an email you won't be able to reset your password.</div>
+            </div>
+
+            <!-- Password (required) -->
+            <div style="margin-top:12px;position:relative;">
+                <label for="password" class="small">Password <span style="color:#ff6b6b">*</span></label>
+                <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Password" required>
+                <button type="button" id="togglePw" aria-label="Toggle password" aria-pressed="false" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);cursor:pointer"> 
+                    <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.2"></path><path d="M1 1l22 22"></path></svg>
+                </button>
+            </div>
+
+            <!-- Confirm Password (required) -->
+            <div style="margin-top:12px;position:relative;">
+                <label for="confirm_password" class="small">Confirm password <span style="color:#ff6b6b">*</span></label>
+                <input id="confirm_password" name="confirm_password" type="password" placeholder="Confirm password" required>
+                <button type="button" id="togglePw2" aria-label="Toggle confirm password" aria-pressed="false" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);cursor:pointer"> 
+                    <svg id="eyeOpen2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <svg id="eyeClosed2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.2"></path><path d="M1 1l22 22"></path></svg>
+                </button>
+            </div>
+
+            <div style="margin-top:18px">
+                <button type="submit" class="btn">Create account</button>
+            </div>
+        </form>
+
+        <div class="meta" style="margin-top:14px;text-align:center;color:var(--muted);font-size:13px">
+            <div class="small">Already have an account? <a class="link" href="{{ url_for('p2_bp.login') }}">Sign in</a></div>
+        </div>
+    </div>
+    <script>
+        // Form validation: require username and matching passwords. Email is optional (but required to reset password later).
+        (function(){
+            var form = document.getElementById('registerForm');
+            var email = document.getElementById('email');
+            var username = document.getElementById('username');
+            var pw = document.getElementById('password');
+            var pw2 = document.getElementById('confirm_password');
+
+            if(form){
+                form.addEventListener('submit', function(evt){
+                    // Ensure username provided
+                    if(username && !username.value.trim()){
+                        evt.preventDefault();
+                        alert('Please enter a username.');
+                        username.focus();
+                        return false;
+                    }
+
+                    // confirm password match
+                    if(pw && pw2 && pw.value !== pw2.value){
+                        evt.preventDefault();
+                        alert('Passwords do not match.');
+                        pw2.focus();
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
+            // Toggle password visibility
+            function makeToggle(btnId, inputId, eyeOpenId, eyeClosedId){
+                var btn = document.getElementById(btnId);
+                var inp = document.getElementById(inputId);
+                var eOpen = document.getElementById(eyeOpenId);
+                var eClosed = document.getElementById(eyeClosedId);
+                if(!btn || !inp) return;
+                btn.addEventListener('click', function(){
+                    if(inp.type === 'password'){
+                        inp.type = 'text';
+                        if(eOpen) eOpen.style.display = 'none';
+                        if(eClosed) eClosed.style.display = 'inline';
+                        btn.setAttribute('aria-pressed','true');
+                    } else {
+                        inp.type = 'password';
+                        if(eOpen) eOpen.style.display = 'inline';
+                        if(eClosed) eClosed.style.display = 'none';
+                        btn.setAttribute('aria-pressed','false');
+                    }
+                    inp.focus();
+                });
+            }
+
+            makeToggle('togglePw','password','eyeOpen','eyeClosed');
+            makeToggle('togglePw2','confirm_password','eyeOpen2','eyeClosed2');
+        })();
+    </script>
+</body>
+</html>

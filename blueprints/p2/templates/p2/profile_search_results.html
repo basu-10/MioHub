@@ -1,0 +1,96 @@
+<!-- profile_search_results.html - show users matching a search -->
+
+{% include "/p2/folder_view_navbar_partial.html" %}
+
+<head>
+  <title>Search results - MioSpace</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+</head>
+
+<div class="max-w-5xl mx-auto mt-28 p-6">
+  <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+    {# Capture any flashed messages so we can prefer them over query-flag messages #}
+    {% set flashed = get_flashed_messages() %}
+    {% if flashed %}
+      <div class="alert alert-warning text-white">{{ flashed[0] }}</div>
+    {% endif %}
+
+    {# Also allow direct query-flag feedback when redirect loses flash state -
+       only show the query-flag alert when there is no flash to avoid duplicates #}
+    {% if (not flashed) and request.args.get('pin_result') %}
+      {% if request.args.get('pin_result') == 'pinned' %}
+        <div id="pin-alert" class="alert alert-warning text-white">User pinned.</div>
+      {% elif request.args.get('pin_result') == 'unpinned' %}
+        <div id="pin-alert" class="alert alert-warning text-white">User unpinned.</div>
+      {% endif %}
+      {# Remove the query flag from the URL so a refresh doesn't re-show the message #}
+      <script>
+        (function(){
+          try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('pin_result')) {
+              params.delete('pin_result');
+              const newSearch = params.toString();
+              const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+              window.history.replaceState({}, document.title, newUrl);
+            }
+          } catch (e) {
+            // If History API or URLSearchParams isn't supported, do nothing.
+          }
+        })();
+      </script>
+    {% endif %}
+    <h3 class="text-xl font-semibold text-white mb-4">Search results for "{{ q }}"</h3>
+
+    {% if users %}
+      <ul class="space-y-3">
+        {% for u in users %}
+          {# robust pinned check: handle missing prefs and string/int id storage #}
+          {% set pinned = false %}
+          {% if current_user.user_prefs %}
+            {% set pu = current_user.user_prefs.get('pinned_users', []) %}
+            {% if pu %}
+              {% if u.id in pu %}
+                {% set pinned = true %}
+              {% else %}
+                {% if (u.id|string) in pu %}
+                  {% set pinned = true %}
+                {% endif %}
+              {% endif %}
+            {% endif %}
+          {% endif %}
+          <li class="p-3 bg-gray-900 rounded-md flex items-center justify-between">
+            <div>
+              <div class="text-white font-medium">{{ u.username }}</div>
+              <div class="text-gray-400 text-sm">{{ u.email or 'No email' }}</div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <a href="{{ url_for('p2_bp.view_user', user_id=u.id) }}" class="px-3 py-1 bg-gray-700 text-white rounded-md">View</a>
+              <!-- Pin/unpin form -->
+              <form action="{{ url_for('p2_bp.toggle_pin_user', user_id=u.id) }}" method="post" style="display:inline">
+                <input type="hidden" name="next" value="{{ request.url }}">
+                {% if pinned %}
+                  <button type="submit" class="px-3 py-1 bg-yellow-500 text-black rounded-md">Unpin</button>
+                {% else %}
+                  <button type="submit" class="px-3 py-1 bg-yellow-600 text-white rounded-md">Pin</button>
+                {% endif %}
+              </form>
+              <!-- Placeholder actions; implement endpoints when ready -->
+              <button class="px-3 py-1 bg-blue-600 text-white rounded-md" onclick="alert('Start chat feature not implemented yet')">Message</button>
+              
+              <button class="px-3 py-1 bg-red-700 text-white rounded-md" onclick="if(confirm('Report this user?')){ alert('Report sent (placeholder)') }">Report</button>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="text-gray-400">No users found.</div>
+    {% endif %}
+
+    <div class="mt-6">
+      <a href="{{ url_for('p2_bp.profile') }}" class="px-3 py-2 bg-gray-700 text-white rounded-md">Back to my profile</a>
+    </div>
+  </div>
+</div>

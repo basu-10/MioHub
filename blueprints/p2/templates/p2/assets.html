@@ -1,0 +1,692 @@
+<!-- assets.html - User uploaded images gallery -->
+
+{% include "/p2/folder_view_navbar_partial.html" %}
+
+<head>
+  <title>Picture Assets - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+</head>
+
+<div class="min-h-screen bg-gray-900 pt-28 text-gray-200 px-4">
+    <!-- Flash notifications container -->
+    <div id="flashArea" class="fixed top-28 right-4 z-50 space-y-2"></div>
+  <div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-semibold teal-heading">Picture Assets</h1>
+      <div class="text-gray-300 text-sm">{{ images|length }} images • {{ (total_size / (1024*1024))|round(2) }} MB</div>
+      <div class="flex items-center space-x-2">
+          <label for="assetUpload" class="px-3 py-2 rounded bg-indigo-600 text-sm cursor-pointer">Upload images</label>
+          <input id="assetUpload" type="file" multiple accept="image/*" class="hidden">
+          <a href="{{ url_for('p2_bp.profile') }}" class="px-3 py-2 rounded bg-gray-800 text-sm">Back to Profile</a>
+        </div>
+    </div>
+
+    {% if images %}
+      {# in_use and reserve lists computed server-side in routes.py and passed into template #}
+      {% set in_use = in_use or [] %}
+      {% set reserve = reserve or [] %}
+
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-lg text-gray-100">In Use (<span class="in-use-count">{{ in_use|length }}</span>)</div>
+        <div class="text-sm text-gray-400">Showing images that are currently referenced in notes/boards</div>
+      </div>
+      <div id="inUseGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        {% for img in in_use %}
+          <div
+            class="card asset-card p-2 bg-gray-800 border border-gray-700"
+            data-fname="{{ img.filename }}"
+            data-meta="{{ { 'filename': img.filename, 'url': img.url, 'size': img.size, 'mtime': (img.mtime.strftime('%Y-%m-%d %H:%M') if img.mtime else ''), 'used_in': img.used_in } | tojson }}"
+          >
+            <div class="flex flex-col items-center">
+              <button type="button" class="asset-preview-btn w-full" data-action="open-viewer">
+                <div style="height:140px; overflow:hidden; display:flex; align-items:center; justify-content:center;" class="w-full">
+                  <img src="{{ img.url }}" alt="{{ img.filename }}" class="w-full h-full object-contain">
+                </div>
+              </button>
+              <div class="mt-2 w-full text-xs text-gray-300">
+                <div class="truncate" title="{{ img.filename }}"><strong>{{ img.filename }}</strong></div>
+                <div class="text-gray-400 text-xs">{{ (img.size / (1024*1024))|round(2) }} MB • {{ img.mtime.strftime('%Y-%m-%d %H:%M') }}</div>
+                <div class="mt-2 flex items-center justify-between w-full flex-wrap gap-2">
+                  <div class="flex items-center space-x-2">
+                    <button type="button" title="Open viewer" class="action-btn btn-viewer" data-action="open-viewer"><i class="material-icons">visibility</i></button>
+                    <a title="Download" class="action-btn" href="{{ img.url }}" download><i class="material-icons">download</i></a>
+                    <button title="Copy URL" class="btn-copy-link action-btn" data-url="{{ img.url }}"><i class="material-icons">link</i></button>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button title="Delete" class="btn-delete action-btn btn-danger" data-fname="{{ img.filename }}"><i class="material-icons">delete</i></button>
+                  </div>
+                </div>
+                {% if img.used_in and img.used_in|length > 0 %}
+                  <div class="text-xs text-green-300 mt-1 used-list">
+                    <strong>Used in:</strong>
+                    <ul class="list-none p-0 m-1">
+                      {% for u in img.used_in %}
+                        <li class="truncate" title="Open {{ u.title }}">• <a class="text-blue-200 hover:underline" href="{{ u.url }}">{{ u.title }}</a> <span class="text-gray-400">({{ u.type }})</span></li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-lg text-gray-100">Reserve (<span class="reserve-count">{{ reserve|length }}</span>)</div>
+        <div class="flex items-center space-x-2">
+          <div class="text-sm text-gray-400">Uploaded images not currently referenced</div>
+          <button id="btnDeleteUnused" class="px-3 py-2 rounded bg-red-700 text-sm">Delete all unused</button>
+        </div>
+      </div>
+      <div id="reserveGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {% for img in reserve %}
+          <div
+            class="card asset-card p-2 bg-gray-800 border border-gray-700"
+            data-fname="{{ img.filename }}"
+            data-meta="{{ { 'filename': img.filename, 'url': img.url, 'size': img.size, 'mtime': (img.mtime.strftime('%Y-%m-%d %H:%M') if img.mtime else ''), 'used_in': img.used_in } | tojson }}"
+          >
+            <div class="flex flex-col items-center">
+              <button type="button" class="asset-preview-btn w-full" data-action="open-viewer">
+                <div style="height:140px; overflow:hidden; display:flex; align-items:center; justify-content:center;" class="w-full">
+                  <img src="{{ img.url }}" alt="{{ img.filename }}" class="w-full h-full object-contain">
+                </div>
+              </button>
+              <div class="mt-2 w-full text-xs text-gray-300">
+                <div class="truncate" title="{{ img.filename }}"><strong>{{ img.filename }}</strong></div>
+                <div class="text-gray-400 text-xs">{{ (img.size / (1024*1024))|round(2) }} MB • {{ img.mtime.strftime('%Y-%m-%d %H:%M') }}</div>
+                <div class="mt-2 flex items-center justify-between w-full flex-wrap gap-2">
+                  <div class="flex items-center space-x-2">
+                    <button type="button" title="Open viewer" class="action-btn btn-viewer" data-action="open-viewer"><i class="material-icons">visibility</i></button>
+                    <a title="Download" class="action-btn" href="{{ img.url }}" download><i class="material-icons">download</i></a>
+                    <button title="Copy URL" class="btn-copy-link action-btn" data-url="{{ img.url }}"><i class="material-icons">link</i></button>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button title="Delete" class="btn-delete action-btn btn-danger" data-fname="{{ img.filename }}"><i class="material-icons">delete</i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <div id="unusedPanel" class="mt-4 bg-gray-800 border border-gray-700 rounded p-3 hidden">
+        <div class="flex justify-between items-center mb-2">
+          <div class="text-sm text-gray-200">Unused images found: <span id="unusedCount">0</span></div>
+          <div class="flex items-center space-x-2">
+            <button id="btnDeleteSelected" class="px-3 py-1 rounded bg-red-600 text-sm">Delete selected</button>
+            <button id="btnClearUnused" class="px-3 py-1 rounded bg-gray-700 text-sm">Clear markings</button>
+          </div>
+        </div>
+        <div id="unusedList" class="grid grid-cols-1 gap-1 max-h-48 overflow-auto"></div>
+      </div>
+    {% else %}
+      <div class="card p-4 bg-gray-800 text-gray-300">No uploaded images yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<script type="application/json" id="assetDataPayload">{{ images|default([], true)|tojson }}</script>
+
+<div id="assetViewerModal" class="asset-viewer-modal hidden" aria-hidden="true">
+  <div class="asset-viewer-backdrop" data-action="close-viewer"></div>
+  <div class="asset-viewer-dialog" role="dialog" aria-modal="true" aria-labelledby="assetViewerTitle">
+    <div class="asset-viewer-header">
+      <div>
+        <div id="assetViewerTitle" data-role="viewer-filename" class="text-lg font-semibold text-gray-100"></div>
+        <div data-role="viewer-meta" class="text-sm text-gray-400"></div>
+      </div>
+      <div class="asset-viewer-header-controls">
+        <button type="button" class="viewer-nav" data-role="viewer-prev" aria-label="Previous image">
+          <i class="material-icons">chevron_left</i>
+        </button>
+        <div data-role="viewer-counter" class="viewer-counter text-xs text-gray-400"></div>
+        <button type="button" class="viewer-nav" data-role="viewer-next" aria-label="Next image">
+          <i class="material-icons">chevron_right</i>
+        </button>
+        <button type="button" class="viewer-close" data-action="close-viewer" aria-label="Close viewer">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+    </div>
+    <div class="asset-viewer-body">
+      <button type="button" class="viewer-nav floating prev" data-role="viewer-prev" aria-label="Previous image">
+        <i class="material-icons">chevron_left</i>
+      </button>
+      <img data-role="viewer-image" src="" alt="Selected asset">
+      <button type="button" class="viewer-nav floating next" data-role="viewer-next" aria-label="Next image">
+        <i class="material-icons">chevron_right</i>
+      </button>
+    </div>
+    <div class="asset-viewer-footer">
+      <div class="asset-viewer-actions">
+        <a data-role="viewer-edit" class="viewer-btn" target="_blank" rel="noopener">Edit picture</a>
+        <a data-role="viewer-download" class="viewer-btn" download>Download</a>
+      </div>
+      <div class="asset-viewer-usage">
+        <div class="text-xs uppercase tracking-wider text-gray-400 mb-1">Used in</div>
+        <div data-role="viewer-used" class="viewer-used-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function emitAssetDeleted(filename) {
+    if (!filename) return;
+    document.dispatchEvent(new CustomEvent('mio:asset-deleted', { detail: { filename } }));
+  }
+
+  async function doDelete(filename) {
+    if (!confirm('Delete image "' + filename + '"? This is permanent.')) return;
+    try {
+      const resp = await fetch('{{ url_for("p2_bp.assets_delete") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ filename })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        document.querySelectorAll('[data-fname="' + filename + '"]').forEach(el => el.remove());
+        emitAssetDeleted(filename);
+      } else {
+        alert(data.error || 'Failed to delete image');
+      }
+    } catch (e) { console.error(e); alert('Delete failed'); }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', e => {
+      const fn = e.currentTarget.getAttribute('data-fname');
+      doDelete(fn);
+    }));
+    document.querySelectorAll('.btn-copy-link').forEach(b => b.addEventListener('click', e => {
+      const link = e.currentTarget.getAttribute('data-url');
+      navigator.clipboard.writeText(link).then(() => {
+        alert('Image URL copied to clipboard');
+      }).catch(() => alert('Failed to copy'));
+    }));
+
+    const assetUpload = document.getElementById('assetUpload');
+    const reserveGrid = document.getElementById('reserveGrid');
+    const btnDeleteUnused = document.getElementById('btnDeleteUnused');
+    const btnDeleteSelected = document.getElementById('btnDeleteSelected');
+    const btnClearUnused = document.getElementById('btnClearUnused');
+    const unusedPanel = document.getElementById('unusedPanel');
+    const unusedList = document.getElementById('unusedList');
+    const unusedCount = document.getElementById('unusedCount');
+    const assetDataMap = new Map();
+    (function seedAssetData() {
+      const payloadNode = document.getElementById('assetDataPayload');
+      if (!payloadNode) return;
+      try {
+        const initialData = JSON.parse(payloadNode.textContent || '[]');
+        initialData.forEach(item => {
+          if (item && item.filename) {
+            assetDataMap.set(item.filename, item);
+          }
+        });
+      } catch (err) {
+        console.warn('Failed to parse asset metadata payload', err);
+      }
+    })();
+    let galleryData = [];
+
+    function formatBytes(bytes) {
+      if (typeof bytes !== 'number' || Number.isNaN(bytes)) return 'Unknown size';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let value = bytes;
+      let idx = 0;
+      while (value >= 1024 && idx < units.length - 1) {
+        value /= 1024;
+        idx += 1;
+      }
+      const precision = idx === 0 ? 0 : (idx === 1 ? 1 : 2);
+      return `${value.toFixed(precision)} ${units[idx]}`;
+    }
+
+    function rebuildGalleryData() {
+      const cards = Array.from(document.querySelectorAll('.asset-card'));
+      galleryData = cards.map((card, index) => {
+        card.dataset.index = index;
+        let meta = {};
+        try {
+          meta = JSON.parse(card.getAttribute('data-meta') || '{}');
+        } catch (err) {
+          meta = {};
+        }
+        if (!meta.filename) meta.filename = card.getAttribute('data-fname');
+        if (!meta.url) {
+          const imgEl = card.querySelector('img');
+          if (imgEl) meta.url = imgEl.getAttribute('src');
+        }
+        meta.size = typeof meta.size === 'number' ? meta.size : undefined;
+        meta.mtime = meta.mtime || '';
+        const serverMeta = meta.filename ? assetDataMap.get(meta.filename) : null;
+        if (serverMeta) {
+          if (!meta.url && serverMeta.url) meta.url = serverMeta.url;
+          if (typeof meta.size !== 'number' && typeof serverMeta.size === 'number') meta.size = serverMeta.size;
+          meta.mtime = meta.mtime || serverMeta.mtime || '';
+          meta.used_in = Array.isArray(serverMeta.used_in) ? serverMeta.used_in : (meta.used_in || []);
+        } else {
+          meta.used_in = meta.used_in || [];
+        }
+        meta.index = index;
+        return meta;
+      });
+    }
+
+    function findIndexByFilename(filename) {
+      if (!filename) return -1;
+      return galleryData.findIndex(item => item.filename === filename);
+    }
+
+    const viewer = createAssetViewer();
+
+    window.refreshAssetGalleryData = function refreshAssetGalleryData() {
+      rebuildGalleryData();
+      if (viewer && viewer.isOpen()) {
+        viewer.refreshCurrent();
+      }
+    };
+
+    rebuildGalleryData();
+
+    document.addEventListener('mio:asset-deleted', function(evt) {
+      const removed = (evt && evt.detail) ? evt.detail.filename : undefined;
+      if (removed) {
+        assetDataMap.delete(removed);
+      }
+      if (typeof window.refreshAssetGalleryData === 'function') {
+        window.refreshAssetGalleryData();
+      }
+      if (removed && viewer && typeof viewer.getCurrentFilename === 'function' && viewer.getCurrentFilename() === removed) {
+        viewer.close();
+      }
+    });
+
+    function createAssetViewer() {
+      const modal = document.getElementById('assetViewerModal');
+      if (!modal) return null;
+      const imageEl = modal.querySelector('[data-role="viewer-image"]');
+      const filenameEl = modal.querySelector('[data-role="viewer-filename"]');
+      const metaEl = modal.querySelector('[data-role="viewer-meta"]');
+      const downloadEl = modal.querySelector('[data-role="viewer-download"]');
+      const editEl = modal.querySelector('[data-role="viewer-edit"]');
+      const usedListEl = modal.querySelector('[data-role="viewer-used"]');
+      const counterEl = modal.querySelector('[data-role="viewer-counter"]');
+      const prevBtns = modal.querySelectorAll('[data-role="viewer-prev"]');
+      const nextBtns = modal.querySelectorAll('[data-role="viewer-next"]');
+      let currentIndex = -1;
+
+      prevBtns.forEach(btn => btn.addEventListener('click', () => prev()));
+      nextBtns.forEach(btn => btn.addEventListener('click', () => next()));
+
+      function setEditTarget(filename) {
+        if (!editEl) return;
+        if (filename) {
+          editEl.href = `/edit_image/${filename}`;
+          editEl.classList.remove('disabled');
+        } else {
+          editEl.removeAttribute('href');
+          editEl.classList.add('disabled');
+        }
+      }
+
+      function populateUsage(item) {
+        if (!usedListEl) return;
+        usedListEl.innerHTML = '';
+        const used = Array.isArray(item.used_in) ? item.used_in : [];
+        if (!used.length) {
+          const empty = document.createElement('div');
+          empty.className = 'text-sm text-gray-500';
+          empty.textContent = 'Not inserted anywhere yet.';
+          usedListEl.appendChild(empty);
+          return;
+        }
+        used.forEach(entry => {
+          const node = document.createElement(entry.url ? 'a' : 'div');
+          node.className = 'viewer-used-link';
+          if (entry.url) {
+            node.href = entry.url;
+            node.target = '_blank';
+            node.rel = 'noopener';
+          }
+          const parts = [];
+          if (entry.title) parts.push(entry.title);
+          if (entry.type) parts.push(`(${entry.type})`);
+          node.textContent = parts.join(' ');
+          usedListEl.appendChild(node);
+        });
+        setEditTarget(item.filename);
+      }
+
+      function renderCurrent() {
+        if (currentIndex < 0 || currentIndex >= galleryData.length) {
+          close();
+          return;
+        }
+        const item = galleryData[currentIndex];
+        if (!item) {
+          close();
+          return;
+        }
+        if (imageEl) {
+          imageEl.src = item.url || '';
+          imageEl.alt = item.filename || 'Picture asset';
+        }
+        if (filenameEl) {
+          filenameEl.textContent = item.filename || 'Picture asset';
+        }
+        if (metaEl) {
+          const parts = [];
+          if (typeof item.size === 'number') parts.push(formatBytes(item.size));
+          if (item.mtime) parts.push(item.mtime);
+          metaEl.textContent = parts.join(' • ');
+        }
+        if (downloadEl) {
+          if (item.url) {
+            downloadEl.href = item.url;
+            downloadEl.setAttribute('download', item.filename || 'asset.webp');
+            downloadEl.classList.remove('disabled');
+          } else {
+            downloadEl.removeAttribute('href');
+            downloadEl.classList.add('disabled');
+          }
+        }
+        if (counterEl) {
+          counterEl.textContent = `${item.index + 1} / ${galleryData.length}`;
+        }
+        populateUsage(item);
+      }
+
+      function open(index) {
+        if (!galleryData.length) return;
+        currentIndex = (index + galleryData.length) % galleryData.length;
+        renderCurrent();
+        modal.classList.add('active');
+        modal.classList.remove('hidden');
+        document.body.classList.add('asset-viewer-open');
+      }
+
+      function close() {
+        modal.classList.remove('active');
+        modal.classList.add('hidden');
+        document.body.classList.remove('asset-viewer-open');
+        currentIndex = -1;
+      }
+
+      function next() {
+        if (!galleryData.length) return;
+        open((currentIndex + 1) % galleryData.length);
+      }
+
+      function prev() {
+        if (!galleryData.length) return;
+        open((currentIndex - 1 + galleryData.length) % galleryData.length);
+      }
+
+      function openByFilename(filename) {
+        const idx = findIndexByFilename(filename);
+        if (idx === -1) {
+          showFlash('Picture not found in gallery', 'error');
+          return;
+        }
+        open(idx);
+      }
+
+      function isOpen() {
+        return modal.classList.contains('active');
+      }
+
+      function getCurrentFilename() {
+        if (currentIndex < 0 || currentIndex >= galleryData.length) return null;
+        const current = galleryData[currentIndex];
+        return current ? current.filename : null;
+      }
+
+      return { open, close, next, prev, openByFilename, isOpen, refreshCurrent: renderCurrent, getCurrentFilename };
+    }
+
+    document.addEventListener('click', function(e) {
+      const viewTrigger = e.target.closest('[data-action="open-viewer"]');
+      if (viewTrigger && viewer) {
+        const card = viewTrigger.closest('.asset-card');
+        if (card) {
+          e.preventDefault();
+          const idx = parseInt(card.dataset.index || '-1', 10);
+          if (!Number.isNaN(idx)) viewer.open(idx);
+        }
+      }
+      const closeTrigger = e.target.closest('[data-action="close-viewer"]');
+      if (closeTrigger && viewer) {
+        viewer.close();
+      }
+      const openByName = e.target.closest('[data-open-by-fname]');
+      if (openByName && viewer) {
+        e.preventDefault();
+        viewer.openByFilename(openByName.getAttribute('data-open-by-fname'));
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (!viewer || !viewer.isOpen()) return;
+      if (e.key === 'Escape') {
+        viewer.close();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        viewer.next();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        viewer.prev();
+      }
+    });
+
+    async function markUnusedImages(images) {
+      document.querySelectorAll('.unused').forEach(el => el.classList.remove('unused'));
+      if (!unusedList || !unusedPanel || !unusedCount) return;
+      unusedList.innerHTML = '';
+      let count = 0;
+      for (const img of images) {
+        count += 1;
+        const el = document.querySelector('[data-fname="' + img.filename + '"]');
+        if (el) {
+          el.classList.add('unused');
+        }
+        const li = document.createElement('div');
+        li.className = 'flex items-center justify-between text-xs text-gray-200 p-1 border border-gray-700 rounded';
+        li.innerHTML = `<div class="truncate">${img.filename}</div><div class="flex items-center space-x-2"><input type="checkbox" value="${img.filename}" class="unused-checkbox"><button type="button" class="text-blue-400 hover:underline ml-2" data-open-by-fname="${img.filename}">View</button></div>`;
+        unusedList.appendChild(li);
+      }
+      unusedCount.textContent = count;
+      unusedPanel.classList.toggle('hidden', count === 0);
+    }
+
+    async function deleteUnusedAll() {
+      if (!confirm('Delete all unused images permanently?')) return;
+      try {
+        const resp = await fetch('{{ url_for("p2_bp.assets_cleanup") }}', {
+          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({})
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          for (const fn of data.deleted || []) {
+            document.querySelectorAll('[data-fname="' + fn + '"]').forEach(el => el.remove());
+            emitAssetDeleted(fn);
+          }
+          markUnusedImages([]);
+          if (window.refreshAssetGalleryData) window.refreshAssetGalleryData();
+          alert('Deleted ' + (data.deleted||[]).length + ' unused images. Freed ' + ((data.freed_bytes||0)/(1024*1024)).toFixed(2) + ' MB');
+        } else {
+          alert('Cleanup failed: ' + (data.error || 'unknown'));
+        }
+      } catch (e) { console.error(e); alert('Cleanup failed'); }
+    }
+
+    async function deleteSelected() {
+      if (!unusedList) return;
+      const checks = Array.from(unusedList.querySelectorAll('.unused-checkbox:checked'));
+      if (!checks.length) { alert('No files selected'); return; }
+      if (!confirm('Delete ' + checks.length + ' selected images?')) return;
+      const fns = checks.map(c => c.value);
+      try {
+        const resp = await fetch('{{ url_for("p2_bp.assets_cleanup") }}', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filenames: fns }) });
+        const data = await resp.json();
+        if (resp.ok) {
+          for (const fn of data.deleted || []) {
+            document.querySelectorAll('[data-fname="' + fn + '"]').forEach(el => el.remove());
+            emitAssetDeleted(fn);
+          }
+          markUnusedImages([]);
+          if (window.refreshAssetGalleryData) window.refreshAssetGalleryData();
+          alert('Deleted ' + (data.deleted||[]).length + ' images. Freed ' + ((data.freed_bytes||0)/(1024*1024)).toFixed(2) + ' MB');
+        } else {
+          alert('Selected delete failed: ' + (data.error || 'unknown'));
+        }
+      } catch (e) { console.error(e); alert('Selected delete failed'); }
+    }
+
+    if (btnDeleteUnused) btnDeleteUnused.addEventListener('click', deleteUnusedAll);
+    if (btnDeleteSelected) btnDeleteSelected.addEventListener('click', deleteSelected);
+    if (btnClearUnused) btnClearUnused.addEventListener('click', function() { markUnusedImages([]); });
+
+    function createImageCard(item) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'card asset-card p-2 bg-gray-800 border border-gray-700';
+      wrapper.setAttribute('data-fname', item.filename);
+      const metaPayload = {
+        filename: item.filename,
+        url: item.url,
+        size: item.size || 0,
+        mtime: item.mtime || '',
+        used_in: item.used_in || []
+      };
+      wrapper.setAttribute('data-meta', JSON.stringify(metaPayload));
+      assetDataMap.set(item.filename, metaPayload);
+      const sizeMb = item.size ? (item.size/(1024*1024)).toFixed(2) : '0.00';
+      const mtime = item.mtime || 'Unknown';
+      wrapper.innerHTML = `<div class="flex flex-col items-center"><button type="button" class="asset-preview-btn w-full" data-action="open-viewer"><div style="height:140px; overflow:hidden; display:flex; align-items:center; justify-content:center;" class="w-full"><img src="${item.url}" alt="${item.filename}" class="w-full h-full object-contain"></div></button><div class="mt-2 w-full text-xs text-gray-300"><div class="truncate" title="${item.filename}"><strong>${item.filename}</strong></div><div class="text-gray-400 text-xs">${sizeMb} MB • ${mtime}</div><div class="mt-2 flex items-center justify-between w-full flex-wrap gap-2"><div class="flex items-center space-x-2"><button type="button" title="Open viewer" class="action-btn btn-viewer" data-action="open-viewer"><i class="material-icons">visibility</i></button><a title="Download" class="action-btn" href="${item.url}" download><i class="material-icons">download</i></a><button title="Copy URL" class="btn-copy-link action-btn" data-url="${item.url}"><i class="material-icons">link</i></button></div><div class="flex items-center space-x-2"><button title="Delete" class="btn-delete action-btn btn-danger" data-fname="${item.filename}"><i class="material-icons">delete</i></button></div></div></div></div>`;
+      return wrapper;
+    }
+
+    function addImageToReserve(item) {
+      const el = createImageCard(item);
+      if (reserveGrid) reserveGrid.prepend(el);
+      el.querySelectorAll('.btn-copy-link').forEach(b => b.addEventListener('click', e => {
+        navigator.clipboard.writeText(e.currentTarget.getAttribute('data-url')).then(() => alert('Image URL copied')).catch(() => alert('Copy failed'));
+      }));
+      el.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', e => {
+        const fn = e.currentTarget.getAttribute('data-fname');
+        doDelete(fn);
+      }));
+      if (window.refreshAssetGalleryData) window.refreshAssetGalleryData();
+      try {
+        const rc = document.querySelector('.reserve-count');
+        if (rc) rc.textContent = (parseInt(rc.textContent || '0', 10) + 1).toString();
+      } catch (e) { console.warn('Failed to increment reserve count', e); }
+    }
+
+    async function uploadFiles(files) {
+      if (!files || !files.length) return;
+      const form = new FormData();
+      for (const f of files) form.append('files', f);
+      try {
+        const resp = await fetch('{{ url_for("p2_bp.assets_upload") }}', { method: 'POST', credentials: 'same-origin', body: form });
+        const data = await resp.json();
+        if (resp.ok && data.uploaded) {
+          for (const u of data.uploaded) {
+            if (u.success) {
+              const item = { filename: u.filename, url: u.url, size: u.size || 0, mtime: u.mtime || new Date().toISOString().slice(0,16).replace('T',' '), used_in: u.used_in || [] };
+              addImageToReserve(item);
+            } else {
+              alert('Upload failed for ' + u.filename + ': ' + (u.error || 'unknown'));
+            }
+          }
+          const uploadedBytes = data.uploaded_bytes || data.uploaded.reduce((acc, it) => acc + ((it.success && !it.deduped) ? (it.size || 0) : 0), 0);
+          if (uploadedBytes > 0) {
+            const mb = (uploadedBytes / (1024*1024)).toFixed(2);
+            const countNew = data.uploaded.filter(u => u.success && !u.deduped).length;
+            let msg = `Uploaded ${mb} MB (${countNew} file${countNew !== 1 ? 's' : ''})`;
+            if (data.user_total_bytes) {
+              const totalMb = (data.user_total_bytes / (1024*1024)).toFixed(2);
+              msg += ` • Account: ${totalMb} MB used`;
+            }
+            showFlash(msg, 'success');
+          } else {
+            const dedupedCount = data.uploaded.filter(u => u.success && u.deduped).length;
+            if (dedupedCount > 0) showFlash(`Files were deduplicated; ${dedupedCount} existing file${dedupedCount !== 1 ? 's' : ''} referenced.`, 'info');
+          }
+        } else {
+          alert('Upload failed: ' + (data.error || 'unknown'));
+        }
+      } catch (e) { console.error(e); alert('Upload request failed'); }
+    }
+
+    if (assetUpload) {
+      assetUpload.addEventListener('change', function(){ uploadFiles(this.files); this.value = ''; });
+    }
+
+    function showFlash(message, kind='info') {
+      const holder = document.getElementById('flashArea');
+      if (!holder) { alert(message); return; }
+      const node = document.createElement('div');
+      const bg = (kind === 'success') ? 'bg-green-600' : (kind === 'error' ? 'bg-red-600' : 'bg-indigo-600');
+      node.className = `${bg} text-white px-4 py-2 rounded shadow-lg`;
+      node.textContent = message;
+      holder.appendChild(node);
+      setTimeout(() => { node.classList.add('opacity-0'); setTimeout(() => node.remove(), 400); }, 4500);
+    }
+
+    if (reserveGrid) {
+      reserveGrid.addEventListener('dragover', e => { e.preventDefault(); reserveGrid.classList.add('drag-over'); });
+      reserveGrid.addEventListener('dragleave', () => { reserveGrid.classList.remove('drag-over'); });
+      reserveGrid.addEventListener('drop', e => { e.preventDefault(); reserveGrid.classList.remove('drag-over'); if (e.dataTransfer?.files) uploadFiles(e.dataTransfer.files); });
+    }
+  });
+</script>
+
+<style>
+  .card { border-radius: 8px; }
+  .asset-card { position: relative; }
+  .asset-preview-btn { border: none; padding: 0; margin: 0; width: 100%; background: transparent; cursor: pointer; }
+  .asset-preview-btn:focus-visible { outline: 2px solid rgba(59,130,246,0.9); outline-offset: 2px; }
+  .teal-heading { color: #14b8a6 !important; }
+  .action-btn { width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background: rgba(255,255,255,0.03); color: #e5e7eb; border: 1px solid rgba(255,255,255,0.04); }
+  .action-btn i.material-icons { font-size: 18px; }
+  .btn-copy-link { padding:0; }
+  .btn-delete.btn-danger { background: linear-gradient(180deg,#ef4444,#dc2626); border-color: rgba(0,0,0,0.2); }
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .used-list ul li { margin-left: 8px; }
+  .unused { box-shadow: 0 0 0 2px rgba(255,215,64,0.08); border: 1px solid rgba(250,204,21,0.12); }
+  .unused .action-btn { background: rgba(250,204,21,0.06); }
+  #reserveGrid.drag-over { outline: 3px dashed rgba(99,102,241,0.6); }
+  .asset-viewer-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; z-index: 120; }
+  .asset-viewer-modal.active { display: flex; }
+  .asset-viewer-backdrop { position: absolute; inset: 0; background: rgba(2,6,23,0.85); }
+  .asset-viewer-dialog { position: relative; z-index: 1; width: min(1200px, 92vw); max-height: 92vh; background: #0f172a; border: 1px solid #1f2937; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 30px 80px rgba(0,0,0,0.65); }
+  .asset-viewer-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .asset-viewer-header-controls { display: flex; align-items: center; gap: 8px; }
+  .viewer-counter { min-width: 70px; text-align: center; }
+  .asset-viewer-body { position: relative; background: #020617; border: 1px solid #1f2937; border-radius: 14px; min-height: 360px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 12px; }
+  .asset-viewer-body img { max-width: 100%; max-height: 70vh; object-fit: contain; }
+  .asset-viewer-footer { display: flex; flex-direction: column; gap: 16px; }
+  .asset-viewer-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .viewer-btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.45rem 0.95rem; border-radius: 8px; border: 1px solid rgba(99,102,241,0.35); background: rgba(79,70,229,0.12); color: #e0e7ff; font-size: 0.85rem; text-decoration: none; transition: background 0.2s ease, border-color 0.2s ease; }
+  .viewer-btn:hover { background: rgba(99,102,241,0.25); }
+  .viewer-btn.disabled { opacity: 0.55; pointer-events: none; }
+  .viewer-nav { background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.3); color: #f8fafc; border-radius: 999px; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s ease; }
+  .viewer-nav:hover { background: rgba(59,130,246,0.55); }
+  .viewer-nav.floating { position: absolute; top: 50%; transform: translateY(-50%); }
+  .viewer-nav.floating.prev { left: 14px; }
+  .viewer-nav.floating.next { right: 14px; }
+  .viewer-close { background: transparent; border: none; color: #94a3b8; cursor: pointer; padding: 6px; border-radius: 999px; }
+  .viewer-close:hover { color: #f1f5f9; }
+  .viewer-used-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 130px; overflow: auto; }
+  .viewer-used-link { padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(148,163,184,0.3); font-size: 0.8rem; color: #bfdbfe; text-decoration: none; }
+  .viewer-used-link:hover { background: rgba(59,130,246,0.12); }
+  body.asset-viewer-open { overflow: hidden; }
+</style>

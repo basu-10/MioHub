@@ -1,0 +1,21 @@
+<!-- Combined/MioBook Section Cards - For HTMX Rearrangement -->
+{% for doc in combined_docs %}
+<div class="col d-flex">
+  <div class="card flex-fill h-100 shadow-sm item-card" data-type="book" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" data-is-pinned="{{ '1' if doc.is_pinned else '0' }}">
+    <div class="badge-container">
+      {% if doc.is_pinned %}
+      <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+      {% endif %}
+      {% if doc.is_public %}
+      <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+      {% endif %}
+    </div>
+    <div class="card-body d-flex flex-column item-body" tabindex="0">
+      <h5 class="card-title">
+        <a href="{{ url_for('combined.edit_combined', document_id=doc.id) }}" class="item-link">{{ doc.title }}</a>
+      </h5>
+      <div class="card-text text-muted small flex-grow-1 mb-3 combined-label">📄 Combined Note+Board</div>
+    </div>
+  </div>
+</div>
+{% endfor %}

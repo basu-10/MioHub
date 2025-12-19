@@ -1,0 +1,205 @@
+<!-- View file: todo type -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ file.title }} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+    
+    .file-container {
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .file-header {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .todo-list {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-primary);
+      transition: background 0.2s;
+    }
+    
+    .todo-item:last-child {
+      border-bottom: none;
+    }
+    
+    .todo-item:hover {
+      background: rgba(20, 184, 166, 0.05);
+    }
+    
+    .todo-checkbox {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .todo-checkbox.completed {
+      background: var(--accent);
+    }
+    
+    .todo-text {
+      flex: 1;
+    }
+    
+    .todo-text.completed {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    
+    .progress-bar-container {
+      background: var(--bg);
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+    
+    .progress-bar-fill {
+      background: var(--accent);
+      height: 100%;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div class="file-container">
+    <div class="file-header">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h1 class="mb-2">{{ file.title }}</h1>
+          <span class="badge" style="background: var(--accent); font-size: 0.875rem;">
+            <i class="material-icons" style="font-size: 16px; vertical-align: middle;">check_circle</i>
+            Todo List
+          </span>
+        </div>
+        <div class="d-flex gap-2">
+          {% if public_view %}
+            <button class="btn btn-outline-secondary btn-sm btn-copy-public" data-file-id="{{ file.id }}" data-file-type="file">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">content_copy</i>
+              Copy to My Profile
+            </button>
+          {% endif %}\n          {% if not public_view %}
+            <a href="{{ url_for('file.edit_file', file_id=file.id) }}" class="btn btn-sm" style="background: var(--accent); color: var(--white);">
+              <i class="material-icons" style="font-size: 18px; vertical-align: middle;">edit</i>
+              Edit
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      
+      {% if file.metadata_json and file.metadata_json.get('description') %}
+        <p class="text-muted mb-0">{{ file.metadata_json.get('description') }}</p>
+      {% endif %}
+      
+      <div id="progress-info" class="mt-3"></div>
+    </div>
+    
+    <div class="todo-list" id="todo-list"></div>
+    
+    <div class="text-center mt-4">
+      <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="material-icons" style="font-size: 18px; vertical-align: middle;">undo</i>
+        Back
+      </a>
+    </div>
+  </div>
+  
+  <script>
+    const todoData = {{ file.content_json|tojson }};
+    const todoList = document.getElementById('todo-list');
+    const progressInfo = document.getElementById('progress-info');
+    
+    if (todoData && todoData.items && Array.isArray(todoData.items)) {
+      const items = todoData.items;
+      const completedCount = items.filter(item => item.completed).length;
+      const totalCount = items.length;
+      const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      
+      // Render progress
+      progressInfo.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small">Progress: ${completedCount}/${totalCount} completed</span>
+          <span class="text-muted small">${percentage}%</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: ${percentage}%"></div>
+        </div>
+      `;
+      
+      // Render todo items
+      items.forEach(item => {
+        const todoItem = document.createElement('div');
+        todoItem.className = 'todo-item';
+        todoItem.innerHTML = `
+          <div class="todo-checkbox ${item.completed ? 'completed' : ''}">
+            ${item.completed ? '<i class="material-icons" style="font-size: 16px; color: white;">check</i>' : ''}
+          </div>
+          <div class="todo-text ${item.completed ? 'completed' : ''}">${item.text}</div>
+        `;
+        todoList.appendChild(todoItem);
+      });
+    } else {
+      todoList.innerHTML = '<p class="text-muted text-center">No tasks yet</p>';
+    }
+    
+    // Copy to profile functionality
+    document.querySelectorAll('.btn-copy-public').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const fileId = btn.dataset.fileId;
+        btn.disabled = true;
+        btn.textContent = 'Copying...';
+        
+        fetch('/folders/public/copy/file/' + fileId, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success && data.new_id) {
+              window.location.href = '/p2/files/' + data.new_id + '/edit';
+            } else {
+              alert('Copy failed: ' + (data.message || 'Unknown error'));
+              btn.disabled = false;
+              btn.innerHTML = '<i class="material-icons" style="font-size: 18px; vertical-align: middle;">content_copy</i> Copy to My Profile';
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Copy failed');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="material-icons" style="font-size: 18px; vertical-align: middle;">content_copy</i> Copy to My Profile';
+          });
+      });
+    });
+  </script>
+</body>
+</html>

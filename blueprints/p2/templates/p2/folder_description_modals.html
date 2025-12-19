@@ -1,0 +1,215 @@
+<!-- folder_description_modals.html -->
+<!-- Modals for creating and renaming folders with descriptions -->
+
+<!-- Create Folder with Description Modal -->
+<div class="modal fade" id="createFolderDescModal" tabindex="-1" aria-labelledby="createFolderDescModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createFolderDescModalLabel">Create New Folder</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createFolderDescForm" method="POST" action="{{ url_for('folders.create_folder_route') }}">
+          <input type="hidden" name="parent_id" id="createFolderParentId" value="{{ current_folder_id }}">
+          
+          <div class="mb-3">
+            <label for="folderNameDesc" class="form-label" style="color: var(--text-primary);">
+              Folder Name <span class="text-danger">*</span>
+            </label>
+            <input 
+              type="text" 
+              name="name" 
+              class="form-control" 
+              id="folderNameDesc" 
+              placeholder="Enter folder name" 
+              required 
+              minlength="1"
+              maxlength="100"
+              style="background: var(--bg-secondary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+            <small class="form-text text-muted">Maximum 100 characters</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="folderDescription" class="form-label" style="color: var(--text-primary);">
+              Description <span class="text-muted">(Optional)</span>
+            </label>
+            <textarea 
+              name="description" 
+              class="form-control" 
+              id="folderDescription" 
+              rows="3"
+              maxlength="500"
+              placeholder="Enter folder description (optional)"
+              style="background: var(--bg-secondary); border: 1px solid var(--border-primary); color: var(--text-primary);"></textarea>
+            <small class="form-text text-muted">Maximum 500 characters</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" form="createFolderDescForm" class="btn btn-primary" style="background: var(--accent-green); border-color: var(--accent-green);">
+          Create Folder
+        </button>
+      </div>
+    </div>
+  </div>
+
+      <!-- Ensure modal/backdrop display above top navbar and other high-z elements in p2 -->
+      <style>
+        /* The p2 navbar uses z-index: 11100 - make modals and their backdrops higher */
+        .modal-backdrop { z-index: 11290 !important; }
+        .modal, .modal.show { z-index: 11295 !important; }
+        /* Ensure note modals (Summernote custom) also appear above the navbar */
+        .note-modal-backdrop { z-index: 11292 !important; }
+        .note-modal, .note-modal.show { z-index: 11296 !important; }
+      </style>
+</div>
+
+<!-- Rename Folder with Description Modal -->
+<div class="modal fade" id="renameFolderDescModal" tabindex="-1" aria-labelledby="renameFolderDescModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="renameFolderDescModalLabel">Edit Folder Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="renameFolderDescForm" method="POST">
+          <input type="hidden" name="folder_id" id="renameFolderId">
+          
+          <div class="mb-3">
+            <label for="renameFolderName" class="form-label" style="color: var(--text-primary);">
+              Folder Name <span class="text-danger">*</span>
+            </label>
+            <input 
+              type="text" 
+              name="name" 
+              class="form-control" 
+              id="renameFolderName" 
+              placeholder="Enter folder name" 
+              required 
+              minlength="1"
+              maxlength="100"
+              style="background: var(--bg-secondary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+            <small class="form-text text-muted">Maximum 100 characters</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="renameFolderDescription" class="form-label" style="color: var(--text-primary);">
+              Description <span class="text-muted">(Optional)</span>
+            </label>
+            <textarea 
+              name="description" 
+              class="form-control" 
+              id="renameFolderDescription" 
+              rows="3"
+              maxlength="500"
+              placeholder="Enter folder description (optional)"
+              style="background: var(--bg-secondary); border: 1px solid var(--border-primary); color: var(--text-primary);"></textarea>
+            <small class="form-text text-muted">Maximum 500 characters</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" onclick="submitRenameFolderDesc()" class="btn btn-primary" style="background: var(--accent-green); border-color: var(--accent-green);">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// JavaScript functions for folder description modals
+
+// Open create folder modal with description
+// Open create folder modal with optional parentId
+window.openCreateFolderDescModal = function(parentId = '') {
+  const modal = new bootstrap.Modal(document.getElementById('createFolderDescModal'));
+  // Clear previous values
+  document.getElementById('folderNameDesc').value = '';
+  document.getElementById('folderDescription').value = '';
+  // Set parent id if provided (allows calling from context menu)
+  const parentInput = document.getElementById('createFolderParentId');
+  if (parentInput) {
+    // Only overwrite the hidden input when an explicit parentId is provided.
+    // If parentId is omitted/empty, leave the template-rendered default (current_folder_id).
+    if (parentId !== undefined && parentId !== null && parentId !== '') {
+      parentInput.value = parentId;
+    }
+  }
+  modal.show();
+};
+
+// Open rename folder modal with description
+window.openRenameFolderDescModal = function(folderId, currentName, currentDescription) {
+  const modal = new bootstrap.Modal(document.getElementById('renameFolderDescModal'));
+  document.getElementById('renameFolderId').value = folderId;
+  document.getElementById('renameFolderName').value = currentName || '';
+  document.getElementById('renameFolderDescription').value = currentDescription || '';
+  modal.show();
+};
+
+// Submit rename folder form with description
+window.submitRenameFolderDesc = function() {
+  const folderId = document.getElementById('renameFolderId').value;
+  const name = document.getElementById('renameFolderName').value;
+  const description = document.getElementById('renameFolderDescription').value;
+  
+  if (!name || !name.trim()) {
+    alert('Folder name cannot be empty');
+    return;
+  }
+  
+  // Submit via fetch API
+  fetch(`/folders/rename/${folderId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      'name': name,
+      'description': description
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Close modal
+      const modalInstance = bootstrap.Modal.getInstance(document.getElementById('renameFolderDescModal'));
+      if (modalInstance) {
+        modalInstance.hide();
+      }
+      
+      // Hide action bar if it exists
+      const actionBar = document.getElementById('action-bar');
+      if (actionBar) {
+        actionBar.style.display = 'none';
+      }
+      
+      // Reload page to show changes
+      location.reload();
+    } else {
+      alert('Failed to rename folder: ' + (data.message || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while renaming the folder');
+  });
+};
+
+// Clear modal on close
+document.getElementById('createFolderDescModal')?.addEventListener('hidden.bs.modal', function() {
+  document.getElementById('folderNameDesc').value = '';
+  document.getElementById('folderDescription').value = '';
+});
+
+document.getElementById('renameFolderDescModal')?.addEventListener('hidden.bs.modal', function() {
+  document.getElementById('renameFolderId').value = '';
+  document.getElementById('renameFolderName').value = '';
+  document.getElementById('renameFolderDescription').value = '';
+});
+</script>

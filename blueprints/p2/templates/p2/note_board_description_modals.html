@@ -1,0 +1,325 @@
+<!-- Rename Note Modal with Description -->
+<div class="modal fade" id="renameNoteDescModal" tabindex="-1" aria-labelledby="renameNoteDescModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="renameNoteDescModalLabel">
+          <i class="fas fa-file-alt me-2" style="color: var(--accent-green);"></i>
+          Rename Note
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="renameNoteDescForm">
+          <input type="hidden" id="renameNoteDescId">
+          
+          <div class="mb-3">
+            <label for="renameNoteDescName" class="form-label">
+              <i class="fas fa-signature me-1"></i> Note Title
+            </label>
+            <input type="text" class="form-control" id="renameNoteDescName" 
+                   placeholder="Enter note title" required 
+                   style="background: var(--bg-primary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+          </div>
+          
+          <div class="mb-3">
+            <label for="renameNoteDescDescription" class="form-label">
+              <i class="fas fa-info-circle me-1"></i> Description (Optional)
+            </label>
+            <textarea class="form-control" id="renameNoteDescDescription" 
+                      rows="3" maxlength="500" 
+                      placeholder="Brief description of this note (max 500 characters)"
+                      style="background: var(--bg-primary); border: 1px solid var(--border-primary); color: var(--text-primary); resize: vertical;"></textarea>
+            <div class="form-text" style="color: rgba(240, 246, 252, 0.6);">
+              <span id="renameNoteDescCharCount">0</span>/500 characters
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitRenameNoteDesc()">
+          <i class="fas fa-check me-1"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Board Modal with Description -->
+<div class="modal fade" id="renameBoardDescModal" tabindex="-1" aria-labelledby="renameBoardDescModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="renameBoardDescModalLabel">
+          <i class="fas fa-chalkboard me-2" style="color: var(--accent-green);"></i>
+          Rename Board
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="renameBoardDescForm">
+          <input type="hidden" id="renameBoardDescId">
+          
+          <div class="mb-3">
+            <label for="renameBoardDescName" class="form-label">
+              <i class="fas fa-signature me-1"></i> Board Title
+            </label>
+            <input type="text" class="form-control" id="renameBoardDescName" 
+                   placeholder="Enter board title" required 
+                   style="background: var(--bg-primary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+          </div>
+          
+          <div class="mb-3">
+            <label for="renameBoardDescDescription" class="form-label">
+              <i class="fas fa-info-circle me-1"></i> Description (Optional)
+            </label>
+            <textarea class="form-control" id="renameBoardDescDescription" 
+                      rows="3" maxlength="500" 
+                      placeholder="Brief description of this board (max 500 characters)"
+                      style="background: var(--bg-primary); border: 1px solid var(--border-primary); color: var(--text-primary); resize: vertical;"></textarea>
+            <div class="form-text" style="color: rgba(240, 246, 252, 0.6);">
+              <span id="renameBoardDescCharCount">0</span>/500 characters
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitRenameBoardDesc()">
+          <i class="fas fa-check me-1"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rename File Modal with Description (for all File types) -->
+<div class="modal fade" id="renameFileDescModal" tabindex="-1" aria-labelledby="renameFileDescModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="renameFileDescModalLabel">
+          <i class="material-icons me-2" style="color: var(--accent-green); font-size: 20px; vertical-align: middle;">insert_drive_file</i>
+          Rename File
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="renameFileDescForm">
+          <input type="hidden" id="renameFileDescId">
+          
+          <div class="mb-3">
+            <label for="renameFileDescName" class="form-label">
+              <i class="fas fa-signature me-1"></i> File Title
+            </label>
+            <input type="text" class="form-control" id="renameFileDescName" 
+                   placeholder="Enter file title" required 
+                   style="background: var(--bg-primary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+          </div>
+          
+          <div class="mb-3">
+            <label for="renameFileDescDescription" class="form-label">
+              <i class="fas fa-info-circle me-1"></i> Description (Optional)
+            </label>
+            <textarea class="form-control" id="renameFileDescDescription" 
+                      rows="3" maxlength="500" 
+                      placeholder="Brief description of this file (max 500 characters)"
+                      style="background: var(--bg-primary); border: 1px solid var(--border-primary); color: var(--text-primary); resize: vertical;"></textarea>
+            <div class="form-text" style="color: rgba(240, 246, 252, 0.6);">
+              <span id="renameFileDescCharCount">0</span>/500 characters
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitRenameFileDesc()">
+          <i class="fas fa-check me-1"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Character counters for note description
+document.addEventListener('DOMContentLoaded', function() {
+  const noteDescTextarea = document.getElementById('renameNoteDescDescription');
+  const noteCharCount = document.getElementById('renameNoteDescCharCount');
+  
+  if (noteDescTextarea && noteCharCount) {
+    noteDescTextarea.addEventListener('input', function() {
+      noteCharCount.textContent = this.value.length;
+    });
+  }
+  
+  const boardDescTextarea = document.getElementById('renameBoardDescDescription');
+  const boardCharCount = document.getElementById('renameBoardDescCharCount');
+  
+  if (boardDescTextarea && boardCharCount) {
+    boardDescTextarea.addEventListener('input', function() {
+      boardCharCount.textContent = this.value.length;
+    });
+  }
+  
+  const fileDescTextarea = document.getElementById('renameFileDescDescription');
+  const fileCharCount = document.getElementById('renameFileDescCharCount');
+  
+  if (fileDescTextarea && fileCharCount) {
+    fileDescTextarea.addEventListener('input', function() {
+      fileCharCount.textContent = this.value.length;
+    });
+  }
+});
+
+// Open rename note modal
+function openRenameNoteDescModal(noteId, noteName, noteDescription) {
+  document.getElementById('renameNoteDescId').value = noteId;
+  document.getElementById('renameNoteDescName').value = noteName || '';
+  document.getElementById('renameNoteDescDescription').value = noteDescription || '';
+  document.getElementById('renameNoteDescCharCount').textContent = (noteDescription || '').length;
+  
+  const modal = new bootstrap.Modal(document.getElementById('renameNoteDescModal'));
+  modal.show();
+}
+
+// Submit rename note
+function submitRenameNoteDesc() {
+  const noteId = document.getElementById('renameNoteDescId').value;
+  const newName = document.getElementById('renameNoteDescName').value.trim();
+  const newDescription = document.getElementById('renameNoteDescDescription').value.trim();
+  
+  if (!newName) {
+    alert('Note title cannot be empty');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('new_name', newName);
+  formData.append('description', newDescription);
+  
+  fetch(`/p2/rename_note/${noteId}`, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Close modal
+      bootstrap.Modal.getInstance(document.getElementById('renameNoteDescModal')).hide();
+      // Reload page to show updated name/description
+      location.reload();
+    } else {
+      alert(data.error || 'Failed to rename note');
+    }
+  })
+  .catch(error => {
+    console.error('Error renaming note:', error);
+    alert('An error occurred while renaming the note');
+  });
+}
+
+// Open rename board modal
+function openRenameBoardDescModal(boardId, boardName, boardDescription) {
+  document.getElementById('renameBoardDescId').value = boardId;
+  document.getElementById('renameBoardDescName').value = boardName || '';
+  document.getElementById('renameBoardDescDescription').value = boardDescription || '';
+  document.getElementById('renameBoardDescCharCount').textContent = (boardDescription || '').length;
+  
+  const modal = new bootstrap.Modal(document.getElementById('renameBoardDescModal'));
+  modal.show();
+}
+
+// Submit rename board
+function submitRenameBoardDesc() {
+  const boardId = document.getElementById('renameBoardDescId').value;
+  const newName = document.getElementById('renameBoardDescName').value.trim();
+  const newDescription = document.getElementById('renameBoardDescDescription').value.trim();
+  
+  if (!newName) {
+    alert('Board title cannot be empty');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('new_name', newName);
+  formData.append('description', newDescription);
+  
+  fetch(`/p2/rename_board/${boardId}`, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Close modal
+      bootstrap.Modal.getInstance(document.getElementById('renameBoardDescModal')).hide();
+      // Reload page to show updated name/description
+      location.reload();
+    } else {
+      alert(data.error || 'Failed to rename board');
+    }
+  })
+  .catch(error => {
+    console.error('Error renaming board:', error);
+    alert('An error occurred while renaming the board');
+  });
+}
+
+// Open rename file modal
+function openRenameFileDescModal(fileId, fileName, fileDescription) {
+  document.getElementById('renameFileDescId').value = fileId;
+  document.getElementById('renameFileDescName').value = fileName || '';
+  document.getElementById('renameFileDescDescription').value = fileDescription || '';
+  document.getElementById('renameFileDescCharCount').textContent = (fileDescription || '').length;
+  
+  const modal = new bootstrap.Modal(document.getElementById('renameFileDescModal'));
+  modal.show();
+}
+
+// Submit rename file
+function submitRenameFileDesc() {
+  const fileId = document.getElementById('renameFileDescId').value;
+  const newName = document.getElementById('renameFileDescName').value.trim();
+  const newDescription = document.getElementById('renameFileDescDescription').value.trim();
+  
+  if (!newName) {
+    alert('File title cannot be empty');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('new_name', newName);
+  formData.append('description', newDescription);
+  
+  fetch(`/p2/files/${fileId}/rename`, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Close modal
+      bootstrap.Modal.getInstance(document.getElementById('renameFileDescModal')).hide();
+      // Reload page to show updated name/description
+      location.reload();
+    } else {
+      alert(data.message || 'Failed to rename file');
+    }
+  })
+  .catch(error => {
+    console.error('Error renaming file:', error);
+    alert('An error occurred while renaming the file');
+  });
+}
+</script>

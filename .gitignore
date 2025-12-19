@@ -1,0 +1,14 @@
+.DOCS/
+.github/
+.pytest_cache/
+.vscode/
+__pycache__/
+*.pyc
+.venv
+config_local.py
+.env
+database_backups/
+other_tests/
+tests/
+start_project.bat
+static/uploads/images

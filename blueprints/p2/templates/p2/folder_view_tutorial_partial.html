@@ -1,0 +1,38 @@
+<!-- folder_view_tutorial_partial.html -->
+<!-- Tutorial CSS, Help button, Shepherd assets and initialization moved here from folder_view.html -->
+
+<!-- Shepherd CSS + local tutorial theme -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/css/shepherd.css"/>
+<link rel="stylesheet" href="{{ url_for('p2_bp.static', filename='css/tutorial-theme.css') }}">
+
+<!-- Tutorial Help Button -->
+<button id="tutorialBtn" type="button" class="btn btn-outline-secondary" title="Show tutorial (Ctrl+Shift+?)" onclick="if(typeof window.startTutorial === 'function') window.startTutorial();">
+  <i class="material-icons" style="font-size: 16px; vertical-align: middle;">help_outline</i>
+</button>
+
+<!-- Shepherd.js and tutorial script -->
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/js/shepherd.min.js"></script>
+<script src="{{ url_for('p2_bp.static', filename='js/tutorial.js') }}"></script>
+
+<script>
+  // Initialize tutorial system when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure page elements are fully loaded
+    setTimeout(function() {
+      // Initialize the tutorial (will auto-start if not completed)
+      if (typeof window.initializeTutorialSystem === 'function') {
+        window.initializeTutorialSystem();
+      }
+    }, 800);
+  });
+  
+  // Add tutorial trigger keyboard shortcut (Ctrl+Shift+?)
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === '?') {
+      e.preventDefault();
+      if (typeof window.startTutorial === 'function') {
+        window.startTutorial();
+      }
+    }
+  });
+</script>

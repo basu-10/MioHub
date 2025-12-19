@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="emerald">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product 4 Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet">
+    <style>
+        /* Carbon Teal theme variables (copied from p2 register.html) */
+        :root{
+            --bg:#0a0a0b;        /* page background (near-black) */
+            --card:#121516;      /* card / panel background */
+            --muted:#9aa8ad;     /* muted text / helper text */
+            --accent:#14b8a6;    /* button / link accent */
+            --accent-strong:#0d9488;
+            --white:#ECFFFF;     /* primary text color */
+            --radius:10px;
+        }
+
+        /* page-level background using the teal/Grey gradient + subtle radial highlight */
+        body {
+            background-color:var(--bg);
+            background-image:
+                radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),
+                linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+            background-size:cover;
+            background-repeat:no-repeat;
+            background-attachment:fixed;
+            background-position:center top;
+            min-height:100vh;
+            color:var(--white);
+        }
+
+        /* card styling consistent with register.html */
+        .admin-card {
+            background:linear-gradient(180deg, rgba(18,21,22,0.98), rgba(10,10,11,0.98));
+            border:1px solid rgba(255,255,255,0.04);
+            padding:1rem;
+            border-radius:var(--radius);
+            box-shadow:0 6px 18px rgba(2,6,23,0.6);
+            backdrop-filter: blur(6px);
+        }
+
+        /* Map some commonly used utility classes to the theme colors so Tailwind/DaisyUI classes inherit this palette */
+        h1, .text-green-400, .text-yellow-400, .text-blue-400, .text-purple-400 {
+            color:var(--white) !important;
+        }
+
+        /* Specific mappings to accent colors used in the UI */
+        .text-green-400 { color: var(--accent) !important; }
+        .text-yellow-400 { color: #facc15 !important; } /* keep yellow for emphasis */
+        .text-blue-400 { color: var(--accent-strong) !important; }
+        .text-purple-400 { color: #a78bfa !important; }
+
+        .nav-title { color: var(--accent) !important; }
+        .muted, .text-gray-300, .text-gray-400 { color: var(--muted) !important; }
+
+        /* Buttons: prefer accent color from theme */
+        .btn.btn-outline.btn-primary, .btn.btn-primary { border-color: rgba(20,184,166,0.15); color:var(--accent) !important }
+        .btn.btn-outline.btn-accent, .btn.btn-accent { color:var(--accent) !important; border-color: rgba(20,184,166,0.12); }
+
+        /* Alerts/flash mapping */
+        .alert { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:var(--white); }
+    </style>
+</head>
+<body class="text-white">
+    <div class="min-h-screen">
+        <!-- Navigation Bar -->
+        <nav class="bg-gray-800 shadow-lg p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-green-400">📊 Product 4 Admin Dashboard</h1>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-300">Welcome, {{ current_user.username }}</span>
+                    <a href="{{ url_for('p2_bp.logout') }}" class="btn btn-outline btn-sm">Logout</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="container mx-auto mt-4 px-4">
+                    {% for message in messages %}
+                        <div class="alert alert-info mb-2">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Main Content -->
+        <div class="container mx-auto p-6">
+            <!-- Coming Soon Header -->
+            <div class="text-center mb-8">
+                <div class="text-6xl mb-4">🚧</div>
+                <h2 class="text-4xl font-bold text-yellow-400 mb-4">Under Development</h2>
+                <p class="text-xl text-gray-300">Product 4 Admin Dashboard is coming soon!</p>
+            </div>
+
+            <!-- Placeholder Statistics -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="admin-card rounded-xl p-6 text-center">
+                    <div class="text-3xl mb-2">📊</div>
+                    <div class="text-2xl font-bold text-blue-400">--</div>
+                    <div class="text-gray-300">Feature 1</div>
+                </div>
+
+                <div class="admin-card rounded-xl p-6 text-center">
+                    <div class="text-3xl mb-2">📈</div>
+                    <div class="text-2xl font-bold text-green-400">--</div>
+                    <div class="text-gray-300">Feature 2</div>
+                </div>
+
+                <div class="admin-card rounded-xl p-6 text-center">
+                    <div class="text-3xl mb-2">⚙️</div>
+                    <div class="text-2xl font-bold text-purple-400">--</div>
+                    <div class="text-gray-300">Feature 3</div>
+                </div>
+
+                <div class="admin-card rounded-xl p-6 text-center">
+                    <div class="text-3xl mb-2">🔧</div>
+                    <div class="text-2xl font-bold text-yellow-400">--</div>
+                    <div class="text-gray-300">Feature 4</div>
+                </div>
+            </div>
+
+            <!-- Development Roadmap -->
+            <div class="admin-card rounded-xl p-6 mb-8">
+                <h2 class="text-xl font-bold mb-4 text-green-400">Development Roadmap</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-yellow-400 rounded-full"></div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-blue-400">Planning Phase</h3>
+                            <p class="text-gray-300">Defining Product 4 requirements and features</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-600 rounded-full"></div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-400">Development Phase</h3>
+                            <p class="text-gray-400">Building core functionality</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-600 rounded-full"></div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-400">Testing Phase</h3>
+                            <p class="text-gray-400">Quality assurance and bug fixing</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-600 rounded-full"></div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-400">Launch Phase</h3>
+                            <p class="text-gray-400">Product release and admin dashboard completion</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placeholder Actions -->
+            <div class="admin-card rounded-xl p-6 mb-8">
+                <h2 class="text-xl font-bold mb-4 text-green-400">Future Actions</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button class="btn btn-outline btn-primary" disabled>Manage Data</button>
+                    <button class="btn btn-outline btn-info" disabled>View Analytics</button>
+                    <button class="btn btn-outline btn-warning" disabled>Configure Settings</button>
+                    <button class="btn btn-outline btn-error" disabled>System Maintenance</button>
+                </div>
+                <div class="mt-4 text-center">
+                    <p class="text-gray-400">All actions will be available once Product 4 is developed</p>
+                </div>
+            </div>
+
+            <!-- Contact/Feedback -->
+            <div class="admin-card rounded-xl p-6">
+                <h2 class="text-xl font-bold mb-4 text-green-400">Have Ideas for Product 4?</h2>
+                <div class="text-center">
+                    <p class="text-gray-300 mb-4">
+                        Product 4 is in the planning phase. If you have suggestions or requirements
+                        for what this product should include, please let us know!
+                    </p>
+                    <div class="space-x-4">
+                        <button class="btn btn-outline btn-accent" disabled>Submit Feedback</button>
+                        <button class="btn btn-outline btn-secondary" disabled>View Roadmap</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="mt-8 text-center space-x-4">
+                <a href="{{ url_for('auth.admin_central') }}" class="btn btn-outline btn-accent">
+                    🏠 Back to Central Admin
+                </a>
+                <a href="{{ url_for('p2_bp.dashboard') }}" class="btn btn-outline btn-secondary">
+                    📝 Go to User Dashboard
+                </a>
+                <a href="{{ url_for('p4_bp.product4') }}" class="btn btn-outline btn-primary">
+                    🔍 View Product 4
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

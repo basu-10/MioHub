@@ -1,0 +1,48 @@
+<!-- folder_view_top_sticky_options_bar_partial.html -->
+<!-- Folder options bar positioned below navbar within the fixed header container -->
+<script>
+  localStorage.setItem("currentFolderId", "{{ folder.id }}");
+</script>
+
+<div class="folder-sticky-bar d-flex justify-content-between align-items-center flex-nowrap gap-3 mb-0" style="position: relative; /* No longer sticky - contained in fixed header */">
+  <!-- Left side: Breadcrumb navigation (aligned horizontally with other items) -->
+  <nav aria-label="breadcrumb" class="mb-0" style="flex: 1 1 auto; min-width: 0;">
+    <ol class="breadcrumb breadcrumb-custom mb-0">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('p2_bp.dashboard') }}" class="breadcrumb-link">
+          <i class="material-icons" style="font-size: 18px; vertical-align: middle;">home</i>
+          <span class="ms-1">Home</span>
+        </a>
+      </li>
+      {% for crumb in folder_breadcrumb %}
+      {% if crumb.parent_id is not none %}
+      <li class="breadcrumb-item{% if loop.last %} active{% endif %}">
+        {% if not loop.last %}
+        <a href="{{ url_for('folders.view_folder', folder_id=crumb.id) }}" class="breadcrumb-link">
+          <i class="material-icons" style="font-size: 16px; vertical-align: middle;">folder</i>
+          <span class="ms-1">{{ crumb.name }}</span>
+        </a>
+        {% else %}
+        <span class="breadcrumb-current">
+          <i class="material-icons" style="font-size: 16px; vertical-align: middle;">folder_open</i>
+          <span class="ms-1">{{ crumb.name }}</span>
+        </span>
+        {% endif %}
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ol>
+  </nav>
+  
+  <!-- Right side: Batch operations + Sorting / View / Help buttons (grouped and right-aligned, all horizontally aligned) -->
+  <div class="d-flex align-items-center gap-2" style="flex: 0 0 auto;">
+    <!-- Batch operation buttons (hidden when no items selected) -->
+    {% include "p2/folder_view_batch_operations_partial.html" %}
+    
+    {% include "/p2/folder_view_sort_by_partial.html" %}
+    {% include "/p2/folder_view_view_partial.html" %}
+    {% include "p2/folder_view_tutorial_partial.html" %}
+  </div>
+</div>
+
+{% include "p2/send_to_modal_partial.html" %}

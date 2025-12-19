@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MioChat — Features</title>
+	<style>
+		:root{--bg:#0a0a0b;--card:#121516;--muted:#9aa8ad;--accent:#14b8a6;--white:#ECFFFF;--radius:10px}
+		html,body{height:100%;min-height:100vh;margin:0;padding:0;font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;color:var(--white);background-color:var(--bg);background-image:radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);background-size:cover;background-repeat:no-repeat;background-attachment:fixed;background-position:center top}
+		.container{max-width:980px;margin:40px auto;padding:24px}
+		.topbar{display:flex;justify-content:flex-end;gap:10px}
+		.btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--accent);text-decoration:none;font-weight:600}
+		.hero{background:linear-gradient(180deg, rgba(18,21,22,0.96), rgba(10,10,11,0.96));border:1px solid rgba(255,255,255,0.04);padding:20px;border-radius:var(--radius);box-shadow:0 6px 18px rgba(2,6,23,0.5)}
+		h1{margin:0;font-size:28px}
+		p.lead{margin:6px 0 0 0;color:var(--muted)}
+		.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+		.feature{background:linear-gradient(180deg, rgba(18,21,22,0.6), rgba(10,10,11,0.4));border:1px solid rgba(255,255,255,0.04);padding:14px;border-radius:12px;color:var(--white)}
+		.feature h3{margin:0 0 6px 0;font-size:16px}
+		.feature p{margin:0;color:var(--muted);font-size:13px}
+		.meta{margin-top:18px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;align-items:center}
+		a.link{color:var(--accent);text-decoration:none}
+		.back{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--white);text-decoration:none}
+		@media (max-width:520px){.container{padding:14px}h1{font-size:22px}}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="topbar">
+			<a class="btn-ghost" href="{{ url_for('p2_bp.login') }}">Sign in</a>
+			<a class="btn-ghost" href="{{ url_for('p2_bp.register') }}">Sign up</a>
+		</div>
+
+		<div class="hero">
+			<h1>MioChat — Features</h1>
+			<p class="lead">A practical chat interface with memory, session history and helpful integrations.</p>
+
+			<div class="grid">
+				<div class="feature">
+					<h3>Conversation memory</h3>
+					<p>Enable long-running memory to keep context across sessions and improve relevance.</p>
+				</div>
+				<div class="feature">
+					<h3>Session history</h3>
+					<p>Persisted chat sessions with timestamps and the ability to resume conversations later.</p>
+				</div>
+				<div class="feature">
+					<h3>Model selection</h3>
+					<p>Choose from multiple configured models and adjust settings like temperature and length.</p>
+				</div>
+				<div class="feature">
+					<h3>Safe streaming</h3>
+					<p>Lightweight streaming UI for responsive chat and incremental responses where supported.</p>
+				</div>
+			</div>
+
+			<div class="meta">
+				<div><a class="link" href="{{ url_for('p3_bp.chatbot') }}">Open MioChat</a></div>
+						<div>
+							<a class="back" href="{{ url_for('core_blueprint.landing') }}">← Back to MioHub</a>
+						</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

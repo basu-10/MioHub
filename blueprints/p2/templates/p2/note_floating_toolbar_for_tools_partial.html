@@ -1,0 +1,80 @@
+<!-- Floating Toolbar when inside editing or new note window-->
+<!-- used inside MioNotes only for showing additional tools -->
+
+<!-- Floating / Pinned Toolbar -->
+<div id="floatingToolbar" class="floating-toolbar" role="region" aria-label="Editor actions">
+  <div class="d-flex align-items-center gap-2">
+    <!-- Primary actions -->
+    <div class="btn-group" role="group" aria-label="Editor actions">
+      <button id="saveBtn" type="submit" form="form" class="btn btn-primary" title="Save (Ctrl/Cmd+S)" style="background: var(--accent-blue); border-color: var(--accent-blue); color: white;">💾</button>
+      <button id="scrollTopBtn" type="button" class="btn btn-secondary" title="Scroll to top" style="background: var(--bg-tertiary); border-color: var(--border-primary); color: var(--text-primary);">⬆️</button>
+      <button id="scrollBottomBtn" type="button" class="btn btn-secondary" title="Scroll to bottom" style="background: var(--bg-tertiary); border-color: var(--border-primary); color: var(--text-primary);">⬇️</button>
+    </div>
+
+    <!-- Utilities dropdown (Eval + Explain with AI) -->
+    <div class="dropdown">
+      <button
+        class="btn btn-outline-secondary dropdown-toggle"
+        id="utilitiesDropdown"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        title="Utilities"
+        aria-label="Utilities menu"
+        style="background: var(--bg-tertiary); border-color: var(--border-primary); color: var(--text-primary);"
+      >🧰</button>
+
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="utilitiesDropdown" style="background: var(--bg-quaternary); border: 1px solid var(--border-primary); border-radius: 8px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);">
+        <li>
+          <button id="evalBtn" type="button" class="dropdown-item" title="Evaluate selection" style="color: var(--text-primary); background: transparent;">🧮 Evaluate selection</button>
+        </li>
+        <li>
+          <button id="explainAiBtn" type="button" class="dropdown-item" title="Explain with AI" style="color: var(--text-primary); background: transparent;">🤖 Explain with AI</button>
+        </li>
+        <li>
+          <button type="button" id="insertTableBtn" class="dropdown-item" title="Format as table" style="color: var(--text-primary); background: transparent;">📊 Tabular</button>
+        </li>
+        <li>
+          <button id="findReplaceBtn" type="button" class="dropdown-item" title="Find and Replace" style="color: var(--text-primary); background: transparent;">🔍 Find and Replace</button>
+        </li>
+        <li><hr class="dropdown-divider" style="border-color: var(--border-primary);"></li>
+        <li>
+          <button id="tutorialBtn" type="button" class="dropdown-item" title="Show tutorial" style="color: var(--text-primary); background: transparent;">❓ Tutorial</button>
+        </li>
+        <li>
+          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#shortcutsModal" title="Keyboard shortcuts" style="color: var(--text-primary); background: transparent;">⌨️ Shortcuts</button>
+        </li>
+      </ul>
+    </div>
+
+
+
+    <!-- Pin toggle -->
+    <button id="pinBtn"
+            type="button"
+            class="btn btn-outline-secondary"
+            title="Pin toolbar to top"
+            aria-label="Pin toolbar"
+            aria-pressed="false"
+            style="background: var(--bg-tertiary); border-color: var(--border-primary); color: var(--text-primary);">📌</button>
+  </div>
+</div>
+
+<style>
+/* Floating toolbar button hover effects */
+.floating-toolbar .btn:hover {
+  background: var(--bg-quaternary) !important;
+  border-color: var(--border-hover) !important;
+  transform: translateY(-1px);
+}
+
+.floating-toolbar .btn-primary:hover {
+  background: var(--accent-blue-hover) !important;
+  border-color: var(--accent-blue-hover) !important;
+}
+
+.floating-toolbar .dropdown-item:hover {
+  background: var(--hover-overlay) !important;
+  color: var(--text-primary) !important;
+}
+</style>

@@ -1,0 +1,47 @@
+<!-- Code Block - Monaco Editor -->
+<div class="block-item" data-type="code" data-block-id="{{ block.id }}">
+    <div class="block-header">
+        <div class="drag-handle" title="Drag to reorder">
+            <i class="fas fa-grip-vertical"></i>
+        </div>
+        <button type="button" class="collapse-toggle-btn" onclick="toggleBlockCollapse(this)" title="Collapse/Expand">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="flex items-center gap-2">
+            <i class="fas fa-code text-teal-400"></i>
+            <span class="block-type-label">Code</span>
+            <select class="language-selector" onchange="changeCodeLanguage(this)">
+                <option value="python" {{ 'selected' if block.metadata and block.metadata.language == 'python' else '' }}>Python</option>
+                <option value="javascript" {{ 'selected' if block.metadata and block.metadata.language == 'javascript' else '' }}>JavaScript</option>
+                <option value="typescript" {{ 'selected' if block.metadata and block.metadata.language == 'typescript' else '' }}>TypeScript</option>
+                <option value="html" {{ 'selected' if block.metadata and block.metadata.language == 'html' else '' }}>HTML</option>
+                <option value="css" {{ 'selected' if block.metadata and block.metadata.language == 'css' else '' }}>CSS</option>
+                <option value="json" {{ 'selected' if block.metadata and block.metadata.language == 'json' else '' }}>JSON</option>
+                <option value="sql" {{ 'selected' if block.metadata and block.metadata.language == 'sql' else '' }}>SQL</option>
+                <option value="markdown" {{ 'selected' if block.metadata and block.metadata.language == 'markdown' else '' }}>Markdown</option>
+                <option value="yaml" {{ 'selected' if block.metadata and block.metadata.language == 'yaml' else '' }}>YAML</option>
+                <option value="bash" {{ 'selected' if block.metadata and block.metadata.language == 'bash' else '' }}>Bash</option>
+            </select>
+        </div>
+        <input type="text" class="block-title-input" placeholder="Block Title" 
+               value="{{ block.title if block.title else '' }}">
+        <div class="block-controls">
+            <button type="button" class="control-btn" onclick="moveBlockUp(this)" title="Move Up">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+            <button type="button" class="control-btn" onclick="moveBlockDown(this)" title="Move Down">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <button type="button" class="control-btn" onclick="deleteBlock(this)" title="Delete">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    <div class="block-content">
+        <div class="code-editor-wrapper">
+            <div class="monaco-editor" 
+                 data-language="{{ block.metadata.language if block.metadata and block.metadata.language else 'python' }}"
+                 data-content="{{ block.content | tojson | forceescape }}"></div>
+        </div>
+    </div>
+</div>

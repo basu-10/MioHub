@@ -1,0 +1,228 @@
+# p2/models.py
+
+'''
+user_prefs column now stores:
+{
+  "theme": "flatly",
+  "isPinned": false,
+  "display": {
+    "columns": 3,
+    "view_mode": "grid",
+    "card_size": "normal",
+    "show_previews": true
+  }
+}
+'''
+
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from datetime import datetime
+from extensions import db
+from sqlalchemy.dialects.mysql import JSON, LONGTEXT
+
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    email = db.Column(db.String(128))
+    password_hash = db.Column(db.String(256))  
+    security_answer = db.Column(db.String(128))
+
+    user_type = db.Column(db.String(20), nullable=False, default='guest')  # spelling must be exact 'user'(uncapped), 'guest'(50mb cap), 'admin'(uncapped), 'moderator', etc.
+    total_data_size = db.Column(db.BigInteger, default=0) 
+
+    user_prefs = db.Column(JSON, default={"theme": "flatly", "isPinned": False})
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime, default=datetime.utcnow)
+    profile_pic_url = db.Column(db.String(256))
+
+    # Relations
+    notes = db.relationship('Note', backref='user', lazy=True, cascade='all, delete-orphan')
+    folders = db.relationship('Folder', backref='user', lazy=True, cascade='all, delete-orphan')
+    boards = db.relationship('Board', back_populates='user', cascade='all, delete-orphan')
+
+    @property
+    def is_admin(self):
+        return self.user_type == 'admin'
+
+
+class Folder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    # Use TEXT (~64KB for MySQL TEXT) to allow longer folder descriptions without using LONGTEXT
+    description = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    parent = db.relationship('Folder', remote_side=[id], backref='children')
+    notes = db.relationship('Note', backref='folder', lazy=True)
+    boards = db.relationship('Board', back_populates='folder', cascade='all, delete-orphan')
+    # Public visibility for folders: allow sharing entire folder trees
+    is_public = db.Column(db.Boolean, default=False, nullable=False)
+
+
+class Note(db.Model):
+    """
+    DEPRECATED: This model is being phased out in favor of the unified File model.
+    All new notes should be created as File records with type='note'.
+    
+    Legacy notes use content_html in File table. This class remains for backward
+    compatibility during migration. Will be removed in future version.
+    
+    Migration: Run migrate_notes_boards_to_files.py to migrate existing records.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    folder_id = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=False) #need to make this true to enable linking notes to nodes
+    # Allow longer titles and descriptions to avoid truncation errors when copying
+    title = db.Column(db.String(500))
+    # Use TEXT (~64KB) for note descriptions
+    description = db.Column(db.Text, nullable=True)
+    content = db.Column(LONGTEXT(collation='utf8mb4_unicode_ci'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    is_public = db.Column(db.Boolean, default=False)
+    is_pinned = db.Column(db.Boolean, default=False)
+
+class SharedNote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    note_id = db.Column(db.Integer, db.ForeignKey('note.id'))
+    shared_with_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    can_edit = db.Column(db.Boolean, default=True)
+
+    note = db.relationship('Note', backref='shared_entries')
+    recipient = db.relationship('User', foreign_keys=[shared_with_id])
+
+class Board(db.Model):
+    """
+    DEPRECATED: This model is being phased out in favor of the unified File model.
+    All new whiteboards should be created as File records with type='whiteboard'.
+    
+    Legacy boards use content_json in File table. This class remains for backward
+    compatibility during migration. Will be removed in future version.
+    
+    Migration: Run migrate_notes_boards_to_files.py to migrate existing records.
+    """
+    __tablename__ = 'boards'
+    id = db.Column(db.Integer, primary_key=True)
+    # Increase title length to match Note title capacity
+    title = db.Column(db.String(500), nullable=False)
+    # Use TEXT (~64KB) for board descriptions
+    description = db.Column(db.Text, nullable=True)
+    content = db.Column(LONGTEXT(charset='utf8mb4', collation='utf8mb4_unicode_ci'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    folder_id = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=False)#need to make this true to enable linking to nodes
+
+    user = db.relationship('User', back_populates='boards')
+    folder = db.relationship('Folder', back_populates='boards')
+    # Public visibility flag for MioDraw (boards)
+    # Migration script will add the corresponding column to the 'boards' table when needed.
+    is_public = db.Column(db.Boolean, default=False, nullable=False)
+
+
+class File(db.Model):
+    """Universal content storage for future file types.
+    
+    Coexists with legacy Note/Board models during transition.
+    Supports: markdown, PDFs, todos, diagrams, uploaded docs, and future content types.
+    
+    Content Storage Strategy:
+    - Only ONE content column should be populated per record (based on type)
+    - content_text: Plain text, markdown source
+    - content_html: Rich formatted HTML (like current notes)
+    - content_json: Structured data (canvas elements, diagrams, todos)
+    - content_blob: Binary files (PDFs, images, uploaded documents)
+    
+    Metadata JSON Guidelines:
+    - Store AUXILIARY info only (descriptions, UI state, file properties)
+    - Never store primary content in metadata_json
+    - Examples: {"description": "...", "file_size": 2048, "mime_type": "...", "is_pinned": false}
+    """
+    __tablename__ = 'files'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    folder_id = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=True)
+    
+    # Type discriminator: 'markdown', 'pdf', 'todo', 'diagram', 'note', 'whiteboard', 'book', etc.
+    type = db.Column(db.String(20), nullable=False, index=True)
+    title = db.Column(db.String(500), nullable=False)
+    
+    # Content storage columns (only one populated per record based on type)
+    content_text = db.Column(db.Text, nullable=True)  # Plain text, markdown
+    content_html = db.Column(LONGTEXT(collation='utf8mb4_unicode_ci'), nullable=True)  # Rich HTML
+    content_json = db.Column(JSON, nullable=True)  # Structured data (canvas, diagrams, todos)
+    content_blob = db.Column(db.LargeBinary, nullable=True)  # Binary files (PDFs, images)
+    
+    # Auxiliary metadata (NOT primary content)
+    # Examples: display settings, file properties, UI state
+    metadata_json = db.Column(JSON, default={})
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+    is_public = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Relationships
+    owner = db.relationship('User', backref='files', foreign_keys=[owner_id])
+    folder = db.relationship('Folder', backref='files')
+    
+    def get_content(self):
+        """Return the appropriate content field based on type."""
+        if self.content_text is not None:
+            return self.content_text
+        elif self.content_html is not None:
+            return self.content_html
+        elif self.content_json is not None:
+            return self.content_json
+        elif self.content_blob is not None:
+            return self.content_blob
+        return None
+    
+    def get_content_size(self):
+        """Calculate content size in bytes for storage quota tracking."""
+        content = self.get_content()
+        if content is None:
+            return 0
+        if isinstance(content, str):
+            return len(content.encode('utf-8'))
+        elif isinstance(content, bytes):
+            return len(content)
+        elif isinstance(content, (dict, list)):
+            import json
+            return len(json.dumps(content).encode('utf-8'))
+        return 0
+
+
+class Notification(db.Model):
+    """System notifications for user activity tracking.
+    
+    Stores recent activity notifications (save operations, transfers, etc.)
+    with automatic cleanup to maintain only the last 50 per user.
+    """
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    message = db.Column(db.String(500), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    # Type discriminator: 'save', 'transfer', 'delete', 'error', 'info', etc.
+    type = db.Column(db.String(20), default='info', nullable=False)
+    
+    # Relationship
+    user = db.relationship('User', backref='notifications')
+    
+    def to_dict(self):
+        """Convert notification to dictionary for JSON serialization."""
+        return {
+            'id': self.id,
+            'message': self.message,
+            'timestamp': self.timestamp.isoformat(),
+            'type': self.type
+        }
