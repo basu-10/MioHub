@@ -2,12 +2,6 @@
 
 This script is intentionally destructive.
 
-Usage (example):
-  python scripts/fresh_install_reset_db.py --yes-delete-everything
-
-Optional:
-  python scripts/fresh_install_reset_db.py --yes-delete-everything --count-rows
-
 Notes:
 - Uses config.get_database_uri() to connect.
 - Designed for fresh installs / local dev. Do NOT run on a database you care about.

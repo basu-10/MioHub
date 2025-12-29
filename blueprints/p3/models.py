@@ -15,7 +15,7 @@ class ChatSession(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # MioSpace folder integration
-    session_folder_id = db.Column(db.Integer, db.ForeignKey('folders.id'), nullable=True)
+    session_folder_id = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=True)
 
     # Relations
     messages = db.relationship('ChatMessage', backref='session', lazy=True, cascade='all, delete-orphan')

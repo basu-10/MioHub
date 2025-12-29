@@ -56,7 +56,7 @@ def run_migration():
             db.session.execute(text("""
                 ALTER TABLE chat_sessions 
                 ADD COLUMN session_folder_id INT NULL,
-                ADD FOREIGN KEY (session_folder_id) REFERENCES folders(id) ON DELETE SET NULL;
+                ADD FOREIGN KEY (session_folder_id) REFERENCES folder(id) ON DELETE SET NULL;
             """))
             print("✓ Added session_folder_id to chat_sessions")
         else:
