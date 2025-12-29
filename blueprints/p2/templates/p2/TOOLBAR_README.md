@@ -6,7 +6,7 @@ The MioDraw toolbar has been extracted into a separate partial template for bett
 ## File Structure
 
 ### Main Template
-- **File**: `mioboard_v4.html`
+- **File**: `file_edit_proprietary_whiteboard.html`
 - **Purpose**: Main MioDraw application template
 - **Toolbar Integration**: Uses Jinja2 `{% include %}` to load the toolbar partial
 

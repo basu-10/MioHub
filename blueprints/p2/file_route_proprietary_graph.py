@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify, render_template, abort, Response
 from flask_login import current_user, login_required
 from datetime import datetime
+from html import unescape
+import re
 
 from extensions import db
 from .models import File, GraphWorkspace, GraphNode, GraphEdge, GraphNodeAttachment, Folder
@@ -13,6 +15,20 @@ from .graph_service import (
 )
 from utilities_main import update_user_data_size, check_guest_limit
 from . import graph_bp
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _clean_plain_text(value: str, max_len: int | None = None) -> str:
+    """Strip HTML and return trimmed plain text. Falls back to empty string."""
+    if not isinstance(value, str):
+        return ""
+    cleaned = unescape(value)
+    cleaned = _TAG_RE.sub("", cleaned)
+    cleaned = cleaned.replace("\r", "").strip()
+    if max_len:
+        cleaned = cleaned[:max_len]
+    return cleaned
 
 
 def _get_graph_file(file_id: int) -> File | None:
@@ -69,12 +85,17 @@ def create_node(file_id: int):
     _authorize_write(file_obj)
     workspace = ensure_workspace(file_obj, file_obj.owner_id, file_obj.folder_id)
 
-    data = request.get_json(force=True) or {}
-    title = (data.get('title') or 'Untitled').strip()
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "Invalid JSON payload"}), 400
+
+    title = _clean_plain_text(data.get('title') or 'Untitled', max_len=255) or 'Untitled'
+    summary = _clean_plain_text(data.get('summary', ''))
     node = GraphNode(
         graph_id=workspace.id,
         title=title,
-        summary=data.get('summary', ''),
+        summary=summary,
         position_json=data.get('position') or {},
         size_json=data.get('size') or {},
         style_json=data.get('style') or {},
@@ -103,7 +124,11 @@ def update_node(file_id: int, node_id: int):
     if not node:
         abort(404)
 
-    data = request.get_json(force=True) or {}
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "Invalid JSON payload"}), 400
+
     field_map = [
         ('title', 'title', False),
         ('summary', 'summary', False),
@@ -115,10 +140,21 @@ def update_node(file_id: int, node_id: int):
     for field, attr, expect_json in field_map:
         if field in data:
             value = data.get(field)
+            if expect_json:
+                value = value if isinstance(value, dict) else {}
+            elif attr == 'title':
+                value = _clean_plain_text(value, max_len=255) or node.title
+            elif attr == 'summary':
+                value = _clean_plain_text(value)
             setattr(node, attr, value or {} if expect_json else value)
     node.updated_at = datetime.utcnow()
+    db.session.flush()
 
-    size_delta = rebuild_content_snapshot(file_obj)
+    try:
+        size_delta = rebuild_content_snapshot(file_obj)
+    except Exception:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Failed to save node"}), 500
     if size_delta > 0 and not check_guest_limit(current_user, size_delta):
         db.session.rollback()
         return jsonify({"ok": False, "error": "Data limit exceeded"}), 400
@@ -220,6 +256,10 @@ def update_edge(file_id: int, edge_id: int):
     # Update label if provided
     if 'label' in data:
         edge.label = data['label']
+    
+    # Update edge_type (direction) if provided
+    if 'edge_type' in data:
+        edge.edge_type = data['edge_type']
     
     # Update metadata if provided
     if 'metadata' in data:

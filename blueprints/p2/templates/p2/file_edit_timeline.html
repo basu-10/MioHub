@@ -1,0 +1,1539 @@
+<!-- Timeline editor - handles both new and edit -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if file %}Edit: {{ file.title }}{% else %}New Timeline{% endif %} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <script src="{{ url_for('p2_bp.static', filename='js/timeline_positioning.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/timeline_color_names.js') }}"></script>
+  
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+    
+    .editor-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .editor-header {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .timeline-canvas {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 2rem;
+      min-height: 600px;
+      overflow-x: auto;
+      overflow-y: auto;
+    }
+    
+    .timeline-row {
+      position: relative;
+      margin-bottom: 3rem;
+      min-height: 200px;
+    }
+    
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+    
+    .timeline-info {
+      flex: 1;
+    }
+    
+    .timeline-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+    
+    .timeline-description {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    
+    .timeline-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .timeline-line {
+      position: relative;
+      height: 3px;
+      background: var(--accent);
+      margin: 1rem 0;
+    }
+    
+    .timeline-events {
+      position: relative;
+      min-height: 100px;
+    }
+    
+    .event-card {
+      position: absolute;
+      width: 150px;
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      padding: 0.75rem;
+      cursor: default; /* Dated events aren't draggable */
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    /* Bookmark/ribbon notch for undated events */
+    .event-card.undated {
+      width: 210px;
+      clip-path: polygon(
+        0% 0%,
+        100% 0%,
+        100% calc(100% - 15px),
+        50% 100%,
+        0% calc(100% - 15px)
+      );
+      padding-bottom: 1rem; /* Extra padding to accommodate notch */
+    }
+    
+    .event-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+      border-color: var(--accent);
+    }
+
+      color: var(--white);
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-date {
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-description {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    
+    .event-delete {
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    
+    .add-timeline-btn, .add-event-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .add-timeline-btn:hover, .add-event-btn:hover {
+      background: var(--accent-strong);
+      transform: translateY(-1px);
+    }
+    
+    .toolbar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    /* Modal styles */
+    .modal-backdrop {
+      z-index: 1040 !important;
+    }
+    
+    .modal-backdrop.show {
+      opacity: 0.8;
+    }
+    
+    .modal {
+      z-index: 1050 !important;
+    }
+    
+    .modal-content {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      color: var(--white);
+    }
+    
+    .modal-header {
+      border-bottom: 1px solid var(--border-primary);
+    }
+    
+    .modal-footer {
+      border-top: 1px solid var(--border-primary);
+    }
+    
+    .form-label {
+      color: var(--white);
+      font-weight: 600;
+    }
+    
+    .form-control, .form-select {
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      color: var(--white);
+    }
+    
+    .form-control:focus, .form-select:focus {
+      background: var(--bg);
+      border-color: var(--accent);
+      color: var(--white);
+      box-shadow: 0 0 0 0.25rem rgba(20, 184, 166, 0.25);
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+    
+    .btn-secondary {
+      background: var(--muted);
+      border-color: var(--muted);
+      color: var(--bg);
+    }
+    
+    .save-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--accent);
+      color: var(--bg);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .save-status.show {
+      opacity: 1;
+    }
+
+    /* Color picker styles */
+    .color-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .color-option {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .color-option:hover {
+      transform: scale(1.1);
+      border-color: var(--white);
+    }
+
+    .color-option.selected {
+      border-color: var(--white);
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    /* Emoji picker styles */
+    .emoji-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .emoji-option {
+      width: 100%;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      background: var(--bg);
+      transition: all 0.2s;
+    }
+
+    .emoji-option:hover {
+      transform: scale(1.2);
+      background: var(--accent);
+    }
+
+    .emoji-option.selected {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .color-option.none-option,
+    .emoji-option.none-option {
+      border-style: dashed;
+      color: var(--muted);
+      font-size: 0.9rem;
+      background: transparent;
+    }
+
+    /* Event card with custom styling */
+    .event-icon {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Drop indicator */
+    .drop-indicator {
+      position: absolute;
+      width: 3px;
+      height: 120px;
+      background: var(--accent);
+      top: -30px;
+      display: none;
+      pointer-events: none;
+      z-index: 1000;
+      box-shadow: 0 0 8px rgba(20, 184, 166, 0.8);
+    }
+    
+    .drop-indicator::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: -5.5px;
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(20, 184, 166, 0.8);
+    }
+    
+    .drop-indicator::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: -5.5px;
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(20, 184, 166, 0.8);
+    }
+    
+    /* Dragging state */
+    .event-card.dragging {
+      opacity: 0.5;
+      cursor: grabbing !important;
+    }
+    
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      background: var(--card);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.5rem 0;
+      min-width: 180px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      display: none;
+    }
+    
+    .context-menu-item {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: all 0.2s;
+    }
+    
+    .context-menu-item:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    
+    .context-menu-item .material-icons {
+      font-size: 18px;
+    }
+    
+    .context-menu-divider {
+      height: 1px;
+      background: var(--border-primary);
+      margin: 0.25rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-container">
+    <!-- Header -->
+    <div class="editor-header">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <a href="{{ url_for('folders.view_folder', folder_id=file.folder_id if file else (folder.id if folder else 0)) }}" 
+             class="btn btn-sm" 
+             style="background: var(--bg); color: var(--muted); border: 1px solid var(--border-primary);">
+            <span class="material-icons" style="font-size: 18px;">arrow_back</span>
+          </a>
+          <h1 class="h4 mb-0">
+            <span class="material-icons" style="vertical-align: middle; color: var(--accent);">timeline</span>
+            {% if file %}Edit{% else %}New{% endif %} Timeline
+          </h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="save-status" id="saveStatus">
+            <span class="material-icons" style="font-size: 18px;">check_circle</span>
+            Saved
+          </span>
+          <button class="btn btn-sm" style="background: var(--accent); color: var(--bg);" onclick="saveTimeline()">
+            <span class="material-icons" style="font-size: 18px; vertical-align: middle;">save</span>
+            Save
+          </button>
+        </div>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Title</label>
+        <input type="text" class="form-control" id="fileTitle" 
+               value="{{ file.title if file else 'Untitled Timeline' }}"
+               placeholder="Enter timeline title">
+      </div>
+      
+      <div>
+        <label class="form-label">Description</label>
+        <textarea class="form-control" id="fileDescription" rows="2" 
+                  placeholder="Optional description">{{ file.description if file else '' }}</textarea>
+      </div>
+    </div>
+    
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="add-timeline-btn" onclick="openTimelineModal()">
+        <span class="material-icons" style="font-size: 20px;">add</span>
+        Add Timeline
+      </button>
+    </div>
+    
+    <!-- Timeline Canvas -->
+    <div class="timeline-canvas" id="timelineCanvas">
+      <div id="timelinesContainer">
+        <!-- Timeline rows will be dynamically added here -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Timeline Modal -->
+  <div class="modal fade" id="timelineModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="timelineModalTitle">Add Timeline</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Timeline Name <span style="color: #ef4444;">*</span></label>
+            <input type="text" class="form-control" id="timelineName" placeholder="Enter timeline name">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" id="timelineDescription" rows="3" placeholder="Optional description"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveTimelineModal()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Event Modal -->
+  <div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="eventModalTitle">Add Event</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Event Title <span style="color: #ef4444;">*</span></label>
+            <input type="text" class="form-control" id="eventTitle" placeholder="Enter event title">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="eventDate">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" id="eventDescription" rows="3" placeholder="Optional description"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Card Color</label>
+            <div class="color-picker-grid" id="colorPickerGrid">
+              <!-- Colors will be populated by JavaScript -->
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Icon (Emoji)</label>
+            <div class="emoji-picker-grid" id="emojiPickerGrid">
+              <!-- Emojis will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveEventModal()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Context Menu -->
+  <div id="contextMenu" class="context-menu">
+    <div class="context-menu-item" onclick="contextMenuEdit()">
+      <span class="material-icons">edit</span>
+      <span>Edit Event</span>
+    </div>
+    <div class="context-menu-item" onclick="contextMenuDuplicate()">
+      <span class="material-icons">content_copy</span>
+      <span>Duplicate Event</span>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="contextMenuDelete()" style="color: #ef4444;">
+      <span class="material-icons">delete</span>
+      <span>Delete Event</span>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // Data structure
+    let timelines = [];
+    let editingTimelineId = null;
+    let editingEventId = null;
+    let currentTimelineId = null;
+    let originalEventDate = null;  // Track original date to detect changes
+    
+    // Context menu state
+    let contextMenuTimelineId = null;
+    let contextMenuEventId = null;
+    
+    // Timeline Modal Functions
+    function openTimelineModal(timelineId = null) {
+      editingTimelineId = timelineId;
+      const modal = new bootstrap.Modal(document.getElementById('timelineModal'));
+      
+      if (timelineId) {
+        const timeline = timelines.find(t => t.id === timelineId);
+        if (timeline) {
+          document.getElementById('timelineModalTitle').textContent = 'Edit Timeline';
+          document.getElementById('timelineName').value = timeline.name;
+          document.getElementById('timelineDescription').value = timeline.description || '';
+        }
+      } else {
+        document.getElementById('timelineModalTitle').textContent = 'Add Timeline';
+        document.getElementById('timelineName').value = '';
+        document.getElementById('timelineDescription').value = '';
+      }
+      
+      modal.show();
+    }
+    
+    function saveTimelineModal() {
+      const name = document.getElementById('timelineName').value.trim();
+      
+      if (!name) {
+        alert('Please enter a timeline name');
+        return;
+      }
+      
+      const description = document.getElementById('timelineDescription').value.trim();
+      
+      if (editingTimelineId) {
+        // Update existing timeline
+        const timeline = timelines.find(t => t.id === editingTimelineId);
+        if (timeline) {
+          timeline.name = name;
+          timeline.description = description;
+        }
+      } else {
+        // Create new timeline
+        const newTimeline = {
+          id: Date.now().toString(),
+          name: name,
+          description: description,
+          events: []
+        };
+        timelines.push(newTimeline);
+      }
+      
+      renderTimelines();
+      bootstrap.Modal.getInstance(document.getElementById('timelineModal')).hide();
+      
+      // Auto-save after timeline change (only for existing files)
+      {% if file %}
+      saveTimeline(true);
+      {% endif %}
+    }
+    
+    // Event Modal Functions
+    const eventColors = [
+      '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#f59e0b', '#84cc16',
+      '#10b981', '#06b6d4', '#6366f1', '#a855f7', '#e11d48', '#dc2626', '#ea580c', '#d97706',
+      '#0891b2', '#0e7490', '#334155', '#475569', '#78716c', '#57534e', '#a16207'
+    ];
+
+    const eventEmojis = [
+      '📅', '⭐', '🎯', '🎉', '💡', '🚀', '🎨', '📝',
+      '🏆', '💼', '🎓', '🏠', '✈️', '🎵', '📱', '💻',
+      '🔬', '🏥', '⚽', '🎭', '📚', '🍕', '☕', '🌟',
+      '🔥', '💪', '🎮', '🎬', '📷', '🎤', '🏃', '🎪'
+    ];
+
+    let selectedColor = '#14b8a6';
+    let selectedEmoji = '';
+
+    function initializeColorPicker() {
+      const grid = document.getElementById('colorPickerGrid');
+      const noneTile = `<div class="color-option none-option" onclick="selectColor('')" data-color="" title="No Color">None</div>`;
+      const colorTiles = eventColors.map(color => {
+        const colorName = window.TimelineColorNames ? window.TimelineColorNames.getName(color) : color;
+        return `<div class="color-option" style="background-color: ${color};" 
+              onclick="selectColor('${color}')" data-color="${color}" title="${colorName}"></div>`;
+      }).join('');
+      grid.innerHTML = noneTile + colorTiles;
+    }
+
+    function initializeEmojiPicker() {
+      const grid = document.getElementById('emojiPickerGrid');
+      const noneTile = `<div class="emoji-option none-option" onclick="selectEmoji('')" data-emoji="">None</div>`;
+      const emojiTiles = eventEmojis.map(emoji => 
+        `<div class="emoji-option" onclick="selectEmoji('${emoji}')" data-emoji="${emoji}">${emoji}</div>`
+      ).join('');
+      grid.innerHTML = noneTile + emojiTiles;
+    }
+
+    function selectColor(color) {
+      selectedColor = color;
+      document.querySelectorAll('.color-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.color === color);
+      });
+    }
+
+    function selectEmoji(emoji) {
+      selectedEmoji = emoji;
+      document.querySelectorAll('.emoji-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.emoji === emoji);
+      });
+    }
+
+    function openEventModal(timelineId, eventId = null) {
+      currentTimelineId = timelineId;
+      editingEventId = eventId;
+      originalEventDate = null;  // Reset
+      
+      if (eventId) {
+        const timeline = timelines.find(t => t.id === timelineId);
+        const event = timeline.events.find(e => e.id === eventId);
+        if (event) {
+          document.getElementById('eventModalTitle').textContent = 'Edit Event';
+          document.getElementById('eventTitle').value = event.title;
+          document.getElementById('eventDate').value = event.date || '';
+          document.getElementById('eventDescription').value = event.description || '';
+          
+          // Store original date to detect changes
+          originalEventDate = event.date || null;
+          
+          // Set color and emoji from event
+          selectedColor = event.color || '#14b8a6';
+          selectedEmoji = event.emoji || '';
+        }
+      } else {
+        document.getElementById('eventModalTitle').textContent = 'Add Event';
+        document.getElementById('eventTitle').value = '';
+        document.getElementById('eventDate').value = '';
+        document.getElementById('eventDescription').value = '';
+        
+        // Reset to defaults
+        selectedColor = '#14b8a6';
+        selectedEmoji = '';
+      }
+      
+      // Open the modal - pickers will be initialized by the 'shown.bs.modal' event
+      const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+      modal.show();
+    }
+    
+    function saveEventModal() {
+      const title = document.getElementById('eventTitle').value.trim();
+      const date = document.getElementById('eventDate').value;
+      
+      if (!title) {
+        alert('Please enter an event title');
+        return;
+      }
+      
+      const description = document.getElementById('eventDescription').value.trim();
+      const timeline = timelines.find(t => t.id === currentTimelineId);
+      
+      let eventId;
+      
+      if (editingEventId) {
+        // Update existing event
+        const event = timeline.events.find(e => e.id === editingEventId);
+        if (event) {
+          event.title = title;
+          event.date = date;
+          event.description = description;
+          event.color = selectedColor;
+          event.emoji = selectedEmoji;
+          eventId = event.id;
+        }
+      } else {
+        // Create new event
+        const newEvent = {
+          id: Date.now().toString(),
+          title: title,
+          date: date,
+          description: description,
+          color: selectedColor,
+          emoji: selectedEmoji,
+          position: 50, // Default position, will be recalculated
+          order: timeline.events.length
+        };
+        timeline.events.push(newEvent);
+        eventId = newEvent.id;
+      }
+      
+      // If the event has a date, intelligently insert it in chronological order
+      // while preserving all undated event positions
+      if (date) {
+        window.TimelinePositioning.smartInsertDatedEvent(timeline, eventId);
+      }
+      
+      // Recalculate positions: preserve undated positions, calculate dated positions
+      recalculateEventPositions(timeline, true);
+      
+      renderTimelines();
+      bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+      
+      // Auto-save after event change (only for existing files)
+      {% if file %}
+      saveTimeline(true);
+      {% endif %}
+    }
+    
+    // Delete Functions
+    function deleteTimeline(timelineId) {
+      if (confirm('Are you sure you want to delete this timeline and all its events?')) {
+        timelines = timelines.filter(t => t.id !== timelineId);
+        renderTimelines();
+        
+        // Auto-save after deletion (only for existing files)
+        {% if file %}
+        saveTimeline(true);
+        {% endif %}
+      }
+    }
+    
+    function deleteEvent(timelineId, eventId) {
+      if (confirm('Are you sure you want to delete this event?')) {
+        const timeline = timelines.find(t => t.id === timelineId);
+        if (timeline) {
+          timeline.events = timeline.events.filter(e => e.id !== eventId);
+          
+          // Always recalculate positions after deletion
+          recalculateEventPositions(timeline);
+          
+          renderTimelines();
+          
+          // Auto-save after deletion (only for existing files)
+          {% if file %}
+          saveTimeline(true);
+          {% endif %}
+        }
+      }
+    }
+    
+    // Render Functions
+    function renderTimelines() {
+      const container = document.getElementById('timelinesContainer');
+      
+      if (timelines.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 3rem; color: var(--muted);">
+            <span class="material-icons" style="font-size: 64px; opacity: 0.5;">timeline</span>
+            <p style="margin-top: 1rem; font-size: 1.1rem;">No timelines yet</p>
+            <p style="font-size: 0.9rem;">Click "Add Timeline" to create your first timeline</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = '';
+      
+      timelines.forEach(timeline => {
+        const timelineWrapper = document.createElement('div');
+        timelineWrapper.style.marginBottom = '3rem';
+        
+        // Timeline header
+        const headerHTML = `
+          <div class="timeline-header">
+            <div class="timeline-info">
+              <div class="timeline-name">${escapeHtml(timeline.name)}</div>
+              ${timeline.description ? `<div class="timeline-description">${escapeHtml(timeline.description)}</div>` : ''}
+            </div>
+            <div class="timeline-actions">
+              <button class="btn btn-sm" style="background: var(--accent); color: var(--bg);" 
+                      onclick="openEventModal('${timeline.id}')">
+                <span class="material-icons" style="font-size: 18px;">add</span>
+                Add Event
+              </button>
+              <button class="btn btn-sm" style="background: var(--bg); color: var(--muted); border: 1px solid var(--border-primary);" 
+                      onclick="openTimelineModal('${timeline.id}')">
+                <span class="material-icons" style="font-size: 18px;">edit</span>
+              </button>
+              <button class="btn btn-sm" style="background: var(--bg); color: #ef4444; border: 1px solid var(--border-primary);" 
+                      onclick="deleteTimeline('${timeline.id}')">
+                <span class="material-icons" style="font-size: 18px;">delete</span>
+              </button>
+            </div>
+          </div>
+        `;
+        
+        // Split events into rows based on practical viewport width
+        // Use a conservative width to ensure cards fit and wrap properly
+        const TIMELINE_WIDTH = Math.min(1400, window.innerWidth * 0.85);
+        const rows = splitEventsIntoRows(timeline.events, TIMELINE_WIDTH);
+        
+        let rowsHTML = '';
+        rows.forEach((rowEvents, rowIndex) => {
+          const eventsHTML = rowEvents.map(event => {
+            const eventColor = event.color || '#14b8a6';
+            const eventEmoji = event.emoji || '';
+            const isUndated = !event.date;
+            const cardClass = isUndated ? 'event-card undated' : 'event-card';
+            // Apply full background color to the card
+            const cardStyle = eventColor ? `background-color: ${eventColor}; color: #ffffff;` : '';
+            
+            return `
+              <div class="${cardClass}" style="left: ${event.position}px; ${cardStyle}" 
+                   draggable="true" 
+                   data-event-id="${event.id}"
+                   data-timeline-id="${timeline.id}"
+                   data-row-index="${rowIndex}"
+                   ondragstart="handleEventDragStart(event, '${timeline.id}', '${event.id}')"
+                   ondragend="handleEventDragEnd(event)"
+                   oncontextmenu="showContextMenu(event, '${timeline.id}', '${event.id}'); return false;">
+                <div class="event-connector" style="background: ${eventColor};"></div>
+                <div class="event-dot" style="background: ${eventColor};"></div>
+                ${eventEmoji ? `<div class="event-icon">${eventEmoji}</div>` : ''}
+                <div class="event-title" style="color: #ffffff; font-weight: 500; text-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(0,0,0,0.3);">${escapeHtml(event.title)}</div>
+                ${event.date ? `<div class="event-date" style="color: #ffffff; opacity: 0.9; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${formatDate(event.date)}</div>` : ''}
+                ${event.description ? `<div class="event-description" style="color: #ffffff; opacity: 0.85; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">${escapeHtml(event.description)}</div>` : ''}
+              </div>
+            `;
+          }).join('');
+          
+          rowsHTML += `
+            <div class="timeline-row">
+              <div class="timeline-line"></div>
+              <div class="timeline-events"
+                   data-timeline-id="${timeline.id}"
+                   ondragover="handleEventDragOver(event)"
+                   ondrop="handleEventDrop(event, '${timeline.id}')"
+                   ondragleave="handleEventDragLeave(event)">
+                <div class="drop-indicator"></div>
+                ${eventsHTML}
+              </div>
+            </div>
+          `;
+        });
+        
+        timelineWrapper.innerHTML = headerHTML + rowsHTML;
+        container.appendChild(timelineWrapper);
+      });
+    }
+    
+    // Split events into rows based on timeline width
+    function splitEventsIntoRows(events, maxWidth) {
+      // console.group('🔵 splitEventsIntoRows');
+      // console.log('Input:', events.length, 'events, maxWidth:', maxWidth);
+      
+      if (events.length === 0) {
+        // console.log('Empty events array - returning [[]]');
+        // console.groupEnd();
+        return [[]];
+      }
+      
+      const DATED_CARD_WIDTH = 150;
+      const UNDATED_CARD_WIDTH = 210;
+      const SPACING = 12;
+      const START_POSITION = 15;
+      const rows = [];
+      let currentRow = [];
+      let currentRowPosition = START_POSITION;
+      
+      // Sort events by position
+      const sortedEvents = [...events].sort((a, b) => a.position - b.position);
+      // console.log('Sorted events by position:', sortedEvents.map(e => ({id: e.id, title: e.title, position: e.position})));
+      
+      sortedEvents.forEach((event, index) => {
+        const cardWidth = event.date ? DATED_CARD_WIDTH : UNDATED_CARD_WIDTH;
+        
+        // Calculate where this card would end if placed at current row position
+        const potentialEndX = currentRowPosition + cardWidth;
+        
+        // console.log(`  Event ${index} "${event.title}":`, {
+        //   origPosition: event.position,
+        //   cardWidth,
+        //   currentRowPosition,
+        //   potentialEndX,
+        //   fitsInRow: potentialEndX <= maxWidth,
+        //   isFirstInRow: currentRow.length === 0
+        // });
+        
+        // Check if event fits in current row
+        if (potentialEndX <= maxWidth || currentRow.length === 0) {
+          // Fits in current row - adjust position to current row position
+          const adjustedEvent = { ...event, position: currentRowPosition };
+          currentRow.push(adjustedEvent);
+          currentRowPosition += cardWidth + SPACING;
+          // console.log(`    ✓ Added to current row (now has ${currentRow.length} events)`);
+        } else {
+          // Doesn't fit - push current row and start new one
+          // console.log(`    ✗ Doesn't fit - starting new row (old row had ${currentRow.length} events)`);
+          rows.push(currentRow);
+          
+          // Start new row from beginning
+          currentRowPosition = START_POSITION;
+          const adjustedEvent = { ...event, position: currentRowPosition };
+          currentRow = [adjustedEvent];
+          currentRowPosition += cardWidth + SPACING;
+        }
+      });
+      
+      // Add last row
+      if (currentRow.length > 0) {
+        rows.push(currentRow);
+      }
+      
+      // console.log('Result:', rows.length, 'rows');
+      // rows.forEach((row, idx) => {
+      //   console.log(`  Row ${idx}: ${row.length} events -`, row.map(e => e.title).join(', '));
+      // });
+      // console.groupEnd();
+      
+      return rows.length > 0 ? rows : [[]];
+    }
+    
+    // Smart positioning function - delegates to TimelinePositioning helper
+    function recalculateEventPositions(timeline, preserveUndatedPositions = false) {
+      TimelinePositioning.positionTimelineEvents(timeline, {
+        preserveUndatedPositions,
+        timelineWidth: window.innerWidth * 0.9,
+      });
+    }
+    
+    // Drag and Drop for Events with Snap and Visual Indicator
+    let draggedEventId = null;
+    let draggedTimelineId = null;
+    
+    function handleEventDragStart(e, timelineId, eventId) {
+      const timeline = timelines.find(t => t.id === timelineId);
+      const event = timeline.events.find(ev => ev.id === eventId);
+      
+      // Only allow dragging undated events
+      if (event && event.date) {
+        e.preventDefault();
+        return false;
+      }
+      
+      draggedEventId = eventId;
+      draggedTimelineId = timelineId;
+      e.target.classList.add('dragging');
+      
+      // Set drag data
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', e.target.innerHTML);
+    }
+    
+    function handleEventDragEnd(e) {
+      e.target.classList.remove('dragging');
+      
+      // Hide all drop indicators
+      document.querySelectorAll('.drop-indicator').forEach(indicator => {
+        indicator.style.display = 'none';
+      });
+    }
+    
+    function handleEventDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      if (!draggedEventId) return;
+      
+      const dropZone = e.currentTarget;
+      const indicator = dropZone.querySelector('.drop-indicator');
+      if (!indicator) return;
+      
+      const rect = dropZone.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      
+      // Get timeline
+      const timelineId = dropZone.dataset.timelineId;
+      const timeline = timelines.find(t => t.id === timelineId);
+      if (!timeline) return;
+      
+      // ROW-AWARE INDICATOR POSITIONING
+      // Determine which row this drop zone belongs to
+      const allTimelineRows = document.querySelectorAll(`[data-timeline-id="${timelineId}"]`);
+      let targetRowIndex = 0;
+      
+      allTimelineRows.forEach((zone, idx) => {
+        if (zone === dropZone) {
+          targetRowIndex = idx;
+        }
+      });
+      
+      // Split events into rows to find events in this row
+      const TIMELINE_WIDTH = window.innerWidth * 0.9;
+      const rows = splitEventsIntoRows(timeline.events, TIMELINE_WIDTH);
+      
+      if (targetRowIndex >= rows.length) {
+        targetRowIndex = rows.length - 1;
+      }
+      
+      const targetRowEvents = rows[targetRowIndex] || [];
+      
+      // Calculate indicator position within this row
+      let indicatorPos = 50; // START_POSITION default
+      
+      if (targetRowEvents.length === 0) {
+        // Empty row - show at start position
+        indicatorPos = 50;
+      } else {
+        // Find position within this row
+        let foundPosition = false;
+        
+        for (let i = 0; i < targetRowEvents.length; i++) {
+          const rowEvent = targetRowEvents[i];
+          
+          // Skip the dragged event itself
+          if (rowEvent.id === draggedEventId) continue;
+          
+          const cardWidth = rowEvent.date ? 150 : 195;
+          const midpoint = rowEvent.position + cardWidth / 2;
+          
+          if (x < midpoint) {
+            // Show indicator before this event
+            indicatorPos = Math.max(50, rowEvent.position - 10);
+            foundPosition = true;
+            break;
+          }
+        }
+        
+        if (!foundPosition) {
+          // Show indicator after last event in row
+          const lastEvent = targetRowEvents[targetRowEvents.length - 1];
+          const lastCardWidth = lastEvent.date ? 150 : 195;
+          indicatorPos = lastEvent.position + lastCardWidth + 10;
+        }
+      }
+      
+      // Show indicator at calculated position
+      indicator.style.left = `${indicatorPos}px`;
+      indicator.style.display = 'block';
+      
+      return false;
+    }
+    
+    function handleEventDragLeave(e) {
+      // Only hide if leaving the timeline-events container, not child elements
+      if (e.currentTarget.contains(e.relatedTarget)) return;
+      
+      const indicator = e.currentTarget.querySelector('.drop-indicator');
+      if (indicator) {
+        indicator.style.display = 'none';
+      }
+    }
+    
+    function handleEventDrop(e, targetTimelineId) {
+      // console.group('🟢 DROP EVENT');
+      e.preventDefault();
+      
+      if (!draggedEventId || !draggedTimelineId) {
+        // console.warn('No dragged event');
+        // console.groupEnd();
+        return;
+      }
+      
+      const sourceTimeline = timelines.find(t => t.id === draggedTimelineId);
+      const targetTimeline = timelines.find(t => t.id === targetTimelineId);
+      
+      if (!sourceTimeline || !targetTimeline) {
+        // console.warn('Timeline not found');
+        // console.groupEnd();
+        return;
+      }
+      
+      const eventIndex = sourceTimeline.events.findIndex(e => e.id === draggedEventId);
+      if (eventIndex === -1) {
+        // console.warn('Event not found in source timeline');
+        // console.groupEnd();
+        return;
+      }
+      
+      const event = sourceTimeline.events[eventIndex];
+      
+      // console.log('Dragging:', event.title);
+      // console.log('From timeline:', sourceTimeline.id, 'at index:', eventIndex);
+      // console.log('To timeline:', targetTimeline.id);
+      // console.log('Source events:', sourceTimeline.events.map(e => e.title));
+      
+      // Only allow dragging undated events
+      if (event.date) {
+        // console.warn('Cannot drag dated events');
+        draggedEventId = null;
+        draggedTimelineId = null;
+        // console.groupEnd();
+        return;
+      }
+      
+      // ROW-AWARE DROP LOGIC
+      // console.log('\n--- ROW-AWARE DROP CALCULATION ---');
+      
+      // Step 1: Determine which row was dropped into
+      const dropZone = e.currentTarget;
+      const allTimelineRows = document.querySelectorAll(`[data-timeline-id="${targetTimelineId}"]`);
+      let targetRowIndex = 0;
+      
+      // Find which row this drop zone belongs to
+      allTimelineRows.forEach((zone, idx) => {
+        if (zone === dropZone) {
+          targetRowIndex = idx;
+        }
+      });
+      // console.log('Step 1: Detected target row index:', targetRowIndex, '(of', allTimelineRows.length, 'rows)');
+      
+      // Step 2: Get events in the target row by splitting into rows
+      const TIMELINE_WIDTH = Math.min(1400, window.innerWidth * 0.85);
+      // console.log('Step 2: Timeline width:', TIMELINE_WIDTH);
+      const rows = splitEventsIntoRows(targetTimeline.events, TIMELINE_WIDTH);
+      
+      if (targetRowIndex >= rows.length) {
+        // console.warn('Target row index exceeds rows, falling back to last row');
+        targetRowIndex = rows.length - 1; // Fallback to last row
+      }
+      
+      const targetRowEvents = rows[targetRowIndex] || [];
+      // console.log('Target row has', targetRowEvents.length, 'events:', targetRowEvents.map(e => e.title));
+      
+      // Step 3: Calculate x position within the row
+      const rect = dropZone.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      // console.log('Step 3: Drop x-coordinate:', x, '(relative to row)');
+      
+      // Step 4: Find insertion point within the target row
+      // console.log('Step 4: Finding insertion point...');
+      let insertionIndex = 0;
+      
+      if (targetRowEvents.length === 0) {
+        // Empty row - insert at the position where this row would start
+        // Find how many events are in previous rows
+        for (let i = 0; i < targetRowIndex; i++) {
+          insertionIndex += rows[i].length;
+        }
+        // console.log('  Empty row - inserting at index', insertionIndex, '(after', targetRowIndex, 'previous rows)');
+      } else {
+        // Non-empty row - find insertion point based on x-coordinate
+        let foundPosition = false;
+        
+        for (let i = 0; i < targetRowEvents.length; i++) {
+          const rowEvent = targetRowEvents[i];
+          const eventIdInRow = rowEvent.id;
+          
+          // Skip the dragged event itself if it's in this row
+          if (eventIdInRow === draggedEventId) {
+            // console.log(`  Skipping dragged event "${rowEvent.title}" in row`);
+            continue;
+          }
+          
+          const cardWidth = rowEvent.date ? 150 : 195;
+          const midpoint = rowEvent.position + cardWidth / 2;
+          
+          // console.log(`  Checking against "${rowEvent.title}": position=${rowEvent.position}, midpoint=${midpoint}, x=${x}`);
+          
+          if (x < midpoint) {
+            // Insert before this event - find its index in the full array
+            insertionIndex = targetTimeline.events.findIndex(ev => ev.id === eventIdInRow);
+            // console.log(`  ✓ Inserting before "${rowEvent.title}" at index ${insertionIndex}`);
+            foundPosition = true;
+            break;
+          }
+        }
+        
+        if (!foundPosition) {
+          // Insert at end of this row
+          const lastEventInRow = targetRowEvents[targetRowEvents.length - 1];
+          const lastEventIndex = targetTimeline.events.findIndex(ev => ev.id === lastEventInRow.id);
+          insertionIndex = lastEventIndex + 1;
+          // console.log(`  ✓ Inserting at end of row after "${lastEventInRow.title}" at index ${insertionIndex}`);
+        }
+      }
+      
+      // console.log('\nInsertion index BEFORE adjustment:', insertionIndex);
+      // console.log('Same timeline?', sourceTimeline.id === targetTimeline.id);
+      
+      // Handle same-timeline vs cross-timeline drops
+      if (sourceTimeline.id === targetTimeline.id) {
+        // Same timeline: adjust insertion index if needed
+        // console.log('Same timeline - eventIndex:', eventIndex, 'insertionIndex:', insertionIndex);
+        if (insertionIndex > eventIndex) {
+          // Moving right/down: insertion index should be 1 less because we remove first
+          // console.log('Moving right/down - adjusting insertion index by -1');
+          insertionIndex -= 1;
+        }
+      }
+      // console.log('Final insertion index:', insertionIndex);
+      
+      // Move the event between timelines respecting insertion order
+      // console.log('\n--- SPLICING ARRAYS ---');
+      // console.log('BEFORE splice - source events:', sourceTimeline.events.map(e => e.title));
+      // console.log('BEFORE splice - target events:', targetTimeline.events.map(e => e.title));
+      
+      sourceTimeline.events.splice(eventIndex, 1);
+      // console.log('AFTER removing from source:', sourceTimeline.events.map(e => e.title));
+      
+      targetTimeline.events.splice(insertionIndex, 0, event);
+      // console.log('AFTER inserting to target at index', insertionIndex + ':', targetTimeline.events.map(e => e.title));
+      
+      // CRITICAL: Update order field to match new array positions BEFORE recalculating
+      // console.log('\n--- UPDATING ORDER FIELDS ---');
+      targetTimeline.events.forEach((ev, idx) => {
+        ev.order = idx;
+      });
+      // console.log('Target timeline orders:', targetTimeline.events.map(e => ({title: e.title, order: e.order})));
+      
+      if (sourceTimeline.id !== targetTimeline.id) {
+        sourceTimeline.events.forEach((ev, idx) => {
+          ev.order = idx;
+        });
+        // console.log('Source timeline orders:', sourceTimeline.events.map(e => ({title: e.title, order: e.order})));
+      }
+
+      // Recalculate positions to reflect new ordering
+      // Use sequential positioning which will naturally group events into rows
+      // console.log('\n--- RECALCULATING POSITIONS ---');
+      recalculateEventPositions(targetTimeline, false);
+      // console.log('Target timeline positions:', targetTimeline.events.map(e => ({title: e.title, position: e.position, order: e.order})));
+      
+      if (sourceTimeline.id !== targetTimeline.id) {
+        recalculateEventPositions(sourceTimeline, false);
+        // console.log('Source timeline positions:', sourceTimeline.events.map(e => ({title: e.title, position: e.position, order: e.order})));
+      }
+      
+      // Hide indicator
+      const indicator = dropZone.querySelector('.drop-indicator');
+      if (indicator) {
+        indicator.style.display = 'none';
+      }
+      
+      // console.log('\n--- RENDERING FINAL RESULT ---');
+      renderTimelines();
+      // console.log('✓ Drop complete');
+      // console.groupEnd();
+      
+      // Auto-save after drag-and-drop (only for existing files)
+      {% if file %}
+      saveTimeline(true);
+      {% endif %}
+      
+      draggedEventId = null;
+      draggedTimelineId = null;
+    }
+    
+    // Save Function
+    function saveTimeline(isAutoSave = false) {
+      const title = document.getElementById('fileTitle').value.trim() || 'Untitled Timeline';
+      const description = document.getElementById('fileDescription').value.trim();
+      
+      {% if file %}
+      // For existing files, use fetch to save without leaving page
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('content_json', JSON.stringify(timelines));
+      
+      fetch('/p2/files/{{ file.id }}/edit', {
+        method: 'POST',
+        body: formData,
+        redirect: isAutoSave ? 'manual' : 'follow'
+      })
+      .then(response => {
+        if (isAutoSave) {
+          showSaveStatus();
+          return;
+        }
+        
+        if (response.redirected) {
+          window.location.href = response.url;
+          return;
+        }
+        return response.text();
+      })
+      .then(html => {
+        if (html) {
+          showSaveStatus();
+        }
+      })
+      .catch(error => {
+        console.error('Save error:', error);
+        if (!isAutoSave) {
+          alert('Error saving timeline');
+        }
+      });
+      {% else %}
+      // For new files, submit form to create and redirect to edit page
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/p2/files/new/timeline?folder_id={{ folder.id if folder else 0 }}';
+      
+      const titleInput = document.createElement('input');
+      titleInput.type = 'hidden';
+      titleInput.name = 'title';
+      titleInput.value = title;
+      form.appendChild(titleInput);
+      
+      const descInput = document.createElement('input');
+      descInput.type = 'hidden';
+      descInput.name = 'description';
+      descInput.value = description;
+      form.appendChild(descInput);
+      
+      const contentInput = document.createElement('input');
+      contentInput.type = 'hidden';
+      contentInput.name = 'content_json';
+      contentInput.value = JSON.stringify(timelines);
+      form.appendChild(contentInput);
+      
+      document.body.appendChild(form);
+      form.submit();
+      {% endif %}
+    }
+    
+    function showSaveStatus() {
+      const status = document.getElementById('saveStatus');
+      status.classList.add('show');
+      setTimeout(() => {
+        status.classList.remove('show');
+      }, 2000);
+    }
+    
+    // Utility Functions
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function formatDate(dateString) {
+      if (!dateString) {
+        return 'No date';
+      }
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    // Context Menu Functions
+    function showContextMenu(e, timelineId, eventId) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      contextMenuTimelineId = timelineId;
+      contextMenuEventId = eventId;
+      
+      const menu = document.getElementById('contextMenu');
+      menu.style.display = 'block';
+      menu.style.left = `${e.clientX}px`;
+      menu.style.top = `${e.clientY}px`;
+      
+      // Adjust position if menu would go off-screen
+      setTimeout(() => {
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+          menu.style.left = `${e.clientX - rect.width}px`;
+        }
+        if (rect.bottom > window.innerHeight) {
+          menu.style.top = `${e.clientY - rect.height}px`;
+        }
+      }, 0);
+      
+      return false;
+    }
+    
+    function hideContextMenu() {
+      document.getElementById('contextMenu').style.display = 'none';
+      contextMenuTimelineId = null;
+      contextMenuEventId = null;
+    }
+    
+    function contextMenuEdit() {
+      if (contextMenuTimelineId && contextMenuEventId) {
+        openEventModal(contextMenuTimelineId, contextMenuEventId);
+      }
+      hideContextMenu();
+    }
+    
+    function contextMenuDuplicate() {
+      if (!contextMenuTimelineId || !contextMenuEventId) {
+        hideContextMenu();
+        return;
+      }
+      
+      const timeline = timelines.find(t => t.id === contextMenuTimelineId);
+      if (!timeline) {
+        hideContextMenu();
+        return;
+      }
+      
+      const originalEvent = timeline.events.find(e => e.id === contextMenuEventId);
+      if (!originalEvent) {
+        hideContextMenu();
+        return;
+      }
+      
+      // Create duplicate with new ID
+      const newEvent = {
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        title: `${originalEvent.title} (copy)`,
+        date: originalEvent.date,
+        description: originalEvent.description,
+        color: originalEvent.color,
+        emoji: originalEvent.emoji,
+        position: originalEvent.position + 20, // Slight offset
+        order: timeline.events.length // Add to end
+      };
+      
+      timeline.events.push(newEvent);
+      
+      // Recalculate positions
+      recalculateEventPositions(timeline);
+      
+      renderTimelines();
+      hideContextMenu();
+      
+      // Auto-save after duplicate (only for existing files)
+      {% if file %}
+      saveTimeline(true);
+      {% endif %}
+    }
+    
+    function contextMenuDelete() {
+      if (contextMenuTimelineId && contextMenuEventId) {
+        hideContextMenu();
+        deleteEvent(contextMenuTimelineId, contextMenuEventId);
+      } else {
+        hideContextMenu();
+      }
+    }
+    
+    // Hide context menu when clicking elsewhere
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#contextMenu')) {
+        hideContextMenu();
+      }
+    });
+    
+    // Hide context menu on scroll
+    document.addEventListener('scroll', hideContextMenu, true);
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load existing data
+      {% if file and file.content_json %}
+      timelines = {{ file.content_json | tojson }};
+      {% else %}
+      timelines = [];
+      {% endif %}
+      
+      // Normalize event order and recalc positions while preserving existing undated placement
+      timelines.forEach(tl => {
+        TimelinePositioning.ensureEventOrder(tl);
+        recalculateEventPositions(tl, true);
+      });
+      
+      renderTimelines();
+      
+      // Save on Ctrl+S
+      document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          saveTimeline();
+        }
+      });
+
+      // Bootstrap modal event listener for event modal
+      const eventModalEl = document.getElementById('eventModal');
+      eventModalEl.addEventListener('shown.bs.modal', function() {
+        // Reinitialize pickers when modal is fully shown
+        initializeColorPicker();
+        initializeEmojiPicker();
+
+        // Apply selection after pickers are initialized
+        setTimeout(() => {
+          selectColor(selectedColor);
+          if (selectedEmoji) selectEmoji(selectedEmoji);
+        }, 100);
+      });
+    });
+  </script>
+</body>
+</html>

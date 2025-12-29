@@ -1,7 +1,7 @@
 <!-- Combined/MioBook Section Cards - For HTMX Rearrangement -->
 {% for doc in combined_docs %}
 <div class="col d-flex">
-  <div class="card flex-fill h-100 shadow-sm item-card" data-type="book" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" data-is-pinned="{{ '1' if doc.is_pinned else '0' }}">
+  <div class="card flex-fill h-100 shadow-sm item-card" data-type="proprietary_blocks" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" data-is-pinned="{{ '1' if doc.is_pinned else '0' }}">
     <div class="badge-container">
       {% if doc.is_pinned %}
       <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>

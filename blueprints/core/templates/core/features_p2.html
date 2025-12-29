@@ -4,62 +4,505 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>MioSpace — Features</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
 	<style>
-		:root{--bg:#0a0a0b;--card:#121516;--muted:#9aa8ad;--accent:#14b8a6;--white:#ECFFFF;--radius:10px}
-		html,body{height:100%;min-height:100vh;margin:0;padding:0;font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;color:var(--white);background-color:var(--bg);background-image:radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);background-size:cover;background-repeat:no-repeat;background-attachment:fixed;background-position:center top}
-		.container{max-width:980px;margin:40px auto;padding:24px}
-		.topbar{display:flex;justify-content:flex-end;gap:10px}
-		.btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--accent);text-decoration:none;font-weight:600}
-		.hero{background:linear-gradient(180deg, rgba(18,21,22,0.96), rgba(10,10,11,0.96));border:1px solid rgba(255,255,255,0.04);padding:20px;border-radius:var(--radius);box-shadow:0 6px 18px rgba(2,6,23,0.5)}
-		h1{margin:0;font-size:28px}
-		p.lead{margin:6px 0 0 0;color:var(--muted)}
-		.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
-		.feature{background:linear-gradient(180deg, rgba(18,21,22,0.6), rgba(10,10,11,0.4));border:1px solid rgba(255,255,255,0.04);padding:14px;border-radius:12px;color:var(--white)}
-		.feature h3{margin:0 0 6px 0;font-size:16px}
-		.feature p{margin:0;color:var(--muted);font-size:13px}
-		.meta{margin-top:18px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;align-items:center}
-		a.link{color:var(--accent);text-decoration:none}
-		.back{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--white);text-decoration:none}
-		@media (max-width:520px){.container{padding:14px}h1{font-size:22px}}
+		:root {
+			--bg: #0a0a0b;
+			--card: #121516;
+			--muted: #9aa8ad;
+			--accent: #14b8a6;
+			--accent-strong: #0d9488;
+			--ochre: #b38b2c;
+			--ochre-strong: #8f6d1e;
+			--white: #ECFFFF;
+			--radius: 12px;
+		}
+
+		* { box-sizing: border-box; }
+
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+			color: var(--white);
+			background: var(--bg);
+			background-image:
+				radial-gradient(circle at 14% 20%, rgba(20, 184, 166, 0.08) 0%, rgba(20, 184, 166, 0.03) 22%, transparent 48%),
+				radial-gradient(circle at 86% 82%, rgba(179, 139, 44, 0.12) 0%, transparent 40%),
+				linear-gradient(135deg, var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+			background-attachment: fixed;
+			background-repeat: no-repeat;
+		}
+
+		.topbar {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			z-index: 90;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 14px 32px;
+			background: rgba(10, 10, 11, 0.85);
+			border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+			backdrop-filter: blur(12px);
+		}
+
+		.logo {
+			font-size: 20px;
+			font-weight: 800;
+			letter-spacing: -0.6px;
+			color: var(--white);
+			text-decoration: none;
+		}
+
+		.logo span { color: var(--accent); }
+
+		.nav-links { display: flex; gap: 10px; }
+
+		.btn-ghost {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 9px 14px;
+			border-radius: 10px;
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			background: transparent;
+			color: var(--white);
+			text-decoration: none;
+			font-weight: 600;
+			font-size: 14px;
+			transition: all 0.2s ease;
+		}
+
+		.btn-ghost:hover {
+			background: rgba(20, 184, 166, 0.12);
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		.btn-primary {
+			background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+			color: #0a0a0b;
+			border-color: var(--accent);
+		}
+
+		.btn-primary:hover {
+			background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+			color: #0a0a0b;
+		}
+
+		.btn-ochre {
+			border-color: rgba(179, 139, 44, 0.6);
+			color: var(--white);
+		}
+
+		.btn-ochre:hover {
+			background: rgba(179, 139, 44, 0.14);
+			border-color: var(--ochre-strong);
+			color: var(--ochre);
+		}
+
+		.hero-shell {
+			padding: 120px 30px 70px;
+			background: linear-gradient(135deg, rgba(10, 23, 27, 0.7) 0%, rgba(18, 21, 22, 0.92) 55%, rgba(10, 10, 11, 0.95) 100%);
+			border-bottom-left-radius: 32px;
+			border-bottom-right-radius: 32px;
+			box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+		}
+
+		.hero {
+			max-width: 980px;
+			margin: 0 auto;
+			text-align: center;
+		}
+
+		.hero-badge {
+			display: inline-block;
+			padding: 7px 16px;
+			border-radius: 18px;
+			background: linear-gradient(120deg, rgba(20, 184, 166, 0.18), rgba(179, 139, 44, 0.18));
+			border: 1px solid rgba(179, 139, 44, 0.55);
+			color: var(--white);
+			font-weight: 700;
+			letter-spacing: 0.4px;
+			margin-bottom: 16px;
+		}
+
+		.hero-title {
+			margin: 0;
+			font-size: 52px;
+			font-weight: 800;
+			line-height: 1.1;
+			letter-spacing: -1.1px;
+			background: linear-gradient(135deg, var(--white) 0%, var(--accent) 100%);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+
+		.hero-text {
+			margin: 14px auto 30px;
+			max-width: 780px;
+			color: var(--muted);
+			font-size: 18px;
+			line-height: 1.7;
+		}
+
+		.cta-row {
+			display: flex;
+			gap: 12px;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		.features-wrapper {
+			max-width: 1320px;
+			margin: 0 auto;
+			padding: 60px 30px 90px;
+		}
+
+		.features-container {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			gap: 60px;
+			align-items: start;
+		}
+
+		.feature-item {
+			padding: 32px 0 32px 16px;
+			border-left: 3px solid transparent;
+			opacity: 0.4;
+			transition: opacity 0.4s ease, border-color 0.3s ease;
+		}
+
+		.feature-item.active {
+			opacity: 1;
+			border-left-color: var(--ochre);
+		}
+
+		.feature-item h2 {
+			margin: 0 0 10px;
+			font-size: 32px;
+			font-weight: 760;
+			letter-spacing: -0.7px;
+			color: var(--white);
+		}
+
+		.feature-item.active h2 { color: var(--ochre); }
+
+		.feature-item p {
+			margin: 0;
+			color: var(--muted);
+			font-size: 17px;
+			line-height: 1.7;
+		}
+
+		.images-column {
+			position: sticky;
+			top: 120px;
+			min-height: 540px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.feature-visual {
+			position: absolute;
+			width: 100%;
+			max-width: 560px;
+			padding: 24px;
+			border-radius: 18px;
+			background: linear-gradient(145deg, rgba(18, 21, 22, 0.92), rgba(10, 10, 11, 0.7));
+			border: 1px solid rgba(255, 255, 255, 0.06);
+			box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+			opacity: 0;
+			transform: translateY(18px) scale(0.97);
+			transition: opacity 0.6s ease, transform 0.6s ease;
+			overflow: hidden;
+		}
+
+		.feature-visual.active {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+
+		.visual-header {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			margin-bottom: 12px;
+		}
+
+		.visual-icon {
+			width: 52px;
+			height: 52px;
+			border-radius: 14px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			color: #0a0a0b;
+			font-weight: 800;
+			box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+		}
+
+		.visual-body {
+			background: linear-gradient(135deg, rgba(20, 184, 166, 0.08), rgba(179, 139, 44, 0.08));
+			border: 1px solid rgba(255, 255, 255, 0.06);
+			border-radius: 14px;
+			padding: 16px;
+			color: var(--muted);
+			font-size: 14px;
+			line-height: 1.6;
+		}
+
+		.bullet-row {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+			gap: 8px;
+			margin-top: 10px;
+		}
+
+		.bullet {
+			padding: 8px 10px;
+			border-radius: 10px;
+			background: rgba(20, 184, 166, 0.12);
+			color: var(--accent);
+			border: 1px solid rgba(20, 184, 166, 0.25);
+			font-weight: 700;
+			font-size: 12px;
+			text-align: center;
+			letter-spacing: 0.2px;
+		}
+
+		.cta-section {
+			padding: 70px 30px;
+			text-align: center;
+			background: rgba(18, 21, 22, 0.75);
+			border-top: 1px solid rgba(255, 255, 255, 0.06);
+		}
+
+		.cta-title {
+			margin: 0 0 12px;
+			font-size: 34px;
+			font-weight: 760;
+			letter-spacing: -0.8px;
+			color: var(--white);
+		}
+
+		.cta-text {
+			margin: 0 0 24px;
+			color: var(--muted);
+			font-size: 17px;
+		}
+
+		@media (max-width: 1024px) {
+			.features-container { grid-template-columns: 1fr; gap: 36px; }
+			.images-column { position: relative; top: 0; min-height: 380px; order: -1; }
+		}
+
+		@media (max-width: 720px) {
+			.topbar { padding: 12px 18px; }
+			.hero-shell { padding: 110px 18px 60px; }
+			.hero-title { font-size: 38px; }
+			.hero-text { font-size: 16px; }
+			.feature-item h2 { font-size: 26px; }
+			.feature-item p { font-size: 16px; }
+			.cta-row { flex-direction: column; }
+			.btn-ghost, .btn-primary { width: 100%; justify-content: center; }
+		}
 	</style>
 </head>
 <body>
-	<div class="container">
-		<div class="topbar">
+	<div class="topbar">
+		<a class="logo" href="{{ url_for('core_blueprint.landing') }}">Mio<span>Space</span></a>
+		<div class="nav-links">
 			<a class="btn-ghost" href="{{ url_for('p2_bp.login') }}">Sign in</a>
-			<a class="btn-ghost" href="{{ url_for('p2_bp.register') }}">Sign up</a>
+			<a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.register') }}">Sign up</a>
 		</div>
+	</div>
 
+	<div class="hero-shell">
 		<div class="hero">
-			<h1>MioSpace — Features</h1>
-			<p class="lead">Notes, folders and collaborative whiteboards — organised around you and your teams.</p>
+			<div class="hero-badge">Dirty ochre + teal</div>
+			<h1 class="hero-title">MioSpace — Notes, boards, and files</h1>
+			<p class="hero-text">Organize everything with nested folders, rich documents, and canvas-style boards. MioSpace keeps quotas, permissions, and sharing simple so teams can create quickly.</p>
+			<div class="cta-row">
+				<a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.dashboard') }}">Open MioSpace →</a>
+				<a class="btn-ghost btn-ochre" href="{{ url_for('core_blueprint.landing') }}">Back to MioHub</a>
+			</div>
+		</div>
+	</div>
 
-			<div class="grid">
-				<div class="feature">
-					<h3>Hierarchical folders</h3>
-					<p>Nested folders with breadcrumbs make it easy to organise large document collections.</p>
+	<div class="features-wrapper">
+		<div class="features-container">
+			<div class="features-column">
+				<div class="feature-item" data-feature="folders">
+					<h2>Hierarchical folders</h2>
+					<p>Nested folders with breadcrumbs and batch operations make it effortless to organize large libraries while keeping sharing controls clear.</p>
 				</div>
-				<div class="feature">
-					<h3>MioWord (documents)</h3>
-					<p>Rich note editor with autosave, versioning hints and markdown support for fast writing.</p>
+
+				<div class="feature-item" data-feature="documents">
+					<h2>MioWord documents</h2>
+					<p>Rich HTML and markdown editing with autosave, version-friendly JSON storage, and quick previews that stay responsive in big files.</p>
 				</div>
-				<div class="feature">
-					<h3>MioBoard (whiteboards)</h3>
-					<p>Canvas-style boards for sketches and diagrams — saved as structured JSON for edit/replay.</p>
+
+				<div class="feature-item" data-feature="boards">
+					<h2>MioBoard whiteboards</h2>
+					<p>Canvas-style diagrams, drawings, and multi-page boards saved as structured JSON so teams can replay, edit, and collaborate without loss.</p>
 				</div>
-				<div class="feature">
-					<h3>Sharing & permissions</h3>
-					<p>Share notes or folders with users, with per-item visibility flags and simple access control.</p>
+
+				<div class="feature-item" data-feature="sharing">
+					<h2>Sharing and permissions</h2>
+					<p>Per-item visibility flags, public links, and storage quotas help you share confidently while respecting limits for guests and teams.</p>
 				</div>
 			</div>
 
-			<div class="meta">
-				<div><a class="link" href="{{ url_for('p2_bp.dashboard') }}">Open MioSpace</a></div>
-				<div>
-					  <a class="back" href="{{ url_for('core_blueprint.landing') }}">← Back to MioHub</a>
+			<div class="images-column">
+				<div class="feature-visual" data-visual="folders">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--accent), #2dd4bf);">
+							<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M3 7h6l2 2h10v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path>
+							</svg>
+						</div>
+						<div>
+							<div style="font-weight:700; letter-spacing:-0.3px;">Structure everything</div>
+							<div style="color:var(--muted); font-size:13px;">Breadcrumbs, drag/drop, and batch actions.</div>
+						</div>
+					</div>
+					<div class="visual-body">
+						Organize work with nested folders and quick breadcrumbs. Batch select items to move, copy, or share without leaving the page.
+						<div class="bullet-row">
+							<div class="bullet">Batch copy</div>
+							<div class="bullet">Breadcrumbs</div>
+							<div class="bullet">Quota aware</div>
+							<div class="bullet">HTMX updates</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="documents">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, #22c55e, #4ade80);">
+							<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M7 3h6l4 4v14H7z"></path>
+								<path d="M13 3v5h5"></path>
+							</svg>
+						</div>
+						<div>
+							<div style="font-weight:700; letter-spacing:-0.3px;">Write with speed</div>
+							<div style="color:var(--muted); font-size:13px;">Markdown, autosave, rich HTML.</div>
+						</div>
+					</div>
+					<div class="visual-body">
+						Use MioWord for long-form notes, markdown, or combined documents. Autosave and structured JSON keep edits reliable for teams.
+						<div class="bullet-row">
+							<div class="bullet">Autosave</div>
+							<div class="bullet">Markdown</div>
+							<div class="bullet">Rich HTML</div>
+							<div class="bullet">Combined docs</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="boards">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, #a855f7, #6366f1);">
+							<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="4" y="5" width="16" height="14" rx="2"></rect>
+								<path d="M8 9h8M8 13h5"></path>
+							</svg>
+						</div>
+						<div>
+							<div style="font-weight:700; letter-spacing:-0.3px;">Draw and diagram</div>
+							<div style="color:var(--muted); font-size:13px;">Multi-page boards stored as JSON.</div>
+						</div>
+					</div>
+					<div class="visual-body">
+						Sketch flows, wireframes, or diagrams. Every board saves as structured JSON for replay, exporting, or merging into combined docs.
+						<div class="bullet-row">
+							<div class="bullet">Multi-page</div>
+							<div class="bullet">Import/Export</div>
+							<div class="bullet">Undo/Redo</div>
+							<div class="bullet">Images & text</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="sharing">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--ochre), var(--ochre-strong)); color: #0a0a0b;">
+							<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M7 7a4 4 0 118 0v2a4 4 0 01-8 0z"></path>
+								<path d="M5 21v-2a4 4 0 014-4h6a4 4 0 014 4v2"></path>
+							</svg>
+						</div>
+						<div>
+							<div style="font-weight:700; letter-spacing:-0.3px;">Share safely</div>
+							<div style="color:var(--muted); font-size:13px;">Public links, quotas, per-item controls.</div>
+						</div>
+					</div>
+					<div class="visual-body">
+						Control access per folder or file, enforce quotas for guests, and use public links when you need frictionless sharing.
+						<div class="bullet-row">
+							<div class="bullet">Public links</div>
+							<div class="bullet">Per-item flags</div>
+							<div class="bullet">Quota aware</div>
+							<div class="bullet">Batch actions</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+
+	<div class="cta-section">
+		<h2 class="cta-title">Ready to organize your workspace?</h2>
+		<p class="cta-text">Jump into MioSpace to create documents, whiteboards, and folders with ochre + teal theming.</p>
+		<div class="cta-row">
+			<a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.dashboard') }}">Open MioSpace</a>
+			<a class="btn-ghost btn-ochre" href="{{ url_for('core_blueprint.landing') }}">Back to MioHub</a>
+		</div>
+	</div>
+
+	<script>
+		const featureItems = document.querySelectorAll('.feature-item');
+		const visuals = document.querySelectorAll('.feature-visual');
+
+		function updateActiveFeature() {
+			const windowHeight = window.innerHeight;
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+			const trigger = scrollTop + windowHeight * 0.5;
+			let activeIndex = -1;
+
+			featureItems.forEach((item, index) => {
+				const rect = item.getBoundingClientRect();
+				const itemTop = rect.top + scrollTop;
+				const itemBottom = itemTop + rect.height;
+				if (trigger >= itemTop && trigger < itemBottom) { activeIndex = index; }
+			});
+
+			featureItems.forEach((item, index) => {
+				item.classList.toggle('active', index === activeIndex);
+			});
+
+			visuals.forEach((visual, index) => {
+				visual.classList.toggle('active', index === activeIndex);
+			});
+		}
+
+		let scrollTimeout;
+		function handleScroll() {
+			if (scrollTimeout) { window.cancelAnimationFrame(scrollTimeout); }
+			scrollTimeout = window.requestAnimationFrame(updateActiveFeature);
+		}
+
+		window.addEventListener('scroll', handleScroll);
+		window.addEventListener('resize', updateActiveFeature);
+		updateActiveFeature();
+	</script>
 </body>
 </html>

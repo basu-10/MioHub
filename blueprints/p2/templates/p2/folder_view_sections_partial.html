@@ -18,13 +18,13 @@
   {% if boards|length > 0 %}
   <div class="nav-pill" onclick="scrollToSection('boards')">
     <i class="material-icons">dashboard</i>
-    <span>MioDraw ({{ boards|length }})</span>
+    <span>MioPages ({{ boards|length }})</span>
   </div>
   {% endif %}
   {% if combined_docs|length > 0 %}
   <div class="nav-pill" onclick="scrollToSection('combined')">
     <i class="material-icons">article</i>
-    <span>MioBook ({{ combined_docs|length }})</span>
+    <span>MioBlocks ({{ combined_docs|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('markdown') %}
@@ -42,7 +42,7 @@
   {% if files_by_type.get('todo') %}
   <div class="nav-pill" onclick="scrollToSection('todo')">
     <i class="material-icons">checklist</i>
-    <span>Todo ({{ files_by_type['todo']|length }})</span>
+    <span>MioList ({{ files_by_type['todo']|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('diagram') %}
@@ -180,7 +180,7 @@
   <div class="section-header boards-header">
     <h3 class="section-title">
       <i class="material-icons">dashboard</i>
-      MioDraw
+      MioPages
       <span class="count-badge">{{ boards|length }}</span>
     </h3>
   </div>
@@ -225,7 +225,7 @@
   <div class="section-header combined-header">
     <h3 class="section-title">
       <i class="material-icons">article</i>
-      MioBook
+      MioBlocks
       <span class="count-badge">{{ combined_docs|length }}</span>
     </h3>
   </div>
@@ -234,7 +234,7 @@
   <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
     {% for doc in combined_docs %}
       <div class="col d-flex">
-        <div class="card flex-fill h-100 shadow-sm item-card" data-type="book" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}">
+        <div class="card flex-fill h-100 shadow-sm item-card" data-type="proprietary_blocks" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}">
           <div class="badge-container">
             {% if doc.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
@@ -267,7 +267,7 @@
         </thead>
         <tbody>
           {% for doc in combined_docs %}
-          <tr class="item-row" data-type="book" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" tabindex="0">
+          <tr class="item-row" data-type="proprietary_blocks" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" tabindex="0">
             <td><i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">article</i></td>
             <td>
               <a href="{{ url_for('combined.edit_combined', document_id=doc.id) }}" class="text-decoration-none item-link">{{ doc.title }}</a>
@@ -336,7 +336,7 @@
   <div class="section-header files-header">
     <h3 class="section-title">
       <i class="material-icons">checklist</i>
-      Todo Lists
+      MioList
       <span class="count-badge">{{ files_by_type['todo']|length }}</span>
     </h3>
   </div>

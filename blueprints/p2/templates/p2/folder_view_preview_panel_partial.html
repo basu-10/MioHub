@@ -90,6 +90,10 @@
         <i class="material-icons">content_copy</i>
         Duplicate
       </button>
+      <button class="preview-action-btn" onclick="copyPreviewedItem()" id="preview-copy-btn">
+        <i class="material-icons">file_copy</i>
+        Copy
+      </button>
       <button class="preview-action-btn" onclick="downloadPreviewedItem()" id="preview-download-btn">
         <i class="material-icons">download</i>
         Download
@@ -651,6 +655,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Close preview panel on click outside (similar to context menu pattern)
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('preview-panel');
+  const handle = document.getElementById('preview-panel-handle');
+  
+  // Only check if panel is open
+  if (!panel || panel.classList.contains('collapsed')) {
+    return;
+  }
+  
+  // Don't close if clicking inside the preview panel or handle
+  if (e.target.closest('#preview-panel') || e.target.closest('#preview-panel-handle')) {
+    console.log('[PREVIEW PANEL] Click inside panel or handle, not closing');
+    return;
+  }
+  
+  // Don't close if clicking on a card (would reopen preview immediately)
+  if (e.target.closest('.item-card') || e.target.closest('.item-row')) {
+    console.log('[PREVIEW PANEL] Click on item card, not closing (will reopen with new item)');
+    return;
+  }
+  
+  console.log('[PREVIEW PANEL] Click outside panel, closing');
+  closePreviewPanel();
+});
+
 // Update Preview Panel Content
 function updatePreviewPanel(item) {
   if (!item) {
@@ -695,16 +725,17 @@ function updatePreviewPanel(item) {
   const typeMap = {
     'folder': 'Folder',
     'note': 'MioNote',
-    'board': 'MioDraw',
-    'whiteboard': 'MioDraw',
-    'proprietary_infinite_whiteboard': 'Infinite Whiteboard',
+    'board': 'MioPages',
+    'whiteboard': 'MioPages',
+    'proprietary_infinite_whiteboard': 'MioInfinite',
     'markdown': 'Markdown',
-    'todo': 'Todo List',
+    'todo': 'MioList',
     'diagram': 'Diagram',
     'table': 'Table',
     'blocks': 'Blocks',
-    'proprietary_graph': 'Graph Workspace',
-    'book': 'MioBook',
+    'proprietary_graph': 'MioThink',
+    'book': 'MioBlocks',
+    'timeline': 'MioEvents',
     'file': 'File'
   };
   document.getElementById('preview-type').textContent = typeMap[displayType] || typeMap[item.type] || item.type;
@@ -967,7 +998,7 @@ function updateActionButtonStates(item) {
     badgesContainer.style.display = (isPublic || isPinned) ? 'flex' : 'none';
   }
   
-  // Regenerate thumbnail button - only for infinite whiteboards
+  // Regenerate thumbnail button - only for MioInfinite
   const regenerateBtn = document.getElementById('preview-regenerate-thumbnail-btn');
   const displayType = item.card?.dataset.fileType || item.type;
   if (regenerateBtn) {
@@ -1128,7 +1159,7 @@ function loadBoardPreview(item, contentArea) {
   } else {
     // No thumbnail available - show placeholder
     const icon = isInfiniteWhiteboard ? 'grid_on' : 'dashboard';
-    const label = isInfiniteWhiteboard ? 'Infinite Whiteboard' : 'Whiteboard';
+    const label = isInfiniteWhiteboard ? 'MioInfinite' : 'MioPages';
     
     contentArea.innerHTML = `
       <div class="preview-placeholder">
@@ -1214,8 +1245,34 @@ function renamePreviewedItem() {
 function copyPreviewedItem() {
   if (!previewedItem) return;
   
-  if (window.FolderOperations) {
-    window.FolderOperations.copyItem(previewedItem);
+  console.log('[PREVIEW COPY] Starting copy operation for:', previewedItem);
+  console.log('[PREVIEW COPY] ClipboardOperations available:', !!window.ClipboardOperations);
+  
+  // Use ClipboardOperations for proper clipboard integration
+  if (window.ClipboardOperations && typeof window.ClipboardOperations.performCopy === 'function') {
+    console.log('[PREVIEW COPY] Calling ClipboardOperations.performCopy');
+    const result = window.ClipboardOperations.performCopy([previewedItem]);
+    console.log('[PREVIEW COPY] Result:', result);
+    
+    // Show success message
+    if (window.TelemetryPanel) {
+      window.TelemetryPanel.setIdle('Item copied to clipboard');
+    }
+    
+    // Update floating paste button state
+    if (typeof window.updateFloatingPasteButton === 'function') {
+      console.log('[PREVIEW COPY] Updating floating paste button state');
+      window.updateFloatingPasteButton();
+    }
+  } else {
+    console.error('[PREVIEW COPY] ClipboardOperations not available');
+    console.error('[PREVIEW COPY] window.ClipboardOperations:', window.ClipboardOperations);
+    if (window.FolderOperations && typeof window.FolderOperations.copyItem === 'function') {
+      console.log('[PREVIEW COPY] Falling back to FolderOperations.copyItem');
+      window.FolderOperations.copyItem(previewedItem);
+    } else {
+      alert('Copy functionality not ready. Please refresh the page.');
+    }
   }
 }
 
@@ -1244,7 +1301,21 @@ function deletePreviewedItem() {
 function cutPreviewedItem() {
   if (!previewedItem) return;
   
-  if (window.FolderOperations) {
+  // Use ClipboardOperations for proper clipboard integration
+  if (window.ClipboardOperations && typeof window.ClipboardOperations.performCut === 'function') {
+    window.ClipboardOperations.performCut([previewedItem]);
+    
+    // Show success message
+    if (window.TelemetryPanel) {
+      window.TelemetryPanel.setIdle('Item cut to clipboard');
+    }
+    
+    // Update floating paste button state
+    if (typeof window.updateFloatingPasteButton === 'function') {
+      window.updateFloatingPasteButton();
+    }
+  } else if (window.FolderOperations) {
+    // Fallback
     window.FolderOperations.cutItem(previewedItem);
   }
   
@@ -1362,7 +1433,7 @@ function downloadPreviewedItem() {
 }
 
 function showDownloadModal(item, itemName) {
-  // Special handling for infinite whiteboards - only PNG and JSONL
+  // Special handling for MioInfinite - only PNG and JSONL
   // Determine the actual type (handle 'file' with file-type attribute)
   let displayType = item.type;
   if (item.type === 'file' && item.card?.dataset.fileType) {
@@ -1512,7 +1583,7 @@ function downloadInFormat(type, id, itemName, format) {
   const safeName = itemName.replace(/[^a-z0-9_\-]/gi, '_');
   
   if (format === 'png') {
-    // PNG export - only for infinite whiteboards
+    // PNG export - only for MioInfinite
     if (type === 'proprietary_infinite_whiteboard') {
       // Open the infinite whiteboard in a new window/tab and trigger export
       const exportUrl = `/infinite_boards/edit/${id}`;
@@ -1551,11 +1622,11 @@ function downloadInFormat(type, id, itemName, format) {
       }
       
       if (window.TelemetryPanel) {
-        window.TelemetryPanel.setIdle('Opening infinite whiteboard for PNG export...');
+        window.TelemetryPanel.setIdle('Opening MioInfinite for PNG export...');
       }
     } else {
       if (window.TelemetryPanel) {
-        window.TelemetryPanel.setIdle('PNG export only available for infinite whiteboards');
+        window.TelemetryPanel.setIdle('PNG export only available for MioInfinite');
       }
     }
   } else if (format === 'native') {
@@ -1727,7 +1798,7 @@ function downloadInFormat(type, id, itemName, format) {
         });
     }
   } else if (format === 'jsonl') {
-    // Special case for infinite whiteboards - trigger browser-side export
+    // Special case for MioInfinite - trigger browser-side export
     if (type === 'proprietary_infinite_whiteboard') {
       // Open the infinite whiteboard in a new window/tab and trigger export
       const exportUrl = `/infinite_boards/edit/${id}`;
@@ -1766,7 +1837,7 @@ function downloadInFormat(type, id, itemName, format) {
       }
       
       if (window.TelemetryPanel) {
-        window.TelemetryPanel.setIdle('Opening infinite whiteboard for JSONL export...');
+        window.TelemetryPanel.setIdle('Opening MioInfinite for JSONL export...');
       }
       return;
     }
@@ -1969,7 +2040,7 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
   }
 });
 
-// Regenerate thumbnail for infinite whiteboard
+// Regenerate thumbnail for MioInfinite
 async function regenerateThumbnail() {
   if (!previewedItem || previewedItem.type !== 'file') return;
   
@@ -2020,6 +2091,21 @@ async function regenerateThumbnail() {
     }, 2000);
   }
 }
+
+// Listen for clipboard state changes to update floating paste button
+document.addEventListener('clipboardStateChanged', function(event) {
+  console.log('[PREVIEW] Clipboard state changed:', event.detail);
+  if (typeof window.updateFloatingPasteButton === 'function') {
+    window.updateFloatingPasteButton();
+  }
+});
+
+// Update floating paste button state on page load
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof window.updateFloatingPasteButton === 'function') {
+    window.updateFloatingPasteButton();
+  }
+});
 </script>
 
 <style>

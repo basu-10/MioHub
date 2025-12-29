@@ -23,9 +23,9 @@ from . import whiteboard_routes
 from . import infinite_whiteboard_routes
 from . import notes_route
 from . import folder_routes
-from . import combined_routes
+from . import file_route_proprietary_blocks
 from . import file_routes
 from . import utils
 from . import routes
 from . import folder_bp
-from . import graph_routes
+from . import file_route_proprietary_graph

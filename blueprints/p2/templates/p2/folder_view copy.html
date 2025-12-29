@@ -1,0 +1,2653 @@
+<!-- folder_view.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ folder.name }} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HTMX for dynamic content loading without page reloads -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  
+  <!-- Shepherd.js Tutorial CSS moved to partial: folder_view_tutorial_partial.html -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('p2_bp.static', filename='css/folder_view.css') }}">
+</head>
+
+<body>
+<!-- Fixed header container to prevent navbar and options bar from overlapping -->
+<div id="header-container" style="position: fixed; top: 0; left: 0; right: 0; z-index: 950;">
+  <!-- Include Navbar -->
+  {% include "/p2/folder_view_navbar_partial.html" %}
+  
+  <!-- Options bar positioned directly below navbar within the fixed container -->
+  <div style="position: relative; z-index: 1045;">
+    {% include "p2/folder_view_top_sticky_options_bar_partial.html" %}
+  </div>
+</div>
+
+<!-- Include Folder Browser Sidebar -->
+{% include "/p2/folder_view_left_sidebar_partial.html" %}
+
+<script>
+// Store current folder ID in localStorage for clipboard operations
+localStorage.setItem('currentFolderId', '{{ folder.id }}');
+console.log('[FOLDER VIEW] Current folder ID stored:', '{{ folder.id }}');
+
+// Sync sidebar state with main content margin
+function updateMainContentSidebarState() {
+  const sidebar = document.getElementById('folderBrowserSidebar');
+  const mainContent = document.getElementById('mainContent');
+  if (!sidebar || !mainContent) return;
+  if (sidebar.classList.contains('collapsed')) {
+    mainContent.classList.add('sidebar-collapsed');
+  } else {
+    mainContent.classList.remove('sidebar-collapsed');
+  }
+}
+// Listen for sidebar toggle
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebar = document.getElementById('folderBrowserSidebar');
+  const togglesContainer = document.getElementById('sidebarTogglesContainer');
+  
+  // Listen for clicks on both toggle buttons
+  if (togglesContainer) {
+    togglesContainer.addEventListener('click', function() {
+      setTimeout(updateMainContentSidebarState, 10);
+    });
+  }
+  
+  // Also update on load
+  updateMainContentSidebarState();
+});
+</script>
+
+<div class="container-fluid mt-0 main-content-with-sidebar sidebar-collapsed" id="mainContent" style="margin-top: 130px !important; padding-left: 2rem; padding-right: 2rem; /* Account for fixed header container (navbar 64px + options bar ~56px) */">
+
+  <!-- Flash Messages (only errors now, success via telemetry) -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-messages-container mb-3">
+        {% for category, message in messages %}
+          {% if category != 'success' %}
+          <div class="alert alert-{{ 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+    {% block content %}
+
+
+
+    
+<!-- Quick Navigation Sidebar -->
+<div class="section-nav">
+  {% if is_root_folder and recent_items|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('recents')">
+    <i class="material-icons">history</i>
+    <span>Recent ({{ recent_items|length }})</span>
+  </div>
+  {% endif %}
+  {% if subfolders|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('folders')">
+    <i class="material-icons">folder</i>
+    <span>Folders ({{ subfolders|length }})</span>
+  </div>
+  {% endif %}
+  {% if notes|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('notes')">
+    <i class="material-icons">description</i>
+    <span>MioNote ({{ notes|length }})</span>
+  </div>
+  {% endif %}
+  {% if folder.boards|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('boards')">
+    <i class="material-icons">dashboard</i>
+    <span>MioPages ({{ folder.boards|length }})</span>
+  </div>
+  {% endif %}
+  {% if combined_docs|length > 0 %}
+  <div class="nav-pill" onclick="scrollToSection('combined')">
+    <i class="material-icons">article</i>
+    <span>MioBlocks ({{ combined_docs|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('proprietary_infinite_whiteboard') %}
+  <div class="nav-pill" onclick="scrollToSection('infinite-whiteboards')">
+    <i class="material-icons">grid_on</i>
+    <span>MioInfinite ({{ files_by_type['proprietary_infinite_whiteboard']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('proprietary_graph') %}
+  <div class="nav-pill" data-section-id="graph-workspaces" data-label="MioThink" onclick="scrollToSection('graph-workspaces')">
+    <i class="material-icons">device_hub</i>
+    <span>MioThink ({{ files_by_type['proprietary_graph']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('markdown') %}
+  <div class="nav-pill" onclick="scrollToSection('markdown')">
+    <i class="material-icons">description</i>
+    <span>Markdown ({{ files_by_type['markdown']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('code') %}
+  <div class="nav-pill" onclick="scrollToSection('code')">
+    <i class="material-icons">code</i>
+    <span>Code ({{ files_by_type['code']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('todo') %}
+  <div class="nav-pill" onclick="scrollToSection('todo')">
+    <i class="material-icons">checklist</i>
+    <span>MioList ({{ files_by_type['todo']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('timeline') %}
+  <div class="nav-pill" onclick="scrollToSection('timeline')">
+    <i class="material-icons">timeline</i>
+    <span>MioEvents ({{ files_by_type['timeline']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('diagram') %}
+  <div class="nav-pill" onclick="scrollToSection('diagram')">
+    <i class="material-icons">account_tree</i>
+    <span>Diagrams ({{ files_by_type['diagram']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('table') %}
+  <div class="nav-pill" onclick="scrollToSection('table')">
+    <i class="material-icons">table_chart</i>
+    <span>Tables ({{ files_by_type['table']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('pdf') %}
+  <div class="nav-pill" onclick="scrollToSection('pdf')">
+    <i class="material-icons">picture_as_pdf</i>
+    <span>PDFs ({{ files_by_type['pdf']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('blocks') %}
+  <div class="nav-pill" onclick="scrollToSection('blocks')">
+    <i class="material-icons">view_week</i>
+    <span>Blocks ({{ files_by_type['blocks']|length }})</span>
+  </div>
+  {% endif %}
+  <div class="nav-pill nav-top-btn" onclick="scrollToTop()" title="Back to Top">
+    <i class="material-icons">arrow_upward</i>
+    <span>Top</span>
+  </div>
+</div>
+
+<hr>
+
+    <!-- HTMX Target for Pasted Items -->
+    <div id="htmx-paste-target" hx-swap-oob="true"></div>
+
+    <!-- Recents Section (Only shown at root folder) -->
+    {% if is_root_folder and recent_items|length > 0 %}
+      {% include 'p2/partials/recently_modified_section.html' %}
+    {% endif %}
+
+    <!-- Folders Section -->
+    {% if subfolders|length > 0 %}
+    <div class="section-container folders-section" id="folders">
+      <div class="section-header folders-header">
+        <h3 class="section-title">
+          <i class="material-icons">folder</i>
+          Folders
+          <span class="count-badge">{{ subfolders|length }}</span>
+        </h3>
+      </div>
+      <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for sub in subfolders %}
+    <div class="col ">
+      <div class="card shadow-sm item-card" data-type="folder" data-id="{{ sub.id }}" data-folder-name="{{ sub.name }}" data-folder-description="{{ sub.description or '' }}" data-is-public="{{ '1' if sub.is_public else '0' }}">
+        <div class="badge-container">
+          {% if sub.is_public %}
+          <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body item-body" tabindex="0" >
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span style="font-size: 1.25rem;">📁</span>
+              <a href="{{ url_for('folders.view_folder', folder_id=sub.id) }}" 
+                class="text-decoration-none fw-semibold item-link flex-grow-1">
+                {{ sub.name }}
+              </a>
+            </div>
+            {% if sub.description and display_prefs.show_previews %}
+              <div class="content-preview folder-description" style="margin-left: 2rem;">
+                <div class="d-flex gap-1 align-items-start">
+                  <i class="material-icons" style="font-size: 14px; margin-top: 2px; color: var(--accent-green); opacity: 0.7;">info</i>
+                  <span class="small">{{ sub.description }}</span>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+      <!-- Table View for Folders -->
+      <div class="table-view-container d-none">
+        <div class="table-responsive">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"></th>
+                <th>Name</th>
+                <th style="width: 150px;">Size</th>
+                <th style="width: 180px;">Created</th>
+                <th style="width: 100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sub in subfolders %}
+              <tr class="item-row" data-type="folder" data-id="{{ sub.id }}" data-folder-name="{{ sub.name }}" data-folder-description="{{ sub.description or '' }}" data-is-public="{{ '1' if sub.is_public else '0' }}" tabindex="0">
+                <td>
+                  <span style="font-size: 1.25rem;">📁</span>
+                </td>
+                <td>
+                  <a href="{{ url_for('folders.view_folder', folder_id=sub.id) }}" class="text-decoration-none fw-semibold item-link">
+                    {{ sub.name }}
+                  </a>
+                  {% if sub.is_public %}
+                    <span class="badge bg-success ms-2" style="font-size: 0.7rem;"><i class="material-icons" style="font-size: 12px; vertical-align: middle;">public</i> Public</span>
+                  {% endif %}
+                  {% if sub.description %}
+                    <div class="text-muted small mt-1">{{ sub.description }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-secondary calculate-size-btn" data-folder-id="{{ sub.id }}">
+                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">calculate</i>
+                    Calculate
+                  </button>
+                  <span class="size-display-{{ sub.id }}" style="display: none;"></span>
+                </td>
+                <td class="text-muted small">
+                  {{ sub.created_at.strftime('%Y-%m-%d %H:%M') if sub.created_at else 'N/A' }}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('folders.view_folder', folder_id=sub.id) }}'">
+                    <i class="material-icons" style="font-size: 14px;">open_in_new</i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+
+
+
+
+<hr>
+    <!-- Notes Section -->
+    {% if notes|length > 0 %}
+    <div class="section-container notes-section" id="notes">
+      <div class="section-header notes-header">
+        <h3 class="section-title">
+          <i class="material-icons">description</i>
+          MioNote
+          <span class="count-badge">{{ notes|length }}</span>
+        </h3>
+      </div>
+      <div id="notes-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+            {% for note in notes %}
+                <div class="col d-flex">
+                <div class="card flex-fill h-100 shadow-sm item-card" data-type="note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" data-is-pinned="{{ '1' if note.is_pinned else '0' }}">
+                  <div class="badge-container">
+                    {% if note.is_pinned %}
+                    <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+                    {% endif %}
+                    {% if note.is_public %}
+                    <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+                    {% endif %}
+                  </div>
+                  <div class="card-body d-flex flex-column item-body" tabindex="0">
+                    <h5 class="card-title">
+                    <a href="{{ url_for('notes.edit_note', note_id=note.id) }}" class="item-link">{{ note.title }}</a>
+                    </h5>
+
+
+
+                      {% if note.descriptions and display_prefs.show_previews %}
+                      <div class="note-description content-preview mb-2">
+                        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+                        <div class="d-flex flex-column">
+                          {% for key, val in note.descriptions %}
+                            <div class="d-flex align-items-start gap-2 small">
+                              <span class="badge rounded-pill bg-secondary">{{ key }}</span>
+                              <span class="text-muted">{{ val }}</span>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                      {% elif note.description and display_prefs.show_previews and note.description_parse_failed %}
+                      <div class="note-description content-preview mb-2 text-warning small">
+                        ⚠️ Description exists but is not in the expected JSON format. Check server logs.
+                      </div>
+                      {% endif %}
+
+                      {% if display_prefs.show_previews %}
+                      <div class="card-text overflow-auto hide-scrollbar flex-grow-1 mb-3 content-preview" style="max-height: 200px;">
+                      {{ note.content_html | safe }}
+                      </div>
+                      {% endif %}
+
+
+                </div>
+
+            </div>
+            </div>
+            {% endfor %}
+        </div>
+
+      <!-- Table View for Notes -->
+      <div class="table-view-container d-none">
+        <div class="table-responsive">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"></th>
+                <th>Name</th>
+                <th style="width: 120px;">Size</th>
+                <th style="width: 180px;">Created</th>
+                <th style="width: 180px;">Modified</th>
+                <th style="width: 100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for note in notes %}
+              <tr class="item-row" data-type="proprietary_note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" tabindex="0">
+                <td>
+                  <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">description</i>
+                </td>
+                <td>
+                  <a href="{{ url_for('notes.edit_note', note_id=note.id) }}" class="text-decoration-none item-link">
+                    {{ note.title }}
+                  </a>
+                  {% if note.is_public %}
+                    <span class="badge bg-success ms-2" style="font-size: 0.7rem;"><i class="material-icons" style="font-size: 12px; vertical-align: middle;">public</i> Public</span>
+                  {% endif %}
+                  {% if note.descriptions %}
+                    <div class="text-muted small mt-1">
+                      {% for key, val in note.descriptions %}
+                        <span class="badge rounded-pill bg-secondary me-1">{{ key }}</span>
+                        <span>{{ val }}</span>
+                        {% if not loop.last %}<br>{% endif %}
+                      {% endfor %}
+                    </div>
+                  {% elif note.description_readable %}
+                    <div class="text-muted small mt-1">{{ note.description_readable }}</div>
+                  {% endif %}
+                </td>
+                <td class="text-muted small">
+                  <span class="file-size" data-bytes="{{ (note.content_html or '')|length }}">{{ ((note.content_html or '')|length / 1024)|round(2) }} KB</span>
+                </td>
+                <td class="text-muted small">
+                  {{ note.created_at.strftime('%Y-%m-%d %H:%M') if note.created_at else 'N/A' }}
+                </td>
+                <td class="text-muted small">
+                  {{ note.last_modified.strftime('%Y-%m-%d %H:%M') if note.last_modified else 'N/A' }}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('notes.edit_note', note_id=note.id) }}'">
+                    <i class="material-icons" style="font-size: 14px;">edit</i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    
+
+<!-- Boards Section -->
+{% if folder.boards|length > 0 %}
+<div class="section-container boards-section" id="boards">
+  <div class="section-header boards-header">
+    <h3 class="section-title">
+      <i class="material-icons">dashboard</i>
+      MioPages
+      <span class="count-badge">{{ folder.boards|length }}</span>
+    </h3>
+  </div>
+  <div id="boards-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for board in folder.boards %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="board" data-id="{{ board.id }}" data-board-description="{{ board.description or '' }}" data-is-public="{{ '1' if board.is_public else '0' }}" data-is-pinned="{{ '1' if board.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if board.is_pinned %}
+          <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if board.is_public %}
+          <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title">
+            <a href="{{ url_for('boards.edit_board', board_id=board.id) }}" class="item-link">{{ board.title }}</a>
+          </h5>
+          
+          {% if board.description and display_prefs.show_previews %}
+          <div class="board-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ board.description }}</span>
+          </div>
+          {% endif %}
+          
+          <div class="card-text text-muted small flex-grow-1 mb-3 mio-draw-label">🧩 MioPages</div>
+
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+      <!-- Table View for Boards -->
+      <div class="table-view-container d-none">
+        <div class="table-responsive">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"></th>
+                <th>Name</th>
+                <th style="width: 120px;">Size</th>
+                <th style="width: 180px;">Created</th>
+                <th style="width: 180px;">Modified</th>
+                <th style="width: 100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for board in folder.boards %}
+              <tr class="item-row" data-type="board" data-id="{{ board.id }}" data-board-description="{{ board.description or '' }}" data-is-public="{{ '1' if board.is_public else '0' }}" tabindex="0">
+                <td>
+                  <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">dashboard</i>
+                </td>
+                <td>
+                  <a href="{{ url_for('boards.edit_board', board_id=board.id) }}" class="text-decoration-none item-link">
+                    {{ board.title }}
+                  </a>
+                  {% if board.is_public %}
+                    <span class="badge bg-success ms-2" style="font-size: 0.7rem;"><i class="material-icons" style="font-size: 12px; vertical-align: middle;">public</i> Public</span>
+                  {% endif %}
+                  {% if board.description %}
+                    <div class="text-muted small mt-1">{{ board.description }}</div>
+                  {% endif %}
+                </td>
+                <td class="text-muted small">
+                  <span class="file-size" data-bytes="{{ (board.content_json|tojson|length) if board.content_json else 0 }}">{{ ((board.content_json|tojson|length if board.content_json else 0) / 1024)|round(2) }} KB</span>
+                </td>
+                <td class="text-muted small">
+                  {{ board.created_at.strftime('%Y-%m-%d %H:%M') if board.created_at else 'N/A' }}
+                </td>
+                <td class="text-muted small">
+                  {{ board.last_modified.strftime('%Y-%m-%d %H:%M') if board.last_modified else 'N/A' }}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('boards.edit_board', board_id=board.id) }}'">
+                    <i class="material-icons" style="font-size: 14px;">edit</i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+</div>
+{% endif %}
+
+
+<!-- MioBooks Section -->
+{% if combined_docs|length > 0 %}
+<div class="section-container combined-section" id="combined">
+  <div class="section-header combined-header">
+    <h3 class="section-title">
+      <i class="material-icons">article</i>
+      MioBlocks
+      <span class="count-badge">{{ combined_docs|length }}</span>
+    </h3>
+  </div>
+  <div id="combined-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for doc in combined_docs %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="proprietary_blocks" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" data-is-pinned="{{ '1' if doc.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if doc.is_pinned %}
+          <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if doc.is_public %}
+          <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title">
+            <a href="{{ url_for('combined.edit_combined', document_id=doc.id) }}" class="item-link">{{ doc.title }}</a>
+          </h5>
+          <div class="card-text text-muted small flex-grow-1 mb-3 combined-label">📄 MioBlocks</div>
+          <!-- 3-dot dropdown menu removed; use single click for context menu -->
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+      <!-- Table View for Combined Docs -->
+      <div class="table-view-container d-none">
+        <div class="table-responsive">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"></th>
+                <th>Name</th>
+                <th style="width: 120px;">Size</th>
+                <th style="width: 180px;">Created</th>
+                <th style="width: 180px;">Modified</th>
+                <th style="width: 100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in combined_docs %}
+              <tr class="item-row" data-type="proprietary_blocks" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" tabindex="0">
+                <td>
+                  <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">article</i>
+                </td>
+                <td>
+                  <a href="{{ url_for('combined.edit_combined', document_id=doc.id) }}" class="text-decoration-none item-link">
+                    {{ doc.title }}
+                  </a>
+                  {% if doc.is_public %}
+                    <span class="badge bg-success ms-2" style="font-size: 0.7rem;"><i class="material-icons" style="font-size: 12px; vertical-align: middle;">public</i> Public</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted small">
+                  <span class="file-size" data-bytes="{{ (doc.content or '')|length }}">{{ ((doc.content or '')|length / 1024)|round(2) }} KB</span>
+                </td>
+                <td class="text-muted small">
+                  {{ doc.created_at.strftime('%Y-%m-%d %H:%M') if doc.created_at else 'N/A' }}
+                </td>
+                <td class="text-muted small">
+                  {{ doc.last_modified.strftime('%Y-%m-%d %H:%M') if doc.last_modified else 'N/A' }}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('combined.edit_combined', document_id=doc.id) }}'">
+                    <i class="material-icons" style="font-size: 14px;">edit</i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+</div>
+{% endif %}
+
+
+<!-- Files Section - Split by Type -->
+
+<!-- MioInfinite Section -->
+{% if files_by_type.get('proprietary_infinite_whiteboard') %}
+<div class="section-container files-section" id="infinite-whiteboards">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">grid_on</i>
+      MioInfinite
+      <span class="count-badge">{{ files_by_type['proprietary_infinite_whiteboard']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['proprietary_infinite_whiteboard'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}" data-thumbnail-url="{{ file.thumbnail_path if file.thumbnail_path else '' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        
+        <!-- Thumbnail Preview (always show for MioInfinite) -->
+        {% if display_prefs.show_previews %}
+        <div class="card-thumbnail-container">
+          {% if file.thumbnail_path and file.thumbnail_path.strip() %}
+          <img src="{{ file.thumbnail_path }}" 
+               alt="Whiteboard preview" 
+               class="card-thumbnail"
+               loading="lazy"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="card-thumbnail-fallback" style="display: none;">
+            <i class="material-icons" style="font-size: 48px; color: var(--accent); opacity: 0.5;">grid_on</i>
+          </div>
+          {% else %}
+          <div class="card-thumbnail-fallback">
+            <i class="material-icons" style="font-size: 48px; color: var(--accent); opacity: 0.5;">grid_on</i>
+            <div style="font-size: 11px; color: var(--muted); margin-top: 8px;">No preview</div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('infinite_boards.edit_infinite_board', board_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+          <div class="card-text text-muted small flex-grow-1 mb-3">🌌 MioInfinite</div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- MioThink Section -->
+{% if files_by_type.get('proprietary_graph') %}
+<div class="section-container files-section" id="graph-workspaces">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">device_hub</i>
+      MioThink
+      <span class="count-badge">{{ files_by_type['proprietary_graph']|length }}</span>
+    </h3>
+  </div>
+  <div id="graph-workspaces-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['proprietary_graph'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('graph.view_graph', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+          <div class="card-text text-muted small flex-grow-1 mb-3">🕸️ MioThink</div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- MioList Section -->
+{% if files_by_type.get('todo') %}
+<div class="section-container files-section" id="todo">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">checklist</i>
+      MioList
+      <span class="count-badge">{{ files_by_type['todo']|length }}</span>
+    </h3>
+  </div>
+  <div id="todo-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['todo'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+          
+          {% if display_prefs.show_previews and display_prefs.card_size in ['normal', 'large'] %}
+          {% set raw_items = file.content_json.get('items', []) if file.content_json else [] %}
+          {% if raw_items is sequence and raw_items is not string and raw_items|length > 0 %}
+          {% set todo_items = raw_items if raw_items[0] is mapping else [] %}
+          {% if todo_items %}
+          <div class="content-preview todo-preview">
+            {% set completed = todo_items | selectattr('completed', 'equalto', true) | list | length %}
+            {% set total = todo_items | length %}
+            {% set percentage = ((completed / total * 100) | round | int) if total > 0 else 0 %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="badge bg-secondary" style="font-size: 0.75rem;">{{ completed }}/{{ total }} done ({{ percentage }}%)</span>
+              <div class="flex-grow-1" style="height: 4px; background: var(--border-primary); border-radius: 999px; overflow: hidden;">
+                <div style="height: 100%; width: {{ percentage }}%; background: var(--accent); transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+            <div class="todo-items-preview">
+              {% for item in todo_items[:5] %}
+              {% if item is mapping and item.text is defined %}
+              <div class="d-flex align-items-start gap-2 mb-1" style="font-size: 0.85rem;">
+                {% if item.completed %}
+                <i class="material-icons" style="font-size: 16px; color: var(--accent);">check_circle</i>
+                <span style="text-decoration: line-through; opacity: 0.6;">{{ item.text[:50] }}{% if item.text|length > 50 %}...{% endif %}</span>
+                {% else %}
+                <i class="material-icons" style="font-size: 16px; color: var(--muted);">radio_button_unchecked</i>
+                <span>{{ item.text[:50] }}{% if item.text|length > 50 %}...{% endif %}</span>
+                {% endif %}
+              </div>
+              {% endif %}
+              {% endfor %}
+              {% if todo_items|length > 5 %}
+              <div class="text-muted small mt-1">+ {{ todo_items|length - 5 }} more...</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- MioEvents Section -->
+{% if files_by_type.get('timeline') %}
+<div class="section-container files-section" id="timeline">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">timeline</i>
+      MioEvents
+      <span class="count-badge">{{ files_by_type['timeline']|length }}</span>
+    </h3>
+  </div>
+  <div id="timeline-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['timeline'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+          <div class="card-text text-muted small flex-grow-1 mb-3">📅 MioEvents</div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Markdown Files Section -->
+{% if files_by_type.get('markdown') %}
+<div class="section-container files-section" id="markdown">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">description</i>
+      Markdown Files
+      <span class="count-badge">{{ files_by_type['markdown']|length }}</span>
+    </h3>
+  </div>
+  <div id="markdown-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['markdown'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Code Files Section -->
+{% if files_by_type.get('code') %}
+<div class="section-container files-section" id="code">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">code</i>
+      Code Files
+      <span class="count-badge">{{ files_by_type['code']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['code'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Todo Files Section -->
+{% if files_by_type.get('todo') %}
+<div class="section-container files-section" id="todo">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">checklist</i>
+      MioList
+      <span class="count-badge">{{ files_by_type['todo']|length }}</span>
+    </h3>
+  </div>
+  <div id="todo-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['todo'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+          
+          {% if display_prefs.show_previews and display_prefs.card_size in ['normal', 'large'] %}
+          {% set raw_items = file.content_json.get('items', []) if file.content_json else [] %}
+          {% if raw_items is sequence and raw_items is not string and raw_items|length > 0 %}
+          {% set todo_items = raw_items if raw_items[0] is mapping else [] %}
+          {% if todo_items %}
+          <div class="content-preview todo-preview">
+            {% set completed = todo_items | selectattr('completed', 'equalto', true) | list | length %}
+            {% set total = todo_items | length %}
+            {% set percentage = ((completed / total * 100) | round | int) if total > 0 else 0 %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="badge bg-secondary" style="font-size: 0.75rem;">{{ completed }}/{{ total }} done ({{ percentage }}%)</span>
+              <div class="flex-grow-1" style="height: 4px; background: var(--border-primary); border-radius: 999px; overflow: hidden;">
+                <div style="height: 100%; width: {{ percentage }}%; background: var(--accent); transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+            <div class="todo-items-preview">
+              {% for item in todo_items[:5] %}
+              {% if item is mapping and item.text is defined %}
+              <div class="d-flex align-items-start gap-2 mb-1" style="font-size: 0.85rem;">
+                {% if item.completed %}
+                <i class="material-icons" style="font-size: 16px; color: var(--accent);">check_circle</i>
+                <span style="text-decoration: line-through; opacity: 0.6;">{{ item.text[:50] }}{% if item.text|length > 50 %}...{% endif %}</span>
+                {% else %}
+                <i class="material-icons" style="font-size: 16px; color: var(--muted);">radio_button_unchecked</i>
+                <span>{{ item.text[:50] }}{% if item.text|length > 50 %}...{% endif %}</span>
+                {% endif %}
+              </div>
+              {% endif %}
+              {% endfor %}
+              {% if todo_items|length > 5 %}
+              <div class="text-muted small mt-1">+ {{ todo_items|length - 5 }} more...</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- MioEvents Files Section -->
+{% if files_by_type.get('timeline') %}
+<div class="section-container files-section" id="timeline">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">timeline</i>
+      MioEvents
+      <span class="count-badge">{{ files_by_type['timeline']|length }}</span>
+    </h3>
+  </div>
+  <div id="timeline-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['timeline'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+          <div class="card-text text-muted small flex-grow-1 mb-3">📅 MioEvents</div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Diagram Files Section -->
+{% if files_by_type.get('diagram') %}
+<div class="section-container files-section" id="diagram">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">account_tree</i>
+      Diagrams
+      <span class="count-badge">{{ files_by_type['diagram']|length }}</span>
+    </h3>
+  </div>
+  <div id="diagram-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['diagram'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Table Files Section -->
+{% if files_by_type.get('table') %}
+<div class="section-container files-section" id="table">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">table_chart</i>
+      Tables
+      <span class="count-badge">{{ files_by_type['table']|length }}</span>
+    </h3>
+  </div>
+  <div id="table-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['table'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- PDF Files Section -->
+{% if files_by_type.get('pdf') %}
+<div class="section-container files-section" id="pdf">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">picture_as_pdf</i>
+      PDF Files
+      <span class="count-badge">{{ files_by_type['pdf']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['pdf'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Blocks Files Section -->
+{% if files_by_type.get('blocks') %}
+<div class="section-container files-section" id="blocks">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">view_week</i>
+      Blocks
+      <span class="count-badge">{{ files_by_type['blocks']|length }}</span>
+    </h3>
+  </div>
+  <div id="blocks-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['blocks'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+
+    {% endblock %}
+</div>
+
+<!-- Context Menu -->
+<div id="context-menu" class="context-menu" style="display: none; position: absolute; z-index: 920;">
+  <ul class="list-group">
+  <li class="list-group-item context-menu-item" onclick="(typeof openCreateFolderDescModal === 'function' ? openCreateFolderDescModal(window.targetFolderId) : createNewFolder(window.targetFolderId))"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">folder</i>Create Folder</li>
+    <li class="list-group-item context-menu-item" onclick="createNewNote()"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">description</i>New MioNote</li>
+    <li class="list-group-item context-menu-item" onclick="createNewBoard()"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">dashboard</i>New MioPages</li>
+    <li class="list-group-item context-menu-item" onclick="createNewCombined()"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">article</i>New MioBlocks</li>
+    <li class="list-group-item context-menu-item" onclick="createNewFile('proprietary_graph')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">device_hub</i>New MioThink</li>
+    <li class="list-group-item context-menu-item" onclick="createNewInfiniteBoard()"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">explore</i>New MioInfinite</li>
+    <li class="list-group-item context-menu-item" onclick="createNewFile('timeline')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">timeline</i>New MioEvents</li>
+    <li class="list-group-item context-menu-item" onclick="createNewFile('todo')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">checklist</i>New MioList</li>
+    <li class="list-group-item context-menu-item dropdown-submenu" onmouseenter="showSubmenu(event)" onmouseleave="hideSubmenu(event)">
+      <span><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">insert_drive_file</i>New File →</span>
+      <ul class="submenu list-group">
+        <li class="list-group-item context-menu-item" onclick="createNewFile('markdown')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">text_fields</i>Markdown</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('code')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">code</i>Code</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('table')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">table_chart</i>Table</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('blocks')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">view_week</i>Blocks</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('diagram')"><i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">account_tree</i>Diagram</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- Create Folder Modal (moved to partial) -->
+{% include 'p2/folder_view_create_folder_partial.html' %}
+
+<!-- Include Folder Description Modals -->
+{% include "p2/folder_description_modals.html" %}
+
+<!-- Include Note/Board Description Modals -->
+{% include "p2/note_board_description_modals.html" %}
+
+<!-- Rename Modal -->
+{% include "p2/folder_view_rename_modal_partial.html" %}
+
+<!-- Delete Confirmation Modal -->
+{% include "p2/delete_confirmation_modal_partial.html" %}
+
+{% include "p2/folder_view_settings_partial.html" %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Ensure dropdown menus inside the sticky folder bar render above other elements by moving them to document.body when opened -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const stickyBar = document.querySelector('.folder-sticky-bar');
+  if (!stickyBar) return;
+
+  // Helper: try to use Popper if available, else fallback to absolute fixed positioning
+  const hasPopper = !!(window.Popper && typeof window.Popper.createPopper === 'function');
+
+  stickyBar.querySelectorAll('.dropdown').forEach(dropdown => {
+    const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+    const menu = dropdown.querySelector('.dropdown-menu');
+    if (!toggle || !menu) return;
+
+    // Keep a placeholder so we can put the menu back when the dropdown closes
+    let placeholder = null;
+    let popperInstance = null;
+
+    dropdown.addEventListener('show.bs.dropdown', function (e) {
+      // Create a placeholder to retain DOM position
+      placeholder = document.createElement('div');
+      placeholder.className = 'dropdown-placeholder d-none';
+      dropdown.insertBefore(placeholder, menu);
+
+      // Move menu to body so it can overlay other elements
+      document.body.appendChild(menu);
+      menu.style.zIndex = '1060';
+      menu.style.position = 'absolute';
+      menu.style.minWidth = menu.style.minWidth || (toggle.offsetWidth + 'px');
+
+      if (hasPopper) {
+        // Create a Popper instance to position the menu
+        popperInstance = Popper.createPopper(toggle, menu, {
+          placement: (menu.classList.contains('dropdown-menu-end') ? 'bottom-end' : 'bottom-start'),
+          modifiers: [
+            { name: 'offset', options: { offset: [0, 6] } },
+            { name: 'preventOverflow', options: { boundary: document.body } },
+            { name: 'computeStyles', options: { adaptive: false } }
+          ]
+        });
+      } else {
+        // Fallback: compute position manually using bounding rect
+        const rect = toggle.getBoundingClientRect();
+        const top = rect.bottom + window.scrollY + 6; // small offset
+        const left = rect.left + window.scrollX;
+        menu.style.top = top + 'px';
+        menu.style.left = left + 'px';
+      }
+    });
+
+    dropdown.addEventListener('hide.bs.dropdown', function () {
+      // Destroy popper instance
+      if (popperInstance) { try { popperInstance.destroy(); } catch(e){} popperInstance = null; }
+
+      // Move menu back to original location
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.insertBefore(menu, placeholder);
+        placeholder.parentNode.removeChild(placeholder);
+        placeholder = null;
+      }
+      // Clear inline styles added
+      menu.style.position = '';
+      menu.style.top = '';
+      menu.style.left = '';
+      menu.style.zIndex = '';
+    });
+    // After shown, update Popper placement (if used)
+    dropdown.addEventListener('shown.bs.dropdown', function () {
+      if (popperInstance && typeof popperInstance.update === 'function') popperInstance.update();
+    });
+  });
+});
+</script>
+
+<!-- Shepherd/tutorial assets moved to partial: p2/folder_view_tutorial_partial.html -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const contextMenu = document.getElementById('context-menu');
+  const createFolderModal = new bootstrap.Modal(document.getElementById('createFolderModal'));
+  
+
+  // Submenu handlers for context menu
+  window.showSubmenu = function(e) {
+    const li = e.currentTarget;
+    const submenu = li.querySelector('.submenu');
+    if (!submenu) return;
+    
+    // Reset styles to default for measurement
+    submenu.style.display = 'block';
+    submenu.style.visibility = 'hidden';
+    submenu.style.left = '100%';
+    submenu.style.right = 'auto';
+    submenu.style.top = '0';
+    submenu.style.bottom = 'auto';
+    submenu.style.marginLeft = '4px';
+    submenu.style.marginRight = '0';
+    
+    const rect = submenu.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    // Check right boundary
+    if (rect.right > windowWidth) {
+      submenu.style.left = 'auto';
+      submenu.style.right = '100%';
+      submenu.style.marginLeft = '0';
+      submenu.style.marginRight = '4px';
+    }
+    
+    // Check bottom boundary
+    if (rect.bottom > windowHeight) {
+      submenu.style.top = 'auto';
+      submenu.style.bottom = '0';
+    }
+    
+    submenu.style.visibility = 'visible';
+  };
+  
+  window.hideSubmenu = function(e) {
+    const submenu = e.currentTarget.querySelector('.submenu');
+    if (submenu) submenu.style.display = 'none';
+  };
+
+  // Right-click event listener
+  document.addEventListener('contextmenu', function(e) {
+    // Prevent default context menu
+    e.preventDefault();
+    // If right-clicking on a card/row, let the card handler manage preview and skip create menu
+    if (e.target.closest('.item-card, .item-row')) {
+      return;
+    }
+    
+    // Check if right-clicking on a folder card
+    const folderCard = e.target.closest('.item-card[data-type="folder"]');
+    if (folderCard) {
+      // Set target folder for paste
+      const folderId = folderCard.getAttribute('data-id');
+      window.targetFolderId = parseInt(folderId);
+      console.error('Right-clicked on folder, target folder ID:', window.targetFolderId);
+    } else {
+      // Right-clicking on main container
+      window.targetFolderId = null;
+    }
+    
+    // Only show if not on other elements or when right-clicking inside the folder browser sidebar
+    // (the sidebar has its own context menu and handlers in `folder_view_left_sidebar_partial.html`)
+    if (e.target.closest('.dropdown') || e.target.closest('form') || e.target.closest('input') || e.target.closest('button') || e.target.closest('#folderBrowserSidebar') || e.target.closest('.folder-browser-sidebar')) {
+      return;
+    }
+    
+    // Position the context menu with boundary checks
+    // First show it off-screen/hidden to measure dimensions
+    contextMenu.style.display = 'block';
+    contextMenu.style.visibility = 'hidden';
+    
+    const menuWidth = contextMenu.offsetWidth;
+    const menuHeight = contextMenu.offsetHeight;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    
+    let left = e.pageX;
+    let top = e.pageY;
+    
+    // Check right boundary (if menu goes off right edge, show it to the left of cursor)
+    if (left + menuWidth > scrollX + windowWidth) {
+      left = left - menuWidth;
+    }
+    
+    // Check bottom boundary (if menu goes off bottom edge, show it above cursor)
+    if (top + menuHeight > scrollY + windowHeight) {
+      top = top - menuHeight;
+    }
+    
+    // Apply positions
+    contextMenu.style.left = left + 'px';
+    contextMenu.style.top = top + 'px';
+    contextMenu.style.visibility = 'visible';
+  });
+
+  // Hide context menu on click elsewhere
+  document.addEventListener('click', function(e) {
+    // Don't hide if clicking inside the context menu
+    if (e.target.closest('#context-menu')) {
+      console.log('[CONTEXT MENU] Click inside menu, not hiding');
+      return;
+    }
+    console.log('[CONTEXT MENU] Click outside menu, hiding');
+    contextMenu.style.display = 'none';
+    window.targetFolderId = null; // Clear target folder
+  });
+
+  // Initialize floating paste button state on page load
+  // Wait for ClipboardOperations to be available
+  function initializeFloatingPasteButton() {
+    if (typeof window.updateFloatingPasteButton === 'function') {
+      if (window.ClipboardOperations) {
+        window.updateFloatingPasteButton();
+        console.log('[FLOATING PASTE] Initial state check complete');
+        
+        // Attach click handler
+        const pasteBtn = document.getElementById('floatingPasteBtn');
+        if (pasteBtn) {
+          pasteBtn.addEventListener('click', window.floatingPasteClick);
+          console.log('[FLOATING PASTE] Click listener attached');
+        }
+      } else {
+        console.log('[FLOATING PASTE] Waiting for ClipboardOperations module...');
+        setTimeout(initializeFloatingPasteButton, 100);
+      }
+    }
+  }
+  setTimeout(initializeFloatingPasteButton, 100);
+
+  // Listen for clipboard state changes
+  document.addEventListener('clipboardStateChanged', function(event) {
+    console.log('[FLOATING PASTE] Clipboard state changed event received:', event.detail);
+    if (typeof window.updateFloatingPasteButton === 'function') {
+      window.updateFloatingPasteButton();
+    }
+  });
+
+  // Update floating paste button visibility
+  window.updateFloatingPasteButton = function() {
+    const pasteBtn = document.getElementById('floatingPasteBtn');
+    
+    if (!pasteBtn) {
+      console.warn('[FLOATING PASTE] Button not found in DOM');
+      return;
+    }
+    
+    // Check if clipboard has data (via ClipboardOperations or localStorage)
+    let hasClipboard = false;
+    
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.hasClipboard === 'function') {
+      hasClipboard = window.ClipboardOperations.hasClipboard();
+      console.log('[FLOATING PASTE] Checked via ClipboardOperations:', hasClipboard);
+    } else {
+      // Fallback: check localStorage directly
+      try {
+        const clipboardData = localStorage.getItem('p2_clipboard');
+        hasClipboard = !!clipboardData;
+        console.log('[FLOATING PASTE] Checked via localStorage:', hasClipboard, clipboardData);
+      } catch (e) {
+        console.error('[FLOATING PASTE] Error checking clipboard:', e);
+      }
+    }
+    
+    // Show/hide paste button
+    if (hasClipboard) {
+      pasteBtn.classList.remove('hidden');
+      console.log('[FLOATING PASTE] Button shown');
+    } else {
+      pasteBtn.classList.add('hidden');
+      console.log('[FLOATING PASTE] Button hidden');
+    }
+  };
+
+  // Floating paste button click handler
+  window.floatingPasteClick = function() {
+    console.log('[FLOATING PASTE] Button clicked');
+    
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.triggerPaste === 'function') {
+      console.log('[FLOATING PASTE] Triggering paste via ClipboardOperations');
+      window.ClipboardOperations.triggerPaste();
+    } else {
+      console.error('[FLOATING PASTE] ClipboardOperations not available');
+    }
+  };
+
+  // Function to open create folder modal
+  window.openCreateFolderModal = function() {
+    contextMenu.style.display = 'none';
+    createFolderModal.show();
+  };
+
+  // Function to create new note
+  window.createNewNote = function() {
+    contextMenu.style.display = 'none';
+    window.location.href = '/new_note';
+  };
+
+  // Function to create new file of specified type
+  window.createNewFile = function(fileType) {
+    contextMenu.style.display = 'none';
+    window.location.href = `/p2/files/new/${fileType}`;
+  };
+
+  // Function to create new board
+  window.createNewBoard = function() {
+    contextMenu.style.display = 'none';
+    // Create a form to submit POST request to /boards/new
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/boards/new';
+    
+    // Add required fields
+    const titleField = document.createElement('input');
+    titleField.type = 'hidden';
+    titleField.name = 'title';
+    titleField.value = 'Untitled Board';
+    form.appendChild(titleField);
+    
+    const contentField = document.createElement('input');
+    contentField.type = 'hidden';
+    contentField.name = 'content';
+    contentField.value = '{}';
+    form.appendChild(contentField);
+    
+    const folderField = document.createElement('input');
+    folderField.type = 'hidden';
+    folderField.name = 'folder_id';
+    folderField.value = '{{ folder.id }}';
+    form.appendChild(folderField);
+    
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  // Function to create new MioBook
+  window.createNewCombined = function() {
+    contextMenu.style.display = 'none';
+    window.location.href = '/combined/new';
+  };
+
+  // Function to create new MioInfinite
+  window.createNewInfiniteBoard = function() {
+    contextMenu.style.display = 'none';
+    window.location.href = '/infinite_boards/new';
+  };
+
+  // Reset form when modal is hidden
+  document.getElementById('createFolderModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('createFolderForm').reset();
+  });
+
+  // Scroll to section function for navigation sidebar
+  window.scrollToSection = function(sectionId) {
+    // Try to find section by ID first (for new file type sections)
+    let section = document.getElementById(sectionId);
+    
+    // Fallback to class-based selector for legacy sections
+    if (!section) {
+      section = document.querySelector(`.${sectionId}-section`);
+    }
+    
+    if (section) {
+      // Remove active class from all nav pills
+      document.querySelectorAll('.nav-pill').forEach(pill => {
+        pill.classList.remove('active');
+      });
+
+      // Add active class to clicked nav pill
+      const activePill = document.querySelector(`.nav-pill[onclick*="scrollToSection('${sectionId}')"]`);
+      if (activePill) {
+        activePill.classList.add('active');
+      }
+
+      // Smooth scroll to section
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Scroll spy functionality to highlight current section
+  function updateActiveSection() {
+    const sections = ['folders', 'notes', 'boards', 'combined', 'infinite-whiteboards', 'graph-workspaces', 'markdown', 'code', 'todo', 'diagram', 'table', 'pdf', 'blocks'];
+    const scrollPosition = window.scrollY + 100; // Offset for navbar
+
+    // Remove active class from all nav pills
+    document.querySelectorAll('.nav-pill').forEach(pill => {
+      pill.classList.remove('active');
+    });
+
+    // Find which section is currently in view
+    for (const sectionId of sections) {
+      // Try ID first, then class-based selector
+      let section = document.getElementById(sectionId);
+      if (!section) {
+        section = document.querySelector(`.${sectionId}-section`);
+      }
+      
+      if (section) {
+        const sectionTop = section.offsetTop;
+        const sectionBottom = sectionTop + section.offsetHeight;
+
+        if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+          const activePill = document.querySelector(`.nav-pill[onclick*="scrollToSection('${sectionId}')"]`);
+          if (activePill) {
+            activePill.classList.add('active');
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Add scroll event listener for scroll spy
+  window.addEventListener('scroll', updateActiveSection);
+
+  // Initialize active section on page load
+  updateActiveSection();
+
+  // Navigation sidebar auto-hide functionality
+  const sectionNav = document.querySelector('.section-nav');
+  let scrollTimer = null;
+  let isScrolling = false;
+  let edgeHoverTimer = null; // Timer to keep sidebar visible for minimum duration
+  const EDGE_HOVER_ZONE = 30; // pixels from right edge to trigger sidebar
+  const MIN_VISIBLE_TIME = 2000; // minimum time (ms) to keep sidebar visible after triggering
+
+  // Show/hide on scroll
+  function handleScroll() {
+    if (!isScrolling) {
+      isScrolling = true;
+      sectionNav.classList.add('scrolling-hidden');
+    }
+
+    // Clear the existing timer
+    clearTimeout(scrollTimer);
+
+    // Set a new timer to hide the sidebar after scrolling stops
+    scrollTimer = setTimeout(() => {
+      isScrolling = false;
+      sectionNav.classList.remove('scrolling-hidden');
+      
+      // If not hovering, apply the slide-out effect
+      if (!sectionNav.matches(':hover')) {
+        sectionNav.classList.add('hidden');
+      }
+    }, 1000); // Hide for 1 second after scrolling stops
+  }
+
+  // Add scroll event listener
+  window.addEventListener('scroll', handleScroll);
+
+  // Handle hover effects on the sidebar itself
+  sectionNav.addEventListener('mouseenter', () => {
+    sectionNav.classList.remove('hidden');
+    // Clear any pending hide timer when user hovers directly on sidebar
+    clearTimeout(edgeHoverTimer);
+  });
+
+  sectionNav.addEventListener('mouseleave', () => {
+    if (!isScrolling) {
+      sectionNav.classList.add('hidden');
+    }
+  });
+
+  // Edge detection - show sidebar when mouse approaches right edge
+  document.addEventListener('mousemove', (e) => {
+    const distanceFromRightEdge = window.innerWidth - e.clientX;
+    
+    // If cursor is within the edge zone on the right side
+    if (distanceFromRightEdge <= EDGE_HOVER_ZONE && !isScrolling) {
+      sectionNav.classList.remove('hidden');
+      sectionNav.classList.remove('scrolling-hidden');
+      
+      // Clear any existing timer
+      clearTimeout(edgeHoverTimer);
+      
+      // Set a new timer to keep visible for minimum time
+      edgeHoverTimer = setTimeout(() => {
+        // Only hide if not hovering sidebar and not in edge zone anymore
+        const currentDistance = window.innerWidth - event.clientX;
+        if (!sectionNav.matches(':hover') && currentDistance > EDGE_HOVER_ZONE && !isScrolling) {
+          sectionNav.classList.add('hidden');
+        }
+      }, MIN_VISIBLE_TIME);
+    } else if (!sectionNav.matches(':hover') && !isScrolling && !edgeHoverTimer) {
+      // Hide if mouse moves away and not hovering sidebar directly and no active timer
+      sectionNav.classList.add('hidden');
+    }
+  });
+
+  // Initialize with hidden state
+  setTimeout(() => {
+    sectionNav.classList.add('hidden');
+  }, 2000); // Show for 2 seconds initially, then hide
+
+  // Scroll to top function
+  window.scrollToTop = function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Keyboard shortcuts for navigation and clipboard operations
+  document.addEventListener('keydown', function(e) {
+    // Only trigger if not typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') {
+      return;
+    }
+
+    // Ctrl+C to copy selected items (unified batch selection)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      e.preventDefault();
+      
+      // Use batch selection (single items are now added to batch)
+      if (window.batchSelected && window.batchSelected.length > 0) {
+        const itemCount = window.batchSelected.length; // Capture count BEFORE clicking button
+        const btnBatchCopy = document.getElementById('btn-batch-copy');
+        if (btnBatchCopy && !btnBatchCopy.disabled) {
+          btnBatchCopy.click();
+          // Show notification AFTER button click (which clears selection)
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Copied ${itemCount} item${itemCount > 1 ? 's' : ''} to clipboard`);
+          }
+        }
+      }
+      return;
+    }
+
+    // Ctrl+X to cut selected items (unified batch selection)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+      e.preventDefault();
+      
+      // Use batch selection (single items are now added to batch)
+      if (window.batchSelected && window.batchSelected.length > 0) {
+        const itemCount = window.batchSelected.length; // Capture count BEFORE clicking button
+        const btnBatchCut = document.getElementById('btn-batch-cut');
+        if (btnBatchCut && !btnBatchCut.disabled) {
+          btnBatchCut.click();
+          // Show notification AFTER button click (which clears selection)
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Cut ${itemCount} item${itemCount > 1 ? 's' : ''} to clipboard`);
+          }
+        }
+      }
+      return;
+    }
+
+    // Ctrl+V to paste from clipboard (unified batch paste)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      e.preventDefault();
+      
+      // Read clipboard directly from sessionStorage
+      let clipboard = null;
+      try {
+        const stored = sessionStorage.getItem('p2_clipboard');
+        if (stored) {
+          clipboard = JSON.parse(stored);
+        }
+      } catch (error) {
+        console.error('Failed to read clipboard:', error);
+      }
+      
+      if (clipboard) {
+        // Always use batch paste button (works for both single and multi items)
+        const btnBatchPaste = document.getElementById('btn-batch-paste');
+        if (btnBatchPaste && !btnBatchPaste.disabled) {
+          btnBatchPaste.click();
+        } else {
+          console.warn('Batch paste button not available or disabled');
+        }
+      } else if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Clipboard is empty');
+      }
+      return;
+    }
+
+    // Ctrl+A to select all items in current folder
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.preventDefault();
+      
+      // Get all visible item cards
+      const allCards = document.querySelectorAll('.item-card');
+      if (allCards.length > 0) {
+        // Initialize batch selection if not already
+        if (!window.batchSelected) {
+          window.batchSelected = [];
+        }
+        
+        // Clear current selection
+        window.batchSelected = [];
+        
+        // Select all cards with Ctrl+click simulation
+        allCards.forEach(card => {
+          const cardBody = card.querySelector('.item-body');
+          if (cardBody) {
+            // Create a synthetic event with ctrlKey set
+            const syntheticEvent = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              ctrlKey: true,
+              metaKey: false
+            });
+            cardBody.dispatchEvent(syntheticEvent);
+          }
+        });
+        
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle(`Selected ${allCards.length} items`);
+        }
+      }
+      return;
+    }
+
+    // Delete key to delete selected items (unified batch selection)
+    if (e.key === 'Delete') {
+      e.preventDefault();
+      
+      // Use batch selection (single items are now added to batch)
+      if (window.batchSelected && window.batchSelected.length > 0) {
+        const btnBatchDelete = document.getElementById('btn-batch-delete');
+        if (btnBatchDelete && !btnBatchDelete.disabled) {
+          btnBatchDelete.click();
+        }
+      }
+      return;
+    }
+
+    // Escape key to clear selection
+    switch(e.key) {
+      case 'Escape':
+        e.preventDefault();
+        // Clear batch selection (single items are now added to batch)
+        if (window.batchSelected && window.batchSelected.length > 0) {
+          const btnClearBatch = document.getElementById('btn-clear-batch');
+          if (btnClearBatch) {
+            btnClearBatch.click();
+          }
+        }
+        break;
+      case '1':
+        e.preventDefault();
+        scrollToSection('folders');
+        break;
+      case '2':
+        e.preventDefault();
+        scrollToSection('notes');
+        break;
+      case '3':
+        e.preventDefault();
+        scrollToSection('boards');
+        break;
+      case '4':
+        e.preventDefault();
+        scrollToSection('combined');
+        break;
+      case 't':
+      case 'T':
+        e.preventDefault();
+        scrollToTop();
+        break;
+    }
+  });
+});
+</script>
+
+<!-- Tutorial initialization moved to partial: p2/folder_view_tutorial_partial.html -->
+
+<!-- Folder Browser Sidebar Integration Script -->
+<script>
+  // Sync main content margin with sidebar state
+  function syncMainContentMargin() {
+    const sidebar = document.getElementById('folderBrowserSidebar');
+    const mainContent = document.getElementById('mainContent');
+    
+    if (sidebar && mainContent) {
+      if (sidebar.classList.contains('collapsed')) {
+        mainContent.classList.add('sidebar-collapsed');
+      } else {
+        mainContent.classList.remove('sidebar-collapsed');
+      }
+    }
+  }
+  
+  // Override toggleFolderBrowser to sync main content
+  const originalToggle = window.toggleFolderBrowser;
+  window.toggleFolderBrowser = function() {
+    if (originalToggle) originalToggle();
+    setTimeout(syncMainContentMargin, 50);
+  };
+  
+  // Sync on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(syncMainContentMargin, 100);
+  });
+</script>
+
+<!-- Calculate Folder Size JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle calculate size button clicks
+  document.querySelectorAll('.calculate-size-btn').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      const folderId = this.dataset.folderId;
+      const sizeDisplay = document.querySelector(`.size-display-${folderId}`);
+      
+      // Disable button and show loading state
+      this.disabled = true;
+      this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Calculating...';
+      
+      // Fetch folder size from API
+      fetch(`{{ url_for('folders.calculate_folder_size', folder_id=0) }}`.replace('/0/', `/${folderId}/`))
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Hide button and show size
+            this.style.display = 'none';
+            sizeDisplay.style.display = 'inline-block';
+            sizeDisplay.innerHTML = `
+              <div class="text-muted small">
+                <strong>${data.formatted_size}</strong>
+                <div class="mt-1" style="font-size: 0.75rem;">
+                  ${data.counts.notes} note${data.counts.notes !== 1 ? 's' : ''}, 
+                  ${data.counts.boards} board${data.counts.boards !== 1 ? 's' : ''}, 
+                  ${data.counts.subfolders} folder${data.counts.subfolders !== 1 ? 's' : ''}
+                </div>
+              </div>
+            `;
+          } else {
+            // Show error and re-enable button
+            this.disabled = false;
+            this.innerHTML = '<i class="material-icons" style="font-size: 14px; vertical-align: middle;">calculate</i> Calculate';
+            alert('Failed to calculate folder size: ' + (data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error calculating folder size:', error);
+          this.disabled = false;
+          this.innerHTML = '<i class="material-icons" style="font-size: 14px; vertical-align: middle;">calculate</i> Calculate';
+          alert('Error calculating folder size. Please try again.');
+        });
+    });
+  });
+  
+  // Helper function to format bytes (for client-side use)
+  window.formatBytes = function(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  };
+  
+  // Check for save success query parameter and show telemetry notification
+  const urlParams = new URLSearchParams(window.location.search);
+  const savedType = urlParams.get('saved');
+  const savedSize = urlParams.get('size');
+  if (savedType && window.TelemetryPanel) {
+    // Show success message in telemetry panel with file size
+    const typeName = savedType.charAt(0).toUpperCase() + savedType.slice(1);
+    const message = savedSize ? `${typeName} saved (${savedSize})` : `${typeName} saved successfully`;
+    window.TelemetryPanel.setIdle(message);
+    // Clean up URL without reloading
+    const newUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, newUrl);
+  }
+  
+  // Scroll position restoration: restore scroll to previously viewed section
+  const savedScrollSection = sessionStorage.getItem('folder_view_scroll_section');
+  if (savedScrollSection) {
+    // Small delay to ensure DOM is fully rendered
+    setTimeout(() => {
+      const section = document.getElementById(savedScrollSection);
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Also activate the corresponding nav pill
+        document.querySelectorAll('.nav-pill').forEach(pill => pill.classList.remove('active'));
+        const navPill = document.querySelector(`.nav-pill[onclick*="'${savedScrollSection}'"]`);
+        if (navPill) navPill.classList.add('active');
+      }
+      sessionStorage.removeItem('folder_view_scroll_section');
+    }, 100);
+  }
+  
+  // Save scroll position when clicking on items to edit/view
+  document.querySelectorAll('.item-card, .item-row').forEach(item => {
+    const links = item.querySelectorAll('a.item-link, a[href*="edit"], a[href*="view"]');
+    links.forEach(link => {
+      link.addEventListener('click', function() {
+        // Find which section this item is in
+        const section = item.closest('.section-container');
+        if (section && section.id) {
+          sessionStorage.setItem('folder_view_scroll_section', section.id);
+        }
+      });
+    });
+  });
+  
+  // HTMX afterSwap event handler - backup listener reattachment
+  // (Primary reattachment is done by backend script, this is fallback)
+  document.body.addEventListener('htmx:afterSwap', function(event) {
+    const targetId = event.detail.target.id;
+    if (targetId && targetId.endsWith('-grid')) {
+      console.log(`[HTMX] afterSwap fired for ${targetId}, checking listeners...`);
+      
+      // Give backend script time to run first
+      setTimeout(() => {
+        const newCards = event.detail.target.querySelectorAll('.item-card');
+        let needsReattach = false;
+        
+        // Check if listeners are already attached
+        newCards.forEach(card => {
+          const itemBody = card.querySelector('.item-body');
+          if (itemBody && !itemBody.hasAttribute('data-listeners-attached')) {
+            needsReattach = true;
+          }
+        });
+        
+        if (needsReattach && typeof window.attachCardClickListeners === 'function') {
+          console.log(`[HTMX] Backup reattachment needed for ${newCards.length} cards`);
+          newCards.forEach(card => {
+            const itemBody = card.querySelector('.item-body');
+            if (itemBody) {
+              window.attachCardClickListeners(itemBody);
+            }
+          });
+        }
+      }, 200);
+    }
+  });
+});
+</script>
+
+<!-- Include Clipboard Operations JavaScript -->
+<script src="{{ url_for('p2_bp.static', filename='js/clipboard_operations.js') }}"></script>
+
+<!-- Include Folder Operations JavaScript -->
+<script src="{{ url_for('p2_bp.static', filename='js/folder_operations.js') }}"></script>
+
+<!-- Batch Send To Button Handler -->
+<script>
+(function() {
+  'use strict';
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    const btnBatchSend = document.getElementById('btn-batch-send');
+    const sendToModal = document.getElementById('sendToModal');
+    const sendToModalDescription = document.getElementById('sendToModalDescription');
+    
+    if (!btnBatchSend || !sendToModal) {
+      console.warn('[BATCH SEND] Required elements not found');
+      return;
+    }
+    
+    btnBatchSend.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('[BATCH SEND] Button clicked');
+      
+      if (!window.batchSelected || window.batchSelected.length === 0) {
+        console.warn('[BATCH SEND] No items selected');
+        return;
+      }
+      
+      console.log('[BATCH SEND] Opening modal with', window.batchSelected.length, 'items');
+      const itemCount = window.batchSelected.length;
+      const modalDescription = `Select a pinned user to send ${itemCount} item${itemCount > 1 ? 's' : ''} to:`;
+      
+      const batchItems = window.batchSelected.map(item => ({
+        type: item.type,
+        id: item.id
+      }));
+
+      if (typeof window.openSendToModalWithItems === 'function') {
+        window.openSendToModalWithItems(batchItems, { mode: 'batch', description: modalDescription });
+        return;
+      }
+
+      // Fallback: configure modal inline if helper is unavailable
+      sendToModal.dataset.batchMode = 'true';
+      sendToModal.dataset.batchItems = JSON.stringify(batchItems);
+      if (sendToModalDescription) {
+        sendToModalDescription.textContent = modalDescription;
+      }
+      if (sendToModal.parentElement !== document.body) {
+        document.body.appendChild(sendToModal);
+      }
+      sendToModal.style.zIndex = '3000';
+      const bs = new bootstrap.Modal(sendToModal);
+      bs.show();
+    });
+    
+    console.log('[BATCH SEND] Handler initialized');
+  });
+})();
+</script>
+
+<!-- Card Click Handlers - Single/Double/Ctrl Click Logic -->
+<script>
+(function() {
+  'use strict';
+  
+  console.log('[CARD CLICK] Initializing card click handlers');
+  
+  // Track click timing for single/double click distinction
+  const clickTimers = new WeakMap();
+  const DOUBLE_CLICK_DELAY = 300; // ms
+  const TOUCH_LONG_PRESS_MS = 450; // ms to trigger mobile action sheet
+  const TOUCH_MOVE_THRESHOLD = 12; // px movement allowed during long press
+  const longPressTimers = new WeakMap();
+  const longPressFired = new WeakMap();
+  let touchActionMenu = null;
+  let touchActionMenuStyleInjected = false;
+
+  function injectTouchMenuStyles() {
+    if (touchActionMenuStyleInjected) return;
+    const style = document.createElement('style');
+    style.textContent = `
+      .touch-action-menu { position: fixed; display: none; background: var(--card, #121516); color: var(--white, #ECFFFF); border: 1px solid var(--accent, #14b8a6); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); padding: 8px; z-index: 3200; width: 190px; }
+      .touch-action-menu.visible { display: flex; flex-direction: column; gap: 6px; }
+      .touch-action-menu button { background: var(--accent, #14b8a6); color: var(--white, #ECFFFF); border: none; border-radius: 10px; padding: 10px 12px; font-weight: 600; text-align: left; }
+      .touch-action-menu button[data-action="select"] { background: var(--card, #121516); color: var(--accent, #14b8a6); border: 1px solid var(--accent, #14b8a6); }
+      .touch-action-menu button:active { transform: scale(0.99); }
+    `;
+    document.head.appendChild(style);
+    touchActionMenuStyleInjected = true;
+  }
+
+  function closeTouchActionMenu() {
+    if (touchActionMenu) {
+      touchActionMenu.classList.remove('visible');
+    }
+  }
+
+  function ensureTouchActionMenu() {
+    if (touchActionMenu) return touchActionMenu;
+    injectTouchMenuStyles();
+    touchActionMenu = document.createElement('div');
+    touchActionMenu.className = 'touch-action-menu';
+    touchActionMenu.innerHTML = `
+      <button type="button" data-action="open">Open</button>
+      <button type="button" data-action="preview">Preview</button>
+      <button type="button" data-action="select">Select for batch</button>
+    `;
+    document.body.appendChild(touchActionMenu);
+    return touchActionMenu;
+  }
+
+  function openTouchActionMenu(card, type, id, coords) {
+    const menu = ensureTouchActionMenu();
+    const maxLeft = window.innerWidth - 210;
+    const maxTop = window.innerHeight - 170;
+    menu.style.left = `${Math.max(8, Math.min(maxLeft, coords.x - 12))}px`;
+    menu.style.top = `${Math.max(8, Math.min(maxTop, coords.y - 12))}px`;
+    menu.classList.add('visible');
+
+    const wire = (action, handler) => {
+      const btn = menu.querySelector(`[data-action="${action}"]`);
+      if (btn) {
+        btn.onclick = () => {
+          handler();
+          closeTouchActionMenu();
+        };
+      }
+    };
+
+    wire('open', () => handleNavigation(card, type, id));
+    wire('preview', () => openPreview(card, type, id));
+    wire('select', () => handleBatchSelection(card, type, id));
+  }
+
+  document.addEventListener('click', function(e) {
+    if (touchActionMenu && touchActionMenu.classList.contains('visible') && !touchActionMenu.contains(e.target)) {
+      closeTouchActionMenu();
+    }
+  });
+
+  document.addEventListener('scroll', closeTouchActionMenu, true);
+  
+  
+  /**
+   * Attach click listeners to a card's item-body element
+   * Handles: single click (preview), double click (navigate), ctrl+click (batch)
+   */
+  window.attachCardClickListeners = function(itemBody) {
+    if (!itemBody) {
+      console.warn('[CARD CLICK] attachCardClickListeners called with null itemBody');
+      return;
+    }
+    
+    // Prevent double-attachment
+    if (itemBody.hasAttribute('data-listeners-attached')) {
+      return;
+    }
+    
+    const card = itemBody.closest('.item-card, .item-row');
+    if (!card) {
+      console.warn('[CARD CLICK] Could not find parent card element');
+      return;
+    }
+    
+    const type = card.dataset.type;
+    const id = card.dataset.id;
+    
+    if (!type || !id) {
+      console.warn('[CARD CLICK] Card missing data-type or data-id attributes');
+      return;
+    }
+    
+    console.log(`[CARD CLICK] Attaching listeners to ${type} ${id}`);
+
+    setupTouchLongPress(itemBody, card, type, id);
+    
+    // Main click handler
+    itemBody.addEventListener('click', function(e) {
+      // Ignore clicks on buttons, links, and interactive elements
+      if (e.target.closest('button, a, input, select, textarea, .prevent-card-click')) {
+        console.log('[CARD CLICK] Ignoring click on interactive element');
+        return;
+      }
+
+      if (longPressFired.get(itemBody)) {
+        longPressFired.set(itemBody, false);
+        return;
+      }
+      
+      e.stopPropagation();
+      
+      const isCtrlClick = e.ctrlKey || e.metaKey;
+      const isShiftClick = e.shiftKey;
+      
+      console.log(`[CARD CLICK] Click on ${type} ${id} - ctrl: ${isCtrlClick}, shift: ${isShiftClick}`);
+      
+      // Ctrl+click or Shift+click → batch selection mode
+      if (isCtrlClick || isShiftClick) {
+        console.log('[CARD CLICK] Batch selection mode');
+        handleBatchSelection(card, type, id);
+        return;
+      }
+      
+      // Check for double-click
+      if (clickTimers.has(itemBody)) {
+        // Double-click detected
+        console.log('[CARD CLICK] Double-click detected');
+        clearTimeout(clickTimers.get(itemBody));
+        clickTimers.delete(itemBody);
+        handleDoubleClick(card, type, id);
+        return;
+      }
+      
+      // Single click - set timer to distinguish from double-click
+      const timer = setTimeout(() => {
+        clickTimers.delete(itemBody);
+        console.log('[CARD CLICK] Single-click confirmed');
+        handleSingleClick(card, type, id);
+      }, DOUBLE_CLICK_DELAY);
+      
+      clickTimers.set(itemBody, timer);
+    });
+
+    // Right-click opens preview panel (keep existing context menu behavior)
+    itemBody.addEventListener('contextmenu', function(e) {
+      if (e.target.closest('button, a, input, select, textarea, .prevent-card-click')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      console.log(`[CARD CLICK] Right-click: opening preview for ${type} ${id}`);
+      openPreview(card, type, id);
+    });
+    
+    // Mark as attached
+    itemBody.setAttribute('data-listeners-attached', 'true');
+  };
+
+  function setupTouchLongPress(itemBody, card, type, id) {
+    const clearLongPress = () => {
+      const data = longPressTimers.get(itemBody);
+      if (data) {
+        clearTimeout(data.timerId);
+        longPressTimers.delete(itemBody);
+      }
+    };
+
+    itemBody.addEventListener('pointerdown', function(e) {
+      if (e.pointerType !== 'touch') return;
+      if (e.target.closest('button, a, input, select, textarea, .prevent-card-click')) return;
+      clearLongPress();
+      longPressFired.set(itemBody, false);
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const timerId = setTimeout(() => {
+        longPressFired.set(itemBody, true);
+        clickTimers.delete(itemBody);
+        openTouchActionMenu(card, type, id, { x: startX, y: startY });
+      }, TOUCH_LONG_PRESS_MS);
+      longPressTimers.set(itemBody, { timerId, startX, startY });
+    });
+
+    itemBody.addEventListener('pointermove', function(e) {
+      const data = longPressTimers.get(itemBody);
+      if (!data) return;
+      const moved = Math.abs(e.clientX - data.startX) > TOUCH_MOVE_THRESHOLD || Math.abs(e.clientY - data.startY) > TOUCH_MOVE_THRESHOLD;
+      if (moved) {
+        clearLongPress();
+      }
+    });
+
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(evt => {
+      itemBody.addEventListener(evt, function() {
+        clearLongPress();
+      });
+    });
+  }
+  
+  /**
+   * Handle single click - open preview panel
+   */
+  function openPreview(card, type, id) {
+    console.log(`[CARD CLICK] Preview request for ${type} ${id}`);
+    if (typeof window.openPreviewPanel === 'function') {
+      const item = { type: type, id: parseInt(id), card: card };
+      window.openPreviewPanel(item);
+    } else {
+      console.warn('[CARD CLICK] window.openPreviewPanel not found');
+    }
+  }
+
+  // Close any open Bootstrap modals (mirrors Escape behavior expectations)
+  function closeAllModals() {
+    const modals = document.querySelectorAll('.modal.show');
+    modals.forEach(modalEl => {
+      const instance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      instance.hide();
+    });
+  }
+
+  /**
+   * Handle single click - navigate to edit/view page
+   */
+  function handleSingleClick(card, type, id) {
+    console.log(`[CARD CLICK] Single click: navigating to ${type} ${id}`);
+    handleNavigation(card, type, id);
+  }
+  
+  /**
+   * Handle double click - navigate to edit/view page
+   */
+  function handleDoubleClick(card, type, id) {
+    console.log(`[CARD CLICK] Double click: closing modals like Escape`);
+    closeAllModals();
+
+    // Also clear batch selection to mirror Escape key behavior
+    if (window.batchSelected && window.batchSelected.length > 0) {
+      const btnClearBatch = document.getElementById('btn-clear-batch');
+      if (btnClearBatch) {
+        btnClearBatch.click();
+      }
+    }
+  }
+
+  /**
+   * Navigate to edit/view page (formerly double-click behavior)
+   */
+  function handleNavigation(card, type, id) {
+    console.log(`[CARD CLICK] Navigating to ${type} ${id}`);
+
+    // Build URL based on type
+    let url = '';
+    const fileType = card.dataset.fileType;
+    const effectiveType = (type === 'file' && fileType) ? fileType : type;
+    
+    if (effectiveType === 'folder') {
+      url = `/folders/${id}`;
+    } else if (effectiveType === 'note') {
+      // Legacy MioNote editor (file_edit_proprietary_note.html with Summernote)
+      url = `/edit_note/${id}`;
+    } else if (effectiveType === 'board' || effectiveType === 'whiteboard') {
+      url = `/boards/edit/${id}`;
+    } else if (effectiveType === 'book' || effectiveType === 'combined') {
+      url = `/combined/edit/${id}`;
+    } else if (effectiveType === 'proprietary_infinite_whiteboard') {
+      url = `/infinite_boards/edit/${id}`;
+    } else if (effectiveType === 'proprietary_graph') {
+      url = `/graph/${id}`;
+    } else if (['markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'pdf'].includes(effectiveType)) {
+      url = `/p2/files/${id}/edit`;
+    } else {
+      // Generic file edit route
+      url = `/p2/files/${id}/edit`;
+    }
+    
+    console.log(`[CARD CLICK] Navigating to: ${url}`);
+    
+    // Save scroll position
+    const section = card.closest('.section-container');
+    if (section && section.id) {
+      sessionStorage.setItem('folder_view_scroll_section', section.id);
+    }
+    
+    // Navigate
+    window.location.href = url;
+  }
+  
+  /**
+   * Handle Ctrl+click or Shift+click - batch selection
+   */
+  function handleBatchSelection(card, type, id) {
+    console.log(`[CARD CLICK] Batch selection for ${type} ${id}`);
+    
+    // Ensure batch selection array exists
+    if (!window.batchSelected) {
+      window.batchSelected = [];
+    }
+    
+    // CRITICAL: Use fileType if available (for infinite whiteboards, graphs, etc.)
+    const fileType = card.dataset.fileType;
+    const effectiveType = (type === 'file' && fileType) ? fileType : type;
+    console.log(`[CARD CLICK] Effective type for clipboard: ${effectiveType}`);
+    
+    // Check if already in batch
+    const existingIndex = window.batchSelected.findIndex(
+      item => item.type === effectiveType && item.id === parseInt(id)
+    );
+    
+    if (existingIndex >= 0) {
+      // Remove from batch
+      console.log(`[CARD CLICK] Removing from batch: ${effectiveType} ${id}`);
+      window.batchSelected.splice(existingIndex, 1);
+      card.classList.remove('batch-selected-item');
+      
+      // Remove checkbox if present
+      const checkbox = card.querySelector('.batch-checkbox');
+      if (checkbox) checkbox.remove();
+    } else {
+      // Add to batch (use effectiveType so clipboard has specific file type)
+      console.log(`[CARD CLICK] Adding to batch: ${effectiveType} ${id}`);
+      window.batchSelected.push({ type: effectiveType, id: parseInt(id), card });
+      card.classList.add('batch-selected-item');
+      
+      // Add visual checkbox
+      if (!card.querySelector('.batch-checkbox')) {
+        const checkbox = document.createElement('div');
+        checkbox.className = 'batch-checkbox';
+        checkbox.innerHTML = '<i class="material-icons">check_circle</i>';
+        card.insertAdjacentElement('afterbegin', checkbox);
+      }
+    }
+    
+    // Update batch operations bar (use ClipboardOperations module if available)
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.updateBatchUI === 'function') {
+      window.ClipboardOperations.updateBatchUI();
+    } else {
+      updateBatchOperationsBar();
+    }
+  }
+  
+  /**
+   * Update batch operations bar visibility and count (fallback for when ClipboardOperations not loaded)
+   */
+  function updateBatchOperationsBar() {
+    const batchOps = document.getElementById('batch-operations');
+    const batchCountElem = document.getElementById('batch-count');
+    
+    const count = window.batchSelected ? window.batchSelected.length : 0;
+    
+    if (batchOps && batchCountElem) {
+      if (count > 0) {
+        batchOps.style.display = 'flex !important';
+        batchOps.style.removeProperty('display');
+        batchCountElem.textContent = count;
+        console.log(`[CARD CLICK] Batch bar updated: ${count} items`);
+      } else {
+        batchOps.style.display = 'none !important';
+        batchCountElem.textContent = '0';
+        console.log('[CARD CLICK] Batch bar hidden');
+      }
+    }
+  }
+  
+  /**
+   * Auto-attach to all existing cards on page load
+   */
+  function attachToAllCards() {
+    const itemBodies = document.querySelectorAll('.item-card .item-body, .item-row .item-body');
+    console.log(`[CARD CLICK] Auto-attaching to ${itemBodies.length} cards`);
+    itemBodies.forEach(itemBody => {
+      window.attachCardClickListeners(itemBody);
+    });
+  }
+  
+  // Attach on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachToAllCards);
+  } else {
+    attachToAllCards();
+  }
+  
+  console.log('[CARD CLICK] Card click handler system initialized');
+})();
+
+// Listen for public status changes from preview panel
+document.addEventListener('previewItemPublicChanged', function(event) {
+  console.log('[FOLDER VIEW] Public changed event received:', event.detail);
+  
+  const { type, id, isPublic } = event.detail;
+  
+  // Build selector to find the card in the grid
+  let selector;
+  if (type === 'note' || type === 'board' || type === 'folder') {
+    selector = `[data-type="${type}"][data-id="${id}"]`;
+  } else if (type === 'file') {
+    selector = `[data-type="file"][data-id="${id}"]`;
+  } else {
+    selector = `[data-type="${type}"][data-id="${id}"], [data-type="file"][data-id="${id}"]`;
+  }
+  
+  console.log('[FOLDER VIEW] Looking for card with selector:', selector);
+  // Try specific selector first, then fallback to ID only
+  const card = document.querySelector(selector) || document.querySelector(`[data-id="${id}"]`);
+  
+  if (!card) {
+    console.warn('[FOLDER VIEW] Card not found in grid');
+    return;
+  }
+  
+  console.log('[FOLDER VIEW] Found card, updating public badge...');
+  
+  // Update the card's data-is-public attribute
+  card.dataset.isPublic = isPublic ? '1' : '0';
+  
+  // Find or create the badge container
+  let badgeContainer = card.querySelector('.badge-container');
+  if (!badgeContainer) {
+    badgeContainer = document.createElement('div');
+    badgeContainer.className = 'badge-container';
+    card.insertAdjacentElement('afterbegin', badgeContainer);
+  }
+  
+  // Update badge visibility
+  if (isPublic) {
+    // Add public badge if it doesn't exist
+    if (!badgeContainer.querySelector('.public-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'public-badge';
+      badge.innerHTML = '<i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span>';
+      // Prepend to ensure it appears before type badge
+      badgeContainer.prepend(badge);
+      console.log('[FOLDER VIEW] Added public badge to card');
+    }
+  } else {
+    // Remove public badge if it exists
+    const badge = badgeContainer.querySelector('.public-badge');
+    if (badge) {
+      badge.remove();
+      console.log('[FOLDER VIEW] Removed public badge from card');
+    }
+  }
+  
+  console.log('[FOLDER VIEW] ✓ Card updated successfully');
+});
+
+// Listen for pin status changes from preview panel
+document.addEventListener('previewItemPinChanged', function(event) {
+  console.log('[FOLDER VIEW] Pin changed event received:', event.detail);
+  
+  const { type, id, isPinned } = event.detail;
+  
+  // Build selector to find the card in the grid
+  let selector;
+  if (type === 'note' || type === 'board' || type === 'folder') {
+    selector = `[data-type="${type}"][data-id="${id}"]`;
+  } else if (type === 'file') {
+    selector = `[data-type="file"][data-id="${id}"]`;
+  } else {
+    selector = `[data-type="${type}"][data-id="${id}"], [data-type="file"][data-id="${id}"]`;
+  }
+  
+  console.log('[FOLDER VIEW] Looking for card with selector:', selector);
+  // Try specific selector first, then fallback to ID only
+  const card = document.querySelector(selector) || document.querySelector(`[data-id="${id}"]`);
+  
+  if (!card) {
+    console.warn('[FOLDER VIEW] Card not found in grid');
+    return;
+  }
+  
+  console.log('[FOLDER VIEW] Found card, updating pin badge...');
+  
+  // Update the card's data-is-pinned attribute
+  card.dataset.isPinned = isPinned ? '1' : '0';
+  
+  // Find or create the badge container
+  let badgeContainer = card.querySelector('.badge-container');
+  if (!badgeContainer) {
+    badgeContainer = document.createElement('div');
+    badgeContainer.className = 'badge-container';
+    card.insertAdjacentElement('afterbegin', badgeContainer);
+  }
+  
+  // Update badge visibility
+  if (isPinned) {
+    // Add pin badge if it doesn't exist
+    if (!badgeContainer.querySelector('.pin-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'pin-badge';
+      badge.innerHTML = '<i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span>';
+      // Prepend to ensure it appears before type badge
+      badgeContainer.prepend(badge);
+      console.log('[FOLDER VIEW] Added pin badge to card');
+    }
+  } else {
+    // Remove pin badge if it exists
+    const badge = badgeContainer.querySelector('.pin-badge');
+    if (badge) {
+      badge.remove();
+      console.log('[FOLDER VIEW] Removed pin badge from card');
+    }
+  }
+  
+  console.log('[FOLDER VIEW] ✓ Card updated successfully');
+});
+</script>
+
+<!-- Include Preview Panel -->
+{% include 'p2/folder_view_preview_panel_partial.html' %}
+
+<!-- Include Floating Action Button (FAB) -->
+{% include 'p2/folder_view_fab.html' %}
+
+</body>
+</html>

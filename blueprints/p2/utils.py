@@ -375,7 +375,7 @@ def calculate_copy_size_for_item(item_type, original, recipient_id):
     def content_size_for_text(text):
         return len(text.encode('utf-8')) if text else 0
 
-    if item_type == 'note':
+    if item_type == 'proprietary_note':
         html = getattr(original, 'content_html', None)
         if html is None:
             html = getattr(original, 'content', None)
@@ -390,7 +390,7 @@ def calculate_copy_size_for_item(item_type, original, recipient_id):
                 collect_images_from_content(desc, images)
         elif getattr(original, 'description', None):
             collect_images_from_content(original.description or '', images)
-    elif item_type == 'board':
+    elif item_type == 'proprietary_whiteboard':
         # Boards use content_json
         total += len(str(original.content_json or '').encode('utf-8'))
         # Board content_json doesn't contain HTML/images usually

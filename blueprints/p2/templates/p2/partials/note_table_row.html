@@ -1,5 +1,5 @@
 <!-- Note Table Row Partial -->
-<tr class="item-row" data-type="note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" tabindex="0">
+<tr class="item-row" data-type="proprietary_note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" tabindex="0">
   <td>
     <i class="material-icons" style="color: var(--accent);">description</i>
   </td>

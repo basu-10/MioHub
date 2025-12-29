@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MioChat v2</title>
 
   <!-- Tailwind (CDN as currently used in project) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Material Icons -->
+  <!-- Theme + fonts + icons -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
   <!-- Markdown + code highlighting -->
@@ -16,176 +19,911 @@
 
   <style>
     :root {
-      --bg: #0a0a0b;
-      --card: #121516;
-      --muted: #9aa8ad;
-      --accent: #14b8a6;
-      --accent-strong: #0d9488;
-      --white: #ecffff;
-      --radius: 12px;
+      --radius: 14px;
+      --icon-panel: 60px;
       --sidebar: 280px;
-      --memory: 320px;
+      --memory: 340px;
+      --topbar-height: 72px;
+      --page-max: 1440px;
     }
 
-    body { background: var(--bg); color: var(--white); min-height: 100vh; }
-    .glass { background: rgba(18,21,22,0.9); border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(8px); }
-    .bubble-user { background: linear-gradient(135deg, var(--accent), var(--accent-strong)); }
-    .bubble-ai { background: linear-gradient(180deg, rgba(18,21,22,0.95), rgba(12,14,15,0.95)); border: 1px solid rgba(255,255,255,0.05); }
-    .sidebar-open { transform: translateX(0); }
-    .sidebar-closed { transform: translateX(calc(-1 * var(--sidebar))); }
-    .memory-open { transform: translateX(0); }
-    .memory-closed { transform: translateX(var(--memory)); }
-    .scroll-slim::-webkit-scrollbar { width: 8px; }
-    .scroll-slim::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(20,184,166,0.6), rgba(20,184,166,0.4)); border-radius: 4px; }
-    
-    /* Modal styles */
-    .modal { 
-      padding: 1rem;
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--white);
+      background: var(--graphite, #0b0e13);
+      background-image:
+        radial-gradient(circle at 18% 16%, rgba(20, 184, 166, 0.12) 0%, rgba(20, 184, 166, 0.04) 30%, transparent 55%),
+        radial-gradient(circle at 80% 74%, rgba(179, 139, 44, 0.12) 0%, rgba(179, 139, 44, 0.05) 32%, transparent 60%),
+        radial-gradient(circle at 60% 40%, rgba(15, 23, 42, 0.22) 0%, transparent 60%),
+        linear-gradient(135deg, var(--slate-900, #0f172a) 0%, var(--slate-800, #1e293b) 45%, var(--slate-700, #273449) 70%, var(--card, #121516) 100%);
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      padding-top: 72px;
+      overflow-x: hidden;
+      transition: padding-top 0.4s ease;
     }
-    .modal-box { 
+
+    body:not(.hero-visible) {
+      padding-top: 0;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      background: rgba(10, 10, 11, 0.85);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--white);
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      font-size: 18px;
+    }
+
+    .brand span { color: var(--accent); }
+
+    .product-dropdown {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: background 0.2s ease;
+    }
+
+    .product-dropdown:hover { background: rgba(255, 255, 255, 0.05); }
+
+    .product-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--white);
+    }
+
+    .dropdown-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+
+    .product-dropdown.open .dropdown-icon { transform: rotate(180deg); }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 200px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(12, 15, 19, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      padding: 8px;
+      display: none;
+      z-index: 101;
+    }
+
+    .dropdown-menu.show { display: block; }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--white);
+      text-decoration: none;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(20, 184, 166, 0.12);
+      color: var(--accent);
+    }
+
+    .top-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-primary, rgba(255,255,255,0.08));
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--white);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(20, 184, 166, 0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 8px 22px rgba(20, 184, 166, 0.22);
+    }
+
+    .btn-solid {
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #0a0a0b;
+      border: 1px solid var(--accent);
+      font-weight: 700;
+      box-shadow: 0 10px 30px rgba(20, 184, 166, 0.28);
+    }
+
+    .btn-solid:hover { background: linear-gradient(135deg, var(--accent-strong), var(--accent)); }
+
+    .hero-shell {
+      max-width: var(--page-max);
+      margin: 0 auto;
+      padding: 24px 26px 28px;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.68), rgba(12, 15, 19, 0.92));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45), 0 0 70px rgba(20, 184, 166, 0.18);
+      border-radius: 24px;
+      padding: 26px 28px;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 30%, rgba(20, 184, 166, 0.16), transparent 40%),
+                  radial-gradient(circle at 78% 20%, rgba(179, 139, 44, 0.14), transparent 48%);
+      pointer-events: none;
+    }
+
+    .hero-copy h1 {
+      margin: 10px 0 8px;
+      font-size: 40px;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--white) 0%, var(--accent) 60%, var(--ochre) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-copy p { color: var(--muted); margin: 0 0 12px; max-width: 680px; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(179, 139, 44, 0.6);
+      background: linear-gradient(120deg, rgba(20, 184, 166, 0.18), rgba(179, 139, 44, 0.16));
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 0.3px;
+    }
+
+    .hero-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(20, 184, 166, 0.16);
+      border: 1px solid rgba(20, 184, 166, 0.36);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+    }
+
+    .stats-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      display: grid;
+      gap: 12px;
+      height: fit-content;
+    }
+
+    .stat-row { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; }
+
+    .stat-value { color: var(--white); font-weight: 700; letter-spacing: -0.2px; }
+
+    .workspace-shell {
+      max-width: calc(var(--page-max) + var(--sidebar) + var(--memory));
+      margin: 0 auto;
+      padding: 6px 24px 32px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - var(--topbar-height));
+      gap: 12px;
+    }
+
+    #icon-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--icon-panel);
+      height: 100vh;
+      padding-top: 72px;
+      background: rgba(10, 10, 11, 0.95);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      z-index: 95;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 88px 8px 16px;
+    }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(20, 184, 166, 0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      position: fixed;
+      top: 88px;
+      left: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      box-shadow: 0 8px 24px rgba(20, 184, 166, 0.35);
+      align-items: center;
+      justify-content: center;
+      z-index: 95;
+      cursor: pointer;
+      border: none;
+      color: #0a0a0b;
+    }
+
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: var(--icon-panel);
+      height: 100vh;
+      padding-top: 72px;
+      width: var(--sidebar);
+      background: rgba(18, 21, 22, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-left: none;
+      border-radius: 0 16px 16px 0;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(10px);
+      transition: transform 0.3s ease;
+      z-index: 91;
+    }
+
+    #memory-panel {
+      position: fixed;
+      top: var(--topbar-height);
+      right: 0;
+      height: calc(100vh - var(--topbar-height));
+      width: min(var(--memory), 100vw);
+      background: rgba(18, 21, 22, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-right: none;
+      border-radius: 16px 0 0 16px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(10px);
+      transition: transform 0.32s ease, opacity 0.24s ease;
+      display: flex;
+      flex-direction: column;
+      padding-top: 0;
+      pointer-events: auto;
+    }
+
+    .sidebar-open { transform: translateX(0); }
+    .sidebar-closed { transform: translateX(calc(-1 * var(--sidebar) - var(--icon-panel))); }
+    .memory-open { transform: translateX(0); opacity: 1; }
+    .memory-closed { transform: translateX(110%); opacity: 0; pointer-events: none; }
+
+    .scroll-slim::-webkit-scrollbar { width: 8px; }
+    .scroll-slim::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(20, 184, 166, 0.6), rgba(20, 184, 166, 0.35));
+      border-radius: 4px;
+    }
+
+    .session-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.02);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .session-card:hover { border-color: rgba(20, 184, 166, 0.45); background: rgba(20, 184, 166, 0.06); }
+    .session-card.active { border-color: rgba(20, 184, 166, 0.65); background: rgba(20, 184, 166, 0.08); }
+
+    .main-column {
+      margin-left: calc(var(--icon-panel) + var(--sidebar));
+      margin-right: 0;
+      padding: 0 12px 32px;
+      transition: margin 0.3s ease;
+      flex: 1;
+      display: flex;
+    }
+
+    .main-column.sidebar-collapsed {
+      margin-left: var(--icon-panel);
+    }
+
+    .main-inner { max-width: var(--page-max); margin: 0 auto; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+
+    .panel {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(18, 21, 22, 0.96));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+    }
+
+    .pill-ghost {
+      padding: 6px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chat-shell { padding: 18px; display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: calc(100vh - var(--topbar-height) - 150px); }
+    #chat-box { 
+      background: rgba(255, 255, 255, 0.02); 
+      border: 1px solid rgba(255, 255, 255, 0.05); 
+      border-radius: 14px; 
+      padding: 16px; 
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); 
+      flex: 1;
+      min-height: 280px;
+      max-height: none;
+    }
+
+    /* Full-height chat in dismissed hero state */
+    body:not(.hero-visible) .chat-shell {
+      min-height: calc(100vh - 140px);
+    }
+
+    .bubble-user { 
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong)); 
+      color: #0a0a0b; 
+      box-shadow: 0 10px 30px rgba(20, 184, 166, 0.35);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 600px;
+    }
+    
+    .bubble-ai { 
+      background: linear-gradient(180deg, rgba(18,21,22,0.96), rgba(12,14,15,0.92)); 
+      border: 1px solid rgba(255,255,255,0.06); 
+      box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 600px;
+    }
+    
+    /* Style scrollbars for bubbles */
+    .bubble-user::-webkit-scrollbar,
+    .bubble-ai::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    .bubble-user::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 3px;
+    }
+    
+    .bubble-ai::-webkit-scrollbar-thumb {
+      background: rgba(20, 184, 166, 0.4);
+      border-radius: 3px;
+    }
+    
+    .bubble-user::-webkit-scrollbar-track,
+    .bubble-ai::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    /* Ensure content inside bubbles wraps properly */
+    .bubble-user > div,
+    .bubble-ai > div {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    /* Handle code blocks and pre elements inside bubbles */
+    .bubble-ai pre {
+      max-width: 100%;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    
+    .bubble-ai code {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    
+    /* Ensure prose content doesn't overflow */
+    .bubble-ai .prose {
+      max-width: 100%;
+      overflow-wrap: break-word;
+    }
+
+    .input-bar { border-top: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+    .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
+    #user-input { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); color: var(--white); border-radius: 12px; padding: 12px 14px; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .modal { padding: 1rem; }
+    .modal-box {
       width: 90vw;
       max-width: 1200px;
       padding: 1.5rem;
       border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.82), rgba(12, 15, 19, 0.94));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
     }
-    #editMemoryModal .modal-box {
-      width: 90vw;
-      max-width: 1200px;
-      border: none;
+
+    #editMemoryModal h3 { color: #d4af37; border-bottom: 2px solid #d4af37; padding-bottom: 0.5rem; }
+    #editMemoryModal .btn-save { background: linear-gradient(135deg, #d4af37, #b8941f); color: #0a0a0b; font-weight: 700; }
+    #editMemoryModal .btn-save:hover { background: linear-gradient(135deg, #e0c04d, #d4af37); }
+
+    /* Hero section centering */
+    .hero-shell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 50vh;
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
     }
-    #editMemoryModal h3 {
-      color: #d4af37;
-      border-bottom: 2px solid #d4af37;
-      padding-bottom: 0.5rem;
+
+    .hero-shell.dismissed {
+      display: none;
     }
-    #editMemoryModal .btn-save {
-      background: linear-gradient(135deg, #d4af37, #b8941f);
-      color: #0a0a0b;
+
+    /* Scroll indicator */
+    .scroll-indicator {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      z-index: 10;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: rgba(20, 184, 166, 0.12);
+      border: 1px solid rgba(20, 184, 166, 0.3);
+      transition: all 0.3s ease;
+      animation: bounce 2s ease-in-out infinite;
+    }
+
+    .scroll-indicator:hover {
+      background: rgba(20, 184, 166, 0.2);
+      border-color: rgba(20, 184, 166, 0.5);
+      transform: translateX(-50%) translateY(-3px);
+      box-shadow: 0 8px 20px rgba(20, 184, 166, 0.25);
+    }
+
+    .scroll-indicator-text {
+      font-size: 13px;
       font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.3px;
     }
-    #editMemoryModal .btn-save:hover {
-      background: linear-gradient(135deg, #e0c04d, #d4af37);
+
+    .scroll-caret {
+      width: 24px;
+      height: 24px;
+      color: var(--accent);
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-8px); }
+    }
+
+    /* Topbar scroll behavior */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .topbar.hidden {
+      transform: translateY(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Workspace shell with top padding for fixed topbar */
+    .workspace-shell {
+      margin-top: 0;
+      transition: margin-top 0.4s ease;
+    }
+
+    body.hero-visible .workspace-shell {
+      margin-top: 0;
+    }
+
+    body:not(.hero-visible) .workspace-shell {
+      margin-top: 0;
+      padding-top: 12px;
+    }
+
+    /* Toolbar expansion on scroll */
+    .toolbar {
+      position: sticky;
+      top: 60px;
+      z-index: 90;
+      transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                  padding 0.3s ease,
+                  box-shadow 0.3s ease;
+    }
+
+    .toolbar.expanded {
+      top: 0;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(18, 21, 22, 0.98));
+      backdrop-filter: blur(12px);
+    }
+
+    /* Smooth scroll behavior */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Chat shell smooth transitions */
+    .chat-shell {
+      transition: margin-top 0.3s ease;
+    }
+
+    @media (max-width: 1200px) {
+      .hero-card { grid-template-columns: 1fr; }
+      .main-column { margin-right: 0; }
+      #memory-panel { transform: translateX(var(--memory)); }
+      .memory-open { transform: translateX(0); }
+    }
+
+    @media (max-width: 900px) {
+      body { padding-top: 64px; }
+      body:not(.hero-visible) { padding-top: 0; }
+      
+      #icon-panel { display: none; }
+      .mobile-menu-btn { display: flex; }
+      #sidebar { left: 0; transform: translateX(calc(-1 * var(--sidebar))); padding-top: 64px; z-index: 96; }
+      #sidebar.sidebar-open { transform: translateX(0); }
+      #memory-panel {
+        width: 100vw;
+        left: 0;
+        right: 0;
+        border-radius: 0;
+        transform: translateX(100%);
+        z-index: 97;
+      }
+      #memory-panel.memory-open { transform: translateX(0); }
+      #memory-panel.memory-closed { transform: translateX(100%); }
+      .main-column { margin-left: 0; margin-right: 0; }
+      .main-column.sidebar-collapsed { margin-left: 0; }
+      .topbar { padding: 14px 16px 14px 72px; }
+      .input-wrapper { flex-direction: column; align-items: stretch; }
+      .workspace-shell { padding: 8px 12px 18px; gap: 10px; }
+      .chat-shell { min-height: calc(100vh - 140px); }
+      #chat-box { min-height: 240px; }
+      
+      /* Mobile-optimized hero */
+      .hero-shell {
+        min-height: 42vh;
+        padding: 1rem 0.75rem;
+      }
+      .hero-card { gap: 16px; }
+      
+      /* Mobile toolbar adjustments */
+      .toolbar {
+        top: 56px;
+      }
+      
+      .toolbar.expanded {
+        top: 0;
+        padding: 0.875rem 1rem;
+      }
+
+      /* Mobile full-height chat */
+      body:not(.hero-visible) .workspace-shell {
+        padding-top: 6px;
+      }
+
+      body:not(.hero-visible) .chat-shell {
+        min-height: calc(100vh - 130px);
+      }
+
+    }
+
+    @media (max-width: 640px) {
+      .hero-shell { padding: 14px 12px 18px; min-height: 36vh; }
+      .hero-card { padding: 18px; }
+      .hero-copy h1 { font-size: 30px; }
+      .top-actions { gap: 6px; }
+      #chat-box { min-height: 220px; }
+
+      .toolbar.expanded {
+        padding: 0.75rem 0.875rem;
+      }
     }
   </style>
 </head>
-<body class="flex h-screen overflow-hidden">
-  <!-- Sidebar: Sessions -->
-  <aside id="sidebar" class="fixed z-30 left-0 top-0 h-full w-[var(--sidebar)] glass transition-transform duration-300 sidebar-open">
-    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
-      <div>
-        <p class="text-xs text-[var(--muted)]">Conversations</p>
-        <h2 class="text-lg font-semibold">Chat History</h2>
+<body class="hero-visible">
+  <header class="topbar">
+    <div class="product-dropdown" id="product-dropdown" onclick="event.stopPropagation(); toggleProductDropdown();">
+      <span class="product-name">MioChat</span>
+      <svg class="dropdown-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      <div class="dropdown-menu" id="product-menu">
+        <a class="dropdown-item" href="{{ url_for('core_blueprint.landing') }}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Home
+        </a>
+        <a class="dropdown-item" href="{{ url_for('p2_bp.dashboard') }}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          MioSpace
+        </a>
       </div>
-      <button class="p-2 rounded-full bg-[var(--accent)] text-white" onclick="newChat()" title="New chat">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-      </button>
     </div>
-    <div class="p-3 space-y-2 overflow-y-auto h-[calc(100%-64px)] scroll-slim">
-      {% for s in sessions %}
-        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition border border-transparent hover:border-white/5 {% if s.id == current_session %}bg-white/5{% else %}bg-white/2{% endif %}" onclick="switchSession({{ s.id }})">
-          <div class="flex-1 truncate">{{ s.title }}</div>
-          <button class="text-red-300 hover:text-red-200" onclick="deleteSession({{ s.id }}, event)" title="Delete conversation">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
-        </div>
-      {% endfor %}
-    </div>
-  </aside>
 
-  <!-- Main column -->
-  <div class="flex-1 flex flex-col ml-[var(--sidebar)] transition-all duration-300" id="main-column">
-    <!-- Header -->
-    <header class="flex items-center justify-between px-4 py-3 border-b border-white/5 glass">
-      <div class="flex items-center gap-3">
-        <button class="p-2 rounded-full bg-white/10" onclick="toggleSidebar()" title="Toggle sidebar">
-          <svg id="sidebar-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-        <div>
-          <p class="text-xs text-[var(--muted)]">MioChat</p>
-          <h1 class="text-xl font-semibold">Chat</h1>
+  </header>
+
+  <section class="hero-shell">
+    <div class="hero-card">
+      <div class="hero-copy">
+        <h1>Stay in flow with memory-forward chat.</h1>
+        <p>Pick up any session, keep the right memories attached, and stream answers with the same Carbon Teal polish as the MioHub homepage.</p>
+        <div class="hero-pills">
+          <span class="pill">Session history</span>
+          <span class="pill">Memory toggles</span>
+          <span class="pill">Model switcher</span>
+          <span class="pill">Code + markdown</span>
         </div>
-        <div class="relative">
-          <button id="product-switcher-btn" class="px-3 py-2 rounded-lg bg-white/5 text-sm" aria-haspopup="true" aria-expanded="false">Switch</button>
-          <div id="product-switcher-list" class="hidden absolute mt-2 w-40 rounded-lg glass border border-white/5 shadow-lg">
-            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('core_blueprint.landing') }}">MioHub</a>
-            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('p2_bp.dashboard') }}">MioNotes</a>
-            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('p1_bp.product1') }}">MioCalc</a>
-            <a class="block px-3 py-2 text-sm hover:bg-white/10" href="{{ url_for('p4_bp.product4') }}">MioGames</a>
+      </div>
+      <div class="stats-card">
+        <div class="stat-row"><span>Active model</span><span id="stat-model" class="stat-value">{{ current_model }}</span></div>
+        <div class="stat-row"><span>Saved sessions</span><span class="stat-value">{{ sessions|length }}</span></div>
+        <div class="stat-row"><span>Memory items</span><span class="stat-value" id="memory-count">–</span></div>
+        <div class="chip">Tip: toggle memory to keep context tight.</div>
+      </div>
+    </div>
+    
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator" onclick="dismissHero()" title="Jump to chat">
+      <span class="scroll-indicator-text">Start chatting</span>
+      <svg class="scroll-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </div>
+  </section>
+
+  <div class="workspace-shell">
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" onclick="toggleSidebar()" title="Toggle menu">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+
+    <!-- Persistent icon panel (desktop only) -->
+    <aside id="icon-panel">
+      <button class="icon-btn" onclick="toggleSidebar()" title="Toggle history">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <button class="icon-btn" onclick="newChat()" title="New chat">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      </button>
+      <button class="icon-btn" onclick="openSettings()" title="Settings">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </button>
+    </aside>
+
+    <!-- Sidebar: Sessions -->
+    <aside id="sidebar" class="sidebar-closed">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
+        <div class="flex items-center gap-3">
+          <button class="p-2 rounded-full bg-white/5 hover:bg-white/10" onclick="toggleSidebar()" title="Close sidebar">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <div>
+            <p class="text-xs text-[var(--muted)]">Conversations</p>
+            <h2 class="text-lg font-semibold">Chat History</h2>
           </div>
         </div>
+        <button class="p-2 rounded-full bg-[var(--accent)] text-white shadow-lg" onclick="newChat()" title="New chat">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
       </div>
-      <div class="flex items-center gap-2">
-        <button class="px-3 py-2 rounded-lg bg-white/5 text-sm" onclick="toggleMemoryPanel()" title="Toggle memory">Memory</button>
-        <button class="px-3 py-2 rounded-lg bg-white/5 text-sm" onclick="openSettings()">Settings</button>
+      <div class="p-3 space-y-2 overflow-y-auto h-[calc(100%-64px)] scroll-slim">
+        {% for s in sessions %}
+          <div class="session-card {% if current_session and s.id == current_session.id %}active{% endif %}" onclick="switchSession({{ s.id }})">
+            <div class="flex-1 truncate">{{ s.title|e }}</div>
+            <button class="text-red-300 hover:text-red-200" onclick="deleteSession({{ s.id }}, event)" title="Delete conversation">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        {% endfor %}
       </div>
-    </header>
+    </aside>
 
-    <!-- Chat area -->
-    <main class="flex-1 overflow-hidden flex flex-col">
-      <div id="chat-box" class="flex-1 overflow-y-auto p-4 scroll-slim">
-        <div class="max-w-4xl mx-auto space-y-4">
-          {% if current_session %}
-            {% for chat in chats %}
-              {% if chat.role == "user" %}
-              <div class="flex justify-end">
-                <div class="bubble-user text-white p-3 rounded-2xl max-w-[70%]">
-                  <div class="text-xs text-white/80 mb-1">You</div>
-                  <div class="whitespace-pre-wrap">{{ chat.content }}</div>
-                </div>
-              </div>
-              {% else %}
-              <div class="flex justify-start">
-                <div class="bubble-ai p-3 rounded-2xl max-w-[80%]">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
-                    {% if chat.model %}
-                    <span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">{{ chat.model }}</span>
-                    {% endif %}
+    <!-- Main column -->
+    <div class="main-column" id="main-column">
+      <div class="main-inner">
+        <header class="panel toolbar">
+          <div class="flex items-center gap-3">
+            {% if current_session %}
+            <div class="flex-1">
+              <p class="text-xs text-[var(--muted)]">{{ chats[0].created_at.strftime('%Y-%m-%d') if chats and chats|length > 0 else 'New chat' }}</p>
+              <h1 class="text-xl font-semibold truncate">{{ chats[0].content[:50] if chats and chats|length > 0 and chats[0].role == 'user' else 'Chat session' }}</h1>
+            </div>
+            {% else %}
+            <div class="flex-1">
+              <p class="text-xs text-[var(--muted)]">MioChat</p>
+              <h1 class="text-xl font-semibold">Select a conversation</h1>
+            </div>
+            {% endif %}
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-ghost" onclick="toggleMemoryPanel()" title="Toggle memory">Memory</button>
+            <button class="btn-ghost" onclick="openSettings()">Settings</button>
+          </div>
+        </header>
+
+        <section class="panel chat-shell">
+          <div class="flex items-center justify-start">
+            <div class="chip">Active model: <span id="chip-model" class="font-semibold text-white">{{ current_model }}</span></div>
+          </div>
+          <div id="chat-box" class="scroll-slim overflow-y-auto">
+            <div class="max-w-4xl mx-auto space-y-4">
+              {% if current_session %}
+                {% for chat in chats %}
+                  {% if chat.role == "user" %}
+                  <div class="flex justify-end">
+                    <div class="bubble-user text-white p-3 rounded-2xl max-w-[70%]">
+                      <div class="text-xs text-black/70 mb-1">You</div>
+                      <div class="whitespace-pre-wrap">{{ chat.content }}</div>
+                    </div>
                   </div>
-                  <div class="prose prose-invert max-w-none" data-markdown="{{ chat.content|e }}"></div>
-                </div>
-              </div>
+                  {% else %}
+                  <div class="flex justify-start">
+                    <div class="bubble-ai p-3 rounded-2xl max-w-[80%]">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
+                        {% if chat.model %}
+                        <span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">{{ chat.model }}</span>
+                        {% endif %}
+                      </div>
+                      <div class="prose prose-invert max-w-none" data-markdown="{{ chat.content|e }}"></div>
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <div class="text-center text-[var(--muted)] py-14">Select a chat or start a new one.</div>
               {% endif %}
-            {% endfor %}
-          {% else %}
-            <div class="text-center text-[var(--muted)] py-20">Select a chat or start a new one.</div>
-          {% endif %}
-        </div>
+            </div>
+          </div>
+          <div class="input-bar">
+            {% if current_session %}
+            <div class="input-wrapper">
+              <textarea id="user-input" rows="1" class="flex-1 resize-none focus:outline-none" placeholder="Type your message..."></textarea>
+              <button class="btn-ghost btn-solid" onclick="sendMessage()">Send</button>
+            </div>
+            <div class="text-xs text-[var(--muted)]">Press Enter to send, Shift+Enter for newline. Memory items marked off stay out of context.</div>
+            {% else %}
+            <div class="text-center text-sm text-[var(--muted)]">Open or create a conversation to start.</div>
+            {% endif %}
+          </div>
+        </section>
       </div>
+    </div>
 
-      <!-- Input -->
-      <div class="border-t border-white/5 glass px-4 py-3">
-        {% if current_session %}
-        <div class="max-w-4xl mx-auto flex gap-2 items-end">
-          <textarea id="user-input" rows="1" class="flex-1 rounded-xl bg-white/5 border border-white/10 p-3 resize-none focus:outline-none" placeholder="Type your message..."></textarea>
-          <button class="px-4 py-3 rounded-xl bg-[var(--accent)] text-white" onclick="sendMessage()">Send</button>
+    <!-- Memory panel -->
+    <aside id="memory-panel" class="memory-closed">
+      <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-[var(--muted)]">Context</p>
+          <h3 class="text-lg font-semibold">Memory</h3>
         </div>
-        {% else %}
-        <div class="text-center text-sm text-[var(--muted)]">Open or create a conversation to start.</div>
-        {% endif %}
+        <button class="p-2 rounded-full bg-white/5" onclick="toggleMemoryPanel()">✕</button>
       </div>
-    </main>
+      <div id="memory-content" class="p-3 space-y-2 overflow-y-auto flex-1 min-h-0 scroll-slim text-sm"></div>
+      <div class="p-3 border-t border-white/5 space-y-2">
+        <textarea id="new-memory-text" rows="3" class="w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm resize-none" placeholder="Add memory snippet..."></textarea>
+        <button class="w-full px-3 py-2 rounded-lg bg-[var(--accent)] text-white" onclick="addMemoryItem()">Add Memory</button>
+      </div>
+    </aside>
   </div>
-
-  <!-- Memory panel -->
-  <aside id="memory-panel" class="fixed z-20 top-0 right-0 h-full w-[var(--memory)] glass border-l border-white/5 transition-transform duration-300 memory-closed">
-    <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-      <div>
-        <p class="text-xs text-[var(--muted)]">Context</p>
-        <h3 class="text-lg font-semibold">Memory</h3>
-      </div>
-      <button class="p-2 rounded-full bg-white/5" onclick="toggleMemoryPanel()">✕</button>
-    </div>
-    <div id="memory-content" class="p-3 space-y-2 overflow-y-auto h-[calc(100%-200px)] scroll-slim text-sm"></div>
-    <div class="p-3 border-t border-white/5 space-y-2">
-      <textarea id="new-memory-text" rows="3" class="w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm resize-none" placeholder="Add memory snippet..."></textarea>
-      <button class="w-full px-3 py-2 rounded-lg bg-[var(--accent)] text-white" onclick="addMemoryItem()">Add Memory</button>
-    </div>
-  </aside>
 
   <!-- Settings Modal -->
   <dialog id="settingsModal" class="modal">
-    <div class="modal-box glass text-sm">
+    <div class="modal-box text-sm">
       <h3 class="text-lg font-semibold mb-3">Settings</h3>
       <label class="block mb-2">Model</label>
       <select id="model-select" class="w-full p-2 rounded bg-white/5 border border-white/10">
@@ -204,7 +942,7 @@
 
   <!-- Edit Memory Modal -->
   <dialog id="editMemoryModal" class="modal">
-    <div class="modal-box glass text-sm max-w-4xl">
+    <div class="modal-box text-sm max-w-4xl">
       <h3 class="text-lg font-semibold mb-3">Edit Memory</h3>
       <textarea id="edit-memory-textarea" class="w-full p-2 rounded bg-white/5 border border-[var(--accent)] min-h-[400px]"></textarea>
       <div class="modal-action mt-4">
@@ -217,69 +955,267 @@
   </dialog>
 
   <script>
+    // Prevent browsers from restoring scroll after reload (forces hero to be visible on new chat)
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
     // ========== STATE MANAGEMENT ==========
     let memoryItems = [];
-    let sidebarOpen = true;
+    let sidebarOpen = false;
     let memoryOpen = false;
     let currentEditingIndex = null;
     let currentModel = '{{ current_model|safe }}' || '{{ models[0]|safe }}';  // Track current model with fallback to first available
+    let lastScrollY = 0;
+    let isScrollLocked = false;
+    let heroVisible = true;
+    let heroDismissed = false;
 
     // ========== SIDEBAR MODULE ==========
     function applySidebarState() {
       const sidebar = document.getElementById('sidebar');
       const main = document.getElementById('main-column');
+      if (!sidebar || !main) return;
+      
       if (sidebarOpen) {
         sidebar.classList.remove('sidebar-closed');
         sidebar.classList.add('sidebar-open');
-        main.style.marginLeft = 'var(--sidebar)';
-        document.getElementById('sidebar-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+        main.classList.remove('sidebar-collapsed');
       } else {
         sidebar.classList.add('sidebar-closed');
         sidebar.classList.remove('sidebar-open');
-        main.style.marginLeft = '0';
-        document.getElementById('sidebar-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>';
+        main.classList.add('sidebar-collapsed');
       }
     }
 
     function toggleSidebar() { 
+      const wasOpening = !sidebarOpen;
       sidebarOpen = !sidebarOpen; 
-      applySidebarState(); 
+      applySidebarState();
+      
+      // Dismiss hero when opening sidebar for cleaner UI
+      if (wasOpening && heroVisible) {
+        dismissHero();
+      }
     }
 
     // ========== MEMORY PANEL TOGGLE MODULE ==========
-    function toggleMemoryPanel() {
+    function applyMemoryState() {
       const panel = document.getElementById('memory-panel');
-      memoryOpen = !memoryOpen;
+      const main = document.getElementById('main-column');
+      if (!panel || !main) return;
+      
+      // Sync position first to ensure correct placement
+      syncMemoryPanelTop();
+      
+      const shouldOffsetMain = window.innerWidth > 1200;
+      const panelWidth = panel.getBoundingClientRect().width || 0;
       if (memoryOpen) {
         panel.classList.remove('memory-closed');
         panel.classList.add('memory-open');
+        main.style.marginRight = memoryOpen && shouldOffsetMain ? `${panelWidth}px` : '0';
       } else {
         panel.classList.add('memory-closed');
         panel.classList.remove('memory-open');
+        main.style.marginRight = '0';
       }
+      // Sync again after class changes
+      setTimeout(syncMemoryPanelTop, 50);
+    }
+
+    function syncMemoryPanelTop() {
+      const panel = document.getElementById('memory-panel');
+      const toolbar = document.querySelector('.toolbar');
+      if (!panel || !toolbar) return;
+      const rect = toolbar.getBoundingClientRect();
+      const top = Math.max(rect.top, 0);
+      panel.style.top = `${top}px`;
+      panel.style.height = `calc(100vh - ${top}px)`;
+    }
+
+    function toggleMemoryPanel() {
+      memoryOpen = !memoryOpen;
+      applyMemoryState();
+      
+      // When opening memory, dismiss hero and lock to chat view
+      if (memoryOpen) {
+        dismissHero();
+      }
+    }
+
+    // ========== SCROLL MANAGEMENT MODULE ==========
+    function dismissHero() {
+      if (heroDismissed) return;
+      
+      heroDismissed = true;
+      heroVisible = false;
+      
+      const heroShell = document.querySelector('.hero-shell');
+      const topbar = document.querySelector('.topbar');
+      const toolbar = document.querySelector('.toolbar');
+      const body = document.body;
+      
+      // Apply dismissed state
+      if (heroShell) heroShell.classList.add('dismissed');
+      if (topbar) topbar.classList.add('hidden');
+      if (toolbar) toolbar.classList.add('expanded');
+      body.classList.remove('hero-visible');
+      
+      // Smooth scroll to top of chat area
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+
+      // Lock scroll briefly
+      isScrollLocked = true;
+      setTimeout(() => { isScrollLocked = false; }, 600);
+      
+      // Update memory panel position after hero dismissal
+      setTimeout(() => {
+        syncMemoryPanelTop();
+        applyMemoryState();
+      }, 100);
+    }
+    
+    function showHero() {
+      heroDismissed = false;
+      heroVisible = true;
+      
+      const heroShell = document.querySelector('.hero-shell');
+      const topbar = document.querySelector('.topbar');
+      const toolbar = document.querySelector('.toolbar');
+      const body = document.body;
+      
+      // Remove dismissed state
+      if (heroShell) heroShell.classList.remove('dismissed');
+      if (topbar) topbar.classList.remove('hidden');
+      if (toolbar) toolbar.classList.remove('expanded');
+      body.classList.add('hero-visible');
+      
+      // Clear dismissal state
+      // Scroll to top to show hero
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+
+    function handleScroll() {
+      if (isScrollLocked || heroDismissed) return;
+      
+      const currentScrollY = window.scrollY;
+      const heroShell = document.querySelector('.hero-shell');
+      
+      if (!heroShell || !heroVisible) return;
+      
+      const heroBottom = heroShell.offsetTop + heroShell.offsetHeight;
+      const dismissThreshold = heroBottom + 150; // Dismiss if scrolled 150px past hero
+      
+      // Check if scrolled to bottom of page
+      const scrolledToBottom = (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 50);
+      
+      // Auto-dismiss hero if user scrolls significantly beyond it OR reaches bottom
+      if (currentScrollY > dismissThreshold || scrolledToBottom) {
+        dismissHero();
+      }
+      
+      lastScrollY = currentScrollY;
+    }
+
+    // Throttled scroll handler for performance
+    let scrollTimeout;
+    function throttledScroll() {
+      if (scrollTimeout) return;
+      scrollTimeout = setTimeout(() => {
+        handleScroll();
+        scrollTimeout = null;
+      }, 16); // ~60fps
     }
 
     // ========== MARKDOWN RENDERING MODULE ==========
     function renderMarkdownContainers() {
-      document.querySelectorAll('[data-markdown]').forEach(el => {
-        const raw = el.getAttribute('data-markdown');
-        if (!raw) return;
-        const html = marked.parse(raw, {
-          highlight: function(code, lang) {
-            if (hljs && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
-            if (hljs && hljs.highlightAuto) return hljs.highlightAuto(code).value;
-            return code;
+      // Safety check: ensure marked library is loaded
+      if (typeof marked === 'undefined' || !marked || !marked.parse) {
+        console.warn('marked library not loaded yet, retrying...');
+        setTimeout(renderMarkdownContainers, 100);
+        return;
+      }
+      
+      try {
+        document.querySelectorAll('[data-markdown]').forEach(el => {
+          const raw = el.getAttribute('data-markdown');
+          if (!raw) return;
+          
+          try {
+            const html = marked.parse(raw, {
+              highlight: function(code, lang) {
+                if (typeof hljs === 'undefined' || !hljs) return code;
+                try {
+                  if (hljs.getLanguage && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                  }
+                  if (hljs.highlightAuto) {
+                    return hljs.highlightAuto(code).value;
+                  }
+                } catch (hlError) {
+                  console.warn('Highlight.js error:', hlError);
+                }
+                return code;
+              }
+            });
+            el.innerHTML = html;
+          } catch (parseError) {
+            console.error('Error parsing markdown for element:', parseError);
+            // Fallback: display as plain text
+            el.textContent = raw;
           }
         });
-        el.innerHTML = html;
-      });
-      if (hljs && hljs.highlightAll) hljs.highlightAll();
+        
+        // Run syntax highlighting if available
+        if (typeof hljs !== 'undefined' && hljs && hljs.highlightAll) {
+          try {
+            hljs.highlightAll();
+          } catch (hlError) {
+            console.warn('Error running highlightAll:', hlError);
+          }
+        }
+      } catch (error) {
+        console.error('Error in renderMarkdownContainers:', error);
+      }
     }
 
     // ========== UTILITY FUNCTIONS MODULE ==========
     function escapeHtml(str) {
       return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
+
+    function toggleProductDropdown() {
+      const dropdown = document.getElementById('product-dropdown');
+      const menu = document.getElementById('product-menu');
+      if (!dropdown || !menu) return;
+      
+      const isOpen = menu.classList.contains('show');
+      if (isOpen) {
+        menu.classList.remove('show');
+        dropdown.classList.remove('open');
+      } else {
+        menu.classList.add('show');
+        dropdown.classList.add('open');
+      }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('product-dropdown');
+      const menu = document.getElementById('product-menu');
+      if (!dropdown || !menu) return;
+      
+      if (!dropdown.contains(e.target)) {
+        menu.classList.remove('show');
+        dropdown.classList.remove('open');
+      }
+    });
 
     // ========== MEMORY LOAD/RENDER MODULE ==========
     async function loadMemoryItems() {
@@ -295,6 +1231,8 @@
 
     function renderMemoryItems() {
       const container = document.getElementById('memory-content');
+      const memoryCount = document.getElementById('memory-count');
+      if (memoryCount) memoryCount.textContent = memoryItems.length || 0;
       if (!memoryItems.length) { 
         container.innerHTML = '<p class="text-[var(--muted)]">No memory yet</p>'; 
         return; 
@@ -483,14 +1421,49 @@
       const activeMemory = memoryItems.filter(m => m.enabled !== false).map(m => m.text);
       try {
         const res = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ message, memory: activeMemory })});
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Server error:', res.status, errorText);
+          throw new Error(`Server returned ${res.status}: ${errorText}`);
+        }
+        
         const data = await res.json();
-        const html = marked.parse(data.reply || '', {
-          highlight: function(code, lang) {
-            if (hljs && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
-            if (hljs && hljs.highlightAuto) return hljs.highlightAuto(code).value;
-            return code;
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        // Safe markdown parsing with fallback
+        let html;
+        try {
+          if (typeof marked !== 'undefined' && marked && marked.parse) {
+            html = marked.parse(data.reply || '', {
+              highlight: function(code, lang) {
+                if (typeof hljs === 'undefined' || !hljs) return code;
+                try {
+                  if (hljs.getLanguage && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                  }
+                  if (hljs.highlightAuto) {
+                    return hljs.highlightAuto(code).value;
+                  }
+                } catch (hlError) {
+                  console.warn('Highlight error:', hlError);
+                }
+                return code;
+              }
+            });
+          } else {
+            // Fallback if marked is not loaded
+            html = escapeHtml(data.reply || '').replace(/\n/g, '<br>');
           }
-        });
+        } catch (parseError) {
+          console.error('Markdown parse error:', parseError);
+          // Fallback to plain text with line breaks
+          html = escapeHtml(data.reply || '').replace(/\n/g, '<br>');
+        }
+        
         const aiDiv = document.createElement('div');
         aiDiv.className = 'flex justify-start';
         aiDiv.innerHTML = `
@@ -504,12 +1477,30 @@
         container.appendChild(aiDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
       } catch (e) {
-        console.error('Send failed', e);
-        alert('Error sending message');
+        console.error('Send failed:', e);
+        // Show more detailed error message
+        const errorMsg = e.message || 'Unknown error occurred';
+        alert(`Error sending message: ${errorMsg}`);
+        
+        // Add error bubble to chat
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'flex justify-start';
+        errorDiv.innerHTML = `
+          <div class="p-3 rounded-2xl max-w-[80%] bg-red-500/20 border border-red-500/40">
+            <div class="text-xs text-red-400 mb-1">Error</div>
+            <div class="text-red-300 text-sm">${escapeHtml(errorMsg)}</div>
+          </div>`;
+        container.appendChild(errorDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
       }
     }
 
     function openSettings() {
+      // Dismiss hero when opening settings
+      if (heroVisible) {
+        dismissHero();
+      }
+      
       // Update select dropdown to reflect current model
       const select = document.getElementById('model-select');
       if (select) {
@@ -523,7 +1514,16 @@
       }
       document.getElementById('settingsModal').showModal();
     }
-
+  
+      // Initialize scroll handlers
+      window.addEventListener('scroll', throttledScroll, { passive: true });
+      handleScroll(); // Initial check
+      
+      // Handle page reload positioning
+      if (window.scrollY > 0) {
+        setTimeout(handleScroll, 100);
+      }
+    
     async function saveSettings() {
       const model = document.getElementById('model-select').value;
       try {
@@ -531,12 +1531,22 @@
         const data = await res.json();
         if (data.status==='ok') {
           currentModel = model;  // Update local state
+          const chip = document.getElementById('chip-model');
+          if (chip) chip.textContent = model;
+          const statModel = document.getElementById('stat-model');
+          if (statModel) statModel.textContent = model;
           document.getElementById('settingsModal').close();
         }
       } catch (e) { console.error(e); alert('Error saving settings'); }
     }
 
     async function switchSession(sessionId) {
+      // Close memory panel before switching to ensure clean state
+      if (memoryOpen) {
+        memoryOpen = false;
+        applyMemoryState();
+      }
+      
       const res = await fetch(`/switch_session/${sessionId}`,{method:'POST'});
       const data = await res.json();
       if (data.status==='ok') location.reload();
@@ -545,7 +1555,11 @@
     async function newChat() {
       const res = await fetch('/new_session',{method:'POST'});
       const data = await res.json();
-      if (data.status==='ok') location.reload();
+      if (data.status==='ok') {
+        // Force scroll to top before reload so hero is visible on load
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        location.reload();
+      }
     }
 
     async function deleteSession(sessionId, event) {
@@ -554,14 +1568,6 @@
       const res = await fetch(`/delete_session/${sessionId}`,{method:'POST'});
       const data = await res.json();
       if (data.status==='ok') location.reload();
-    }
-
-    function initProductSwitcher() {
-      const btn = document.getElementById('product-switcher-btn');
-      const list = document.getElementById('product-switcher-list');
-      if (!btn || !list) return;
-      btn.addEventListener('click', e => { e.stopPropagation(); list.classList.toggle('hidden'); });
-      document.addEventListener('click', () => { list.classList.add('hidden'); });
     }
 
     function initInputResize() {
@@ -582,12 +1588,65 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      // Reset memory panel state on page load
+      memoryOpen = false;
+      
+      // Determine initial hero state based on whether session has messages
+      const hasMessages = {{ 'true' if chats and chats|length > 0 else 'false' }};
+      
+      if (hasMessages) {
+        // Session has existing messages - start with hero dismissed for immersive experience
+        heroVisible = false;
+        heroDismissed = true;
+        document.body.classList.remove('hero-visible');
+        const heroShell = document.querySelector('.hero-shell');
+        const topbar = document.querySelector('.topbar');
+        const toolbar = document.querySelector('.toolbar');
+        if (heroShell) heroShell.classList.add('dismissed');
+        if (topbar) topbar.classList.add('hidden');
+        if (toolbar) toolbar.classList.add('expanded');
+      } else {
+        // New empty chat - show hero for onboarding experience
+        heroVisible = true;
+        heroDismissed = false;
+        document.body.classList.add('hero-visible');
+        const heroShell = document.querySelector('.hero-shell');
+        const topbar = document.querySelector('.topbar');
+        const toolbar = document.querySelector('.toolbar');
+        if (heroShell) heroShell.classList.remove('dismissed');
+        if (topbar) topbar.classList.remove('hidden');
+        if (toolbar) toolbar.classList.remove('expanded');
+      }
+      
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      
       applySidebarState();
-      toggleMemoryPanel(); // start closed
+      applyMemoryState();
+      
+      // Render markdown with retry mechanism
       renderMarkdownContainers();
+      
+      // Ensure markdown is rendered after short delay (in case libraries load slowly)
+      setTimeout(() => {
+        renderMarkdownContainers();
+      }, 200);
+      
       loadMemoryItems();
-      initProductSwitcher();
       initInputResize();
+      window.addEventListener('resize', () => {
+        applyMemoryState();
+        syncMemoryPanelTop();
+      });
+      window.addEventListener('scroll', syncMemoryPanelTop, { passive: true });
+      
+      // Initialize scroll handlers
+      window.addEventListener('scroll', throttledScroll, { passive: true });
+      
+      // Sync memory panel position after hero state is set
+      setTimeout(() => {
+        syncMemoryPanelTop();
+        applyMemoryState();
+      }, 100);
     });
   </script>
 </body>

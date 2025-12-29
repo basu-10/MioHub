@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ file.title }} - Graph Workspace</title>
+  <title>{{ file.title }} - MioThink</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -360,6 +360,18 @@
       font-size: 14px;
     }
     
+    .attachment-link {
+      cursor: pointer;
+      color: var(--accent);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .attachment-link:hover {
+      color: var(--accent-strong);
+      text-decoration: underline;
+    }
+    
     .attachment-actions {
       display: flex;
       gap: 4px;
@@ -389,6 +401,29 @@
     .btn-icon.btn-danger:hover {
       background: #dc3545;
       border-color: #dc3545;
+    }
+    
+    .btn-icon.btn-success {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--white);
+    }
+    
+    .btn-icon.btn-success:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+    
+    .btn-icon.btn-secondary {
+      background: var(--bg);
+      border-color: var(--border-primary);
+      color: var(--muted);
+    }
+    
+    .btn-icon.btn-secondary:hover {
+      background: var(--bg-secondary);
+      border-color: var(--accent);
+      color: var(--white);
     }
     
     .btn-icon .material-icons {
@@ -519,6 +554,131 @@
     #connection-mode-notification .material-icons {
       font-size: 20px;
     }
+
+    /* Node Customization Styles */
+    .node-bg-color-swatch,
+    .node-border-color-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .node-bg-color-swatch:hover,
+    .node-border-color-swatch:hover {
+      transform: scale(1.1);
+      border-color: var(--white);
+      box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+    }
+
+    .node-bg-color-swatch.active,
+    .node-border-color-swatch.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .node-bg-color-swatch.active::after,
+    .node-border-color-swatch.active::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--white);
+      font-size: 16px;
+      font-weight: bold;
+      text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .node-shape-btn,
+    .node-border-style-btn,
+    .node-border-width-btn {
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      color: var(--white);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+    }
+
+    .node-shape-btn:hover,
+    .node-border-style-btn:hover,
+    .node-border-width-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .node-shape-btn.active,
+    .node-border-style-btn.active,
+    .node-border-width-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.3);
+    }
+
+    .node-shape-btn .material-icons {
+      font-size: 20px;
+    }
+
+    .form-range {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .form-range::-webkit-slider-track {
+      background: var(--border-primary);
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    .form-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      margin-top: -6px;
+      transition: all 0.2s;
+    }
+
+    .form-range::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.2);
+    }
+
+    .form-range::-moz-range-track {
+      background: var(--border-primary);
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    .form-range::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .form-range::-moz-range-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.2);
+    }
   </style>
 </head>
 <body data-graph-folder-id="{{ file.folder_id }}">
@@ -526,7 +686,7 @@
   <div id="top-navbar">
     <div class="navbar-title">
       {{ file.title }}
-      <span class="navbar-pill">Graph Workspace</span>
+      <span class="navbar-pill">MioThink</span>
       {% if file.is_public %}
         <span class="badge bg-success ms-2">Public</span>
       {% else %}
@@ -545,6 +705,9 @@
   <div id="graph-container">
     <div id="canvas-wrapper">
       <canvas id="graph-canvas"></canvas>
+      
+      <!-- Rendered Content Overlays Container -->
+      {% include 'p2/partials/graph_rendered_content.html' %}
       
       <!-- Connection Mode Notification -->
       <div id="connection-mode-notification">
@@ -630,6 +793,148 @@
             </div>
           </div>
 
+          <!-- Section 2.5: Node Customization -->
+          <div class="panel-section" id="node-customization-section">
+            <div class="panel-section-title" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.GraphNodeCustomization.toggleCustomization()">
+              <span>Node Customization</span>
+              <button class="btn-icon" id="btn-toggle-customization" title="Show/hide customization options" style="border: none; padding: 4px;">
+                <i class="material-icons" id="customization-toggle-icon">expand_more</i>
+              </button>
+            </div>
+            <div id="node-customization-content" style="display: none;">
+            
+            <!-- Shape Selection -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display: block;">Shape</label>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="node-shape-btn" data-shape="rectangle" title="Rectangle">
+                  <i class="material-icons">crop_square</i>
+                </button>
+                <button class="node-shape-btn active" data-shape="rounded" title="Rounded Rectangle">
+                  <i class="material-icons">rounded_corner</i>
+                </button>
+                <button class="node-shape-btn" data-shape="circle" title="Circle">
+                  <i class="material-icons">circle</i>
+                </button>
+                <button class="node-shape-btn" data-shape="ellipse" title="Ellipse">
+                  <i class="material-icons">panorama_fish_eye</i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Background Color -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display: block;">Background Color</label>
+              <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;">
+                <!-- Neutral colors -->
+                <div class="node-bg-color-swatch active" data-color="#121516" title="Graphite" style="background-color: #121516;"></div>
+                <div class="node-bg-color-swatch" data-color="#1e2326" title="Charcoal" style="background-color: #1e2326;"></div>
+                <div class="node-bg-color-swatch" data-color="#2a3439" title="Slate" style="background-color: #2a3439;"></div>
+                <div class="node-bg-color-swatch" data-color="#3a4449" title="Steel" style="background-color: #3a4449;"></div>
+                <!-- Teal accent -->
+                <div class="node-bg-color-swatch" data-color="#0d4d4a" title="Deep Teal" style="background-color: #0d4d4a;"></div>
+                <div class="node-bg-color-swatch" data-color="#14625e" title="Muted Teal" style="background-color: #14625e;"></div>
+                <div class="node-bg-color-swatch" data-color="#14b8a6" title="Carbon Teal" style="background-color: #14b8a6;"></div>
+                <!-- Cool colors -->
+                <div class="node-bg-color-swatch" data-color="#1e3a5f" title="Deep Blue" style="background-color: #1e3a5f;"></div>
+                <div class="node-bg-color-swatch" data-color="#2c4f7c" title="Navy" style="background-color: #2c4f7c;"></div>
+                <div class="node-bg-color-swatch" data-color="#3f4f7c" title="Muted Indigo" style="background-color: #3f4f7c;"></div>
+                <div class="node-bg-color-swatch" data-color="#3d2f5f" title="Deep Purple" style="background-color: #3d2f5f;"></div>
+                <div class="node-bg-color-swatch" data-color="#4a3f5f" title="Plum" style="background-color: #4a3f5f;"></div>
+                <!-- Natural colors -->
+                <div class="node-bg-color-swatch" data-color="#2d4a3e" title="Deep Green" style="background-color: #2d4a3e;"></div>
+                <div class="node-bg-color-swatch" data-color="#3d5a4e" title="Forest" style="background-color: #3d5a4e;"></div>
+                <div class="node-bg-color-swatch" data-color="#4a6858" title="Sage" style="background-color: #4a6858;"></div>
+                <!-- Warm colors -->
+                <div class="node-bg-color-swatch" data-color="#5a3d2f" title="Burnt Sienna" style="background-color: #5a3d2f;"></div>
+                <div class="node-bg-color-swatch" data-color="#6b4423" title="Rust" style="background-color: #6b4423;"></div>
+                <div class="node-bg-color-swatch" data-color="#7d5a3d" title="Amber" style="background-color: #7d5a3d;"></div>
+                <div class="node-bg-color-swatch" data-color="#5a2d2f" title="Deep Red" style="background-color: #5a2d2f;"></div>
+                <div class="node-bg-color-swatch" data-color="#6b3d3f" title="Burgundy" style="background-color: #6b3d3f;"></div>
+                <div class="node-bg-color-swatch" data-color="#7d4d4f" title="Brick" style="background-color: #7d4d4f;"></div>
+              </div>
+            </div>
+
+            <!-- Border Color -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display: block;">Border Color</label>
+              <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px;">
+                <div class="node-border-color-swatch active" data-color="#646464" title="Subtle Gray" style="background-color: #646464;"></div>
+                <div class="node-border-color-swatch" data-color="#808080" title="Medium Gray" style="background-color: #808080;"></div>
+                <div class="node-border-color-swatch" data-color="#9a9a9a" title="Light Gray" style="background-color: #9a9a9a;"></div>
+                <div class="node-border-color-swatch" data-color="#14b8a6" title="Teal" style="background-color: #14b8a6;"></div>
+                <div class="node-border-color-swatch" data-color="#3b82f6" title="Blue" style="background-color: #3b82f6;"></div>
+                <div class="node-border-color-swatch" data-color="#8b5cf6" title="Purple" style="background-color: #8b5cf6;"></div>
+                <div class="node-border-color-swatch" data-color="#10b981" title="Green" style="background-color: #10b981;"></div>
+                <div class="node-border-color-swatch" data-color="#f59e0b" title="Amber" style="background-color: #f59e0b;"></div>
+                <div class="node-border-color-swatch" data-color="#ef4444" title="Red" style="background-color: #ef4444;"></div>
+              </div>
+            </div>
+
+            <!-- Border Style -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display: block;">Border Style</label>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="node-border-style-btn active" data-border-style="solid" data-dash-pattern="[]" title="Solid">
+                  <span style="width: 30px; height: 2px; background: currentColor; display: block;"></span>
+                </button>
+                <button class="node-border-style-btn" data-border-style="dashed" data-dash-pattern="[10,5]" title="Dashed">
+                  <span style="width: 30px; height: 2px; background: linear-gradient(to right, currentColor 60%, transparent 60%); background-size: 10px 2px; display: block;"></span>
+                </button>
+                <button class="node-border-style-btn" data-border-style="dotted" data-dash-pattern="[2,3]" title="Dotted">
+                  <span style="width: 30px; height: 2px; background: linear-gradient(to right, currentColor 30%, transparent 30%); background-size: 5px 2px; display: block;"></span>
+                </button>
+                <button class="node-border-style-btn" data-border-style="none" data-dash-pattern="[]" title="None">
+                  <span style="font-size: 11px;">None</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Border Width -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display: block;">Border Width</label>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="node-border-width-btn active" data-width="1" title="Thin">
+                  <span style="font-size: 11px;">Thin</span>
+                </button>
+                <button class="node-border-width-btn" data-width="2" title="Medium">
+                  <span style="font-size: 11px;">Medium</span>
+                </button>
+                <button class="node-border-width-btn" data-width="3" title="Thick">
+                  <span style="font-size: 11px;">Thick</span>
+                </button>
+                <button class="node-border-width-btn" data-width="4" title="Bold">
+                  <span style="font-size: 11px;">Bold</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Opacity Slider -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                <span>Opacity</span>
+                <span id="node-opacity-value" style="color: var(--accent);">95%</span>
+              </label>
+              <input type="range" class="form-range" id="node-opacity-slider" min="0.3" max="1" step="0.05" value="0.95" style="width: 100%;">
+            </div>
+
+            <!-- Corner Radius Slider -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 11px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                <span>Corner Radius</span>
+                <span id="node-corner-radius-value" style="color: var(--accent);">8px</span>
+              </label>
+              <input type="range" class="form-range" id="node-corner-radius-slider" min="0" max="30" step="1" value="8" style="width: 100%;">
+            </div>
+
+            <!-- Reset Button -->
+            <button class="node-action-btn" id="btn-reset-node-style" style="width: 100%; justify-content: center;">
+              <i class="material-icons">restart_alt</i>
+              <span>Reset to Default</span>
+            </button>
+            </div>
+          </div>
+
           <!-- Section 3: Create Files -->
           <div class="panel-section">
             <div class="graph-create-wrap">
@@ -668,11 +973,11 @@
 
               <button type="button" class="graph-create-item" data-create-kind="infinite_whiteboard">
                 <i class="material-icons">explore</i>
-                🌌 Infinite Whiteboard
+                🌌 MioInfinite
               </button>
               <button type="button" class="graph-create-item" data-create-kind="file" data-file-type="proprietary_graph">
                 <i class="material-icons">device_hub</i>
-                🕸️ Graph Workspace
+                🕸️ New MioThink
               </button>
 
               <button type="button" class="graph-create-item" data-create-kind="mionote">
@@ -681,11 +986,11 @@
               </button>
               <button type="button" class="graph-create-item" data-create-kind="miodraw">
                 <i class="material-icons">dashboard</i>
-                🎨 New MioDraw
+                🎨 New MioPages
               </button>
               <button type="button" class="graph-create-item" data-create-kind="miobook">
                 <i class="material-icons">article</i>
-                📄 New MioBook
+                📄 New MioBlocks
               </button>
             </div>
             </div>
@@ -891,18 +1196,23 @@
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+  <!-- Marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+
   <!-- Folder/File Picker -->
   <script src="{{ url_for('p2_bp.static', filename='js/folder_file_picker.js') }}"></script>
 
-  <!-- Graph Workspace Modules -->
+  <!-- MioThink Modules -->
   <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_canvas.js') }}"></script>
   <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_nodes.js') }}"></script>
   <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_edges.js') }}"></script>
   <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_storage.js') }}"></script>
   <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_attachments.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_content_renderer.js') }}"></script>
   <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_toolbar.js') }}"></script>
+  <script src="{{ url_for('p2_bp.static', filename='js/graph_workspace/graph_node_customization.js') }}"></script>
 
-  <!-- Initialize Graph Workspace -->
+  <!-- Initialize MioThink -->
   <script>
     const GRAPH_FILE_ID = {{ file.id }};
     const IS_OWNER = {{ 'true' if is_owner else 'false' }};
@@ -918,7 +1228,9 @@
       window.GraphEdges.init(canvas, GRAPH_FILE_ID);
       window.GraphStorage.init(GRAPH_FILE_ID);
       window.GraphAttachments.init(GRAPH_FILE_ID);
+      window.GraphContentRenderer.init(GRAPH_FILE_ID);
       window.GraphToolbar.init(GRAPH_FILE_ID);
+      window.GraphNodeCustomization.init(GRAPH_FILE_ID);
 
       // Load graph data
       await window.GraphStorage.loadGraph();
@@ -1142,6 +1454,11 @@
             btn.disabled = false; // Re-enable connect button
           }
         });
+
+        // Recompute enabled/disabled states based on current selection and graph data
+        if (window.GraphToolbar?.refreshState) {
+          window.GraphToolbar.refreshState();
+        }
         
         // Restore canvas cursor
         canvas.style.cursor = 'grab';

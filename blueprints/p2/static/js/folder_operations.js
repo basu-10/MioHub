@@ -53,71 +53,73 @@ const FolderOperations = (function() {
     console.log('[DELETE] Item id:', item.id);
     console.log('[DELETE] Item name:', itemName);
 
-    if (!confirm(`Are you sure you want to delete "${itemName}"?`)) {
-      console.log('[DELETE] User cancelled deletion');
-      return;
-    }
-
-    if (window.TelemetryPanel) {
-      window.TelemetryPanel.setActive(`Deleting ${itemName}...`);
-    }
-
-    // Delete via direct API call (don't use batch button to avoid timing issues)
-    const formData = new FormData();
-    const itemsPayload = [{ type: item.type, id: item.id }];
-    console.log('[DELETE] Payload:', itemsPayload);
-    formData.append('items', JSON.stringify(itemsPayload));
-
-    console.log('[DELETE] Sending request to /folders/batch_delete');
-    fetch('/folders/batch_delete', {
-      method: 'POST',
-      body: formData,
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(response => {
-      console.log('[DELETE] Response status:', response.status);
-      return response.json();
-    })
-    .then(data => {
-      console.log('[DELETE] Response data:', data);
-      if (data.success) {
-        // Remove card from DOM
-        if (item.card) {
-          const colWrapper = item.card.closest('.col');
-          if (colWrapper) {
-            console.log('[DELETE] Removing col wrapper');
-            colWrapper.remove();
-          } else {
-            console.log('[DELETE] Removing card directly');
-            item.card.remove();
-          }
-          
-          // Also remove corresponding table row
-          const tableRow = document.querySelector(`.item-row[data-type="${item.type}"][data-id="${item.id}"]`);
-          if (tableRow) {
-            console.log('[DELETE] Removing table row');
-            tableRow.remove();
-          }
-        }
-
-        if (window.TelemetryPanel) {
-          window.TelemetryPanel.setIdle(`Deleted ${itemName}`);
-          if (typeof window.TelemetryPanel.fetchData === 'function') {
-            window.TelemetryPanel.fetchData();
-          }
-        }
-        console.log('[DELETE] Delete successful');
-      } else {
-        throw new Error(data.message || 'Delete failed');
-      }
-    })
-    .catch(error => {
-      console.error('[DELETE] Failed:', error);
+    // Use new delete confirmation modal
+    window.deleteModal.show(itemName, async () => {
+      console.log('[DELETE] User confirmed deletion');
+      
       if (window.TelemetryPanel) {
-        window.TelemetryPanel.setIdle(`Delete failed: ${error.message}`);
-      } else {
-        alert(`Failed to delete: ${error.message}`);
+        window.TelemetryPanel.setActive(`Deleting ${itemName}...`);
       }
+
+      // Delete via direct API call (don't use batch button to avoid timing issues)
+      const formData = new FormData();
+      const itemsPayload = [{ type: item.type, id: item.id }];
+      console.log('[DELETE] Payload:', itemsPayload);
+      formData.append('items', JSON.stringify(itemsPayload));
+
+      console.log('[DELETE] Sending request to /folders/batch_delete');
+      fetch('/folders/batch_delete', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(response => {
+        console.log('[DELETE] Response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('[DELETE] Response data:', data);
+        if (data.success) {
+          // Remove card from DOM
+          if (item.card) {
+            const colWrapper = item.card.closest('.col');
+            if (colWrapper) {
+              console.log('[DELETE] Removing col wrapper');
+              colWrapper.remove();
+            } else {
+              console.log('[DELETE] Removing card directly');
+              item.card.remove();
+            }
+            
+            // Also remove corresponding table row
+            const tableRow = document.querySelector(`.item-row[data-type="${item.type}"][data-id="${item.id}"]`);
+            if (tableRow) {
+              console.log('[DELETE] Removing table row');
+              tableRow.remove();
+            }
+          }
+
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Deleted ${itemName}`);
+            if (typeof window.TelemetryPanel.fetchData === 'function') {
+              window.TelemetryPanel.fetchData();
+            }
+          }
+          console.log('[DELETE] Delete successful');
+        } else {
+          throw new Error(data.message || 'Delete failed');
+        }
+      })
+      .catch(error => {
+        console.error('[DELETE] Failed:', error);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle(`Delete failed: ${error.message}`);
+        } else {
+          alert(`Failed to delete: ${error.message}`);
+        }
+      });
+    }, () => {
+      console.log('[DELETE] User cancelled deletion');
     });
   }
 
@@ -128,7 +130,7 @@ const FolderOperations = (function() {
   function updateCardPublicBadge(type, id, isPublic, cardElement = null) {
     // Build selector for matching card in the grid
     let selector;
-    if (type === 'note' || type === 'board' || type === 'folder') {
+    if (type === 'proprietary_note' || type === 'proprietary_whiteboard' || type === 'folder') {
       selector = `[data-type="${type}"][data-id="${id}"]`;
     } else if (type === 'file') {
       selector = `[data-type="file"][data-id="${id}"]`;
@@ -286,7 +288,7 @@ const FolderOperations = (function() {
   function updateCardPinBadge(type, id, isPinned, cardElement = null) {
     // Build selector for matching card in the grid
     let selector;
-    if (type === 'note' || type === 'board' || type === 'folder') {
+    if (type === 'proprietary_note' || type === 'proprietary_whiteboard' || type === 'folder') {
       selector = `[data-type="${type}"][data-id="${id}"]`;
     } else if (type === 'file') {
       selector = `[data-type="file"][data-id="${id}"]`;
@@ -510,14 +512,14 @@ const FolderOperations = (function() {
       if (window.openRenameFolderDescModal) {
         window.openRenameFolderDescModal(item.id, folderName, folderDescription);
       }
-    } else if (item.type === 'note') {
+    } else if (item.type === 'proprietary_note') {
       const link = item.card.querySelector('.card-title a.item-link');
       const currentName = link ? link.textContent.trim() : '';
       const currentDescription = item.card.dataset.noteDescription || '';
       if (window.openRenameNoteDescModal) {
         window.openRenameNoteDescModal(item.id, currentName, currentDescription);
       }
-    } else if (item.type === 'board' || item.type === 'whiteboard') {
+    } else if (item.type === 'proprietary_whiteboard') {
       const link = item.card.querySelector('.card-title a.item-link');
       const currentName = link ? link.textContent.trim() : '';
       const currentDescription = item.card.dataset.boardDescription || '';
@@ -545,16 +547,24 @@ const FolderOperations = (function() {
       return;
     }
 
-    // Use batch copy functionality
-    window.batchSelected = [item];
-    const btnBatchCopy = document.getElementById('btn-batch-copy');
-    if (btnBatchCopy) {
-      btnBatchCopy.click();
-      window.batchSelected = [];
+    console.log('[COPY] Copying item to clipboard:', item);
+    console.log('[COPY] ClipboardOperations available:', !!window.ClipboardOperations);
+    if (window.ClipboardOperations) {
+      console.log('[COPY] performCopy available:', typeof window.ClipboardOperations.performCopy);
     }
-
-    if (window.TelemetryPanel) {
-      window.TelemetryPanel.setIdle('Item copied to clipboard');
+    
+    // Use ClipboardOperations direct function call
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.performCopy === 'function') {
+      console.log('[COPY] Calling ClipboardOperations.performCopy');
+      window.ClipboardOperations.performCopy([item]);
+      
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Item copied to clipboard');
+      }
+    } else {
+      console.error('[COPY] ClipboardOperations.performCopy not available');
+      console.error('[COPY] window.ClipboardOperations:', window.ClipboardOperations);
+      alert('Copy functionality not ready. Please refresh the page.');
     }
   }
 
@@ -568,16 +578,17 @@ const FolderOperations = (function() {
       return;
     }
 
-    // Use batch cut functionality
-    window.batchSelected = [item];
-    const btnBatchCut = document.getElementById('btn-batch-cut');
-    if (btnBatchCut) {
-      btnBatchCut.click();
-      window.batchSelected = [];
-    }
-
-    if (window.TelemetryPanel) {
-      window.TelemetryPanel.setIdle('Item cut to clipboard');
+    console.log('[CUT] Cutting item to clipboard:', item);
+    
+    // Use ClipboardOperations direct function call
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.performCut === 'function') {
+      window.ClipboardOperations.performCut([item]);
+      
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Item cut to clipboard');
+      }
+    } else {
+      console.error('[CUT] ClipboardOperations.performCut not available');
     }
   }
 
@@ -615,63 +626,62 @@ const FolderOperations = (function() {
     const itemCount = items.length;
     const itemWord = itemCount === 1 ? 'item' : 'items';
     
-    if (!confirm(`Are you sure you want to delete ${itemCount} ${itemWord}?`)) {
-      return;
-    }
-
-    if (window.TelemetryPanel) {
-      window.TelemetryPanel.setActive(`Deleting ${itemCount} ${itemWord}...`);
-    }
-
-    // Build request payload
-    const payload = items.map(item => ({ type: item.type, id: item.id }));
-    const folderIdInput = document.getElementById('htmx-folder-id-input');
-    const currentFolderId = localStorage.getItem('currentFolderId') || 
-                           (folderIdInput ? folderIdInput.value : '');
-
-    // Send delete request
-    fetch('/folders/batch_delete_htmx', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: JSON.stringify({
-        items: payload,
-        folder_id: currentFolderId
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Remove deleted items from DOM
-        items.forEach(item => {
-          if (item.card) {
-            const col = item.card.closest('.col');
-            if (col) col.remove();
-            else item.card.remove();
-          }
-        });
-
-        // Clear batch selection
-        window.batchSelected = [];
-        if (typeof window.updateBatchUI === 'function') {
-          window.updateBatchUI();
-        }
-
-        if (window.TelemetryPanel) {
-          window.TelemetryPanel.setIdle(`Deleted ${itemCount} ${itemWord}`);
-        }
-      } else {
-        throw new Error(data.error || 'Delete failed');
-      }
-    })
-    .catch(error => {
-      console.error('[BATCH DELETE] Failed:', error);
+    // Use new delete confirmation modal
+    window.deleteModal.show(`${itemCount} ${itemWord}`, async () => {
       if (window.TelemetryPanel) {
-        window.TelemetryPanel.setIdle(`Delete failed: ${error.message}`);
+        window.TelemetryPanel.setActive(`Deleting ${itemCount} ${itemWord}...`);
       }
-      alert(`Failed to delete items: ${error.message}`);
+
+      // Build request payload
+      const payload = items.map(item => ({ type: item.type, id: item.id }));
+      const folderIdInput = document.getElementById('htmx-folder-id-input');
+      const currentFolderId = localStorage.getItem('currentFolderId') || 
+                             (folderIdInput ? folderIdInput.value : '');
+
+      // Send delete request
+      fetch('/folders/batch_delete_htmx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          items: payload,
+          folder_id: currentFolderId
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Remove deleted items from DOM
+          items.forEach(item => {
+            if (item.card) {
+              const col = item.card.closest('.col');
+              if (col) col.remove();
+              else item.card.remove();
+            }
+          });
+
+          // Clear batch selection
+          window.batchSelected = [];
+          if (typeof window.updateBatchUI === 'function') {
+            window.updateBatchUI();
+          }
+
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Deleted ${itemCount} ${itemWord}`);
+          }
+        } else {
+          throw new Error(data.error || 'Delete failed');
+        }
+      })
+      .catch(error => {
+        console.error('[BATCH DELETE] Failed:', error);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle(`Delete failed: ${error.message}`);
+        }
+        alert(`Failed to delete items: ${error.message}`);
+      });
     });
   }
 

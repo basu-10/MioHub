@@ -21,14 +21,14 @@ html,body{
 /* Badge container system to prevent overlap */
 .badge-container {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 10px;
+  right: 10px;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: flex-start;
-  max-width: calc(100% - 16px);
+  max-width: calc(100% - 20px);
   z-index: 2;
 }
 
@@ -36,24 +36,24 @@ html,body{
 .public-badge {
   background: var(--accent);
   color: var(--white);
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   box-shadow: 0 4px 14px rgba(20,184,166,0.18);
   white-space: nowrap;
 }
-.public-badge .material-icons { font-size: 14px; }
+.public-badge .material-icons { font-size: 15px; }
 
 /* Pin badge shown on items that are pinned */
 .pin-badge {
   background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
   color: var(--white);
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -61,7 +61,7 @@ html,body{
   white-space: nowrap;
 }
 .pin-badge .material-icons { 
-  font-size: 14px; 
+  font-size: 15px; 
   transform: rotate(45deg);
 }
 
@@ -105,8 +105,8 @@ html,body{
 .breadcrumb-custom {
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  padding: 8px 16px;
+  border-radius: 10px;
+  padding: 10px 18px;
   margin-bottom: 0;
 }
 
@@ -114,8 +114,8 @@ html,body{
 /* Now positioned inside the fixed header container, no longer individually sticky */
 .folder-sticky-bar {
   z-index: 1045; /* keep above content and slightly below global navbar */
-  padding: 0.5rem 0.75rem;
-  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
   border: 1px solid var(--border-primary);
   background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
   box-shadow: 0 6px 20px rgba(0,0,0,0.12);
@@ -152,7 +152,7 @@ html,body{
 /* Ensure each dropdown's parent is positioned so the absolute menu aligns correctly */
 .folder-sticky-bar .dropdown { position: relative; }
 
-.folder-sticky-bar .d-flex.align-items-center { gap: 0.5rem; }
+.folder-sticky-bar .d-flex.align-items-center { gap: 0.75rem; }
 
     .breadcrumb-custom .breadcrumb-item {
       display: flex;
@@ -170,9 +170,9 @@ html,body{
       color: var(--text-secondary);
       text-decoration: none;
       font-weight: 500;
-      padding: 4px 8px;
-      border-radius: 6px;
-      transition: all 0.15s ease;
+      padding: 6px 10px;
+      border-radius: 7px;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
     }
@@ -192,8 +192,8 @@ html,body{
 
     .breadcrumb-custom .breadcrumb-item.active .breadcrumb-current {
       background: var(--bg-tertiary);
-      padding: 4px 8px;
-      border-radius: 6px;
+      padding: 6px 10px;
+      border-radius: 7px;
     }
 
 
@@ -202,8 +202,8 @@ html,body{
    .card {
       background: var(--bg-tertiary);
       border: 1px solid var(--border-primary);
-      border-radius: 8px;
-      transition: all 0.15s ease;
+      border-radius: 10px;
+      transition: all 0.2s ease;
       position: relative; 
       color: #c8cebdd7;
       z-index: 10;
@@ -214,18 +214,22 @@ html,body{
 .card:hover {
   background: var(--bg-quaternary);
   border-color: var(--border-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
     /* Ensure card body doesn't clip dropdown */
     .card-body {
       overflow: visible !important;
+      padding: 1.25rem;
     }
 
     /* Card titles and folder names styling */
     .card-title {
       color: var(--text-primary) !important;
       font-weight: 600;
-      font-size: 0.975rem;
+      font-size: 1rem;
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
     }
 
     /* Lighter labels for static card text (MioDraw / Combined) */
@@ -268,20 +272,21 @@ html,body{
 .dropdown-menu {
   background: var(--bg-quaternary);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  padding: 4px;
-  min-width: 180px;
+  padding: 6px;
+  min-width: 200px;
 }
 
 .dropdown-item {
   color: var(--white);
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
+  padding: 10px 14px;
+  border-radius: 7px;
+  transition: all 0.2s ease;
   border: none;
   background: none;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .dropdown-item:hover {
@@ -373,12 +378,13 @@ html,body{
 }
     /* General Button Styling */
     .btn {
-      border-radius: 6px;
+      border-radius: 8px;
       font-weight: 500;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
       position: relative;
       overflow: hidden;
       border-width: 1px;
+      padding: 0.5rem 1rem;
     }
 
     .btn-outline-primary {
@@ -419,7 +425,7 @@ html,body{
       border: none;
       height: 1px;
       background: var(--border-primary);
-      margin: 2rem 0;
+      margin: 3rem 0;
     }
 
     /* Scrollbar styling */
@@ -442,6 +448,12 @@ html,body{
     }
 
     /* Content preview horizontal + vertical scrollbar colors: match vertical green accent used in note-description */
+    .content-preview {
+      padding: 0.5rem 0.75rem;
+      line-height: 1.5;
+      font-size: 0.875rem;
+    }
+    
     .content-preview::-webkit-scrollbar {
       width: 6px;  /* vertical */
       height: 6px; /* horizontal */
@@ -503,41 +515,41 @@ html,body{
 
 /* Enhanced Section Headers */
 .section-container {
-  margin: 2rem 0;
-  padding: 1.5rem;
-  border-radius: 8px;
+  margin: 2.5rem 0;
+  padding: 2rem;
+  border-radius: 12px;
   border: 1px solid var(--border-primary);
   background: var(--bg-secondary);
 }
 
 .section-header {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--border-primary);
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1.25rem;
+  gap: 1rem;
+  font-size: 1.35rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
 }
 
 .section-title .material-icons {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   color: var(--text-secondary);
 }
 
 .count-badge {
   background: var(--bg-quaternary);
   color: var(--text-primary);
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 0.35rem 0.85rem;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
   border: 1px solid var(--border-primary);
 }
 
@@ -617,17 +629,17 @@ html,body{
 
 .recents-section .section-header {
   border-bottom: 2px solid var(--accent);
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
   background: linear-gradient(90deg, 
     rgba(20, 184, 166, 0.05) 0%, 
     transparent 100%);
-  margin-left: -1.5rem;
-  margin-right: -1.5rem;
-  margin-top: -1.5rem;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-  padding-top: 1.5rem;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  margin-top: -2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  padding-top: 2rem;
 }
 
 .recents-section .section-title {
@@ -671,21 +683,112 @@ html,body{
   transform: translateY(-2px);
 }
 
+.recents-subtitle {
+  color: var(--accent);
+  margin-top: 0.5rem;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.recents-subtitle .subtitle-icon {
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.recently-modified-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(280px, 360px);
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding: 0.5rem 0 1rem;
+  scroll-snap-type: x proximity;
+}
+
+.recently-modified-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.recently-modified-grid::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 12px;
+}
+
+.recent-item {
+  scroll-snap-align: start;
+}
+
+.recently-modified-card {
+  min-height: 100%;
+}
+
+.recent-load-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.recent-load-more-btn {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.recent-load-more-btn:hover,
+.recent-load-more-btn:focus {
+  background: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.25);
+}
+
+.recent-load-more-btn .material-icons {
+  vertical-align: middle;
+}
+
+.recent-load-more-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-left: 0.25rem;
+}
+
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator {
+  display: inline-block;
+}
+
 /* Section-Specific Background Colors */
+/* Folders - distinct color for folder organization */
 .folders-section {
-  background: #16221f60;;
+  background: #16221f60 !important;
 }
 
-.notes-section {
-  background: #22201688;
+/* Mio* products - unified color for proprietary products */
+.notes-section,
+.boards-section,
+.combined-section,
+#infinite-whiteboards,
+#graph-workspaces,
+#todo,
+#timeline {
+  background: #1a1e2260 !important;
 }
 
-.boards-section {
-  background: #22161a88;
-}
-
-.combined-section {
-  background: #1a1e2288;
+/* 3rd party files - separate color for external integrations */
+#markdown,
+#code,
+#diagram,
+#table,
+#pdf,
+#blocks {
+  background: #22201660 !important;
 }
 
 /* Paste animation for newly inserted items */
@@ -710,16 +813,17 @@ html,body{
 /* Quick Navigation Sidebar */
 .section-nav {
   position: fixed;
-  right: 20px;
+  right: 24px;
   top: 50%;
   transform: translateY(-50%) translateX(0);
   z-index: 1050;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+.section-nav {
   background: var(--bg-quaternary);
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 14px;
+  padding: 14px;
   border: 1px solid var(--border-primary);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease, opacity 0.3s ease;
@@ -742,26 +846,28 @@ html,body{
 .nav-pill {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
-  border-radius: 20px;
-  padding: 8px 12px;
+  border-radius: 22px;
+  padding: 10px 16px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
+  gap: 8px;
+  font-size: 0.875rem;
   white-space: nowrap;
   position: relative;
   overflow: hidden;
   color: var(--text-secondary);
   font-weight: 500;
+  min-height: 38px;
 }
 
 .nav-pill:hover {
   background: var(--hover-overlay);
-  transform: translateX(-2px);
+  transform: translateX(-4px);
   border-color: var(--border-hover);
   color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .nav-pill.active {
@@ -771,8 +877,8 @@ html,body{
 }
 
 .nav-pill .material-icons {
-  font-size: 1.1rem;
-  transition: transform 0.15s ease;
+  font-size: 1.15rem;
+  transition: transform 0.2s ease;
 }
 
 .nav-pill:hover .material-icons {
@@ -781,13 +887,14 @@ html,body{
 
 /* Special styling for the back to top button */
 .nav-top-btn {
-  margin-top: 8px;
+  margin-top: 10px;
   border-top: 1px solid var(--border-primary);
-  padding-top: 12px;
+  padding-top: 14px;
 }
 
 .nav-top-btn:hover {
   background: linear-gradient(135deg, var(--blue-80) 0%, var(--emerald-80) 100%);
+  box-shadow: 0 3px 10px rgba(20, 184, 166, 0.2);
 }
 
 /* Responsive adjustments for mobile */
@@ -1012,13 +1119,14 @@ html {
 .folder-description,
 .note-description,
 .board-description {
-  margin-top: 0.5rem;
-  padding: 0.375rem 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: rgba(20, 184, 166, 0.08);
-  border-left: 2px solid var(--accent-green);
-  border-radius: 4px;
+  border-left: 3px solid var(--accent-green);
+  border-radius: 6px;
   max-height: 4.5em; /* ~3 lines */
   overflow-y: auto;
+  line-height: 1.5;
 }
 
 .folder-description::-webkit-scrollbar,
@@ -1286,31 +1394,43 @@ html {
 .context-menu {
   background: var(--bg-quaternary);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  min-width: 160px;
-  padding: 4px;
+  min-width: 180px;
+  padding: 6px;
+}
+
+.context-menu .list-group {
+  background: transparent !important;
+  border: none !important;
 }
 
 .context-menu-item {
-  background: none;
-  border: none;
-  padding: 8px 12px;
+  background: none !important;
+  border: none !important;
+  padding: 10px 14px;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--white) !important;
   font-weight: 500;
-  transition: all 0.15s ease;
-  border-radius: 6px;
+  transition: all 0.2s ease;
+  border-radius: 7px;
   margin: 2px 0;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.context-menu-item i,
+.context-menu-item .material-icons {
+  color: var(--white) !important;
+  font-size: 18px !important;
+  vertical-align: middle !important;
 }
 
 .context-menu-item:hover {
-  background-color: var(--hover-overlay);
-  color: var(--text-primary);
+  background-color: var(--hover-overlay) !important;
+  color: var(--white) !important;
 }
 
 /* Submenu styles */
@@ -1325,12 +1445,17 @@ html {
   top: 0;
   background: var(--bg-quaternary);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  min-width: 150px;
-  padding: 4px;
-  margin-left: 4px;
+  min-width: 170px;
+  padding: 6px;
+  margin-left: 6px;
   z-index: 1001;
+}
+
+.dropdown-submenu .submenu .list-group {
+  background: transparent !important;
+  border: none !important;
 }
 
 .dropdown-submenu:hover .submenu {
@@ -1339,21 +1464,28 @@ html {
 
 /* Override Bootstrap dropdown-item styles for context menu */
 .context-menu .list-group-item {
-  background: none;
-  border: none;
-  padding: 8px 12px;
+  background: none !important;
+  border: none !important;
+  padding: 10px 14px;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--white) !important;
   font-weight: 500;
-  transition: all 0.15s ease;
-  border-radius: 6px;
+  transition: all 0.2s ease;
+  border-radius: 7px;
   margin: 2px 0;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+}
+
+.context-menu .list-group-item i,
+.context-menu .list-group-item .material-icons {
+  color: var(--white) !important;
+  font-size: 18px !important;
+  vertical-align: middle !important;
 }
 
 .context-menu .list-group-item:hover {
-  background-color: var(--hover-overlay);
-  color: var(--text-primary);
+  background-color: var(--hover-overlay) !important;
+  color: var(--white) !important;
 }
 
 /* Override additional dropdown styles */

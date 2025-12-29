@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clipboard Integration Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a1a; color: #fff; }
+    .test-section { margin: 20px 0; padding: 15px; background: #2a2a2a; border-radius: 5px; }
+    .test-section h2 { color: #14b8a6; }
+    button { padding: 10px 20px; margin: 5px; background: #14b8a6; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #0d9488; }
+    .log { background: #000; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    .success { color: #10b981; }
+    .error { color: #ef4444; }
+    .info { color: #14b8a6; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Clipboard Integration Test</h1>
+  
+  <div class="test-section">
+    <h2>1. Module Check</h2>
+    <button onclick="checkModules()">Check Modules</button>
+    <div id="module-check" class="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Copy Test</h2>
+    <button onclick="testCopy()">Test Copy</button>
+    <div id="copy-test" class="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Clipboard State Test</h2>
+    <button onclick="testClipboardState()">Test Clipboard State</button>
+    <div id="state-test" class="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. Context Menu Test</h2>
+    <button onclick="testContextMenu()">Test Context Menu Update</button>
+    <div id="context-test" class="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>5. Event Listener Test</h2>
+    <button onclick="testEvents()">Test Events</button>
+    <div id="event-test" class="log"></div>
+  </div>
+
+  <script>
+    function log(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+      element.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+    }
+
+    function checkModules() {
+      const el = document.getElementById('module-check');
+      el.innerHTML = '';
+      
+      log('module-check', 'Checking ClipboardOperations...', 'info');
+      if (typeof window.ClipboardOperations === 'object') {
+        log('module-check', '✓ ClipboardOperations module found', 'success');
+        
+        const methods = ['init', 'performCopy', 'performCut', 'hasClipboard', 'triggerPaste', 'clearClipboard', 'getClipboard'];
+        methods.forEach(method => {
+          if (typeof window.ClipboardOperations[method] === 'function') {
+            log('module-check', `  ✓ ${method}() available`, 'success');
+          } else {
+            log('module-check', `  ✗ ${method}() missing`, 'error');
+          }
+        });
+      } else {
+        log('module-check', '✗ ClipboardOperations module not found', 'error');
+      }
+      
+      log('module-check', 'Checking updateContextMenuClipboardState...', 'info');
+      if (typeof window.updateContextMenuClipboardState === 'function') {
+        log('module-check', '✓ updateContextMenuClipboardState() found', 'success');
+      } else {
+        log('module-check', '✗ updateContextMenuClipboardState() missing', 'error');
+      }
+    }
+
+    function testCopy() {
+      const el = document.getElementById('copy-test');
+      el.innerHTML = '';
+      
+      if (!window.ClipboardOperations) {
+        log('copy-test', '✗ ClipboardOperations not available', 'error');
+        return;
+      }
+      
+      const testItem = { type: 'note', id: 123 };
+      log('copy-test', `Testing copy with item: ${JSON.stringify(testItem)}`, 'info');
+      
+      try {
+        const result = window.ClipboardOperations.performCopy([testItem]);
+        if (result && result.items && result.items.length > 0) {
+          log('copy-test', `✓ Copy successful: ${JSON.stringify(result)}`, 'success');
+          
+          // Check localStorage
+          const stored = localStorage.getItem('p2_clipboard');
+          if (stored) {
+            log('copy-test', `✓ Data saved to localStorage: ${stored}`, 'success');
+          } else {
+            log('copy-test', '✗ Data not saved to localStorage', 'error');
+          }
+        } else {
+          log('copy-test', '✗ Copy returned null or empty', 'error');
+        }
+      } catch (error) {
+        log('copy-test', `✗ Error during copy: ${error.message}`, 'error');
+      }
+    }
+
+    function testClipboardState() {
+      const el = document.getElementById('state-test');
+      el.innerHTML = '';
+      
+      if (!window.ClipboardOperations) {
+        log('state-test', '✗ ClipboardOperations not available', 'error');
+        return;
+      }
+      
+      log('state-test', 'Testing hasClipboard()...', 'info');
+      const hasClipboard = window.ClipboardOperations.hasClipboard();
+      log('state-test', `Result: ${hasClipboard}`, hasClipboard ? 'success' : 'error');
+      
+      if (hasClipboard) {
+        const clipboard = window.ClipboardOperations.getClipboard();
+        log('state-test', `Clipboard content: ${JSON.stringify(clipboard)}`, 'info');
+      }
+    }
+
+    function testContextMenu() {
+      const el = document.getElementById('context-test');
+      el.innerHTML = '';
+      
+      if (typeof window.updateContextMenuClipboardState !== 'function') {
+        log('context-test', '✗ updateContextMenuClipboardState not available', 'error');
+        return;
+      }
+      
+      log('context-test', 'Calling updateContextMenuClipboardState()...', 'info');
+      try {
+        window.updateContextMenuClipboardState();
+        log('context-test', '✓ Function executed without errors', 'success');
+        
+        // Check if paste item exists and check its display
+        const pasteItem = document.getElementById('context-paste-item');
+        if (pasteItem) {
+          log('context-test', `Paste item display: ${pasteItem.style.display}`, 'info');
+        } else {
+          log('context-test', 'Note: context-paste-item not in test page (check on actual folder view)', 'info');
+        }
+      } catch (error) {
+        log('context-test', `✗ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function testEvents() {
+      const el = document.getElementById('event-test');
+      el.innerHTML = '';
+      
+      log('event-test', 'Setting up event listener...', 'info');
+      
+      let eventReceived = false;
+      const listener = function(event) {
+        eventReceived = true;
+        log('event-test', `✓ clipboardStateChanged event received: ${JSON.stringify(event.detail)}`, 'success');
+      };
+      
+      document.addEventListener('clipboardStateChanged', listener);
+      log('event-test', 'Event listener registered', 'success');
+      
+      // Test by copying
+      if (window.ClipboardOperations) {
+        log('event-test', 'Triggering copy to test event...', 'info');
+        window.ClipboardOperations.performCopy([{ type: 'note', id: 999 }]);
+        
+        setTimeout(() => {
+          if (eventReceived) {
+            log('event-test', '✓ Event system working correctly', 'success');
+          } else {
+            log('event-test', '✗ Event not received', 'error');
+          }
+          document.removeEventListener('clipboardStateChanged', listener);
+        }, 100);
+      }
+    }
+
+    // Auto-run module check on load
+    window.addEventListener('load', function() {
+      setTimeout(checkModules, 500);
+    });
+  </script>
+</body>
+</html>

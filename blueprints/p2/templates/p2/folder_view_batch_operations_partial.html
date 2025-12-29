@@ -10,6 +10,9 @@
   <button id="btn-batch-paste" class="btn btn-sm btn-outline-success" title="Paste items" disabled>
     <i class="material-icons" style="font-size: 18px;">content_paste</i>
   </button>
+  <button id="btn-clear-clipboard" class="btn btn-sm btn-outline-warning" title="Clear clipboard (allows new copy/cut)" style="display: none;">
+    <i class="material-icons" style="font-size: 18px;">clear_all</i>
+  </button>
   <button id="btn-batch-pin" class="btn btn-sm btn-outline-primary" title="Toggle pin for selected items"
           hx-post="/folders/batch_toggle_pin_htmx"
           hx-swap="none">
@@ -26,7 +29,7 @@
   <button id="btn-batch-delete" class="btn btn-sm btn-outline-danger" title="Delete selected items">
     <i class="material-icons" style="font-size: 18px;">delete</i>
   </button>
-  <button id="btn-clear-batch" class="btn btn-sm btn-outline-secondary" title="Clear selection">
+  <button id="btn-clear-batch" class="btn btn-sm btn-outline-secondary" title="Clear selection (keep clipboard)">
     <i class="material-icons" style="font-size: 18px;">clear</i>
   </button>
   <span id="batch-count" class="badge bg-primary ms-1" style="font-size: 0.75rem;">0</span>

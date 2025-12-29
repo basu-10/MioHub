@@ -318,25 +318,43 @@ function deleteFolder(folderId) {
   const folder = findFolderById(folderId);
   if (!folder) return;
   
-  if (!confirm(`Are you sure you want to delete "${folder.name}" and all its contents?`)) return;
-  
-  fetch(`/folders/delete/${folderId}`, {
-    method: 'POST'
-  })
-  .then(response => {
-    if (response.ok) {
-      refreshFolderTree();
-      // If we deleted the current folder, go to dashboard
-      if (folder.id == localStorage.getItem('currentFolderId')) {
-        window.location.href = '/product2';
-      }
-    } else {
-      alert('Failed to delete folder');
+  // Use new delete confirmation modal
+  window.deleteModal.show(`${folder.name} (and all its contents)`, async () => {
+    if (window.TelemetryPanel) {
+      window.TelemetryPanel.setActive(`Deleting folder ${folder.name}...`);
     }
-  })
-  .catch(error => {
-    console.error('Error deleting folder:', error);
-    alert('Error deleting folder');
+    
+    fetch(`/folders/delete/${folderId}`, {
+      method: 'POST'
+    })
+    .then(response => {
+      if (response.ok) {
+        refreshFolderTree();
+        // If we deleted the current folder, go to dashboard
+        if (folder.id == localStorage.getItem('currentFolderId')) {
+          window.location.href = '/product2';
+        }
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle(`Deleted folder ${folder.name}`);
+        }
+      } else {
+        const errorMsg = 'Failed to delete folder';
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle(errorMsg);
+        } else {
+          alert(errorMsg);
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error deleting folder:', error);
+      const errorMsg = 'Error deleting folder';
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle(errorMsg);
+      } else {
+        alert(errorMsg);
+      }
+    });
   });
 }
 

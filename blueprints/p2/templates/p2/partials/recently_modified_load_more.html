@@ -1,0 +1,22 @@
+{# Load-more control for Recently Modified. When use_oob is True the wrapper swaps via OOB. #}
+{% set oob = use_oob|default(false) %}
+<div id="recently-modified-load-more" class="recent-load-more text-center mt-2" {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
+  {% if recent_has_more %}
+    <button
+      type="button"
+      class="btn recent-load-more-btn"
+      hx-get="{{ url_for('folders.recent_items_partial') }}"
+      hx-target="#recently-modified-grid"
+      hx-swap="beforeend"
+      hx-vals='{{ {"offset": recent_next_offset, "limit": recent_page_size}|tojson }}'
+      hx-indicator="#recent-load-more-spinner"
+      aria-label="Show more recently modified items">
+      <i class="material-icons align-middle me-1" style="font-size: 1.2rem;">expand_more</i>
+      Show more
+      <span class="recent-load-more-hint">(+{{ recent_page_size }} items)</span>
+      <span id="recent-load-more-spinner" class="spinner-border spinner-border-sm htmx-indicator" role="status" aria-hidden="true" style="color: var(--accent);"></span>
+    </button>
+  {% else %}
+    <div class="text-muted small">You are up to date.</div>
+  {% endif %}
+</div>

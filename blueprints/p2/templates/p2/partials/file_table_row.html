@@ -37,8 +37,8 @@
     <!-- Type Badge -->
     <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">
       {% if file.type == 'proprietary_note' %}MioNote
-      {% elif file.type == 'proprietary_whiteboard' %}MioDraw
-      {% elif file.type == 'proprietary_blocks' %}MioBook
+      {% elif file.type == 'proprietary_whiteboard' %}MioPages
+      {% elif file.type == 'proprietary_blocks' %}MioBlocks
       {% elif file.type == 'proprietary_infinite_whiteboard' %}Infinite Canvas
       {% elif file.type == 'proprietary_graph' %}Graph
       {% else %}{{ file.type | title }}

@@ -1,4 +1,4 @@
-<!-- Description stub partial: moved from mionote_v2.html -->
+<!-- Description stub partial: moved from file_edit_proprietary_note.html -->
 <div class="mb-3 description-section">
   <label class="form-label">Description stubs</label>
   <div class="d-flex align-items-start gap-2" id="descriptionRow">
@@ -7,7 +7,7 @@
   <small class="form-text text-muted">Add a brief description to help identify this note. You can create multiple description stubs for saving urls, tags, etc.</small>
 </div>
 <!-- Hidden combined description JSON (serialized before submit / autosave) -->
-<input type="hidden" name="description" id="description" value="{{ (note.metadata_json.description if note and note.metadata_json and note.metadata_json.description else '') }}">
+<input type="hidden" name="description" id="description" value="{{ (file.metadata_json.description if file and file.metadata_json and file.metadata_json.description else '') }}">
 
 <script>
 /* Description stub helper functions and initialization. These are executed after the main document ready

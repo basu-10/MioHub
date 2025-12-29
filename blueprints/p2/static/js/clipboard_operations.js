@@ -33,7 +33,15 @@ const ClipboardOperations = (function() {
   // Security configuration
   const MAX_BATCH_SIZE = 100; // Prevent memory exhaustion
   const MAX_CLIPBOARD_AGE = 24 * 60 * 60 * 1000; // 24 hours in ms
-  const ALLOWED_ITEM_TYPES = ['folder', 'note', 'board', 'file', 'book', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'proprietary_infinite_whiteboard', 'proprietary_graph'];
+  const ALLOWED_ITEM_TYPES = [
+    'folder', 'note', 'board', 'file', 
+    // File types (matching VALID_FILE_TYPES in models.py)
+    'proprietary_note', 'proprietary_whiteboard', 'proprietary_blocks', 
+    'proprietary_infinite_whiteboard', 'proprietary_graph',
+    'markdown', 'code', 'todo', 'diagram', 'table', 'blocks', 'timeline', 'pdf',
+    // Legacy aliases
+    'book'
+  ];
 
   const SECTION_CONFIGS = {
     'proprietary_graph': {
@@ -279,7 +287,9 @@ const ClipboardOperations = (function() {
         cut: safeQuery('#btn-batch-cut'),
         copy: safeQuery('#btn-batch-copy'),
         paste: safeQuery('#btn-batch-paste'),
+        clearClipboard: safeQuery('#btn-clear-clipboard'),
         pin: safeQuery('#btn-batch-pin'),
+        send: safeQuery('#btn-batch-send'),
         public: safeQuery('#btn-batch-public'),
         delete: safeQuery('#btn-batch-delete'),
         clear: safeQuery('#btn-clear-batch')
@@ -289,6 +299,7 @@ const ClipboardOperations = (function() {
         cut: !!batchButtons.cut,
         copy: !!batchButtons.copy,
         paste: !!batchButtons.paste,
+        clearClipboard: !!batchButtons.clearClipboard,
         pin: !!batchButtons.pin,
         public: !!batchButtons.public,
         delete: !!batchButtons.delete,
@@ -298,6 +309,11 @@ const ClipboardOperations = (function() {
       batchOperations = safeQuery('#batch-operations');
       batchCount = safeQuery('#batch-count');
 
+      // Initialize window.batchSelected if not already defined
+      if (!window.batchSelected) {
+        window.batchSelected = [];
+      }
+
       // Setup event listeners
       setupSingleOperationListeners();
       setupBatchOperationListeners();
@@ -305,6 +321,9 @@ const ClipboardOperations = (function() {
 
       // Load saved clipboard state
       loadClipboard();
+      
+      // Initialize batch UI to correct state (hide if nothing selected)
+      updateBatchUI();
 
       console.log('ClipboardOperations: Initialized successfully');
     } catch (error) {
@@ -335,14 +354,13 @@ const ClipboardOperations = (function() {
       clipboard = parsed;
       updatePasteButton();
       
-      // Restore batch operations bar visibility if clipboard has batch items
+      // Don't automatically show batch operations bar on load
+      // It will be shown by updateBatchUI() when user selects items
+      // Just ensure paste button state is correct
       if (clipboard && clipboard.items && clipboard.items.length > 0) {
-        batchOperations.style.cssText = 'display: flex !important;';
-        batchCount.textContent = '0';
-        if (batchButtons.cut) batchButtons.cut.disabled = true;
-        if (batchButtons.copy) batchButtons.copy.disabled = true;
-        if (batchButtons.delete) batchButtons.delete.disabled = true;
-        batchButtons.paste.disabled = false;
+        if (batchButtons.paste) {
+          batchButtons.paste.disabled = false;
+        }
       }
       
       // Apply cut styling to items in clipboard
@@ -403,24 +421,38 @@ const ClipboardOperations = (function() {
     if (clipboard) {
       if (clipboard.items && clipboard.items.length > 0) {
         // Batch clipboard
-        batchButtons.paste.disabled = false;
+        if (batchButtons.paste) {
+          batchButtons.paste.disabled = false;
+        }
+        if (batchButtons.clearClipboard) {
+          batchButtons.clearClipboard.style.display = '';
+        }
         if (contextPasteItem) contextPasteItem.style.display = 'block';
         if (contextClearItem) contextClearItem.style.display = 'block';
         if (fabPasteItem) fabPasteItem.classList.remove('hidden');
         if (fabClearItem) fabClearItem.classList.remove('hidden');
       } else {
         // Single item clipboard
-        actionButtons.paste.disabled = false;
-        actionButtons.paste.style.opacity = '1';
+        if (actionButtons.paste) {
+          actionButtons.paste.disabled = false;
+          actionButtons.paste.style.opacity = '1';
+        }
         if (contextPasteItem) contextPasteItem.style.display = 'block';
         if (contextClearItem) contextClearItem.style.display = 'block';
         if (fabPasteItem) fabPasteItem.classList.remove('hidden');
         if (fabClearItem) fabClearItem.classList.remove('hidden');
       }
     } else {
-      actionButtons.paste.disabled = true;
-      actionButtons.paste.style.opacity = '0.5';
-      batchButtons.paste.disabled = true;
+      if (actionButtons.paste) {
+        actionButtons.paste.disabled = true;
+        actionButtons.paste.style.opacity = '0.5';
+      }
+      if (batchButtons.paste) {
+        batchButtons.paste.disabled = true;
+      }
+      if (batchButtons.clearClipboard) {
+        batchButtons.clearClipboard.style.display = 'none';
+      }
       if (contextPasteItem) contextPasteItem.style.display = 'none';
       if (contextClearItem) contextClearItem.style.display = 'none';
       if (fabPasteItem) fabPasteItem.classList.add('hidden');
@@ -450,6 +482,89 @@ const ClipboardOperations = (function() {
     card.style.transition = 'all 0.2s ease';
   }
 
+  // ==================== CLIPBOARD CORE OPERATIONS ====================
+
+  /**
+   * Pure function to perform copy operation
+   * @param {Array} items - Array of item objects [{type, id}, ...]
+   * @returns {Object} Clipboard object that was created
+   */
+  function performCopy(items) {
+    if (!items || items.length === 0) {
+      console.warn('[COPY] No items provided');
+      return null;
+    }
+
+    // Validate items
+    for (const item of items) {
+      if (!isValidItemType(item.type) || !isValidId(item.id)) {
+        console.error('[COPY] Invalid item:', item);
+        return null;
+      }
+    }
+
+    // Create clipboard object
+    clipboard = {
+      action: 'copy',
+      items: items.map(item => ({ type: item.type, id: item.id }))
+    };
+    saveClipboard();
+    batchButtons.paste.disabled = false;
+
+    // Dispatch custom event for context menu updates
+    document.dispatchEvent(new CustomEvent('clipboardStateChanged', { detail: { hasClipboard: true, action: 'copy' } }));
+
+    return clipboard;
+  }
+
+  /**
+   * Pure function to perform cut operation
+   * @param {Array} items - Array of item objects [{type, id, card}, ...]
+   * @returns {Object} Clipboard object that was created
+   */
+  function performCut(items) {
+    if (!items || items.length === 0) {
+      console.warn('[CUT] No items provided');
+      return null;
+    }
+
+    // Validate items
+    for (const item of items) {
+      if (!isValidItemType(item.type) || !isValidId(item.id)) {
+        console.error('[CUT] Invalid item:', item);
+        return null;
+      }
+    }
+
+    // Clear old cut styles
+    safeQueryAll('.item-card').forEach(card => removeCutStyle(card));
+
+    // Create clipboard object
+    clipboard = {
+      action: 'cut',
+      items: items.map(item => ({ type: item.type, id: item.id }))
+    };
+    saveClipboard();
+
+    // Apply cut styling to cards
+    items.forEach(item => {
+      if (item.card) {
+        applyCutStyle(item.card);
+      } else {
+        // Try to find card by data attributes
+        const card = safeQuery(`.item-card[data-type="${CSS.escape(String(item.type))}"][data-id="${CSS.escape(String(item.id))}"]`);
+        if (card) applyCutStyle(card);
+      }
+    });
+
+    batchButtons.paste.disabled = false;
+
+    // Dispatch custom event for context menu updates
+    document.dispatchEvent(new CustomEvent('clipboardStateChanged', { detail: { hasClipboard: true, action: 'cut' } }));
+
+    return clipboard;
+  }
+
   // ==================== SINGLE ITEM OPERATIONS ====================
 
   function setupSingleOperationListeners() {
@@ -470,19 +585,16 @@ const ClipboardOperations = (function() {
         }
         
         // Toggle cut if same item
-        if (clipboard && clipboard.action === 'cut' && clipboard.type === window.selected.type && clipboard.id === window.selected.id) {
+        if (clipboard && clipboard.action === 'cut' && clipboard.items && clipboard.items.length === 1 && 
+            clipboard.items[0].type === window.selected.type && clipboard.items[0].id === window.selected.id) {
           clipboard = null;
           saveClipboard();
           clearSelection();
           return;
         }
         
-        // Clear old cut styles
-        safeQueryAll('.item-card').forEach(card => removeCutStyle(card));
-        
-        clipboard = { type: window.selected.type, id: window.selected.id, action: 'cut' };
-        saveClipboard();
-        applyCutStyle(window.selected.card);
+        // Use performCut function
+        performCut([window.selected]);
         
         if (window.TelemetryPanel) {
           const itemName = window.selected.card.querySelector('.item-link')?.textContent?.trim() || `${window.selected.type} ${window.selected.id}`;
@@ -509,8 +621,8 @@ const ClipboardOperations = (function() {
           return;
         }
         
-        clipboard = { type: window.selected.type, id: window.selected.id, action: 'copy' };
-        saveClipboard();
+        // Use performCopy function
+        performCopy([window.selected]);
         
         if (window.TelemetryPanel) {
           const itemName = window.selected.card.querySelector('.item-link')?.textContent?.trim() || `${window.selected.type} ${window.selected.id}`;
@@ -556,102 +668,103 @@ const ClipboardOperations = (function() {
           return;
         }
         
-        if (!confirm('Are you sure you want to delete this item?')) return;
-        
-        operationInProgress = true;
-        
         const itemName = window.selected.card.querySelector('.item-link')?.textContent?.trim() || `${window.selected.type} ${window.selected.id}`;
         
-        // Show activity in telemetry
-        if (window.TelemetryPanel) {
-          window.TelemetryPanel.setActive(`Deleting ${itemName}...`);
-        }
-        
-        let deleteUrl = '';
-        if (window.selected.type === 'folder') deleteUrl = `/folders/delete/${window.selected.id}`;
-        else if (window.selected.type === 'note') deleteUrl = `/folders/delete_note/${window.selected.id}`;
-        else if (window.selected.type === 'board') deleteUrl = `/folders/delete_board/${window.selected.id}`;
-        else if (window.selected.type === 'file' || window.selected.type === 'book' || window.selected.type === 'markdown' || window.selected.type === 'todo' || window.selected.type === 'diagram' || window.selected.type === 'table' || window.selected.type === 'blocks') deleteUrl = `/p2/files/${window.selected.id}/delete`;
-        
-        if (deleteUrl) {
-          const formData = new FormData();
-          const csrfToken = getCSRFToken();
-          if (csrfToken) {
-            formData.append('csrf_token', csrfToken);
-          }
+        // Use new delete confirmation modal
+        window.deleteModal.show(itemName, async () => {
+          operationInProgress = true;
           
-          fetch(deleteUrl, { 
-            method: 'POST', 
-            body: formData,
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
+          // Show activity in telemetry
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setActive(`Deleting ${itemName}...`);
+          }
+        
+          let deleteUrl = '';
+          if (window.selected.type === 'folder') deleteUrl = `/folders/delete/${window.selected.id}`;
+          else if (window.selected.type === 'proprietary_note' || window.selected.type === 'note') deleteUrl = `/folders/delete_note/${window.selected.id}`;
+          else if (window.selected.type === 'board') deleteUrl = `/folders/delete_board/${window.selected.id}`;
+          else if (window.selected.type === 'file' || window.selected.type === 'proprietary_blocks' || window.selected.type === 'book' || window.selected.type === 'markdown' || window.selected.type === 'todo' || window.selected.type === 'diagram' || window.selected.type === 'table' || window.selected.type === 'blocks') deleteUrl = `/p2/files/${window.selected.id}/delete`;
+          
+          if (deleteUrl) {
+            const formData = new FormData();
+            const csrfToken = getCSRFToken();
+            if (csrfToken) {
+              formData.append('csrf_token', csrfToken);
             }
-          })
-            .then(response => response.json())
-            .then(data => {
-              if (data.success) {
-                // Remove the card from DOM
-                const cardToRemove = window.selected.card;
-                const parentGrid = cardToRemove.closest('.content-grid');
-                const colWrapper = cardToRemove.closest('.col');
-                
-                // Remove with animation
-                cardToRemove.style.transition = 'all 0.3s ease';
-                cardToRemove.style.opacity = '0';
-                cardToRemove.style.transform = 'scale(0.8)';
-                
-                setTimeout(() => {
-                  if (colWrapper) {
-                    colWrapper.remove();
-                  } else {
-                    cardToRemove.remove();
-                  }
+            
+            fetch(deleteUrl, { 
+              method: 'POST', 
+              body: formData,
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  // Remove the card from DOM
+                  const cardToRemove = window.selected.card;
+                  const parentGrid = cardToRemove.closest('.content-grid');
+                  const colWrapper = cardToRemove.closest('.col');
                   
-                  // Update count badge if present
-                  const section = parentGrid?.closest('.section-container');
-                  if (section) {
-                    const countBadge = section.querySelector('.count-badge');
-                    if (countBadge) {
-                      const currentCount = parseInt(countBadge.textContent) || 0;
-                      const newCount = currentCount - 1;
-                      countBadge.textContent = newCount;
-                      
-                      // Hide section if empty
-                      if (newCount === 0) {
-                        section.style.transition = 'all 0.3s ease';
-                        section.style.opacity = '0';
-                        setTimeout(() => section.remove(), 300);
+                  // Remove with animation
+                  cardToRemove.style.transition = 'all 0.3s ease';
+                  cardToRemove.style.opacity = '0';
+                  cardToRemove.style.transform = 'scale(0.8)';
+                  
+                  setTimeout(() => {
+                    if (colWrapper) {
+                      colWrapper.remove();
+                    } else {
+                      cardToRemove.remove();
+                    }
+                    
+                    // Update count badge if present
+                    const section = parentGrid?.closest('.section-container');
+                    if (section) {
+                      const countBadge = section.querySelector('.count-badge');
+                      if (countBadge) {
+                        const currentCount = parseInt(countBadge.textContent) || 0;
+                        const newCount = currentCount - 1;
+                        countBadge.textContent = newCount;
+                        
+                        // Hide section if empty
+                        if (newCount === 0) {
+                          section.style.transition = 'all 0.3s ease';
+                          section.style.opacity = '0';
+                          setTimeout(() => section.remove(), 300);
+                        }
                       }
                     }
-                  }
+                    
+                    // Refresh telemetry data
+                    if (window.TelemetryPanel) {
+                      window.TelemetryPanel.refreshData();
+                      window.TelemetryPanel.setIdle(`Deleted ${itemName}`);
+                    }
+                  }, 300);
                   
-                  // Refresh telemetry data
-                  if (window.TelemetryPanel) {
-                    window.TelemetryPanel.refreshData();
-                    window.TelemetryPanel.setIdle(`Deleted ${itemName}`);
-                  }
-                }, 300);
-                
-                clearSelection();
-              } else {
-                throw new Error(data.message || 'Delete failed');
-              }
-            })
-            .catch(error => { 
-              const errorMsg = `Failed to delete: ${sanitizeText(error.message)}`;
-              if (window.TelemetryPanel) {
-                window.TelemetryPanel.setIdle(errorMsg);
-              } else {
-                alert(errorMsg);
-              }
-              console.error('Delete error:', error); 
-            })
-            .finally(() => {
-              operationInProgress = false;
-            });
-        } else {
-          operationInProgress = false;
-        }
+                  clearSelection();
+                } else {
+                  throw new Error(data.message || 'Delete failed');
+                }
+              })
+              .catch(error => { 
+                const errorMsg = `Failed to delete: ${sanitizeText(error.message)}`;
+                if (window.TelemetryPanel) {
+                  window.TelemetryPanel.setIdle(errorMsg);
+                } else {
+                  alert(errorMsg);
+                }
+                console.error('Delete error:', error); 
+              })
+              .finally(() => {
+                operationInProgress = false;
+              });
+          } else {
+            operationInProgress = false;
+          }
+        });
       });
     }
   }
@@ -722,19 +835,8 @@ const ClipboardOperations = (function() {
           return;
         }
         
-        // Validate all items
-        for (const item of window.batchSelected) {
-          if (!isValidItemType(item.type) || !isValidId(item.id)) {
-            console.error('Invalid item in batch selection:', item);
-            return;
-          }
-        }
-        
-        clipboard = {
-          action: 'copy',
-          items: window.batchSelected.map(item => ({ type: item.type, id: item.id }))
-        };
-        saveClipboard();
+        // Use performCopy function
+        performCopy(window.batchSelected);
         
         // Note: Telemetry notification handled by keyboard shortcut handler to preserve count
         
@@ -789,11 +891,53 @@ const ClipboardOperations = (function() {
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            // Clear clipboard if it was a cut operation
+            // Use HTMX to load new items if HTML provided
+            if (data.new_items_html && Array.isArray(data.new_items_html)) {
+              console.log(`📦 Processing ${data.new_items_html.length} new items`);
+              
+              // Insert each new item with staggered animation
+              data.new_items_html.forEach((itemHtml, index) => {
+                if (itemHtml && itemHtml.html && itemHtml.type) {
+                  setTimeout(() => {
+                    console.log(`🎨 Inserting item ${index + 1}/${data.new_items_html.length}:`, itemHtml.type);
+                    insertNewItemHTML(itemHtml.html, itemHtml.type);
+                  }, index * 50); // Stagger by 50ms
+                }
+              });
+              
+              // For cut operations, remove original cards after inserting new ones
+              if (clipboard.action === 'cut') {
+                clipboard.items.forEach((item, index) => {
+                  setTimeout(() => {
+                    const sanitizedType = CSS.escape(String(item.type));
+                    const sanitizedId = CSS.escape(String(item.id));
+                    const card = safeQuery(`.item-card[data-type="${sanitizedType}"][data-id="${sanitizedId}"]`);
+                    if (card) {
+                      animateCardRemoval(card).then(() => {
+                        card.remove();
+                        updateSectionCounts();
+                      });
+                    }
+                  }, index * 50 + 100);
+                });
+              }
+              
+              // Refresh telemetry after all items inserted
+              if (window.TelemetryPanel && typeof window.TelemetryPanel.fetchData === 'function') {
+                setTimeout(() => {
+                  window.TelemetryPanel.fetchData();
+                }, data.new_items_html.length * 50 + 200);
+              }
+            } else {
+              console.warn('⚠️ No new_items_html in response, falling back to reload');
+              window.location.reload();
+              return;
+            }
+            
+            // Clear clipboard after paste operation (only for cut operations)
             if (clipboard.action === 'cut') {
               clipboard = null;
               saveClipboard();
-              updatePasteButton();
             }
             
             if (window.TelemetryPanel) {
@@ -803,72 +947,8 @@ const ClipboardOperations = (function() {
               window.TelemetryPanel.setIdle(msg);
             }
             
-            // Use HTMX to load new items if HTML provided
-            if (data.new_items_html && Array.isArray(data.new_items_html)) {
-              // Insert each new item with staggered animation
-              data.new_items_html.forEach((itemHtml, index) => {
-                if (itemHtml && itemHtml.html && itemHtml.type) {
-                  setTimeout(() => {
-                    insertNewItemHTML(itemHtml.html, itemHtml.type);
-                  }, index * 50); // Stagger by 50ms
-                }
-              });
-              
-              // Refresh telemetry after all items inserted
-              if (window.TelemetryPanel && typeof window.TelemetryPanel.fetchData === 'function') {
-                setTimeout(() => {
-                  window.TelemetryPanel.fetchData();
-                }, data.new_items_html.length * 50 + 200);
-              }
-            } else {
-              // Fallback: reload just the folder content without refreshing navbar/telemetry
-              const currentUrl = window.location.pathname;
-              
-              fetch(currentUrl, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-              })
-              .then(response => response.text())
-              .then(html => {
-                // Parse the HTML
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Find all sections in the new HTML
-                const newSections = doc.querySelectorAll('.section-container');
-                const currentContainer = document.querySelector('.container');
-                
-                if (currentContainer && newSections.length > 0) {
-                  // Remove all current sections and <hr> separators
-                  const oldSections = currentContainer.querySelectorAll('.section-container');
-                  const oldHrs = currentContainer.querySelectorAll('hr');
-                  oldSections.forEach(s => s.remove());
-                  oldHrs.forEach(hr => hr.remove());
-                  
-                  // Add new sections with their <hr> separators
-                  newSections.forEach((section, index) => {
-                    if (index > 0) {
-                      const hr = document.createElement('hr');
-                      currentContainer.appendChild(hr);
-                    }
-                    currentContainer.appendChild(section.cloneNode(true));
-                  });
-                  
-                  // Re-attach event listeners to all new cards
-                  if (typeof window.attachCardClickListeners === 'function') {
-                    safeQueryAll('.item-card .item-body').forEach(window.attachCardClickListeners);
-                  }
-                } else {
-                  // Fallback: full page reload if sections not found
-                  console.warn('Could not find sections in response, doing full reload');
-                  window.location.reload();
-                }
-              })
-              .catch(err => {
-                console.error('Failed to reload content:', err);
-                // Fallback to full page reload
-                window.location.reload();
-              });
-            }
+            // Clear batch selection after successful operation
+            clearBatchSelectionVisuals();
           } else {
             throw new Error(data.message || 'Batch paste failed');
           }
@@ -912,79 +992,83 @@ const ClipboardOperations = (function() {
           }
         }
         
-        if (!confirm(`Are you sure you want to delete ${window.batchSelected.length} items?`)) return;
+        const itemCount = window.batchSelected.length;
+        const itemWord = itemCount === 1 ? 'item' : 'items';
         
-        operationInProgress = true;
-        const formData = new FormData();
-        formData.append('items', JSON.stringify(window.batchSelected.map(item => ({ type: item.type, id: item.id }))));
-        
-        const csrfToken = getCSRFToken();
-        if (csrfToken) {
-          formData.append('csrf_token', csrfToken);
-        }
-        
-        if (window.TelemetryPanel) {
-          window.TelemetryPanel.setActive(`Deleting ${window.batchSelected.length} items...`);
-        }
-        
-        fetch('/folders/batch_delete', {
-          method: 'POST',
-          body: formData,
-          headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            // Remove cards from grid view AND corresponding rows from table view
-            window.batchSelected.forEach((item, index) => {
-              if (item.card) {
-                setTimeout(() => {
-                  animateCardRemoval(item.card).then(() => {
-                    // Remove grid view card
-                    const colWrapper = item.card.closest('.col');
-                    if (colWrapper) colWrapper.remove();
-                    else item.card.remove();
-                    
-                    // Also remove corresponding table row
-                    const sanitizedType = CSS.escape(String(item.type));
-                    const sanitizedId = CSS.escape(String(item.id));
-                    const tableRow = safeQuery(`.item-row[data-type="${sanitizedType}"][data-id="${sanitizedId}"]`);
-                    if (tableRow) {
-                      tableRow.remove();
-                    }
-                    
-                    // Update counts after last item
-                    if (index === window.batchSelected.length - 1) {
-                      updateSectionCounts();
-                    }
-                  });
-                }, index * 50);
-              }
-            });
-            
-            if (window.TelemetryPanel) {
-              window.TelemetryPanel.setIdle(`Deleted ${window.batchSelected.length} items`);
-              if (typeof window.TelemetryPanel.fetchData === 'function') {
-                window.TelemetryPanel.fetchData();
-              }
-            }
-            
-            clearBatchSelection();
-          } else {
-            throw new Error(data.message || 'Batch delete failed');
+        // Use new delete confirmation modal
+        window.deleteModal.show(`${itemCount} ${itemWord}`, async () => {
+          operationInProgress = true;
+          const formData = new FormData();
+          formData.append('items', JSON.stringify(window.batchSelected.map(item => ({ type: item.type, id: item.id }))));
+          
+          const csrfToken = getCSRFToken();
+          if (csrfToken) {
+            formData.append('csrf_token', csrfToken);
           }
-        })
-        .catch(error => {
-          const errorMsg = `Failed to delete items: ${error.message}`;
+          
           if (window.TelemetryPanel) {
-            window.TelemetryPanel.setIdle(errorMsg);
-          } else {
-            alert(errorMsg);
+            window.TelemetryPanel.setActive(`Deleting ${window.batchSelected.length} items...`);
           }
-          console.error('Batch delete error:', error);
-        })
-        .finally(() => {
-          operationInProgress = false;
+          
+          fetch('/folders/batch_delete', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Remove cards from grid view AND corresponding rows from table view
+              window.batchSelected.forEach((item, index) => {
+                if (item.card) {
+                  setTimeout(() => {
+                    animateCardRemoval(item.card).then(() => {
+                      // Remove grid view card
+                      const colWrapper = item.card.closest('.col');
+                      if (colWrapper) colWrapper.remove();
+                      else item.card.remove();
+                      
+                      // Also remove corresponding table row
+                      const sanitizedType = CSS.escape(String(item.type));
+                      const sanitizedId = CSS.escape(String(item.id));
+                      const tableRow = safeQuery(`.item-row[data-type="${sanitizedType}"][data-id="${sanitizedId}"]`);
+                      if (tableRow) {
+                        tableRow.remove();
+                      }
+                      
+                      // Update counts after last item
+                      if (index === window.batchSelected.length - 1) {
+                        updateSectionCounts();
+                      }
+                    });
+                  }, index * 50);
+                }
+              });
+              
+              if (window.TelemetryPanel) {
+                window.TelemetryPanel.setIdle(`Deleted ${window.batchSelected.length} items`);
+                if (typeof window.TelemetryPanel.fetchData === 'function') {
+                  window.TelemetryPanel.fetchData();
+                }
+              }
+              
+              clearBatchSelection();
+            } else {
+              throw new Error(data.message || 'Batch delete failed');
+            }
+          })
+          .catch(error => {
+            const errorMsg = `Failed to delete items: ${error.message}`;
+            if (window.TelemetryPanel) {
+              window.TelemetryPanel.setIdle(errorMsg);
+            } else {
+              alert(errorMsg);
+            }
+            console.error('Batch delete error:', error);
+          })
+          .finally(() => {
+            operationInProgress = false;
+          });
         });
       });
     }
@@ -1297,17 +1381,31 @@ const ClipboardOperations = (function() {
       console.warn('[BATCH PIN] Button element #btn-batch-pin not found!');
     }
 
-    // Batch clear button handler
-    if (batchButtons.clear) {
-      batchButtons.clear.addEventListener('click', function(e) {
+    // Batch clear clipboard button handler (clears clipboard only)
+    if (batchButtons.clearClipboard) {
+      batchButtons.clearClipboard.addEventListener('click', function(e) {
         e.preventDefault();
-        // Clear both selection and clipboard
-        clearBatchSelection();
+        // Clear clipboard only (keep selection intact)
         clipboard = null;
         saveClipboard();
         batchButtons.paste.disabled = true;
+        if (batchButtons.clearClipboard) {
+          batchButtons.clearClipboard.style.display = 'none';
+        }
         if (window.TelemetryPanel) {
-          window.TelemetryPanel.setIdle('Clipboard cleared');
+          window.TelemetryPanel.setIdle('Clipboard cleared - you can now copy/cut again');
+        }
+      });
+    }
+
+    // Batch clear selection button handler (clears selection only)
+    if (batchButtons.clear) {
+      batchButtons.clear.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Clear selection only (keep clipboard intact)
+        clearBatchSelection();
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle('Selection cleared');
         }
       });
     }
@@ -1377,21 +1475,21 @@ const ClipboardOperations = (function() {
     if (clipboardData.action === 'cut') {
       if (clipboardData.type === 'folder') {
         pasteUrl = `/folders/move/${clipboardData.id}`;
-      } else if (clipboardData.type === 'note') {
+      } else if (clipboardData.type === 'proprietary_note' || clipboardData.type === 'note') {
         pasteUrl = `/folders/move_note/${clipboardData.id}`;
       } else if (clipboardData.type === 'board') {
         pasteUrl = `/folders/move_board/${clipboardData.id}`;
-      } else if (clipboardData.type === 'file' || clipboardData.type === 'book' || clipboardData.type === 'markdown' || clipboardData.type === 'todo' || clipboardData.type === 'diagram' || clipboardData.type === 'table' || clipboardData.type === 'blocks') {
+      } else if (clipboardData.type === 'file' || clipboardData.type === 'proprietary_blocks' || clipboardData.type === 'book' || clipboardData.type === 'markdown' || clipboardData.type === 'todo' || clipboardData.type === 'diagram' || clipboardData.type === 'table' || clipboardData.type === 'blocks') {
         pasteUrl = `/p2/files/${clipboardData.id}/move`;
       }
     } else if (clipboardData.action === 'copy') {
       if (clipboardData.type === 'folder') {
         pasteUrl = `/folders/copy/${clipboardData.id}`;
-      } else if (clipboardData.type === 'note') {
+      } else if (clipboardData.type === 'proprietary_note' || clipboardData.type === 'note') {
         pasteUrl = `/folders/duplicate_note/${clipboardData.id}`;
       } else if (clipboardData.type === 'board') {
         pasteUrl = `/folders/duplicate_board/${clipboardData.id}`;
-      } else if (clipboardData.type === 'file' || clipboardData.type === 'book' || clipboardData.type === 'markdown' || clipboardData.type === 'todo' || clipboardData.type === 'diagram' || clipboardData.type === 'table' || clipboardData.type === 'blocks') {
+      } else if (clipboardData.type === 'file' || clipboardData.type === 'proprietary_blocks' || clipboardData.type === 'book' || clipboardData.type === 'markdown' || clipboardData.type === 'todo' || clipboardData.type === 'diagram' || clipboardData.type === 'table' || clipboardData.type === 'blocks') {
         pasteUrl = `/p2/files/${clipboardData.id}/duplicate`;
       }
     }
@@ -1450,6 +1548,12 @@ const ClipboardOperations = (function() {
             });
           }
           
+          // Insert new HTML in target folder for cut operation
+          if (data.new_item_html) {
+            console.log('🎨 Inserting new HTML after cut');
+            insertNewItemHTML(data.new_item_html, clipboardData.type);
+          }
+          
           // Clear clipboard after cut
           clipboard = null;
           saveClipboard();
@@ -1472,14 +1576,13 @@ const ClipboardOperations = (function() {
             }
           } else {
             console.warn('⚠️ No new_item_html in response, falling back to reload');
-            // Fallback to reload if no HTML provided
-            if (window.TelemetryPanel) {
-              window.TelemetryPanel.setIdle(data.message || 'Item copied');
-            }
             setTimeout(() => {
               window.location.reload();
             }, 500);
+            return;
           }
+          
+          // Keep clipboard for copy operations (allow multiple pastes)
         }
       } else {
         throw new Error(data.message || 'Paste failed');
@@ -1511,6 +1614,37 @@ const ClipboardOperations = (function() {
       htmlPreview: html ? html.substring(0, 100) : 'null'
     });
     
+    // CRITICAL: Parse HTML first to extract actual data-type from the card
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const wrapperDiv = temp.firstElementChild;
+    
+    if (!wrapperDiv) {
+      console.error('❌ Could not parse new item HTML');
+      window.location.reload();
+      return;
+    }
+    
+    // Find the actual .item-card element (might be wrapped in col div)
+    const actualCard = wrapperDiv.classList.contains('item-card') 
+      ? wrapperDiv 
+      : wrapperDiv.querySelector('.item-card');
+    
+    if (!actualCard) {
+      console.error('❌ Could not find .item-card in HTML');
+      window.location.reload();
+      return;
+    }
+    
+    // Extract actual type from data-file-type (for files) or data-type (for folders)
+    const actualType = actualCard.dataset.fileType || actualCard.dataset.type || itemType;
+    console.log('🔍 PASTE DEBUG - Extracted type from card:', actualType);
+    console.log('🔍 PASTE DEBUG - Original param type:', itemType);
+    console.log('🔍 PASTE DEBUG - Card element:', actualCard);
+    console.log('🔍 PASTE DEBUG - Card data-type:', actualCard.dataset.type);
+    console.log('🔍 PASTE DEBUG - Card data-file-type:', actualCard.dataset.fileType);
+    console.log('🔍 PASTE DEBUG - All data attributes:', actualCard.dataset);
+    
     // Map item types to section IDs
     const sectionMap = {
       'folder': 'folders',
@@ -1525,12 +1659,15 @@ const ClipboardOperations = (function() {
       'blocks': 'blocks',
       'proprietary_infinite_whiteboard': 'infinite-whiteboards',
       'proprietary_graph': 'graph-workspaces',
+      'proprietary_note': 'notes',
+      'proprietary_whiteboard': 'boards',
+      'proprietary_blocks': 'combined',
       'file': 'markdown' // Default file type mapping
     };
     
-    const config = SECTION_CONFIGS[itemType];
-    const sectionId = (config && config.sectionId) || sectionMap[itemType] || 'folders';
-    console.log('📍 Looking for section:', sectionId);
+    const config = SECTION_CONFIGS[actualType];
+    const sectionId = (config && config.sectionId) || sectionMap[actualType] || 'folders';
+    console.log('📍 Looking for section:', sectionId, 'for type:', actualType);
     
     let section = safeQuery(`#${sectionId}`);
     
@@ -1546,7 +1683,7 @@ const ClipboardOperations = (function() {
     }
     
     if (!section) {
-      console.error('❌ Section not found for type', itemType, 'falling back to reload');
+      console.error('❌ Section not found for type', actualType, 'falling back to reload');
       window.location.reload();
       return;
     }
@@ -1563,18 +1700,8 @@ const ClipboardOperations = (function() {
     
     console.log('✅ Content grid found:', contentGrid);
     
-    // Create temporary container to parse HTML
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-    const newItem = temp.firstElementChild;
-    
-    if (!newItem) {
-      console.error('❌ Could not parse new item HTML');
-      window.location.reload();
-      return;
-    }
-    
-    console.log('✅ New item parsed:', newItem);
+    // Item already parsed earlier (wrapperDiv contains the full structure)
+    const newItem = wrapperDiv;
     
     // Add entrance animation
     newItem.style.opacity = '0';
@@ -1742,13 +1869,27 @@ const ClipboardOperations = (function() {
    * Update batch operations UI based on selection state
    */
   function updateBatchUI() {
-    if (window.batchSelected.length > 0) {
+    const hasSelection = window.batchSelected && window.batchSelected.length > 0;
+    const hasClipboard = clipboard && clipboard.items && clipboard.items.length > 0;
+    
+    if (hasSelection) {
+      // Show batch operations bar with selection count
       batchOperations.style.cssText = 'display: flex !important;';
       batchCount.textContent = window.batchSelected.length;
+      
       // Enable selection-based buttons
       if (batchButtons.cut) batchButtons.cut.disabled = false;
       if (batchButtons.copy) batchButtons.copy.disabled = false;
       if (batchButtons.delete) batchButtons.delete.disabled = false;
+      if (batchButtons.pin) batchButtons.pin.disabled = false;
+      if (batchButtons.send) batchButtons.send.disabled = false;
+      if (batchButtons.public) batchButtons.public.disabled = false;
+      
+      // Paste button depends on clipboard state
+      if (batchButtons.paste) {
+        batchButtons.paste.disabled = !hasClipboard;
+      }
+      
       // Add visual indicator to selected cards
       window.batchSelected.forEach(item => {
         if (item.card) {
@@ -1771,18 +1912,31 @@ const ClipboardOperations = (function() {
           }
         }
       });
-    } else {
-      // Only hide batch operations if clipboard is also empty
-      if (!clipboard || !clipboard.items || clipboard.items.length === 0) {
-        batchOperations.style.cssText = 'display: none !important;';
-      } else {
-        // Keep visible but disable selection-based buttons
-        batchOperations.style.cssText = 'display: flex !important;';
-        batchCount.textContent = '0';
-        if (batchButtons.cut) batchButtons.cut.disabled = true;
-        if (batchButtons.copy) batchButtons.copy.disabled = true;
-        if (batchButtons.delete) batchButtons.delete.disabled = true;
+    } else if (hasClipboard) {
+      // Show batch operations bar with clipboard indicator but disable selection-based buttons
+      batchOperations.style.cssText = 'display: flex !important;';
+      batchCount.textContent = '0';
+      
+      // Disable selection-based buttons
+      if (batchButtons.cut) batchButtons.cut.disabled = true;
+      if (batchButtons.copy) batchButtons.copy.disabled = true;
+      if (batchButtons.delete) batchButtons.delete.disabled = true;
+      if (batchButtons.pin) batchButtons.pin.disabled = true;
+      if (batchButtons.send) batchButtons.send.disabled = true;
+      if (batchButtons.public) batchButtons.public.disabled = true;
+      
+      // Enable paste button since clipboard has content
+      if (batchButtons.paste) {
+        batchButtons.paste.disabled = false;
       }
+      
+      // Remove all batch checkboxes
+      safeQueryAll('.batch-checkbox').forEach(cb => cb.remove());
+      safeQueryAll('.batch-selected-item').forEach(el => el.classList.remove('batch-selected-item'));
+    } else {
+      // Hide batch operations bar completely
+      batchOperations.style.cssText = 'display: none !important;';
+      
       // Remove all batch checkboxes
       safeQueryAll('.batch-checkbox').forEach(cb => cb.remove());
       safeQueryAll('.batch-selected-item').forEach(el => el.classList.remove('batch-selected-item'));
@@ -1813,12 +1967,68 @@ const ClipboardOperations = (function() {
     loadClipboard: loadClipboard,
     saveClipboard: saveClipboard,
     updatePasteButton: updatePasteButton,
+    updateBatchUI: updateBatchUI,
+    performCopy: performCopy,
+    performCut: performCut,
     clearClipboard: function() {
       clipboard = null;
       saveClipboard();
+      // Update paste button state
+      if (batchButtons.paste) {
+        batchButtons.paste.disabled = true;
+      }
+      // Update batch UI to reflect new state
+      updateBatchUI();
+      // Trigger custom event for context menu updates
+      document.dispatchEvent(new CustomEvent('clipboardStateChanged', { detail: { hasClipboard: false } }));
     },
     getClipboard: function() {
       return clipboard;
+    },
+    hasClipboard: function() {
+      // Check both memory and localStorage
+      if (clipboard && clipboard.items && clipboard.items.length > 0) {
+        return true;
+      }
+      // Fallback: check localStorage
+      try {
+        const stored = localStorage.getItem(CLIPBOARD_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return parsed && parsed.items && parsed.items.length > 0;
+        }
+      } catch (e) {
+        console.error('[CLIPBOARD] Error checking localStorage:', e);
+      }
+      return false;
+    },
+    triggerPaste: function(targetFolderId) {
+      console.log('[CLIPBOARD] triggerPaste called with targetFolderId:', targetFolderId);
+      
+      // Trigger paste operation programmatically
+      if (!clipboard || !clipboard.items || clipboard.items.length === 0) {
+        console.warn('[CLIPBOARD] No clipboard data to paste');
+        return;
+      }
+      
+      console.log('[CLIPBOARD] Clipboard has', clipboard.items.length, 'items');
+      
+      // Store the target folder ID in localStorage for the paste handler
+      if (targetFolderId) {
+        localStorage.setItem('currentFolderId', targetFolderId.toString());
+        console.log('[CLIPBOARD] Set currentFolderId in localStorage:', targetFolderId);
+      }
+      
+      // Use the existing batch paste logic
+      const btnBatchPaste = document.getElementById('btn-batch-paste');
+      if (btnBatchPaste && !btnBatchPaste.disabled) {
+        console.log('[CLIPBOARD] Clicking paste button');
+        btnBatchPaste.click();
+      } else {
+        console.error('[CLIPBOARD] Paste button not available or disabled');
+        console.error('[CLIPBOARD] Button:', btnBatchPaste, 'Disabled:', btnBatchPaste?.disabled);
+        alert('Unable to paste at this time. Please try again.');
+      }
     },
     isOperationInProgress: function() {
       return operationInProgress;
@@ -1832,6 +2042,10 @@ const ClipboardOperations = (function() {
     }
   };
 })();
+
+// Expose to window for global access
+window.ClipboardOperations = ClipboardOperations;
+console.log('[CLIPBOARD] ClipboardOperations module loaded and exposed to window');
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {

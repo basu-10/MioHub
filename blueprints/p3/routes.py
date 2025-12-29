@@ -5,7 +5,7 @@ from .models import ChatSession, ChatMessage, ChatMemory
 from extensions import db
 from datetime import datetime
 import os
-from groq import Groq
+import requests
 from providers import LLMClient
 from sqlalchemy.orm.attributes import flag_modified
 import config
@@ -15,8 +15,8 @@ import logging
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-# Groq client setup
-client = Groq(api_key=config.GROQ_API_KEY)
+# Initialize LLM client (supports Groq, OpenRouter, Fireworks, Together)
+llm_client = LLMClient()
 
 @p3_blueprint.route('/chatbot')
 @login_required
@@ -109,6 +109,7 @@ def chat():
         title = datetime.now().strftime("%Y-%m-%d") + " • " + user_message[:20]
         chat_session.title = title
         chat_session.updated_at = datetime.utcnow()
+        db.session.commit()  # Commit title update immediately
 
     # Save user message
     user_message_obj = ChatMessage(
@@ -121,26 +122,35 @@ def chat():
     db.session.commit()
 
     # --- Build conversation ONLY from memory_items ---
-    groq_messages = []
+    llm_messages = []
 
     if memory_items:
         memory_items_formatted = "\n".join(config.CHAT_MEMORY_ITEM_FORMAT.format(item=item) for item in memory_items)
         memory_context = config.CHAT_MEMORY_TEMPLATE.format(memory_items=memory_items_formatted)
-        groq_messages.append({"role": "system", "content": memory_context})
+        llm_messages.append({"role": "system", "content": memory_context})
 
     # Always include the latest user message
-    groq_messages.append({"role": "user", "content": user_message})
+    llm_messages.append({"role": "user", "content": user_message})
 
-    print(f"Sending to llm: {groq_messages}")
+    print(f"Sending to LLM: {llm_messages}")
     print(f"Using model: {current_model}")
+    print(f"Using provider: {config.PROVIDER}")
 
     try:
-        chat_completion = client.chat.completions.create(
-            messages=groq_messages,
-            model=current_model,
+        # Use LLMClient for provider-agnostic LLM calls
+        llm_client.model = current_model
+        ai_response = llm_client.chat(
+            messages=llm_messages,
+            temperature=0.7,
+            max_tokens=2048
         )
-        ai_response = chat_completion.choices[0].message.content
+    except requests.exceptions.RequestException as e:
+        # Network/API errors
+        print(f"LLM API Error: {str(e)}")
+        ai_response = f"Connection error. Please check your API configuration."
     except Exception as e:
+        # Other errors
+        print(f"LLM Error: {str(e)}")
         ai_response = f"Error: {str(e)}"
 
     # Save AI response

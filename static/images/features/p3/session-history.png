@@ -1,0 +1,26 @@
+<svg width="1100" height="700" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1100" height="700" fill="#121516"/>
+  <rect x="40" y="40" width="1020" height="620" rx="16" fill="#1a1d1e" stroke="#14b8a6" stroke-width="2"/>
+  
+  <!-- Session list -->
+  <rect x="80" y="80" width="940" height="100" rx="8" fill="#2a2d2e"/>
+  <text x="100" y="115" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ECFFFF">Project Planning Discussion</text>
+  <text x="100" y="145" font-family="Arial, sans-serif" font-size="14" fill="#9aa8ad">Dec 22, 2024 • 45 messages</text>
+  <circle cx="970" cy="130" r="6" fill="#14b8a6"/>
+  
+  <rect x="80" y="200" width="940" height="100" rx="8" fill="#2a2d2e"/>
+  <text x="100" y="235" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ECFFFF">Budget Review and Analysis</text>
+  <text x="100" y="265" font-family="Arial, sans-serif" font-size="14" fill="#9aa8ad">Dec 18, 2024 • 32 messages</text>
+  
+  <rect x="80" y="320" width="940" height="100" rx="8" fill="#2a2d2e"/>
+  <text x="100" y="355" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ECFFFF">Code Review Questions</text>
+  <text x="100" y="385" font-family="Arial, sans-serif" font-size="14" fill="#9aa8ad">Dec 15, 2024 • 28 messages</text>
+  
+  <rect x="80" y="440" width="940" height="100" rx="8" fill="#2a2d2e"/>
+  <text x="100" y="475" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ECFFFF">Feature Brainstorming</text>
+  <text x="100" y="505" font-family="Arial, sans-serif" font-size="14" fill="#9aa8ad">Dec 10, 2024 • 56 messages</text>
+  
+  <!-- Title -->
+  <text x="80" y="600" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#14b8a6">Session History</text>
+  <text x="80" y="635" font-family="Arial, sans-serif" font-size="18" fill="#9aa8ad">Access all past conversations</text>
+</svg>

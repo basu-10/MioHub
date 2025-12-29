@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infinite Whiteboard</title>
+    <title>MioInfinite</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
 
-<!-- Load Infinite Whiteboard Modules -->
+<!-- Load MioInfinite Modules -->
 <script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_core.js') }}"></script>
 <script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_drawing.js') }}"></script>
 <script src="{{ url_for('p2_bp.static', filename='js/infinite_whiteboard/infinite_whiteboard_minimap.js') }}"></script>
@@ -1010,7 +1010,7 @@
 
     <!-- Statusbar -->
     <div class="statusbar" id="statusbar">
-        Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%
+        MioInfinite - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%
     </div>
 
     <!-- Hidden file input for image upload -->
@@ -1018,7 +1018,7 @@
 
 <script>
 // ============================================================================
-// INFINITE WHITEBOARD - Using Dedicated Infinite Whiteboard Modules
+// MIOINFINITE - Using Dedicated MioInfinite Modules
 // ============================================================================
 
 // Canvas setup
@@ -3833,7 +3833,7 @@ async function pasteFromClipboard() {
         const clipboardItems = await navigator.clipboard.read();
         
         for (const item of clipboardItems) {
-            // Check for images
+            // Check for images first
             const imageTypes = item.types.filter(type => type.startsWith('image/'));
             if (imageTypes.length > 0) {
                 const imageType = imageTypes[0];
@@ -3908,9 +3908,64 @@ async function pasteFromClipboard() {
                 reader.readAsDataURL(blob);
                 return; // Found image, exit
             }
+            
+            // Check for text
+            if (item.types.includes('text/plain')) {
+                const blob = await item.getType('text/plain');
+                const text = await blob.text();
+                
+                if (text && text.trim()) {
+                    // Create text object at center of viewport
+                    const centerX = -IWB.viewportX / IWB.zoom + (window.innerWidth / 2 / IWB.zoom);
+                    const centerY = -IWB.viewportY / IWB.zoom + (window.innerHeight / 2 / IWB.zoom);
+                    
+                    // Use a reasonable font size (24px default, or current size if larger)
+                    const fontSize = Math.max(24, IWB.size * 6 || 24);
+                    
+                    const textObj = {
+                        id: nextObjectId++,
+                        type: 'text',
+                        text: text.trim(),
+                        x: centerX - 200, // Offset left so text doesn't overflow right
+                        y: centerY - 50,  // Offset up a bit
+                        fontSize: fontSize,
+                        color: IWB.color || '#14b8a6',
+                        fontFamily: 'sf, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+                        width: null,
+                        height: null,
+                        maxWidth: 400, // Reduced from 600 for better wrapping
+                        align: 'left',
+                        bold: false,
+                        italic: false
+                    };
+                    
+                    // Calculate dimensions with word wrapping
+                    if (typeof IWB.updateTextDimensions === 'function') {
+                        IWB.updateTextDimensions(textObj);
+                    }
+                    
+                    // Assign layer
+                    if (typeof IWB.assignLayerMetadata === 'function') {
+                        IWB.assignLayerMetadata(textObj, defaultLayer);
+                    } else {
+                        textObj.layer = defaultLayer;
+                    }
+                    
+                    objects.push(textObj);
+                    if (IWB.sortObjectsByLayerInPlace) {
+                        IWB.sortObjectsByLayerInPlace(objects);
+                    }
+                    
+                    IWB.addToUndoStack({ type: 'add', object: textObj });
+                    render();
+                    
+                    console.log(`[CLIPBOARD] Text pasted: ${text.length} characters`);
+                    return; // Found text, exit
+                }
+            }
         }
         
-        console.log('[CLIPBOARD] No images found in clipboard');
+        console.log('[CLIPBOARD] No images or text found in clipboard');
     } catch (err) {
         console.error('[CLIPBOARD] Error pasting:', err);
     }
@@ -3932,8 +3987,8 @@ if (typeof IWB.updateUndoRedoButtons === 'function') {
     IWB.updateUndoRedoButtons();
 }
 
-console.log('Infinite Whiteboard initialized with dedicated modules');
-console.log('Available infinite whiteboard modules:', {
+console.log('MioInfinite initialized with dedicated modules');
+console.log('Available MioInfinite modules:', {
     core: typeof IWB.applyTransform !== 'undefined',
     drawing: typeof IWB.drawObject !== 'undefined',
     minimap: typeof IWB.updateMinimap !== 'undefined',
@@ -3963,7 +4018,7 @@ const isNewBoard = !boardId;
 function loadBoardContent() {
     try {
         const content = {{ board.content_json | tojson }};
-        console.log('[LOAD] Loading infinite whiteboard content:', content);
+        console.log('[LOAD] Loading MioInfinite content:', content);
         
         if (content && content.objects) {
             // Load objects
@@ -4108,7 +4163,7 @@ async function saveToServer(silent = false) {
         
         const titleInput = document.getElementById('board-title-input');
         const descriptionInput = document.getElementById('board-description-input');
-        const boardTitle = titleInput?.value?.trim() || 'Infinite Whiteboard';
+        const boardTitle = titleInput?.value?.trim() || 'MioInfinite';
         const boardDescription = descriptionInput?.value?.trim() || '';
         
         const response = await fetch(`/infinite_boards/edit/${boardId}`, {
@@ -4169,7 +4224,7 @@ async function saveToServer(silent = false) {
             if (!silent) {
                 document.getElementById('statusbar').textContent = 'Saved successfully!';
                 setTimeout(() => {
-                    document.getElementById('statusbar').textContent = `Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%`;
+                    document.getElementById('statusbar').textContent = `MioInfinite - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%`;
                 }, 2000);
             }
             console.log('[SAVE] Board saved successfully');
@@ -4446,7 +4501,7 @@ window.exportInfiniteWhiteboardAsPNG = async function() {
         console.log(`[EXPORT PNG] Downloaded as ${filename}`);
         document.getElementById('statusbar').textContent = `Exported as ${filename}`;
         setTimeout(() => {
-            document.getElementById('statusbar').textContent = 'Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%';
+            document.getElementById('statusbar').textContent = 'MioInfinite - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%';
         }, 3000);
     }, 'image/png');
 };
@@ -4458,7 +4513,7 @@ window.exportInfiniteWhiteboardAsJSONL = function() {
     const exportData = {
         type: 'proprietary_infinite_whiteboard',
         id: boardId || 0,
-        title: '{{ board.title if board else "Infinite Whiteboard" }}',
+        title: '{{ board.title if board else "MioInfinite" }}',
         created_at: '{{ board.created_at.isoformat() if board and board.created_at else "" }}',
         last_modified: '{{ board.last_modified.isoformat() if board and board.last_modified else "" }}',
         content: {
@@ -4501,7 +4556,7 @@ window.exportInfiniteWhiteboardAsJSONL = function() {
     console.log(`[EXPORT JSONL] Downloaded as ${filename}`);
     document.getElementById('statusbar').textContent = `Exported as ${filename}`;
     setTimeout(() => {
-        document.getElementById('statusbar').textContent = 'Infinite Whiteboard - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%';
+        document.getElementById('statusbar').textContent = 'MioInfinite - Ready | Pan: Space + Drag or Mouse Wheel | Zoom: Ctrl + Wheel | Position: (0, 0) | Zoom: 100%';
     }, 3000);
 };
 

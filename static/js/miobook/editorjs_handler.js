@@ -34,6 +34,12 @@ class EditorJSHandler {
         
         const blockId = blockEl.dataset.blockId;
         
+        // Check if already initialized - prevent duplicate instances
+        if (this.editors.has(blockId)) {
+            console.log(`[EditorJS] Block ${blockId} already initialized, skipping`);
+            return;
+        }
+        
         // Get existing content
         let data = null;
         try {

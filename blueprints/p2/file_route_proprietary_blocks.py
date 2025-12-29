@@ -6,6 +6,8 @@ from sqlalchemy.orm.attributes import flag_modified
 import json
 import io
 
+from blueprints.p2.utils import save_data_uri_images_in_json
+
 from . import combined_bp  # Import the blueprint instance
 
 
@@ -17,6 +19,31 @@ def format_file_size(size_bytes):
         return f"{(size_bytes / 1024):.1f}KB"
     else:
         return f"{(size_bytes / (1024 * 1024)):.1f}MB"
+
+
+def process_miobook_images(content_data, user_id):
+    """
+    Persist embedded data URI images to disk (deduped + compressed) and replace with URLs.
+    Returns (updated_content_data, total_bytes_added).
+    """
+    total_bytes = 0
+
+    if not content_data or not isinstance(content_data, dict):
+        return content_data, total_bytes
+
+    blocks = content_data.get('blocks', []) or []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+
+        try:
+            updated_content, added = save_data_uri_images_in_json(block.get('content'), user_id)
+            block['content'] = updated_content
+            total_bytes += added
+        except Exception as e:
+            print(f"[WARN] Failed to process images for MioBook block {block.get('id')}: {e}")
+
+    return content_data, total_bytes
 
 @combined_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -67,6 +94,9 @@ def new_combined():
             except json.JSONDecodeError:
                 content_data = {'version': '1.0', 'blocks': []}
             
+            # Persist embedded images (e.g., whiteboard) to disk for dedupe/storage accounting
+            content_data, bytes_added = process_miobook_images(content_data, current_user.id)
+
             # Store as a File with type='proprietary_blocks' and JSON content
             book_file = File(
                 title=title,
@@ -94,13 +124,15 @@ def new_combined():
                 db.session.commit()
             
             content_size = book_file.get_content_size()
-            if not check_guest_limit(current_user, content_size):
+            total_size = content_size + (bytes_added or 0)
+
+            if not check_guest_limit(current_user, total_size):
                 return jsonify({"success": False, "error": "Data limit exceeded"}), 400
             
             # Save to database
             db.session.add(book_file)
             db.session.commit()
-            update_user_data_size(current_user, content_size)
+            update_user_data_size(current_user, total_size)
             
             # Add notification for creation
             from blueprints.p2.utils import add_notification
@@ -125,7 +157,7 @@ def new_combined():
     folders = Folder.query.filter_by(user_id=current_user.id).all()
     current_folder = Folder.query.filter_by(id=current_folder_id, user_id=current_user.id).first() if current_folder_id else None
     
-    return render_template('p2/miobook_edit_v2.html', 
+    return render_template('p2/file_edit_proprietary_blocks.html', 
                          folders=folders, 
                          current_folder=current_folder,
                          folder_id=current_folder_id)
@@ -143,7 +175,7 @@ def edit_combined(document_id):
     if request.method == 'POST':
         try:
             # Update title
-            new_title = request.form.get('title', '').strip()
+            new_title = request.form.get('title', '').strip() if not request.is_json else request.get_json().get('title', '').strip()
             if new_title:
                 document.title = new_title
             
@@ -159,15 +191,35 @@ def edit_combined(document_id):
                     content_data['version'] = '1.0'
                 if 'blocks' not in content_data or not isinstance(content_data['blocks'], list):
                     content_data['blocks'] = []
+                
+                # Debug: Log what we're saving
+                print(f"[DEBUG] Saving MioBook {document_id}: '{new_title or document.title}'")
+                print(f"[DEBUG] Number of blocks to save: {len(content_data['blocks'])}")
+                for i, block in enumerate(content_data['blocks']):
+                    print(f"[DEBUG] Block {i}: type={block.get('type')}, id={block.get('id')}, title={block.get('title')}")
+                    if block.get('type') == 'whiteboard':
+                        content = block.get('content')
+                        print(f"[DEBUG] Whiteboard content type: {type(content)}")
+                        if isinstance(content, dict):
+                            print(f"[DEBUG] Whiteboard content keys: {content.keys()}")
+                            if 'imageData' in content:
+                                img_data = content['imageData']
+                                print(f"[DEBUG] imageData present: {bool(img_data)}, length: {len(img_data) if img_data else 0}")
+                        else:
+                            print(f"[DEBUG] Whiteboard content: {str(content)[:100] if content else 'None/Empty'}")
+                
             except json.JSONDecodeError:
                 content_data = {'version': '1.0', 'blocks': []}
             
+            # Persist embedded images (e.g., whiteboard) to disk for dedupe/storage accounting
+            content_data, bytes_added = process_miobook_images(content_data, current_user.id)
+
             # Calculate size difference
             old_size = document.get_content_size()
             document.content_json = content_data
             flag_modified(document, 'content_json')  # Required for SQLAlchemy to detect JSON changes
             new_size = document.get_content_size()
-            size_delta = new_size - old_size
+            size_delta = (new_size - old_size) + (bytes_added or 0)
             
             # Check guest limits for size increase
             def check_guest_limit(user, additional_size):
@@ -213,11 +265,33 @@ def edit_combined(document_id):
     folders = Folder.query.filter_by(user_id=current_user.id).all()
     current_folder = document.folder
     
-    return render_template('p2/miobook_edit_v2.html', 
-                         document=document,
+    # Debug: Log the document content structure
+    print(f"[DEBUG] Loading MioBook {document_id}: '{document.title}'")
+    print(f"[DEBUG] content_json type: {type(document.content_json)}")
+    if document.content_json:
+        print(f"[DEBUG] content_json keys: {document.content_json.keys() if isinstance(document.content_json, dict) else 'not a dict'}")
+        if isinstance(document.content_json, dict) and 'blocks' in document.content_json:
+            print(f"[DEBUG] Number of blocks: {len(document.content_json['blocks'])}")
+            for i, block in enumerate(document.content_json['blocks']):
+                print(f"[DEBUG] Block {i}: type={block.get('type')}, id={block.get('id')}, title={block.get('title')}")
+                if block.get('type') == 'whiteboard':
+                    content = block.get('content')
+                    print(f"[DEBUG] Whiteboard content type: {type(content)}")
+                    if isinstance(content, dict):
+                        print(f"[DEBUG] Whiteboard content keys: {content.keys()}")
+                        if 'imageData' in content:
+                            img_data = content['imageData']
+                            print(f"[DEBUG] imageData present: {bool(img_data)}, length: {len(img_data) if img_data else 0}")
+                    else:
+                        print(f"[DEBUG] Whiteboard content value: {str(content)[:100] if content else 'None/Empty'}")
+    
+    return render_template('p2/file_edit_proprietary_blocks.html', 
+                         file=document,  # Pass as 'file' to match template expectations
+                         document=document,  # Keep for backward compatibility
                          folders=folders, 
                          current_folder=current_folder,
                          folder_id=current_folder.id if current_folder else None)
+
 
 # Legacy save_note_block and save_board_block routes removed
 # MioBook now stores all blocks inline in content_json (no separate File records)
@@ -281,10 +355,11 @@ def print_view(document_id):
         return redirect(url_for('folders.view_folder', folder_id=session.get('current_folder_id')))
     
     try:
-        # Get content blocks from content_json
-        content_blocks = document.content_json if document.content_json else []
-        if not isinstance(content_blocks, list):
-            content_blocks = []
+        # Get content from content_json (new format with version)
+        content_data = document.content_json if document.content_json else {'version': '1.0', 'blocks': []}
+        if not isinstance(content_data, dict):
+            content_data = {'version': '1.0', 'blocks': []}
+        content_blocks = content_data.get('blocks', [])
         
         # Render print view template
         return render_template('p2/miobook_print_view.html', 

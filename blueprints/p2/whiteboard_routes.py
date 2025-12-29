@@ -142,7 +142,7 @@ def new_board():
             return jsonify({"ok": False, "error": str(e)}), 500
 
     # GET request - pass current folder context to template
-    return render_template('p2/mioboard_v4.html', current_folder_id=current_folder_id)
+    return render_template('p2/file_edit_proprietary_whiteboard.html', file=None, current_folder_id=current_folder_id)
 
 
 
@@ -278,6 +278,6 @@ def edit_board(board_id):
     print(f"[DEBUG] Board content length: {len(str(content))}")
     print(f"[DEBUG] Board content preview: {str(content)[:200] if content else 'None'}...")
 
-    return render_template('p2/mioboard_v4.html', board=board)
+    return render_template('p2/file_edit_proprietary_whiteboard.html', file=board)
 
 

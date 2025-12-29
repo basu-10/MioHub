@@ -26,6 +26,16 @@ window.GraphStorage = (function() {
         if (window.GraphEdges) {
           window.GraphEdges.loadEdges(graph.edges || []);
         }
+
+        // Load rendered content state from node metadata
+        if (window.GraphContentRenderer) {
+          window.GraphContentRenderer.loadRendererState(graph.nodes || []);
+        }
+
+        // Sync toolbar state (connect/manage/arrow buttons) with latest graph data
+        if (window.GraphToolbar?.refreshState) {
+          window.GraphToolbar.refreshState();
+        }
         
         // Restore viewport state (zoom/pan) from workspace settings
         if (graph.settings && window.GraphCanvas.loadViewportState) {

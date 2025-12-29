@@ -166,7 +166,7 @@ def new_note():
     elif request.method == 'GET':
         folder = Folder.query.get(current_folder_id)
         breadcrumb = build_folder_breadcrumb(folder) if folder else []
-        return render_template('p2/mionote_v2.html', folder_breadcrumb=breadcrumb)
+        return render_template('p2/file_edit_proprietary_note.html', file=None, folder_breadcrumb=breadcrumb)
 
 @notes_bp.route('/edit_note/<int:note_id>', methods=['GET', 'POST'])
 @login_required
@@ -252,7 +252,7 @@ def edit_note(note_id):
         return redirect(url_for('folders.view_folder', folder_id=note.folder_id))
 
     breadcrumb = build_folder_breadcrumb(note.folder) if note.folder else []
-    return render_template('p2/mionote_v2.html', note=note, folder_breadcrumb=breadcrumb)
+    return render_template('p2/file_edit_proprietary_note.html', file=note, folder_breadcrumb=breadcrumb)
 
 def extract_and_save_images(content, user_id):
     """

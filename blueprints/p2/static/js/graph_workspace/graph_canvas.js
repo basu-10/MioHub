@@ -163,11 +163,13 @@ window.GraphCanvas = (function() {
   function updateCursorForPosition(e) {
     if (isPanning) {
       canvas.style.cursor = 'grabbing';
+      canvas.title = '';
       return;
     }
     
     if (!e) {
       canvas.style.cursor = 'grab';
+      canvas.title = '';
       return;
     }
     
@@ -181,8 +183,15 @@ window.GraphCanvas = (function() {
     
     if (overNode || overEdge) {
       canvas.style.cursor = 'pointer';
+      // Show full label as tooltip for edges
+      if (overEdge && overEdge.label) {
+        canvas.title = overEdge.label;
+      } else {
+        canvas.title = '';
+      }
     } else {
       canvas.style.cursor = 'grab';
+      canvas.title = '';
     }
   }
 
@@ -231,6 +240,11 @@ window.GraphCanvas = (function() {
     }
     if (window.GraphNodes) {
       window.GraphNodes.render(ctx, viewportX, viewportY, scale);
+    }
+    
+    // Update rendered content overlays after canvas render
+    if (window.GraphContentRenderer) {
+      window.GraphContentRenderer.updateRenderedOverlays();
     }
   }
 
@@ -410,6 +424,17 @@ window.GraphCanvas = (function() {
     return snapToGridEnabled;
   }
 
+  /**
+   * Get individual viewport values for convenience
+   */
+  function getViewportX() {
+    return viewportX;
+  }
+
+  function getViewportY() {
+    return viewportY;
+  }
+
   return {
     init,
     render,
@@ -421,6 +446,8 @@ window.GraphCanvas = (function() {
     getCanvas,
     getScale,
     getViewport,
+    getViewportX,
+    getViewportY,
     loadViewportState,
     saveViewportState,
     toggleSnapToGrid,

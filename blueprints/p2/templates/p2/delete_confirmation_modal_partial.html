@@ -1,0 +1,361 @@
+1<!-- delete_confirmation_modal_partial.html -->
+<!-- Modern, animated delete confirmation modal with Carbon Teal theme -->
+
+<style>
+/* Delete Confirmation Modal Overlay */
+.delete-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+.delete-modal-overlay.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Delete Modal Container */
+.delete-modal-container {
+  background: var(--card, #121516);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  border-radius: 12px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(236, 255, 255, 0.1);
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+/* Modal Header */
+.delete-modal-header {
+  background: linear-gradient(135deg, 
+    rgba(239, 68, 68, 0.15) 0%, 
+    rgba(220, 38, 38, 0.1) 100%);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delete-modal-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.delete-modal-icon i {
+  color: white;
+  font-size: 28px;
+}
+
+.delete-modal-title {
+  margin: 0;
+  color: var(--white, #ECFFFF);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Modal Body */
+.delete-modal-body {
+  padding: 24px;
+}
+
+.delete-modal-message {
+  color: var(--white, #ECFFFF);
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.delete-modal-item-name {
+  display: inline-block;
+  background: rgba(20, 184, 166, 0.15);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: var(--accent, #14b8a6);
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.delete-modal-warning {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 16px;
+}
+
+.delete-modal-warning i {
+  color: #fbbf24;
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.delete-modal-warning-text {
+  color: var(--muted, #9aa8ad);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Modal Footer */
+.delete-modal-footer {
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(236, 255, 255, 0.1);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.delete-modal-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+  letter-spacing: 0.02em;
+}
+
+.delete-modal-btn-cancel {
+  background: rgba(236, 255, 255, 0.1);
+  color: var(--white, #ECFFFF);
+  border: 1px solid rgba(236, 255, 255, 0.2);
+}
+
+.delete-modal-btn-cancel:hover {
+  background: rgba(236, 255, 255, 0.15);
+  border-color: rgba(236, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.delete-modal-btn-delete {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.delete-modal-btn-delete:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-2px);
+}
+
+.delete-modal-btn-delete:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Keyboard hint */
+.delete-modal-kbd-hint {
+  font-size: 11px;
+  color: var(--muted, #9aa8ad);
+  margin-top: 12px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.delete-modal-kbd {
+  display: inline-block;
+  background: rgba(236, 255, 255, 0.1);
+  border: 1px solid rgba(236, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  margin: 0 2px;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .delete-modal-container {
+    max-width: 95%;
+  }
+  
+  .delete-modal-footer {
+    flex-direction: column-reverse;
+  }
+  
+  .delete-modal-btn {
+    width: 100%;
+  }
+}
+</style>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmationModal" class="delete-modal-overlay">
+  <div class="delete-modal-container">
+    <!-- Header -->
+    <div class="delete-modal-header">
+      <div class="delete-modal-icon">
+        <i class="material-icons">warning</i>
+      </div>
+      <h3 class="delete-modal-title">Confirm Deletion</h3>
+    </div>
+    
+    <!-- Body -->
+    <div class="delete-modal-body">
+      <div class="delete-modal-message">
+        Are you sure you want to delete 
+        <span class="delete-modal-item-name" id="deleteItemName">this item</span>?
+      </div>
+      
+      <div class="delete-modal-warning">
+        <i class="material-icons">info</i>
+        <div class="delete-modal-warning-text">
+          <strong>This action cannot be undone.</strong><br>
+          All contents and associated data will be permanently removed.
+        </div>
+      </div>
+      
+      <div class="delete-modal-kbd-hint">
+        Press <span class="delete-modal-kbd">Esc</span> to cancel or <span class="delete-modal-kbd">Enter</span> to confirm
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="delete-modal-footer">
+      <button class="delete-modal-btn delete-modal-btn-cancel" onclick="window.deleteModal.cancel()">
+        <i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">close</i>
+        Cancel
+      </button>
+      <button class="delete-modal-btn delete-modal-btn-delete" onclick="window.deleteModal.confirm()">
+        <i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">delete_forever</i>
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Delete Modal Controller
+(function() {
+  const modal = {
+    element: null,
+    confirmCallback: null,
+    cancelCallback: null,
+    
+    init() {
+      this.element = document.getElementById('deleteConfirmationModal');
+      
+      // Click outside to close
+      this.element.addEventListener('click', (e) => {
+        if (e.target === this.element) {
+          this.cancel();
+        }
+      });
+      
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (!this.element.classList.contains('show')) return;
+        
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          this.cancel();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          this.confirm();
+        }
+      });
+    },
+    
+    /**
+     * Show delete confirmation modal
+     * @param {string} itemName - Name of item to delete
+     * @param {Function} onConfirm - Callback when user confirms
+     * @param {Function} onCancel - Optional callback when user cancels
+     * @returns {Promise} - Resolves to true if confirmed, false if cancelled
+     */
+    show(itemName, onConfirm, onCancel) {
+      return new Promise((resolve) => {
+        // Update item name in modal
+        const itemNameElement = document.getElementById('deleteItemName');
+        if (itemNameElement) {
+          itemNameElement.textContent = itemName;
+        }
+        
+        // Store callbacks
+        this.confirmCallback = () => {
+          if (onConfirm) onConfirm();
+          resolve(true);
+        };
+        
+        this.cancelCallback = () => {
+          if (onCancel) onCancel();
+          resolve(false);
+        };
+        
+        // Show modal
+        this.element.classList.add('show');
+      });
+    },
+    
+    confirm() {
+      this.element.classList.remove('show');
+      if (this.confirmCallback) {
+        this.confirmCallback();
+        this.confirmCallback = null;
+      }
+    },
+    
+    cancel() {
+      this.element.classList.remove('show');
+      if (this.cancelCallback) {
+        this.cancelCallback();
+        this.cancelCallback = null;
+      }
+    }
+  };
+  
+  // Initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => modal.init());
+  } else {
+    modal.init();
+  }
+  
+  // Expose globally
+  window.deleteModal = modal;
+})();
+</script>

@@ -19,7 +19,7 @@
   --text-secondary: var(--muted);
   --text-muted: var(--muted);
 
-  --border-primary: rgba(255,255,255,0.04);
+  --border-primary: var(--muted);
   --border-secondary: rgba(255,255,255,0.02);
   --border-hover: rgba(13,148,136,0.12);
 
@@ -47,6 +47,19 @@ html,body{background-color:var(--bg);color:var(--text-primary);background-image:
 .bg-green-600 { background-color: var(--accent) !important; color: var(--text-primary) !important; }
 .bg-blue-600 { background-color: var(--accent-strong) !important; color: var(--text-primary) !important; }
 #dropdowns:where(.dropdown-custom, .fab-dropdown) { background: linear-gradient(180deg,var(--bg-secondary), var(--bg-tertiary)) !important; border:1px solid var(--border-primary); box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+
+/* Small badge for displaying the current user's type with a subtle border */
+.user-type-badge {
+  border: 1px solid var(--muted);
+  color: var(--text-secondary);
+  display: inline-block;
+  padding: 0.125rem 0.5rem; /* aligns with px-2 py-0.5 */
+  border-radius: 6px;
+  font-size: 0.75rem; /* matches text-xs */
+  line-height: 1;
+  vertical-align: middle;
+  background: transparent;
+}
 
 /* Dropdown link text and icon color: ensure light text for readability */
 .dropdown-custom li a,
@@ -79,12 +92,13 @@ html,body{background-color:var(--bg);color:var(--text-primary);background-image:
     <div class="flex justify-between items-center h-16">
       <!-- Brand -->
       <a class="text-xl font-semibold text-white hover:text-gray-200 no-underline flex items-center" href="{{ url_for('folders.view_folder', folder_id=current_folder_id or current_user.folders[0].id) }}">
-        <i class="material-icons mr-2">folder</i>
+        
         Hi {{ current_user.username }}
-        {%- if current_user.user_type %}
-          <span class="ml-2 text-gray-300 text-xs font-medium uppercase px-2 py-0.5 rounded" title="{{ current_user.user_type }}">{{ current_user.user_type|capitalize }}</span>
-        {%- endif %}
         , welcome to MioSpace
+
+        {%- if current_user.user_type %}
+          <span class="ml-2 text-gray-300 text-xs font-medium uppercase px-2 py-0.5 rounded user-type-badge" title="{{ current_user.user_type }}">{{ current_user.user_type|capitalize }}</span>
+        {%- endif %}
       </a>
       
       <!-- Navigation Items -->
@@ -310,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-md">
           <h7 class="text-gray-200 font-medium mb-2 block">Export as Backup (ZIP)</h7>
           <p class="text-gray-300 text-sm mb-3">
-            Download all MioNotes, MioDraws, and images from the current folder and its subfolders as a ZIP file.
+            Download all MioNotes, MioPages, and images from the current folder and its subfolders as a ZIP file.
           </p>
           
           <!-- Warning Box -->
@@ -319,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
               <i class="material-icons text-yellow-400 mr-2 text-sm mt-0.5">warning</i>
               <div>
                 <p class="text-yellow-200 text-xs">
-                  <strong>Note:</strong> These ZIP backups can be re-uploaded to restore MioNotes, MioDraws, and MioBooks. However, they are <strong>not viewable by 3rd party software</strong>. For a viewable format, use the PDF export option below.
+                  <strong>Note:</strong> These ZIP backups can be re-uploaded to restore MioNotes, MioPages, and MioBlocks. However, they are <strong>not viewable by 3rd party software</strong>. For a viewable format, use the PDF export option below.
                 </p>
               </div>
             </div>

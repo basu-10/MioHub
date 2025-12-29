@@ -37,13 +37,17 @@ class MioBookCore {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 filter: '.insert-separator',  // Don't allow dragging separators
-                draggable: '.block-item',      // Only allow dragging block items
+                draggable: '.block-row',       // Drag entire row (block + annotation)
                 forceFallback: false,           // Use native drag for better performance
                 scroll: true,                   // Enable auto-scrolling
                 scrollSensitivity: 80,          // Distance from edge (in px) to trigger scroll
                 scrollSpeed: 15,                // Scrolling speed
                 bubbleScroll: true,             // Allow scrolling in all scrollable ancestors
-                onEnd: () => {
+                onStart: (evt) => {
+                    evt.item.classList.add('dragging');
+                },
+                onEnd: (evt) => {
+                    evt.item.classList.remove('dragging');
                     this.rebuildSeparators();
                     this.markDirty();
                 }
@@ -76,13 +80,17 @@ class MioBookCore {
     
     async collectBlocksData() {
         const blocks = [];
-        const blockElements = document.querySelectorAll('#contentBlocks .block-item');
+        const blockRows = document.querySelectorAll('#contentBlocks .block-row');
         
-        for (let i = 0; i < blockElements.length; i++) {
-            const blockEl = blockElements[i];
+        for (let i = 0; i < blockRows.length; i++) {
+            const blockRow = blockRows[i];
+            const blockEl = blockRow.querySelector('.block-item');
+            if (!blockEl) continue;
+            
             const type = blockEl.dataset.type;
             const blockId = blockEl.dataset.blockId || `block-${Date.now()}-${i}`;
             const title = blockEl.querySelector('.block-title-input')?.value || '';
+            const splitRatio = parseInt(blockRow.dataset.splitRatio) || 50;
             
             let content = null;
             let metadata = {};
@@ -111,12 +119,35 @@ class MioBookCore {
                     break;
             }
             
+            // Check for annotation block
+            const annotationEl = blockRow.querySelector('.annotation-block');
+            let annotationId = null;
+            
+            if (annotationEl) {
+                annotationId = annotationEl.dataset.annotationId || `annotation-${Date.now()}-${i}`;
+                const annotationContent = await window.AnnotationHandler?.getContent(annotationEl);
+                
+                // Add annotation as separate block
+                blocks.push({
+                    id: annotationId,
+                    type: 'annotation',
+                    parentId: blockId,
+                    content: annotationContent
+                });
+            }
+            
+            // Default to true (visible) if not explicitly set
+            const annotationShow = blockRow.dataset.annotationShow !== 'false';
+            
             blocks.push({
                 id: blockId,
                 type: type,
                 title: title,
                 content: content,
-                metadata: metadata
+                metadata: metadata,
+                annotationId: annotationId,
+                splitRatio: splitRatio,
+                annotationShow: annotationShow
             });
         }
         
@@ -124,21 +155,26 @@ class MioBookCore {
     }
     
     async saveDocument(silent = false) {
+        console.log('[MioBook] saveDocument called, silent:', silent, 'isDirty:', this.isDirty, 'documentId:', this.documentId);
+        
         const title = document.getElementById('documentTitle')?.value?.trim();
         
         if (!title) {
+            console.warn('[MioBook] No title provided');
             if (!silent) {
                 alert('Please enter a document title');
             }
             return false;
         }
         
+        console.log('[MioBook] Collecting blocks data...');
         const blocks = await this.collectBlocksData();
+        console.log('[MioBook] Collected', blocks.length, 'blocks');
         
         const data = {
             title: title,
             content_json: JSON.stringify({
-                version: '1.0',
+                version: '2.0',
                 blocks: blocks
             })
         };
@@ -147,7 +183,10 @@ class MioBookCore {
             `/combined/edit/${this.documentId}` : 
             '/combined/new';
         
+        console.log('[MioBook] Saving to URL:', url);
+        
         try {
+            console.log('[MioBook] Sending fetch request...');
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -157,9 +196,12 @@ class MioBookCore {
                 body: JSON.stringify(data)
             });
             
+            console.log('[MioBook] Response status:', response.status);
             const result = await response.json();
+            console.log('[MioBook] Response result:', result);
             
             if (result.success) {
+                console.log('[MioBook] Save successful');
                 if (!this.documentId && result.document_id) {
                     this.documentId = result.document_id;
                     // Update URL without reload
@@ -167,6 +209,7 @@ class MioBookCore {
                 }
                 
                 this.isDirty = false;
+                console.log('[MioBook] isDirty set to false');
                 
                 if (!silent) {
                     this.showSaveSuccess();
@@ -174,6 +217,7 @@ class MioBookCore {
                 
                 return true;
             } else {
+                console.error('[MioBook] Save failed:', result.error);
                 if (!silent) {
                     alert('Failed to save: ' + (result.error || 'Unknown error'));
                 }
@@ -344,21 +388,21 @@ class MioBookCore {
         const oldSeparators = container.querySelectorAll('.insert-separator');
         oldSeparators.forEach(sep => sep.remove());
         
-        // Get all blocks
-        const blocks = container.querySelectorAll('.block-item');
+        // Get all block rows
+        const blockRows = container.querySelectorAll('.block-row');
         
-        // Add separator before first block
-        if (blocks.length > 0) {
-            blocks[0].insertAdjacentHTML('beforebegin', this.createSeparatorHTML(0));
+        // Add separator before first block row
+        if (blockRows.length > 0) {
+            blockRows[0].insertAdjacentHTML('beforebegin', this.createSeparatorHTML(0));
         } else {
             // No blocks, add single separator
             container.innerHTML = this.createSeparatorHTML(0);
             return;
         }
         
-        // Add separator after each block
-        blocks.forEach((block, index) => {
-            block.insertAdjacentHTML('afterend', this.createSeparatorHTML(index + 1));
+        // Add separator after each block row
+        blockRows.forEach((blockRow, index) => {
+            blockRow.insertAdjacentHTML('afterend', this.createSeparatorHTML(index + 1));
         });
     }
     
@@ -387,31 +431,38 @@ class MioBookCore {
     
     createMarkdownBlockHTML(blockId) {
         return `
-            <div class="block-item" data-type="markdown" data-block-id="${blockId}">
-                <div class="block-header">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-markdown text-teal-400"></i>
-                        <span class="block-type-label">Markdown</span>
-                    </div>
-                    <div class="block-controls">
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <div class="drag-handle" title="Drag to reorder">
-                            <i class="fas fa-grip-vertical"></i>
+            <div class="block-row" data-block-id="${blockId}" data-split-ratio="50">
+                <div class="main-block-column">
+                    <div class="block-item" data-type="markdown" data-block-id="${blockId}">
+                        <div class="block-header">
+                            <div class="drag-handle" title="Drag to reorder">
+                                <i class="fas fa-grip-vertical"></i>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-markdown text-teal-400"></i>
+                                <span class="block-type-label">Markdown</span>
+                            </div>
+                            <input type="text" class="block-title-input" placeholder="Block Title" value="">
+                            <div class="block-controls">
+                                <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                    <i class="fas fa-comment-alt"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="block-content">
-                    <input type="text" class="block-title-input" placeholder="Block Title" value="">
-                    <div class="markdown-editor-wrapper">
-                        <div class="markdown-editor" data-content=""></div>
+                        <div class="block-content">
+                            <div class="markdown-editor-wrapper">
+                                <div class="markdown-editor" data-content=""></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -420,34 +471,41 @@ class MioBookCore {
     
     createTodoBlockHTML(blockId) {
         return `
-            <div class="block-item" data-type="todo" data-block-id="${blockId}">
-                <div class="block-header">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-tasks text-yellow-400"></i>
-                        <span class="block-type-label">Todo List</span>
-                    </div>
-                    <div class="block-controls">
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <div class="drag-handle" title="Drag to reorder">
-                            <i class="fas fa-grip-vertical"></i>
+            <div class="block-row" data-block-id="${blockId}" data-split-ratio="50">
+                <div class="main-block-column">
+                    <div class="block-item" data-type="todo" data-block-id="${blockId}">
+                        <div class="block-header">
+                            <div class="drag-handle" title="Drag to reorder">
+                                <i class="fas fa-grip-vertical"></i>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-tasks text-dirty-yellow-400"></i>
+                                <span class="block-type-label">Todo List</span>
+                            </div>
+                            <input type="text" class="block-title-input" placeholder="Block Title" value="">
+                            <div class="block-controls">
+                                <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                    <i class="fas fa-comment-alt"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="block-content">
-                    <input type="text" class="block-title-input" placeholder="Block Title" value="">
-                    <div class="todo-list-wrapper">
-                        <div class="todo-list" data-content="[]"></div>
-                        <button type="button" class="add-todo-btn" onclick="window.TodoHandler.addItem(this)">
-                            <i class="fas fa-plus"></i> Add Task
-                        </button>
+                        <div class="block-content">
+                            <div class="todo-list-wrapper">
+                                <div class="todo-list" data-content="[]"></div>
+                                <button type="button" class="add-todo-btn" onclick="window.TodoHandler.addItem(this)">
+                                    <i class="fas fa-plus"></i> Add Task
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -456,43 +514,50 @@ class MioBookCore {
     
     createCodeBlockHTML(blockId) {
         return `
-            <div class="block-item" data-type="code" data-block-id="${blockId}">
-                <div class="block-header">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-code text-teal-400"></i>
-                        <span class="block-type-label">Code</span>
-                        <select class="language-selector" onchange="window.CodeHandler.changeLanguage(this)">
-                            <option value="python">Python</option>
-                            <option value="javascript">JavaScript</option>
-                            <option value="typescript">TypeScript</option>
-                            <option value="html">HTML</option>
-                            <option value="css">CSS</option>
-                            <option value="json">JSON</option>
-                            <option value="sql">SQL</option>
-                            <option value="markdown">Markdown</option>
-                            <option value="yaml">YAML</option>
-                            <option value="bash">Bash</option>
-                        </select>
-                    </div>
-                    <div class="block-controls">
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <div class="drag-handle" title="Drag to reorder">
-                            <i class="fas fa-grip-vertical"></i>
+            <div class="block-row" data-block-id="${blockId}" data-split-ratio="50">
+                <div class="main-block-column">
+                    <div class="block-item" data-type="code" data-block-id="${blockId}">
+                        <div class="block-header">
+                            <div class="drag-handle" title="Drag to reorder">
+                                <i class="fas fa-grip-vertical"></i>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-code text-teal-400"></i>
+                                <span class="block-type-label">Code</span>
+                                <select class="language-selector" onchange="window.CodeHandler.changeLanguage(this)">
+                                    <option value="python">Python</option>
+                                    <option value="javascript">JavaScript</option>
+                                    <option value="typescript">TypeScript</option>
+                                    <option value="html">HTML</option>
+                                    <option value="css">CSS</option>
+                                    <option value="json">JSON</option>
+                                    <option value="sql">SQL</option>
+                                    <option value="markdown">Markdown</option>
+                                    <option value="yaml">YAML</option>
+                                    <option value="bash">Bash</option>
+                                </select>
+                            </div>
+                            <input type="text" class="block-title-input" placeholder="Block Title" value="">
+                            <div class="block-controls">
+                                <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                    <i class="fas fa-comment-alt"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="block-content">
-                    <input type="text" class="block-title-input" placeholder="Block Title" value="">
-                    <div class="code-editor-wrapper">
-                        <div class="monaco-editor" data-language="python" data-content=""></div>
+                        <div class="block-content">
+                            <div class="code-editor-wrapper">
+                                <div class="monaco-editor" data-language="python" data-content=""></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -501,27 +566,38 @@ class MioBookCore {
     
     createEditorJSBlockHTML(blockId) {
         return `
-            <div class="block-item" data-type="blocks" data-block-id="${blockId}">
-                <div class="block-header">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-th-large text-yellow-400"></i>
-                        <span class="block-type-label">Rich Blocks</span>
-                    </div>
-                    <div class="block-controls">
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="block-content">
-                    <div class="editorjs-wrapper">
-                        <div class="editorjs-editor" data-content=""></div>
+            <div class="block-row" data-block-id="${blockId}" data-split-ratio="50">
+                <div class="main-block-column">
+                    <div class="block-item" data-type="blocks" data-block-id="${blockId}">
+                        <div class="block-header">
+                            <div class="drag-handle" title="Drag to reorder">
+                                <i class="fas fa-grip-vertical"></i>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-th-large text-dirty-yellow-400"></i>
+                                <span class="block-type-label">Rich Blocks</span>
+                            </div>
+                            <input type="text" class="block-title-input" placeholder="Block Title" value="">
+                            <div class="block-controls">
+                                <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                    <i class="fas fa-comment-alt"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="block-content">
+                            <div class="editorjs-wrapper">
+                                <div class="editorjs-editor" data-content=""></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -530,60 +606,68 @@ class MioBookCore {
     
     createAtramentBlockHTML(blockId) {
         return `
-            <div class="block-item" data-type="whiteboard" data-block-id="${blockId}">
-                <div class="block-header">
-                    <div class="drag-handle" title="Drag to reorder">
-                        <i class="fas fa-grip-vertical"></i>
-                    </div>
-                    <button type="button" class="collapse-toggle-btn" onclick="toggleBlockCollapse(this)" title="Collapse/Expand">
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-draw-polygon text-dirty-yellow-400"></i>
-                        <span class="block-type-label">Whiteboard</span>
-                    </div>
-                    <input type="text" class="block-title-input" placeholder="Block Title" value="">
-                    <div class="block-controls">
-                        <button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="block-content">
-                    <div class="atrament-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
-                        <button type="button" class="atrament-draw active" style="padding: 6px 12px; background: rgba(20, 184, 166, 0.2); border: 1px solid #14b8a6; color: #14b8a6; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                            <i class="fas fa-pen"></i> Draw
-                        </button>
-                        <button type="button" class="atrament-erase" style="padding: 6px 12px; background: transparent; border: 1px solid #3d4047; color: #7a7f8a; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                            <i class="fas fa-eraser"></i> Erase
-                        </button>
-                        <div style="border-left: 1px solid #3d4047; height: 24px;"></div>
-                        <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
-                            Color:
-                            <input type="color" class="atrament-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
-                            Size:
-                            <input type="range" class="atrament-size" min="1" max="20" value="2" style="width: 100px;">
-                        </label>
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="atrament-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                            <i class="fas fa-trash"></i> Clear
-                        </button>
-                    </div>
-                    <div style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10;">
-                        <canvas class="atrament-canvas" 
-                                style="display: block; cursor: default; touch-action: none;"
-                                data-content=""></canvas>
+            <div class="block-row" data-block-id="${blockId}" data-split-ratio="50">
+                <div class="main-block-column">
+                    <div class="block-item" data-type="whiteboard" data-block-id="${blockId}">
+                        <div class="block-header">
+                            <div class="drag-handle" title="Drag to reorder">
+                                <i class="fas fa-grip-vertical"></i>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-draw-polygon text-dirty-yellow-400"></i>
+                                <span class="block-type-label">Whiteboard</span>
+                            </div>
+                            <input type="text" class="block-title-input" placeholder="Block Title" value="">
+                            <div class="block-controls">
+                                <button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                    <i class="fas fa-comment-alt"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="block-content">
+                            <div class="atrament-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
+                                <button type="button" class="atrament-mode-btn atrament-draw active">
+                                    <i class="fas fa-pen"></i> Draw
+                                </button>
+                                <button type="button" class="atrament-mode-btn atrament-erase">
+                                    <i class="fas fa-eraser"></i> Erase
+                                </button>
+                                <div style="border-left: 1px solid #3d4047; height: 24px;"></div>
+                                <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
+                                    Color:
+                                    <input type="color" class="atrament-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
+                                    Size:
+                                    <input type="range" class="atrament-size" min="1" max="20" value="2" style="width: 100px;">
+                                </label>
+                                <button type="button" class="atrament-action-btn atrament-attach" title="Attach image">
+                                    <i class="fas fa-paperclip"></i> Image
+                                </button>
+                                <input type="file" class="atrament-image-input" accept="image/*" style="display:none">
+                                <div style="flex: 1;"></div>
+                                <button type="button" class="atrament-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    <i class="fas fa-trash"></i> Clear
+                                </button>
+                            </div>
+                            <div style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10;">
+                                <canvas class="atrament-canvas" 
+                                        style="display: block; cursor: default; touch-action: none;"
+                                        data-content=""></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -591,46 +675,49 @@ class MioBookCore {
     }
     
     moveBlockUp(button) {
-        const block = button.closest('.block-item');
-        const blocks = Array.from(document.querySelectorAll('#contentBlocks .block-item'));
-        const currentIndex = blocks.indexOf(block);
+        const blockRow = button.closest('.block-row');
+        const blockRows = Array.from(document.querySelectorAll('#contentBlocks .block-row'));
+        const currentIndex = blockRows.indexOf(blockRow);
         
         if (currentIndex > 0) {
-            const prevBlock = blocks[currentIndex - 1];
+            const prevBlockRow = blockRows[currentIndex - 1];
             
-            // Move current block before the previous block
-            prevBlock.insertAdjacentElement('beforebegin', block);
+            // Move current row before the previous row
+            prevBlockRow.insertAdjacentElement('beforebegin', blockRow);
             
             this.rebuildSeparators();
             this.markDirty();
             
             // Scroll to keep block in view
-            block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            blockRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
     
     moveBlockDown(button) {
-        const block = button.closest('.block-item');
-        const blocks = Array.from(document.querySelectorAll('#contentBlocks .block-item'));
-        const currentIndex = blocks.indexOf(block);
+        const blockRow = button.closest('.block-row');
+        const blockRows = Array.from(document.querySelectorAll('#contentBlocks .block-row'));
+        const currentIndex = blockRows.indexOf(blockRow);
         
-        if (currentIndex < blocks.length - 1) {
-            const nextBlock = blocks[currentIndex + 1];
+        if (currentIndex < blockRows.length - 1) {
+            const nextBlockRow = blockRows[currentIndex + 1];
             
-            // Move current block after the next block
-            nextBlock.insertAdjacentElement('afterend', block);
+            // Move current row after the next row
+            nextBlockRow.insertAdjacentElement('afterend', blockRow);
             
             this.rebuildSeparators();
             this.markDirty();
             
             // Scroll to keep block in view
-            block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            blockRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
     
     deleteBlock(button) {
         if (confirm('Are you sure you want to delete this block?')) {
-            const block = button.closest('.block-item');
+            const blockRow = button.closest('.block-row');
+            const block = blockRow?.querySelector('.block-item');
+            if (!block) return;
+            
             const type = block.dataset.type;
             
             // Cleanup before removal
@@ -646,8 +733,14 @@ class MioBookCore {
                     break;
             }
             
-            // Remove the block
-            block.remove();
+            // Cleanup annotation if exists
+            const annotationEl = blockRow.querySelector('.annotation-block');
+            if (annotationEl) {
+                window.AnnotationHandler?.destroy(annotationEl);
+            }
+            
+            // Remove the entire row
+            blockRow.remove();
             
             // Rebuild all separators to maintain proper structure
             this.rebuildSeparators();
@@ -661,6 +754,195 @@ class MioBookCore {
         } else {
             window.location.href = '/p2/';
         }
+    }
+    
+    addAnnotation(button) {
+        const blockRow = button.closest('.block-row');
+        if (!blockRow) return;
+        
+        // Check if annotation already exists
+        if (blockRow.querySelector('.annotation-column')) {
+            return;
+        }
+        
+        const blockId = blockRow.dataset.blockId;
+        const annotationId = `annotation-${Date.now()}`;
+        const splitRatio = parseInt(blockRow.dataset.splitRatio) || 50;
+        
+        // Calculate widths based on split ratio
+        const mainWidth = `${splitRatio}%`;
+        const annotationWidth = `${100 - splitRatio}%`;
+        
+        const annotationHTML = `
+            <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
+            <div class="annotation-column" style="width: ${annotationWidth}">
+                <div class="annotation-block" data-annotation-id="${annotationId}" data-parent-id="${blockId}">
+                    <div class="annotation-header">
+                        <div class="flex items-center gap-2 flex-1">
+                            <i class="fas fa-comment-alt text-teal-400"></i>
+                            <span class="block-type-label">Annotation</span>
+                        </div>
+                        <button type="button" class="annotation-control-btn remove" onclick="window.MioBook.deleteAnnotation(this)" title="Delete Annotation">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="annotation-content">
+                        <div class="annotation-editor" data-content=""></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Set main column width
+        const mainColumn = blockRow.querySelector('.main-block-column');
+        if (mainColumn) {
+            mainColumn.style.width = mainWidth;
+        }
+        
+        // Set annotation show state
+        blockRow.dataset.annotationShow = 'true';
+        
+        blockRow.insertAdjacentHTML('beforeend', annotationHTML);
+        
+        // Initialize the annotation
+        const annotationEl = blockRow.querySelector('.annotation-block');
+        if (annotationEl) {
+            window.AnnotationHandler?.initialize(annotationEl);
+        }
+        
+        // Change button to toggle annotation visibility
+        button.innerHTML = '<i class="fas fa-eye"></i>';
+        button.setAttribute('title', 'Hide Annotation');
+        button.setAttribute('onclick', 'window.MioBook.toggleAnnotation(this)');
+        
+        this.markDirty();
+    }
+    
+    toggleAnnotation(button) {
+        const blockRow = button.closest('.block-row');
+        if (!blockRow) return;
+        
+        const annotationColumn = blockRow.querySelector('.annotation-column');
+        if (!annotationColumn) return;
+        
+        const isHidden = annotationColumn.classList.contains('hidden');
+        
+        if (isHidden) {
+            // Show annotation
+            annotationColumn.classList.remove('hidden');
+            blockRow.dataset.annotationShow = 'true';
+            button.innerHTML = '<i class="fas fa-eye"></i>';
+            button.setAttribute('title', 'Hide Annotation');
+        } else {
+            // Hide annotation
+            annotationColumn.classList.add('hidden');
+            blockRow.dataset.annotationShow = 'false';
+            button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            button.setAttribute('title', 'Show Annotation');
+        }
+        
+        this.markDirty();
+    }
+    
+    deleteAnnotation(button) {
+        const blockRow = button.closest('.block-row');
+        if (!blockRow) return;
+        
+        if (confirm('Delete annotation? This cannot be undone.')) {
+            const annotationColumn = blockRow.querySelector('.annotation-column');
+            const resizeHandle = blockRow.querySelector('.resize-handle');
+            const mainColumn = blockRow.querySelector('.main-block-column');
+            
+            if (annotationColumn) {
+                const annotationEl = annotationColumn.querySelector('.annotation-block');
+                if (annotationEl) {
+                    window.AnnotationHandler?.destroy(annotationEl);
+                }
+                annotationColumn.remove();
+            }
+            
+            if (resizeHandle) {
+                resizeHandle.remove();
+            }
+            
+            // Reset main column width
+            if (mainColumn) {
+                mainColumn.style.width = '';
+            }
+            
+            // Remove annotation show state
+            delete blockRow.dataset.annotationShow;
+            
+            // Change button back to add annotation
+            const addBtn = blockRow.querySelector('.block-controls .control-btn[onclick*="Annotation"]');
+            if (addBtn) {
+                addBtn.innerHTML = '<i class="fas fa-comment-alt"></i>';
+                addBtn.setAttribute('title', 'Add Annotation');
+                addBtn.setAttribute('onclick', 'window.MioBook.addAnnotation(this)');
+            }
+            
+            this.markDirty();
+        }
+    }
+
+    updateAllResizeHandles() {
+        const blockRows = document.querySelectorAll('.block-row');
+        blockRows.forEach((row) => this.positionResizeHandle(row));
+    }
+
+    positionResizeHandle(blockRow) {
+        if (!blockRow) return;
+        const handle = blockRow.querySelector('.resize-handle');
+        const mainColumn = blockRow.querySelector('.main-block-column');
+        const containerWidth = blockRow.offsetWidth;
+        if (!handle || !mainColumn || !containerWidth) return;
+
+        const mainPercentage = (mainColumn.offsetWidth / containerWidth) * 100;
+        handle.style.left = `${mainPercentage}%`;
+    }
+    
+    startResize(event, handle) {
+        event.preventDefault();
+        const blockRow = handle.closest('.block-row');
+        if (!blockRow) return;
+        
+        const mainColumn = blockRow.querySelector('.main-block-column');
+        const annotationColumn = blockRow.querySelector('.annotation-column');
+        if (!mainColumn || !annotationColumn) return;
+        
+        const startX = event.clientX;
+        const containerWidth = blockRow.offsetWidth;
+        const startMainWidth = mainColumn.offsetWidth;
+        const startAnnotationWidth = annotationColumn.offsetWidth;
+
+        // Position the handle at the current split before dragging
+        handle.style.left = `${(startMainWidth / containerWidth) * 100}%`;
+        
+        const onMouseMove = (e) => {
+            const deltaX = e.clientX - startX;
+            const newMainWidth = Math.max(200, Math.min(containerWidth - 200, startMainWidth + deltaX));
+            const newAnnotationWidth = containerWidth - newMainWidth - 16; // 16px gap
+            
+            const mainPercentage = (newMainWidth / containerWidth) * 100;
+            const annotationPercentage = (newAnnotationWidth / containerWidth) * 100;
+            
+            mainColumn.style.width = `${mainPercentage}%`;
+            annotationColumn.style.width = `${annotationPercentage}%`;
+
+            handle.style.left = `${mainPercentage}%`;
+            
+            // Store the split ratio
+            blockRow.dataset.splitRatio = Math.round(mainPercentage);
+        };
+        
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            this.markDirty();
+        };
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
     
     destroy() {

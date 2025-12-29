@@ -1,6 +1,6 @@
 <!-- Board Card Partial (Whiteboard/MioDraw) -->
 <div class="col d-flex">
-  <div class="card flex-fill h-100 shadow-sm item-card" data-type="board" data-id="{{ board.id }}" data-board-description="{{ board.description_readable if board.description_readable else ('' if ((board.description or '').strip().startswith('[') or (board.description or '').strip().startswith('{')) else (board.description or '')) }}" data-is-public="{{ '1' if board.is_public else '0' }}">
+  <div class="card flex-fill h-100 shadow-sm item-card" data-type="proprietary_whiteboard" data-id="{{ board.id }}" data-board-description="{{ board.description_readable if board.description_readable else ('' if ((board.description or '').strip().startswith('[') or (board.description or '').strip().startswith('{')) else (board.description or '')) }}" data-is-public="{{ '1' if board.is_public else '0' }}">
     <div class="badge-container">
       {% if board.is_public %}
         <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>

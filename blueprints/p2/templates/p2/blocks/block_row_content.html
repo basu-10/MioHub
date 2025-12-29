@@ -1,0 +1,133 @@
+{# Block content template for block-row structure #}
+<div class="block-item" data-type="{{ block.type }}" data-block-id="{{ block.id }}">
+    <div class="block-header">
+        <div class="drag-handle" title="Drag to reorder">
+            <i class="fas fa-grip-vertical"></i>
+        </div>
+        {% if block.type == 'markdown' %}
+            <div class="flex items-center gap-2">
+                <i class="fas fa-markdown text-teal-400"></i>
+                <span class="block-type-label">Markdown</span>
+            </div>
+        {% elif block.type == 'todo' %}
+            <div class="flex items-center gap-2">
+                <i class="fas fa-tasks text-dirty-yellow-400"></i>
+                <span class="block-type-label">Todo List</span>
+            </div>
+        {% elif block.type == 'code' %}
+            <div class="flex items-center gap-2">
+                <i class="fas fa-code text-teal-400"></i>
+                <span class="block-type-label">Code</span>
+                <select class="language-selector" onchange="window.CodeHandler.changeLanguage(this)">
+                    <option value="python" {% if block.metadata and block.metadata.language == 'python' %}selected{% endif %}>Python</option>
+                    <option value="javascript" {% if block.metadata and block.metadata.language == 'javascript' %}selected{% endif %}>JavaScript</option>
+                    <option value="typescript" {% if block.metadata and block.metadata.language == 'typescript' %}selected{% endif %}>TypeScript</option>
+                    <option value="html" {% if block.metadata and block.metadata.language == 'html' %}selected{% endif %}>HTML</option>
+                    <option value="css" {% if block.metadata and block.metadata.language == 'css' %}selected{% endif %}>CSS</option>
+                    <option value="json" {% if block.metadata and block.metadata.language == 'json' %}selected{% endif %}>JSON</option>
+                    <option value="sql" {% if block.metadata and block.metadata.language == 'sql' %}selected{% endif %}>SQL</option>
+                    <option value="markdown" {% if block.metadata and block.metadata.language == 'markdown' %}selected{% endif %}>Markdown</option>
+                    <option value="yaml" {% if block.metadata and block.metadata.language == 'yaml' %}selected{% endif %}>YAML</option>
+                    <option value="bash" {% if block.metadata and block.metadata.language == 'bash' %}selected{% endif %}>Bash</option>
+                </select>
+            </div>
+        {% elif block.type == 'blocks' %}
+            <div class="flex items-center gap-2">
+                <i class="fas fa-th-large text-dirty-yellow-400"></i>
+                <span class="block-type-label">Rich Blocks</span>
+            </div>
+        {% elif block.type == 'whiteboard' %}
+            <div class="flex items-center gap-2">
+                <i class="fas fa-draw-polygon text-dirty-yellow-400"></i>
+                <span class="block-type-label">Whiteboard</span>
+            </div>
+        {% endif %}
+        <input type="text" class="block-title-input" placeholder="Block Title" value="{{ block.title if block.title else '' }}">
+        <div class="block-controls">
+            {% if annotation %}
+                {% if block.annotationShow == false %}
+                    <button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="Show Annotation">
+                        <i class="fas fa-eye-slash"></i>
+                    </button>
+                {% else %}
+                    <button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="Hide Annotation">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                {% endif %}
+            {% else %}
+                <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                    <i class="fas fa-comment-alt"></i>
+                </button>
+            {% endif %}
+            {% if block.type == 'whiteboard' %}
+                <button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
+                    <i class="fas fa-pen"></i>
+                </button>
+            {% endif %}
+            <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+            <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    <div class="block-content">
+        {% if block.type == 'markdown' %}
+            <div class="markdown-editor-wrapper">
+                <div class="markdown-editor" data-content="{{ block.content | tojson | forceescape }}"></div>
+            </div>
+        {% elif block.type == 'todo' %}
+            <div class="todo-list-wrapper">
+                <div class="todo-list" data-content="{{ block.content | tojson | forceescape }}"></div>
+                <button type="button" class="add-todo-btn" onclick="window.TodoHandler.addItem(this)">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+            </div>
+        {% elif block.type == 'code' %}
+            <div class="code-editor-wrapper">
+                <div class="monaco-editor" 
+                     data-language="{{ block.metadata.language if block.metadata and block.metadata.language else 'python' }}" 
+                     data-content="{{ block.content | tojson | forceescape }}"></div>
+            </div>
+        {% elif block.type == 'blocks' %}
+            <div class="editorjs-wrapper">
+                <div class="editorjs-editor" data-content="{{ block.content | tojson | forceescape }}"></div>
+            </div>
+        {% elif block.type == 'whiteboard' %}
+            <div class="atrament-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
+                <button type="button" class="atrament-mode-btn atrament-draw active">
+                    <i class="fas fa-pen"></i> Draw
+                </button>
+                <button type="button" class="atrament-mode-btn atrament-erase">
+                    <i class="fas fa-eraser"></i> Erase
+                </button>
+                <div style="border-left: 1px solid #3d4047; height: 24px;"></div>
+                <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
+                    Color:
+                    <input type="color" class="atrament-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
+                    Size:
+                    <input type="range" class="atrament-size" min="1" max="20" value="2" style="width: 100px;">
+                </label>
+                <button type="button" class="atrament-action-btn atrament-attach" title="Attach image">
+                    <i class="fas fa-paperclip"></i> Image
+                </button>
+                <input type="file" class="atrament-image-input" accept="image/*" style="display:none">
+                <div style="flex: 1;"></div>
+                <button type="button" class="atrament-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-trash"></i> Clear
+                </button>
+            </div>
+            <div style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10;">
+                <canvas class="atrament-canvas" 
+                        style="display: block; cursor: default; touch-action: none;"
+                        data-content="{{ block.content | tojson | forceescape }}"></canvas>
+            </div>
+        {% endif %}
+    </div>
+</div>

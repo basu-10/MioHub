@@ -3,11 +3,30 @@
 */
 :root{
     --bg:#0a0a0b;        /* page background (near-black) */
-    --card:#121516;      /* card / panel background */
+    --card:#121516;      /* card  background */
+    --panel:#121516;      /*  panel background */
     --muted:#b4c0c5;     /* muted text / helper text - improved contrast from #9aa8ad */
     --accent:#14b8a6;    /* button / link accent (teal) */
     --accent-strong:#0d9488;
+    --ochre:#b38b2c;     /* secondary accent (dirty ochre) */
+    --ochre-strong:#8f6d1e;
     --white:#ECFFFF;     /* primary text color */
+
+    /* Brown palette */
+    --rich-brown:#6d4c3d;      /* rich earthy brown */
+    --cocoa-brown:#4a3728;     /* darker cocoa brown */
+    --ash-brown:#5a4a3f;       /* muted ash brown */
+    --deep-teal:#040D12;       /* very dark blue-black */
+    --rich-brown-light:rgba(109, 76, 61, 0.2);
+    --cocoa-brown-light:rgba(74, 55, 40, 0.3);
+    --ash-brown-light:rgba(90, 74, 63, 0.25);
+
+    /* Slate / dark neutrals */
+    --slate-900:#0f172a;       /* deep slate blue */
+    --slate-800:#1e293b;       /* slate shell */
+    --slate-700:#273449;       /* header/footer panels */
+    --graphite:#0b0e13;        /* charcoal base */
+    --graphite-soft:rgba(15, 23, 42, 0.45);
 
     /* Carbon Teal non-conflicting variable names (ct- prefix) - safe fallback when
        page :root variables override generic names (like --bg). Use these for
@@ -17,7 +36,18 @@
     --ct-muted: #b4c0c5;
     --ct-accent: #14b8a6;
     --ct-accent-strong: #0d9488;
+    --ct-ochre: #b38b2c;
+    --ct-ochre-strong: #8f6d1e;
     --ct-white: #ECFFFF;
+    --ct-rich-brown: #6d4c3d;
+    --ct-cocoa-brown: #4a3728;
+    --ct-ash-brown: #5a4a3f;
+    --ct-deep-teal: #040D12;
+    --ct-slate-900: #0f172a;
+    --ct-slate-800: #1e293b;
+    --ct-slate-700: #273449;
+    --ct-graphite: #0b0e13;
+    --ct-graphite-soft: rgba(15, 23, 42, 0.45);
     --ct-bg-tertiary: rgba(18,21,22,0.98);
     --ct-bg-quaternary: #0a171b;
     --ct-border-primary: rgba(255,255,255,0.04);
@@ -67,6 +97,8 @@
     --muted: #b4c0c5;
     --accent: #14b8a6;
     --accent-strong: #0d9488;
+    --ochre: #b38b2c;
+    --ochre-strong: #8f6d1e;
     --white: #ECFFFF;
     --radius: 10px;
 
@@ -108,6 +140,8 @@
     --ct-muted: var(--muted);
     --ct-accent: var(--accent);
     --ct-accent-strong: var(--accent-strong);
+    --ct-ochre: var(--ochre);
+    --ct-ochre-strong: var(--ochre-strong);
     --ct-white: var(--white);
     --ct-bg-tertiary: var(--bg-tertiary);
     --ct-bg-quaternary: var(--bg-quaternary);

@@ -56,9 +56,19 @@ window.GraphToolbar = (function() {
       ...partialStyle
     };
 
-    await window.GraphEdges.updateEdge(selectedEdge.id, {
-      metadata: { style: mergedStyle }
-    });
+    // Update both metadata.style AND edgeType for proper direction handling
+    const updates = {
+      metadata: { style: mergedStyle },
+      edge_type: mergedStyle.direction  // Update edgeType to match direction
+    };
+
+    // Update local edge immediately for responsive UI
+    selectedEdge.metadata = selectedEdge.metadata || {};
+    selectedEdge.metadata.style = mergedStyle;
+    selectedEdge.edgeType = mergedStyle.direction;
+    window.GraphCanvas.render(); // Immediate visual feedback
+
+    await window.GraphEdges.updateEdge(selectedEdge.id, updates);
   }
 
   function init(fileId) {
@@ -197,10 +207,20 @@ window.GraphToolbar = (function() {
       window.GraphAttachments.renderAttachmentsList(node, attachmentsContainer);
       document.getElementById('node-attachments-count').textContent = (node.attachments || []).length;
 
+      // Update customization panel
+      if (window.GraphNodeCustomization) {
+        window.GraphNodeCustomization.updateCustomizationPanel(node);
+      }
+
       document.getElementById('node-info-panel').style.display = 'block';
     } else {
       document.getElementById('node-info-panel').style.display = 'none';
       document.getElementById('node-attachments-count').textContent = '0';
+      
+      // Hide customization panel when no node selected
+      if (window.GraphNodeCustomization) {
+        window.GraphNodeCustomization.updateCustomizationPanel(null);
+      }
     }
   }
 
@@ -212,25 +232,64 @@ window.GraphToolbar = (function() {
     const nodePanel = document.getElementById('node-info-panel');
     if (edge) {
       // Hide node panel, show arrow panel
-      nodePanel.style.display = 'none';
-      arrowPanel.style.display = 'block';
-      arrowPanel.classList.remove('collapsed');
+      if (nodePanel) nodePanel.style.display = 'none';
+      if (arrowPanel) {
+        arrowPanel.style.display = 'block';
+        arrowPanel.classList.remove('collapsed');
+      }
     } else {
       // Hide arrow panel when no edge selected
-      arrowPanel.style.display = 'none';
+      if (arrowPanel) arrowPanel.style.display = 'none';
     }
   }
 
   function updateToolbarState() {
     const hasNodeSelection = selectedNode !== null;
     const hasEdgeSelection = selectedEdge !== null;
-    // Connect button is always enabled - users can enter connection mode anytime
-    // Manage and delete buttons are now only in the panel
+    const nodeCount = (window.GraphNodes?.getNodes?.() || []).length;
+
+    // Count total attachments across all nodes
+    const nodes = window.GraphNodes?.getNodes?.() || [];
+    const totalAttachments = nodes.reduce((sum, node) => sum + (node.attachments?.length || 0), 0);
+
+    // Add Node is always available (no selection required)
+    const addNodeBtn = document.getElementById('btn-add-node');
+    if (addNodeBtn) addNodeBtn.disabled = false;
+
+    // Connect is available once there are at least two nodes
+    const connectBtn = document.getElementById('btn-connect-nodes');
+    if (connectBtn) connectBtn.disabled = nodeCount < 2;
+
+    // Toolbar manage/delete depend on node selection
+    const manageBtn = document.getElementById('btn-add-attachment');
+    const deleteBtn = document.getElementById('btn-delete-node');
+    if (manageBtn) manageBtn.disabled = !hasNodeSelection;
+    if (deleteBtn) deleteBtn.disabled = !hasNodeSelection;
+
+    // Arrow ops depend on edge selection - hide when no edge selected
+    const editArrowBtn = document.getElementById('btn-edit-arrow');
+    const deleteArrowBtn = document.getElementById('btn-delete-arrow');
+    if (editArrowBtn) {
+      editArrowBtn.disabled = !hasEdgeSelection;
+      editArrowBtn.style.display = hasEdgeSelection ? '' : 'none';
+    }
+    if (deleteArrowBtn) {
+      deleteArrowBtn.disabled = !hasEdgeSelection;
+      deleteArrowBtn.style.display = hasEdgeSelection ? '' : 'none';
+    }
+
+    // Refresh button only visible when there are attachments
+    const refreshBtn = document.getElementById('btn-refresh-names');
+    if (refreshBtn) {
+      refreshBtn.style.display = totalAttachments > 0 ? '' : 'none';
+      refreshBtn.disabled = false; // Always enabled when visible
+    }
+
+    // Panel manage/delete mirror toolbar state
     const panelManageBtn = document.getElementById('btn-panel-manage');
     const panelDeleteBtn = document.getElementById('btn-panel-delete');
     if (panelManageBtn) panelManageBtn.disabled = !hasNodeSelection;
     if (panelDeleteBtn) panelDeleteBtn.disabled = !hasNodeSelection;
-    // Arrow ops buttons are now in the arrow panel, no need to enable/disable here
   }
 
   function openCreateNodeModal() {
@@ -526,6 +585,7 @@ window.GraphToolbar = (function() {
   // Toggle arrow panel collapsed state
   function toggleArrowPanel() {
     const panel = document.getElementById('arrow-ops-panel');
+    if (!panel) return;
     panel.classList.toggle('collapsed');
   }
 
@@ -535,6 +595,7 @@ window.GraphToolbar = (function() {
     updateEdgeSelection,
     openEditArrowModal,
     openAttachmentModal,
-    toggleArrowPanel
+    toggleArrowPanel,
+    refreshState: updateToolbarState
   };
 })();

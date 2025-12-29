@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ document.title if document else 'Edit MioBook' }} - MioBook Editor</title>
+    <title>{{ file.title if file else 'Edit MioBlocks' }} - MioBlocks Editor</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -72,13 +72,123 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
         }
         
+        /* Block Row Wrapper - Two Column Layout */
+        .block-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 500px;
+            max-height: 500px;
+            align-items: stretch;
+        }
+        
+        .block-row.dragging {
+            opacity: 0.5;
+        }
+        
+        .block-row.dragging .annotation-block {
+            border: 2px dashed #14b8a6;
+            background: rgba(20, 184, 166, 0.05);
+        }
+        
+        /* Main Block Column */
+        .main-block-column {
+            flex: 1;
+            min-width: 0;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Annotation Column */
+        .annotation-column {
+            flex: 0 0 auto;
+            min-width: 0;
+            position: relative;
+            transition: width 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .annotation-column.hidden {
+            display: none;
+        }
+        
+        /* Resizer Handle */
+        .resize-handle {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 16px;
+            cursor: ew-resize;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateX(-50%);
+        }
+        
+        .resize-handle::before {
+            content: '';
+            width: 4px;
+            height: 40px;
+            background: #3d4047;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+        
+        .resize-handle:hover::before {
+            background: #14b8a6;
+            height: 60px;
+        }
+        
         /* Block Styles */
         .block-item {
             background: #1a1b1f;
             border: 1px solid #2a2c31;
             border-radius: 8px;
-            margin-bottom: 20px;
             transition: all 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Annotation Block */
+        .annotation-block {
+            background: #1a1b1f;
+            border: 1px solid #2a2c31;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .annotation-block .annotation-header {
+            background: #2a2c31;
+            border-bottom: 1px solid #3d4047;
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+            flex-shrink: 0;
+        }
+        
+        .annotation-block .annotation-content {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .annotation-editor {
+            min-height: 150px;
+            height: 100%;
         }
         
         .block-item:hover {
@@ -93,6 +203,10 @@
             gap: 12px;
             align-items: center;
             border-radius: 8px 8px 0 0;
+            flex-wrap: nowrap;
+            overflow: visible;
+            position: relative;
+            flex-shrink: 0;
         }
         
         .block-type-label {
@@ -107,6 +221,9 @@
             gap: 4px;
             align-items: center;
             margin-left: auto;
+            flex-shrink: 0;
+            min-width: fit-content;
+            position: relative;
         }
         
         .control-btn {
@@ -123,6 +240,71 @@
         .control-btn:hover {
             background: rgba(255, 255, 255, 0.05);
             color: #c3c6cb;
+        }
+        
+        /* Overflow Menu */
+        .overflow-menu-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            color: #7a7f8a;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            position: relative;
+        }
+        
+        .overflow-menu-btn.active {
+            display: block;
+        }
+        
+        .overflow-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #c3c6cb;
+        }
+        
+        .overflow-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: #2a2c31;
+            border: 1px solid #3d4047;
+            border-radius: 6px;
+            padding: 4px;
+            min-width: 160px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+        }
+        
+        .overflow-dropdown.active {
+            display: block;
+        }
+        
+        .overflow-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            color: #c3c6cb;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        .overflow-menu-item:hover {
+            background: rgba(20, 184, 166, 0.1);
+            color: #14b8a6;
+        }
+        
+        .overflow-menu-item i {
+            width: 16px;
+            text-align: center;
         }
         
         /* Insert Separator Line */
@@ -196,6 +378,37 @@
         
         .block-content {
             padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Atrament toolbar buttons */
+        .atrament-toolbar .atrament-mode-btn,
+        .atrament-toolbar .atrament-action-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #3d4047;
+            color: #7a7f8a;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .atrament-toolbar .atrament-mode-btn.active {
+            background: rgba(20, 184, 166, 0.2);
+            border-color: #14b8a6;
+            color: #14b8a6;
+            box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.15);
+        }
+
+        .atrament-toolbar .atrament-action-btn.loading {
+            opacity: 0.6;
+            pointer-events: none;
         }
 
         /* Progressive init (avoid blank page while heavy editors boot) */
@@ -225,7 +438,8 @@
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s ease;
-            min-width: 150px;
+            min-width: 100px;
+            max-width: 300px;
         }
         
         .block-title-input:hover {
@@ -242,6 +456,37 @@
         
         .block-title-input::placeholder {
             color: #5f646f;
+        }
+        
+        /* Annotation Controls */
+        .annotation-control-btn {
+            background: transparent;
+            border: 1px solid #3d4047;
+            color: #7a7f8a;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .annotation-control-btn:hover {
+            background: rgba(20, 184, 166, 0.1);
+            border-color: #14b8a6;
+            color: #14b8a6;
+        }
+        
+        .annotation-control-btn.remove {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        .annotation-control-btn.remove:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
         }
         
         /* Todo Styles */
@@ -343,20 +588,51 @@
             border: 1px solid #2a2c31;
             border-radius: 6px;
             overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
         
         .monaco-editor {
-            min-height: 300px;
+            min-height: 200px;
+            height: 100%;
+            flex: 1;
         }
         
         /* Toast UI Editor Dark Theme Override */
         .toastui-editor-defaultUI {
             border: none !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        .toastui-editor-defaultUI .toastui-editor-main-container {
+            flex: 1 !important;
+            overflow: hidden !important;
+        }
+        
+        .markdown-editor,
+        .editorjs-editor {
+            height: 100%;
+            flex: 1;
         }
         
         .toastui-editor-defaultUI .ProseMirror {
             background: #1a1b1f !important;
             color: #e1e3e5 !important;
+        }
+        
+        /* Todo List Wrapper */
+        .todo-list-wrapper {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .todo-list {
+            flex: 1;
+            overflow-y: auto;
         }
         
         /* Add Block Menu */
@@ -453,6 +729,78 @@
             border-color: #14b8a6;
             box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
         }
+        
+        /* Mobile Toggle Button */
+        .mobile-annotations-toggle {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #14b8a6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.2s ease;
+        }
+        
+        .mobile-annotations-toggle:hover {
+            background: #0d9488;
+            transform: scale(1.05);
+        }
+        
+        .mobile-annotations-toggle i {
+            font-size: 20px;
+        }
+        
+        /* Mobile/Tablet Responsive */
+        @media (max-width: 1024px) {
+            .block-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .annotation-column {
+                width: 100% !important;
+            }
+            
+            .annotation-column.mobile-hidden {
+                display: none;
+            }
+            
+            .mobile-annotations-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .resize-handle {
+                display: none;
+            }
+        }
+        
+        /* Drag Wireframe Preview */
+        .sortable-ghost {
+            opacity: 0.3;
+        }
+        
+        .sortable-ghost .block-item,
+        .sortable-ghost .annotation-block {
+            background: transparent !important;
+            border: 2px dashed #14b8a6 !important;
+        }
+        
+        .sortable-ghost * {
+            visibility: hidden;
+        }
+        
+        .sortable-ghost .drag-handle {
+            visibility: visible;
+        }
     </style>
 </head>
 <body>
@@ -464,7 +812,7 @@
                        id="documentTitle" 
                        class="document-title-input flex-1" 
                        placeholder="Untitled Document" 
-                       value="{{ document.title if document else '' }}">
+                       value="{{ file.title if file else '' }}">
                 
                 <button onclick="window.MioBook.saveDocument()" 
                         class="save-document-btn px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-all flex items-center gap-2">
@@ -490,23 +838,56 @@
                 </div>
             </div>
             
-            {% if document and document.content_json %}
-                {% set content_data = document.content_json if document.content_json is mapping else (document.content_json | tojson | safe | from_json) %}
+            {% if file and file.content_json %}
+                {% set content_data = file.content_json if file.content_json is mapping else (file.content_json | tojson | safe | from_json) %}
                 {% if content_data and content_data.blocks %}
+                    {% set main_blocks = [] %}
+                    {% set annotations = {} %}
+                    
+                    {# Separate main blocks from annotations #}
                     {% for block in content_data.blocks %}
-                        {% if block.type == 'markdown' %}
-                            {% include 'p2/blocks/markdown_block.html' %}
-                        {% elif block.type == 'todo' %}
-                            {% include 'p2/blocks/todo_block.html' %}
-                        {% elif block.type == 'code' %}
-                            {% include 'p2/blocks/code_block.html' %}
-                        {% elif block.type == 'blocks' %}
-                            {% include 'p2/blocks/editorjs_block.html' %}
-                        {% elif block.type == 'whiteboard' %}
-                            {% include 'p2/blocks/atrament_block.html' %}
+                        {% if block.type == 'annotation' %}
+                            {% set _ = annotations.update({block.parentId: block}) %}
+                        {% else %}
+                            {% set _ = main_blocks.append(block) %}
                         {% endif %}
+                    {% endfor %}
+                    
+                    {# Render main blocks with their annotations #}
+                    {% for block in main_blocks %}
+                        {% set annotation = annotations.get(block.id) %}
+                        {% set split_ratio = block.splitRatio if block.splitRatio else 50 %}
+                        {% set main_width = split_ratio ~ '%' %}
+                        {% set annotation_width = (100 - split_ratio) ~ '%' %}
                         
-                        <!-- Insert separator after each block -->
+                        <!-- Block Row -->
+                        <div class="block-row" data-block-id="{{ block.id }}" data-split-ratio="{{ split_ratio }}" {% if annotation %}data-annotation-show="{% if block.annotationShow == false %}false{% else %}true{% endif %}"{% endif %}>
+                            <div class="main-block-column" style="width: {{ main_width if annotation else '' }}">
+                                {% include 'p2/blocks/block_row_content.html' %}
+                            </div>
+                            
+                            {% if annotation %}
+                                <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
+                                <div class="annotation-column{% if block.annotationShow == false %} hidden{% endif %}" style="width: {{ annotation_width }}">
+                                    <div class="annotation-block" data-annotation-id="{{ annotation.id }}" data-parent-id="{{ block.id }}">
+                                        <div class="annotation-header">
+                                            <div class="flex items-center gap-2 flex-1">
+                                                <i class="fas fa-comment-alt text-teal-400"></i>
+                                                <span class="block-type-label">Annotation</span>
+                                            </div>
+                                            <button type="button" class="annotation-control-btn remove" onclick="window.MioBook.deleteAnnotation(this)" title="Delete Annotation">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        <div class="annotation-content">
+                                            <div class="annotation-editor" data-content="{{ annotation.content | tojson | forceescape }}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Insert separator after each block row -->
                         <div class="insert-separator" onclick="showInsertMenuAtSeparator(event, {{ loop.index }})">
                             <div class="insert-separator-line"></div>
                             <div class="insert-separator-trigger">
@@ -520,7 +901,7 @@
         </div>
         
         <!-- Empty State -->
-        {% if not document or not document.content_json or (document.content_json.blocks | length == 0 if document.content_json.blocks is defined else true) %}
+        {% if not file or not file.content_json or (file.content_json.blocks | length == 0 if file.content_json.blocks is defined else true) %}
         <div class="text-center py-20 text-graphite-400">
             <i class="fas fa-file-alt text-6xl mb-4 text-graphite-700"></i>
             <h3 class="text-xl font-medium mb-2">Start building your document</h3>
@@ -528,6 +909,11 @@
         </div>
         {% endif %}
     </div>
+    
+    <!-- Mobile Annotations Toggle Button -->
+    <button class="mobile-annotations-toggle" onclick="toggleMobileAnnotations()" title="Toggle Annotations">
+        <i class="fas fa-comment-alt"></i>
+    </button>
 
     <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -566,10 +952,11 @@
     <script src="{{ url_for('static', filename='js/miobook/code_handler.js') }}"></script>
     <script src="{{ url_for('static', filename='js/miobook/editorjs_handler.js') }}"></script>
     <script src="{{ url_for('static', filename='js/miobook/atrament_handler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/miobook/annotation_handler.js') }}"></script>
     
     <script>
         // Global variables
-        const currentDocumentId = {{ document.id if document else 'null' }};
+        const currentDocumentId = {{ file.id if file else 'null' }};
         const currentFolderId = {{ folder_id if folder_id else 'null' }};
         
         // Initialize MioBook
@@ -581,8 +968,34 @@
             // Create MioBook instance
             window.MioBook = new MioBookCore(currentDocumentId, currentFolderId);
             
+            // Add title change listener to mark dirty
+            const titleInput = document.getElementById('documentTitle');
+            if (titleInput) {
+                titleInput.addEventListener('input', () => {
+                    window.MioBook.markDirty();
+                });
+            }
+            
             // Initialize existing blocks
             await initializeExistingBlocks();
+            
+            // Initialize existing annotation blocks
+            const annotationBlocks = document.querySelectorAll('.annotation-block');
+            console.log(`[MioBook] Found ${annotationBlocks.length} annotation blocks`);
+            for (const annotationEl of annotationBlocks) {
+                await window.AnnotationHandler?.initialize(annotationEl);
+            }
+            
+            // Initialize layout-dependent UI
+            const refreshLayoutUI = () => {
+                initializeOverflowMenus();
+                window.MioBook?.updateAllResizeHandles();
+            };
+
+            refreshLayoutUI();
+
+            // Re-check on window resize
+            window.addEventListener('resize', debounce(refreshLayoutUI, 200));
         });
         
         async function initializeExistingBlocks() {
@@ -889,6 +1302,152 @@
                 closeInsertMenu();
             }
         });
+        
+        // Mobile annotations toggle
+        function toggleMobileAnnotations() {
+            const annotationColumns = document.querySelectorAll('.annotation-column');
+            const toggleBtn = document.querySelector('.mobile-annotations-toggle');
+            const hasHidden = Array.from(annotationColumns).some(col => col.classList.contains('mobile-hidden'));
+            
+            annotationColumns.forEach(col => {
+                if (hasHidden) {
+                    col.classList.remove('mobile-hidden');
+                } else {
+                    col.classList.add('mobile-hidden');
+                }
+            });
+            
+            // Update button icon
+            if (toggleBtn) {
+                const icon = toggleBtn.querySelector('i');
+                if (hasHidden) {
+                    icon.className = 'fas fa-comment-alt';
+                } else {
+                    icon.className = 'fas fa-comment-slash';
+                }
+            }
+        }
+        
+        // Overflow menu management
+        function initializeOverflowMenus() {
+            const blockHeaders = document.querySelectorAll('.block-header');
+            
+            blockHeaders.forEach(header => {
+                const controls = header.querySelector('.block-controls');
+                if (!controls) return;
+                
+                // Get all control buttons (excluding overflow menu button)
+                const buttons = Array.from(controls.querySelectorAll('.control-btn:not(.overflow-menu-btn)'));
+                if (buttons.length === 0) return;
+                
+                // Check if overflow menu already exists
+                let overflowBtn = controls.querySelector('.overflow-menu-btn');
+                let overflowDropdown = controls.querySelector('.overflow-dropdown');
+                
+                if (!overflowBtn) {
+                    // Create overflow menu button
+                    overflowBtn = document.createElement('button');
+                    overflowBtn.className = 'control-btn overflow-menu-btn';
+                    overflowBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i>';
+                    overflowBtn.title = 'More options';
+                    
+                    // Create dropdown
+                    overflowDropdown = document.createElement('div');
+                    overflowDropdown.className = 'overflow-dropdown';
+                    
+                    // Toggle dropdown on click
+                    overflowBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        overflowDropdown.classList.toggle('active');
+                    });
+                    
+                    // Append to controls
+                    controls.appendChild(overflowBtn);
+                    controls.appendChild(overflowDropdown);
+                    
+                    // Close dropdown when clicking outside
+                    document.addEventListener('click', (e) => {
+                        if (!overflowBtn.contains(e.target) && !overflowDropdown.contains(e.target)) {
+                            overflowDropdown.classList.remove('active');
+                        }
+                    });
+                }
+                
+                // Ensure overflow button participates in layout measurements
+                overflowBtn.style.display = 'block';
+                overflowBtn.style.visibility = 'visible';
+
+                // Measure available space
+                const headerWidth = header.offsetWidth;
+                const controlsLeft = controls.offsetLeft;
+                const overflowBtnWidth = overflowBtn.offsetWidth || 32;
+                const paddingBuffer = 16; // small padding on the right
+                const availableWidth = Math.max(0, headerWidth - controlsLeft - overflowBtnWidth - paddingBuffer);
+                
+                // Show all buttons initially to measure
+                buttons.forEach(btn => {
+                    btn.style.display = '';
+                });
+                
+                // Calculate which buttons fit
+                let currentWidth = 0;
+                const overflowButtons = [];
+                
+                buttons.forEach((btn, index) => {
+                    const btnWidth = btn.offsetWidth + 4; // gap
+                    if (currentWidth + btnWidth <= availableWidth) {
+                        currentWidth += btnWidth;
+                    } else {
+                        overflowButtons.push(btn);
+                    }
+                });
+                
+                // Hide overflowing buttons
+                overflowButtons.forEach(btn => {
+                    btn.style.display = 'none';
+                });
+                
+                // Populate overflow dropdown
+                overflowDropdown.innerHTML = '';
+                if (overflowButtons.length > 0) {
+                    overflowBtn.classList.add('active');
+                    overflowBtn.style.visibility = 'visible';
+
+                    overflowButtons.forEach(btn => {
+                        const menuItem = document.createElement('div');
+                        menuItem.className = 'overflow-menu-item';
+                        menuItem.innerHTML = btn.innerHTML;
+                        menuItem.title = btn.title || '';
+
+                        // Clone button functionality
+                        menuItem.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            btn.click();
+                            overflowDropdown.classList.remove('active');
+                        });
+
+                        overflowDropdown.appendChild(menuItem);
+                    });
+                } else {
+                    overflowBtn.classList.remove('active');
+                    overflowDropdown.classList.remove('active');
+                    overflowBtn.style.visibility = 'hidden';
+                }
+            });
+        }
+        
+        // Debounce utility
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
     </script>
 </body>
 </html>

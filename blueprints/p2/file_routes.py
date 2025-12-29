@@ -20,6 +20,15 @@ from utilities_main import update_user_data_size, calculate_content_size
 from . import file_bp
 
 
+def _default_todo_title_if_blank(title: str) -> str:
+    """Return a datetime-based title when a todo title is missing/blank."""
+    normalized = (title or '').strip()
+    if normalized:
+        return normalized
+    # Match the UI's intent: a simple local datetime stamp.
+    return datetime.now().strftime('%Y-%m-%d %H:%M')
+
+
 def format_file_size(size_bytes):
     """Format file size in human-readable format."""
     if size_bytes < 1024:
@@ -34,8 +43,8 @@ def format_file_size(size_bytes):
 @login_required
 def new_file(file_type):
     """
-    Create a new file of specified type.
-    Supported types: markdown, code, todo, diagram, note, whiteboard, table, pdf
+    Create a new file of specified type with default values and redirect to edit.
+    Supported types: markdown, code, todo, diagram, note, whiteboard, table, blocks, proprietary_graph, timeline
     """
     # Allow callers (e.g., Graph Workspace) to explicitly target a folder.
     # This is validated against current_user and then persisted to session to
@@ -71,217 +80,124 @@ def new_file(file_type):
         add_notification(current_user.id, "Error: Invalid folder", 'error')
         return redirect(url_for('folders.view_folder'))
     
-    if request.method == 'POST':
-        title = request.form.get('title', 'Untitled').strip()
-        description = request.form.get('description', '').strip()
-        is_public = request.form.get('is_public') == 'on'
+    # GET request - create file with defaults and redirect to edit template
+    if request.method == 'GET':
+        # Default title is current datetime
+        default_title = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        default_description = ''
         
-        # Create new file based on type
+        # Create new file with type-specific defaults
         new_file = File(
             owner_id=current_user.id,
             folder_id=current_folder_id,
             type=file_type,
-            title=title,
-            is_public=is_public,
-            metadata_json={"description": description} if description else {}
+            title=default_title,
+            is_public=False,
+            metadata_json={"description": default_description}
         )
         
-        # Handle content based on type
+        # Initialize content based on type
         if file_type == 'markdown':
-            content_text = request.form.get('content', '')
-            new_file.content_text = content_text
-            content_size = len(content_text.encode('utf-8'))
+            new_file.content_text = ''
             
         elif file_type == 'code':
-            # Code editor with language metadata
-            content_text = request.form.get('content', '')
-            language = request.form.get('language', 'plaintext')
-            new_file.content_text = content_text
-            content_size = len(content_text.encode('utf-8'))
-            
-            # Store language in metadata_json
-            if not new_file.metadata_json:
-                new_file.metadata_json = {}
-            new_file.metadata_json['language'] = language
-            if description:
-                new_file.metadata_json['description'] = description
-            flag_modified(new_file, 'metadata_json')
+            new_file.content_text = ''
+            new_file.metadata_json['language'] = 'plaintext'
             
         elif file_type == 'todo':
-            # Expect JSON array of todo items, wrap in dict
-            try:
-                raw_content = request.form.get('content', '[]')
-                parsed = json.loads(raw_content)
-
-                if isinstance(parsed, dict) and 'items' in parsed:
-                    todo_data = parsed
-                elif isinstance(parsed, list):
-                    todo_data = {'items': parsed}
-                else:
-                    todo_data = {'items': []}
-
-                new_file.content_json = todo_data
-                content_size = len(json.dumps(todo_data).encode('utf-8'))
-            except json.JSONDecodeError:
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, "Error: Invalid todo data format", 'error')
-                return redirect(url_for('file.new_file', file_type='todo'))
-                
+            new_file.content_json = {'items': []}
+            
         elif file_type == 'diagram':
-            # Diagram JSON data (nodes and edges)
-            try:
-                diagram_data = json.loads(request.form.get('content', '{}'))
-                new_file.content_json = diagram_data
-                content_size = len(json.dumps(diagram_data).encode('utf-8'))
-            except json.JSONDecodeError:
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, "Error: Invalid diagram data format", 'error')
-                return redirect(url_for('file.new_file', file_type='diagram'))
+            new_file.content_json = {}
+            
+        elif file_type == 'table':
+            # Default Luckysheet sheet
+            new_file.content_json = [{
+                "name": "Sheet1",
+                "color": "",
+                "status": 1,
+                "order": 0,
+                "data": [
+                    ["Column A", "Column B", "Column C"],
+                    ["", "", ""]
+                ],
+                "config": {},
+                "index": 0
+            }]
+            
+        elif file_type == 'blocks':
+            # Default Editor.js state
+            new_file.content_json = {
+                "root": {
+                    "children": [
+                        {
+                            "children": [],
+                            "direction": None,
+                            "format": "",
+                            "indent": 0,
+                            "type": "paragraph",
+                            "version": 1
+                        }
+                    ],
+                    "direction": None,
+                    "format": "",
+                    "indent": 0,
+                    "type": "root",
+                    "version": 1
+                }
+            }
+            
+        elif file_type == 'proprietary_graph':
+            new_file.content_json = {
+                'nodes': [],
+                'edges': [],
+                'settings': {},
+                'metadata': {}
+            }
+            
+        elif file_type == 'timeline':
+            new_file.content_json = []
             
         elif file_type == 'whiteboard':
-            # Canvas JSON data
-            try:
-                canvas_data = json.loads(request.form.get('content', '{}'))
-                new_file.content_json = canvas_data
-                content_size = len(json.dumps(canvas_data).encode('utf-8'))
-            except json.JSONDecodeError:
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, "Error: Invalid canvas data format", 'error')
-                return redirect(url_for('file.new_file', file_type='whiteboard'))
-                
-        elif file_type == 'table':
-            # Luckysheet table data (JSON array of sheets)
-            try:
-                table_data = json.loads(request.form.get('content', '[]'))
-                # Validate Luckysheet format
-                if isinstance(table_data, list) and len(table_data) > 0:
-                    new_file.content_json = table_data
-                else:
-                    # Create default sheet if empty or invalid
-                    new_file.content_json = [{
-                        "name": "Sheet1",
-                        "color": "",
-                        "status": 1,
-                        "order": 0,
-                        "data": [
-                            ["Column A", "Column B", "Column C"],
-                            ["", "", ""]
-                        ],
-                        "config": {},
-                        "index": 0
-                    }]
-                content_size = len(json.dumps(new_file.content_json).encode('utf-8'))
-            except json.JSONDecodeError as e:
-                print(f"DEBUG: Table creation JSONDecodeError - {e}")
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, "Error: Invalid table data format", 'error')
-                return redirect(url_for('file.new_file', file_type='table'))
-            except Exception as e:
-                print(f"DEBUG: Table creation error - {type(e).__name__}: {e}")
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, f"Error creating table: {str(e)}", 'error')
-                return redirect(url_for('file.new_file', file_type='table'))
-        
-        elif file_type == 'blocks':
-            # Lexical editor JSON state
-            try:
-                # Default empty Lexical state
-                default_state = {
-                    "root": {
-                        "children": [
-                            {
-                                "children": [],
-                                "direction": None,
-                                "format": "",
-                                "indent": 0,
-                                "type": "paragraph",
-                                "version": 1
-                            }
-                        ],
-                        "direction": None,
-                        "format": "",
-                        "indent": 0,
-                        "type": "root",
-                        "version": 1
-                    }
-                }
-                blocks_data = json.loads(request.form.get('content', json.dumps(default_state)))
-                new_file.content_json = blocks_data
-                content_size = len(json.dumps(blocks_data).encode('utf-8'))
-            except json.JSONDecodeError:
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, "Error: Invalid blocks data format", 'error')
-                return redirect(url_for('file.new_file', file_type='blocks'))
-
-        elif file_type == 'proprietary_graph':
-            try:
-                raw = request.form.get('content', '{}')
-                layout_data = json.loads(raw) if raw else {}
-            except json.JSONDecodeError:
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, "Error: Invalid graph data format", 'error')
-                return redirect(url_for('file.new_file', file_type='proprietary_graph'))
-
-            if not isinstance(layout_data, dict):
-                layout_data = {}
-            layout_data.setdefault('nodes', [])
-            layout_data.setdefault('edges', [])
-            layout_data.setdefault('settings', {})
-            layout_data.setdefault('metadata', {})
-
-            new_file.content_json = layout_data
-            content_size = len(json.dumps(layout_data).encode('utf-8'))
-
+            new_file.content_json = {}
+            
         else:
             from blueprints.p2.utils import add_notification
             add_notification(current_user.id, f"Error: Unsupported file type '{file_type}'", 'error')
             return redirect(url_for('folders.view_folder'))
         
-        # Storage quota check
-        if current_user.user_type == 'guest':
-            GUEST_LIMIT = 50 * 1024 * 1024  # 50MB
-            if current_user.total_data_size + content_size > GUEST_LIMIT:
-                from blueprints.p2.utils import add_notification
-                add_notification(current_user.id, f"Error: Guest users are limited to 50MB. Current usage: {current_user.total_data_size / (1024*1024):.2f}MB", 'error')
-                return redirect(url_for('folders.view_folder'))
+        flag_modified(new_file, 'metadata_json')
         
         try:
             db.session.add(new_file)
             db.session.flush()
-
+            
             if file_type == 'proprietary_graph':
                 ensure_workspace(new_file, current_user.id, current_folder_id)
-
+            
             # Update folder last_modified
             folder.last_modified = datetime.utcnow()
-            
             db.session.commit()
-
-            # Persist storage usage (was missing, so totals stayed stale after creation)
+            
+            # Calculate and update storage (minimal for empty file)
+            content_size = new_file.get_content_size()
             update_user_data_size(current_user, content_size)
             
-            # Add notification for successful creation
-            from blueprints.p2.utils import add_notification
-            size_str = format_file_size(content_size)
-            notification_msg = f"Created {file_type}: {title} ({size_str})"
-            add_notification(current_user.id, notification_msg, 'save')
-            
-            # No flash message - use telemetry panel notification via query param
-            # Redirect interactive editors back to their edit pages so users can keep working
-            if file_type in ['code', 'blocks', 'todo']:
-                return redirect(url_for('file.edit_file', file_id=new_file.id, saved=file_type, size=size_str))
+            # Redirect to edit template with new flag
             if file_type == 'proprietary_graph':
-                return redirect(url_for('graph.view_graph', file_id=new_file.id, saved=file_type, size=size_str))
-            return redirect(url_for('folders.view_folder', folder_id=current_folder_id, saved=file_type, size=size_str))
-            
+                return redirect(url_for('graph.view_graph', file_id=new_file.id, is_new=1))
+            else:
+                return redirect(url_for('file.edit_file', file_id=new_file.id, is_new=1))
+                
         except SQLAlchemyError as e:
             db.session.rollback()
             from blueprints.p2.utils import add_notification
             add_notification(current_user.id, f"Error creating {file_type}: {str(e)}", 'error')
-            return redirect(url_for('file.new_file', file_type=file_type))
+            return redirect(url_for('folders.view_folder'))
     
-    # GET request - show creation form
-    return render_template(f'p2/file_new_{file_type}.html', folder=folder)
+    # POST request - this is now handled by edit_file route
+    # This should not be reached, but redirect to folder view as fallback
+    return redirect(url_for('folders.view_folder', folder_id=current_folder_id))
 
 
 @file_bp.route('/files/<int:file_id>/edit', methods=['GET', 'POST'])
@@ -303,7 +219,10 @@ def edit_file(file_id):
         return redirect(url_for('folders.view_folder', folder_id=target_folder_id))
     
     if request.method == 'POST':
-        file_obj.title = request.form.get('title', 'Untitled').strip()
+        title = request.form.get('title', '').strip()
+        if file_obj.type == 'todo':
+            title = _default_todo_title_if_blank(title)
+        file_obj.title = title
         description = request.form.get('description', '').strip()
         file_obj.is_public = request.form.get('is_public') == 'on'
 
@@ -442,6 +361,20 @@ def edit_file(file_id):
                     return jsonify({'success': False, 'error': f'Error saving table: {str(e)}'}), 500
                 return redirect(url_for('file.edit_file', file_id=file_id))
         
+        elif file_obj.type == 'timeline':
+            try:
+                timeline_data = json.loads(request.form.get('content_json', '[]'))
+                if not isinstance(timeline_data, list):
+                    timeline_data = []
+                file_obj.content_json = timeline_data
+                flag_modified(file_obj, 'content_json')
+            except json.JSONDecodeError as e:
+                from blueprints.p2.utils import add_notification
+                add_notification(current_user.id, "Error: Invalid timeline data format", 'error')
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'error': 'Invalid timeline data format'}), 400
+                return redirect(url_for('file.edit_file', file_id=file_id))
+        
         # Update storage quota
         new_size = file_obj.get_content_size()
         size_delta = new_size - old_size
@@ -474,8 +407,8 @@ def edit_file(file_id):
                     'last_modified': file_obj.last_modified.isoformat()
                 })
             
-            if file_obj.type == 'todo':
-                # Stay on the edit page for todos so the user does not lose context
+            if file_obj.type in ['todo', 'timeline']:
+                # Stay on the edit page for these types so the user does not lose context
                 return redirect(url_for('file.edit_file', file_id=file_obj.id, saved=file_obj.type, size=size_str))
             return redirect(url_for('folders.view_folder', folder_id=file_obj.folder_id, saved=file_obj.type, size=size_str))
         except SQLAlchemyError as e:

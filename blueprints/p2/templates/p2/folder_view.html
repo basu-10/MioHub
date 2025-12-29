@@ -32,6 +32,10 @@
 {% include "/p2/folder_view_left_sidebar_partial.html" %}
 
 <script>
+// Store current folder ID in localStorage for clipboard operations
+localStorage.setItem('currentFolderId', '{{ folder.id }}');
+console.log('[FOLDER VIEW] Current folder ID stored:', '{{ folder.id }}');
+
 // Sync sidebar state with main content margin
 function updateMainContentSidebarState() {
   const sidebar = document.getElementById('folderBrowserSidebar');
@@ -60,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<div class="container-fluid mt-0 main-content-with-sidebar sidebar-collapsed" id="mainContent" style="margin-top: 120px !important; /* Account for fixed header container (navbar 64px + options bar ~56px) */">
+<div class="container-fluid mt-0 main-content-with-sidebar sidebar-collapsed" id="mainContent" style="margin-top: 130px !important; padding-left: 2rem; padding-right: 2rem; /* Account for fixed header container (navbar 64px + options bar ~56px) */">
 
   <!-- Flash Messages (only errors now, success via telemetry) -->
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -106,25 +110,37 @@ document.addEventListener('DOMContentLoaded', function() {
   {% if folder.boards|length > 0 %}
   <div class="nav-pill" onclick="scrollToSection('boards')">
     <i class="material-icons">dashboard</i>
-    <span>MioDraw ({{ folder.boards|length }})</span>
+    <span>MioPages ({{ folder.boards|length }})</span>
   </div>
   {% endif %}
   {% if combined_docs|length > 0 %}
   <div class="nav-pill" onclick="scrollToSection('combined')">
     <i class="material-icons">article</i>
-    <span>MioBook ({{ combined_docs|length }})</span>
+    <span>MioBlocks ({{ combined_docs|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('proprietary_infinite_whiteboard') %}
   <div class="nav-pill" onclick="scrollToSection('infinite-whiteboards')">
     <i class="material-icons">grid_on</i>
-    <span>Infinite Whiteboards ({{ files_by_type['proprietary_infinite_whiteboard']|length }})</span>
+    <span>MioInfinite ({{ files_by_type['proprietary_infinite_whiteboard']|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('proprietary_graph') %}
-  <div class="nav-pill" data-section-id="graph-workspaces" data-label="Graph Workspaces" onclick="scrollToSection('graph-workspaces')">
+  <div class="nav-pill" data-section-id="graph-workspaces" data-label="MioThink" onclick="scrollToSection('graph-workspaces')">
     <i class="material-icons">device_hub</i>
-    <span>Graph Workspaces ({{ files_by_type['proprietary_graph']|length }})</span>
+    <span>MioThink ({{ files_by_type['proprietary_graph']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('todo') %}
+  <div class="nav-pill" onclick="scrollToSection('todo')">
+    <i class="material-icons">checklist</i>
+    <span>MioList ({{ files_by_type['todo']|length }})</span>
+  </div>
+  {% endif %}
+  {% if files_by_type.get('timeline') %}
+  <div class="nav-pill" onclick="scrollToSection('timeline')">
+    <i class="material-icons">timeline</i>
+    <span>MioEvents ({{ files_by_type['timeline']|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('markdown') %}
@@ -137,12 +153,6 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="nav-pill" onclick="scrollToSection('code')">
     <i class="material-icons">code</i>
     <span>Code ({{ files_by_type['code']|length }})</span>
-  </div>
-  {% endif %}
-  {% if files_by_type.get('todo') %}
-  <div class="nav-pill" onclick="scrollToSection('todo')">
-    <i class="material-icons">checklist</i>
-    <span>Todo ({{ files_by_type['todo']|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('diagram') %}
@@ -182,125 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Recents Section (Only shown at root folder) -->
     {% if is_root_folder and recent_items|length > 0 %}
-    <div class="section-container recents-section" id="recents">
-      <div class="section-header recents-header">
-        <h3 class="section-title">
-          <i class="material-icons">history</i>
-          Recently Modified
-          <span class="count-badge">{{ recent_items|length }}</span>
-        </h3>
-        <div class="small" style="color: var(--accent); margin-top: 0.5rem; opacity: 0.9;">
-          <i class="material-icons" style="font-size: 14px; vertical-align: middle;">bolt</i>
-          Quick access to your most recent work across all folders
-        </div>
-      </div>
-      <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-3 mb-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
-        {% for recent in recent_items %}
-        <div class="col">
-          {% if recent.type == 'note' %}
-            {# Legacy Note #}
-            <div class="card shadow-sm item-card" data-type="note" data-id="{{ recent.item.id }}" data-note-title="{{ recent.item.title }}" data-is-public="{{ '1' if recent.item.is_public else '0' }}">
-              <div class="badge-container">
-                {% if recent.item.is_public %}
-                <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i></span>
-                {% endif %}
-                <span class="badge bg-info">Note</span>
-              </div>
-              <div class="card-body item-body" tabindex="0">
-                <div class="d-flex align-items-center gap-2 mb-1">
-                  <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-blue);">description</i>
-                  <a href="{{ url_for('notes.edit_note', note_id=recent.item.id) }}" class="text-decoration-none fw-semibold item-link flex-grow-1">
-                    {{ recent.item.title }}
-                  </a>
-                </div>
-                {% set recent_description = recent.item.description %}
-                {% if recent_description and display_prefs.show_previews %}
-                <div class="file-description content-preview mb-2">
-                  <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
-                  <span>{{ recent_description }}</span>
-                </div>
-                {% endif %}
-                <div class="text-muted small">
-                  <i class="material-icons" style="font-size: 14px;">access_time</i>
-                  {{ recent.last_modified.strftime('%b %d, %Y %H:%M') if recent.last_modified else 'N/A' }}
-                </div>
-              </div>
-            </div>
-          {% elif recent.type == 'board' %}
-            {# Legacy Board #}
-            <div class="card shadow-sm item-card" data-type="board" data-id="{{ recent.item.id }}" data-board-title="{{ recent.item.title }}" data-is-public="{{ '1' if recent.item.is_public else '0' }}">
-              <div class="badge-container">
-                {% if recent.item.is_public %}
-                <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i></span>
-                {% endif %}
-                <span class="badge bg-warning text-dark">Board</span>
-              </div>
-              <div class="card-body item-body" tabindex="0">
-                <div class="d-flex align-items-center gap-2 mb-1">
-                  <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-yellow);">draw</i>
-                  <a href="{{ url_for('boards.edit_board', board_id=recent.item.id) }}" class="text-decoration-none fw-semibold item-link flex-grow-1">
-                    {{ recent.item.title }}
-                  </a>
-                </div>
-                {% set recent_description = recent.item.description %}
-                {% if recent_description and display_prefs.show_previews %}
-                <div class="file-description content-preview mb-2">
-                  <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
-                  <span>{{ recent_description }}</span>
-                </div>
-                {% endif %}
-                <div class="text-muted small">
-                  <i class="material-icons" style="font-size: 14px;">access_time</i>
-                  {{ recent.last_modified.strftime('%b %d, %Y %H:%M') if recent.last_modified else 'N/A' }}
-                </div>
-              </div>
-            </div>
-          {% elif recent.type == 'file' %}
-            {# File (all types including MioBook) #}
-            <div class="card shadow-sm item-card" data-type="file" data-file-type="{{ recent.file_type }}" data-id="{{ recent.item.id }}" data-file-title="{{ recent.item.title }}" data-is-public="{{ '1' if recent.item.is_public else '0' }}">
-              <div class="badge-container">
-                {% if recent.item.is_public %}
-                <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i></span>
-                {% endif %}
-                <span class="badge bg-success">{{ recent.file_type|capitalize }}</span>
-              </div>
-              <div class="card-body item-body" tabindex="0">
-                <div class="d-flex align-items-center gap-2 mb-1">
-                  {% if recent.file_type == 'markdown' %}
-                    <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">article</i>
-                  {% elif recent.file_type == 'todo' %}
-                    <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-green);">checklist</i>
-                  {% elif recent.file_type == 'diagram' %}
-                    <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-purple);">account_tree</i>
-                  {% elif recent.file_type == 'table' %}
-                    <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-orange);">table_chart</i>
-                  {% elif recent.file_type == 'book' %}
-                    <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-pink);">menu_book</i>
-                  {% else %}
-                    <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">insert_drive_file</i>
-                  {% endif %}
-                  <a href="{{ url_for('file.edit_file', file_id=recent.item.id) if recent.file_type != 'book' else url_for('combined.edit_combined', document_id=recent.item.id) }}" class="text-decoration-none fw-semibold item-link flex-grow-1">
-                    {{ recent.item.title }}
-                  </a>
-                </div>
-                {% set recent_description = recent.item.description %}
-                {% if recent_description and display_prefs.show_previews %}
-                <div class="file-description content-preview mb-2">
-                  <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
-                  <span>{{ recent_description }}</span>
-                </div>
-                {% endif %}
-                <div class="text-muted small">
-                  <i class="material-icons" style="font-size: 14px;">access_time</i>
-                  {{ recent.last_modified.strftime('%b %d, %Y %H:%M') if recent.last_modified else 'N/A' }}
-                </div>
-              </div>
-            </div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
-    </div>
+      {% include 'p2/partials/recently_modified_section.html' %}
     {% endif %}
 
     <!-- Folders Section -->
@@ -313,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <span class="count-badge">{{ subfolders|length }}</span>
         </h3>
       </div>
-      <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-3 mb-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+      <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
   {% for sub in subfolders %}
     <div class="col ">
       <div class="card shadow-sm item-card" data-type="folder" data-id="{{ sub.id }}" data-folder-name="{{ sub.name }}" data-folder-description="{{ sub.description or '' }}" data-is-public="{{ '1' if sub.is_public else '0' }}">
@@ -482,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </thead>
             <tbody>
               {% for note in notes %}
-              <tr class="item-row" data-type="note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" tabindex="0">
+              <tr class="item-row" data-type="proprietary_note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" tabindex="0">
                 <td>
                   <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">description</i>
                 </td>
@@ -535,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="section-header boards-header">
     <h3 class="section-title">
       <i class="material-icons">dashboard</i>
-      MioDraw
+      MioPages
       <span class="count-badge">{{ folder.boards|length }}</span>
     </h3>
   </div>
@@ -563,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           {% endif %}
           
-          <div class="card-text text-muted small flex-grow-1 mb-3 mio-draw-label">🧩 MioDraw</div>
+          <div class="card-text text-muted small flex-grow-1 mb-3 mio-draw-label">🧩 MioPages</div>
 
         </div>
       </div>
@@ -632,14 +524,14 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="section-header combined-header">
     <h3 class="section-title">
       <i class="material-icons">article</i>
-      MioBook
+      MioBlocks
       <span class="count-badge">{{ combined_docs|length }}</span>
     </h3>
   </div>
   <div id="combined-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
   {% for doc in combined_docs %}
     <div class="col d-flex">
-      <div class="card flex-fill h-100 shadow-sm item-card" data-type="book" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" data-is-pinned="{{ '1' if doc.is_pinned else '0' }}">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="proprietary_blocks" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" data-is-pinned="{{ '1' if doc.is_pinned else '0' }}">
         <div class="badge-container">
           {% if doc.is_pinned %}
           <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
@@ -652,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <h5 class="card-title">
             <a href="{{ url_for('combined.edit_combined', document_id=doc.id) }}" class="item-link">{{ doc.title }}</a>
           </h5>
-          <div class="card-text text-muted small flex-grow-1 mb-3 combined-label">📄 Combined Note+Board</div>
+          <div class="card-text text-muted small flex-grow-1 mb-3 combined-label">📄 MioBlocks</div>
           <!-- 3-dot dropdown menu removed; use single click for context menu -->
         </div>
       </div>
@@ -676,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </thead>
             <tbody>
               {% for doc in combined_docs %}
-              <tr class="item-row" data-type="book" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" tabindex="0">
+              <tr class="item-row" data-type="proprietary_blocks" data-id="{{ doc.id }}" data-is-public="{{ '1' if doc.is_public else '0' }}" tabindex="0">
                 <td>
                   <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">article</i>
                 </td>
@@ -714,13 +606,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Files Section - Split by Type -->
 
-<!-- Infinite Whiteboard Section -->
+<!-- MioInfinite Section -->
 {% if files_by_type.get('proprietary_infinite_whiteboard') %}
 <div class="section-container files-section" id="infinite-whiteboards">
   <div class="section-header files-header">
     <h3 class="section-title">
       <i class="material-icons">grid_on</i>
-      Infinite Whiteboards
+      MioInfinite
       <span class="count-badge">{{ files_by_type['proprietary_infinite_whiteboard']|length }}</span>
     </h3>
   </div>
@@ -735,10 +627,9 @@ document.addEventListener('DOMContentLoaded', function() {
           {% if file.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
           {% endif %}
-          <span class="type-badge">∞ canvas</span>
         </div>
         
-        <!-- Thumbnail Preview (always show for infinite whiteboards) -->
+        <!-- Thumbnail Preview (always show for MioInfinite) -->
         {% if display_prefs.show_previews %}
         <div class="card-thumbnail-container">
           {% if file.thumbnail_path and file.thumbnail_path.strip() %}
@@ -769,7 +660,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <span>{{ file.metadata_json.get('description') }}</span>
           </div>
           {% endif %}
-          <div class="card-text text-muted small flex-grow-1 mb-3">🌌 Infinite Whiteboard</div>
+          <div class="card-text text-muted small flex-grow-1 mb-3">🌌 MioInfinite</div>
         </div>
       </div>
     </div>
@@ -778,13 +669,13 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 {% endif %}
 
-<!-- Graph Workspace Section -->
+<!-- MioThink Section -->
 {% if files_by_type.get('proprietary_graph') %}
 <div class="section-container files-section" id="graph-workspaces">
   <div class="section-header files-header">
     <h3 class="section-title">
       <i class="material-icons">device_hub</i>
-      Graph Workspaces
+      MioThink
       <span class="count-badge">{{ files_by_type['proprietary_graph']|length }}</span>
     </h3>
   </div>
@@ -799,7 +690,6 @@ document.addEventListener('DOMContentLoaded', function() {
           {% if file.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
           {% endif %}
-          <span class="type-badge">graph</span>
         </div>
 
         <div class="card-body d-flex flex-column item-body" tabindex="0">
@@ -812,7 +702,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <span>{{ file.metadata_json.get('description') }}</span>
           </div>
           {% endif %}
-          <div class="card-text text-muted small flex-grow-1 mb-3">🕸️ Graph Workspace</div>
+          <div class="card-text text-muted small flex-grow-1 mb-3">🕸️ MioThink</div>
         </div>
       </div>
     </div>
@@ -821,98 +711,13 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 {% endif %}
 
-<!-- Markdown Files Section -->
-{% if files_by_type.get('markdown') %}
-<div class="section-container files-section" id="markdown">
-  <div class="section-header files-header">
-    <h3 class="section-title">
-      <i class="material-icons">description</i>
-      Markdown Files
-      <span class="count-badge">{{ files_by_type['markdown']|length }}</span>
-    </h3>
-  </div>
-  <div id="markdown-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
-  {% for file in files_by_type['markdown'] %}
-    <div class="col d-flex">
-      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
-        <div class="badge-container">
-          {% if file.is_pinned %}
-            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
-          {% endif %}
-          {% if file.is_public %}
-            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
-          {% endif %}
-          <span class="type-badge">markdown</span>
-        </div>
-        <div class="card-body d-flex flex-column item-body" tabindex="0">
-          <h5 class="card-title mb-2">
-            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
-          </h5>
-          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
-          <div class="file-description content-preview mb-2">
-            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
-            <span>{{ file.metadata_json.get('description') }}</span>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-<!-- Code Files Section -->
-{% if files_by_type.get('code') %}
-<div class="section-container files-section" id="code">
-  <div class="section-header files-header">
-    <h3 class="section-title">
-      <i class="material-icons">code</i>
-      Code Files
-      <span class="count-badge">{{ files_by_type['code']|length }}</span>
-    </h3>
-  </div>
-  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
-  {% for file in files_by_type['code'] %}
-    <div class="col d-flex">
-      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
-        <div class="badge-container">
-          {% if file.is_pinned %}
-            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
-          {% endif %}
-          {% if file.is_public %}
-            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
-          {% endif %}
-          <span class="type-badge">code</span>
-          {% if file.metadata_json and file.metadata_json.get('language') %}
-            <span class="subtype-badge">{{ file.metadata_json.get('language')|title }}</span>
-          {% endif %}
-        </div>
-        <div class="card-body d-flex flex-column item-body" tabindex="0">
-          <h5 class="card-title mb-2">
-            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
-          </h5>
-          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
-          <div class="file-description content-preview mb-2">
-            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
-            <span>{{ file.metadata_json.get('description') }}</span>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-<!-- Todo Files Section -->
+<!-- MioList Section -->
 {% if files_by_type.get('todo') %}
 <div class="section-container files-section" id="todo">
   <div class="section-header files-header">
     <h3 class="section-title">
       <i class="material-icons">checklist</i>
-      Todo Lists
+      MioList
       <span class="count-badge">{{ files_by_type['todo']|length }}</span>
     </h3>
   </div>
@@ -927,7 +732,6 @@ document.addEventListener('DOMContentLoaded', function() {
           {% if file.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
           {% endif %}
-          <span class="type-badge">todo</span>
         </div>
         <div class="card-body d-flex flex-column item-body" tabindex="0">
           <h5 class="card-title mb-2">
@@ -985,6 +789,127 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 {% endif %}
 
+<!-- MioEvents Section -->
+{% if files_by_type.get('timeline') %}
+<div class="section-container files-section" id="timeline">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">timeline</i>
+      MioEvents
+      <span class="count-badge">{{ files_by_type['timeline']|length }}</span>
+    </h3>
+  </div>
+  <div id="timeline-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['timeline'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+          <div class="card-text text-muted small flex-grow-1 mb-3">📅 MioEvents</div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Markdown Files Section -->
+{% if files_by_type.get('markdown') %}
+<div class="section-container files-section" id="markdown">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">description</i>
+      Markdown Files
+      <span class="count-badge">{{ files_by_type['markdown']|length }}</span>
+    </h3>
+  </div>
+  <div id="markdown-grid" class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['markdown'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Code Files Section -->
+{% if files_by_type.get('code') %}
+<div class="section-container files-section" id="code">
+  <div class="section-header files-header">
+    <h3 class="section-title">
+      <i class="material-icons">code</i>
+      Code Files
+      <span class="count-badge">{{ files_by_type['code']|length }}</span>
+    </h3>
+  </div>
+  <div class="content-grid row row-cols-1 row-cols-md-2 row-cols-lg-{{ display_prefs.columns }} g-4" data-view-mode="{{ display_prefs.view_mode }}" data-card-size="{{ display_prefs.card_size }}">
+  {% for file in files_by_type['code'] %}
+    <div class="col d-flex">
+      <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="{{ file.type }}" data-file-description="{{ file.metadata_json.get('description', '') if file.metadata_json else '' }}" data-is-public="{{ '1' if file.is_public else '0' }}" data-is-pinned="{{ '1' if file.is_pinned else '0' }}">
+        <div class="badge-container">
+          {% if file.is_pinned %}
+            <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>
+          {% endif %}
+          {% if file.is_public %}
+            <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column item-body" tabindex="0">
+          <h5 class="card-title mb-2">
+            <a href="{{ url_for('file.view_file', file_id=file.id) }}" class="item-link">{{ file.title }}</a>
+          </h5>
+          {% if file.metadata_json and file.metadata_json.get('description') and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ file.metadata_json.get('description') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <!-- Diagram Files Section -->
 {% if files_by_type.get('diagram') %}
 <div class="section-container files-section" id="diagram">
@@ -1006,7 +931,6 @@ document.addEventListener('DOMContentLoaded', function() {
           {% if file.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
           {% endif %}
-          <span class="type-badge">diagram</span>
         </div>
         <div class="card-body d-flex flex-column item-body" tabindex="0">
           <h5 class="card-title mb-2">
@@ -1047,7 +971,6 @@ document.addEventListener('DOMContentLoaded', function() {
           {% if file.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
           {% endif %}
-          <span class="type-badge">table</span>
         </div>
         <div class="card-body d-flex flex-column item-body" tabindex="0">
           <h5 class="card-title mb-2">
@@ -1088,7 +1011,6 @@ document.addEventListener('DOMContentLoaded', function() {
           {% if file.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
           {% endif %}
-          <span class="type-badge">pdf</span>
         </div>
         <div class="card-body d-flex flex-column item-body" tabindex="0">
           <h5 class="card-title mb-2">
@@ -1129,7 +1051,6 @@ document.addEventListener('DOMContentLoaded', function() {
           {% if file.is_public %}
             <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i><span class="visually-hidden">Public</span></span>
           {% endif %}
-          <span class="type-badge">blocks</span>
         </div>
         <div class="card-body d-flex flex-column item-body" tabindex="0">
           <h5 class="card-title mb-2">
@@ -1156,25 +1077,24 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Context Menu -->
 <div id="context-menu" class="context-menu" style="display: none; position: absolute; z-index: 920;">
   <ul class="list-group">
-  <li class="list-group-item context-menu-item" onclick="(typeof openCreateFolderDescModal === 'function' ? openCreateFolderDescModal(window.targetFolderId) : createNewFolder(window.targetFolderId))">📁 Create Folder</li>
-    <li class="list-group-item context-menu-item" onclick="createNewNote()">📝 New MioNote</li>
-    <li class="list-group-item context-menu-item" onclick="createNewBoard()">🎨 New MioDraw</li>
-    <li class="list-group-item context-menu-item" onclick="createNewCombined()">📄 New MioBook</li>
+  <li class="list-group-item context-menu-item" onclick="(typeof openCreateFolderDescModal === 'function' ? openCreateFolderDescModal(window.targetFolderId) : createNewFolder(window.targetFolderId))"><i class="material-icons">folder</i>Create Folder</li>
+    <li class="list-group-item context-menu-item" onclick="createNewNote()"><i class="material-icons">description</i>New MioNote</li>
+    <li class="list-group-item context-menu-item" onclick="createNewBoard()"><i class="material-icons">dashboard</i>New MioPages</li>
+    <li class="list-group-item context-menu-item" onclick="createNewCombined()"><i class="material-icons">article</i>New MioBlocks</li>
+    <li class="list-group-item context-menu-item" onclick="createNewFile('proprietary_graph')"><i class="material-icons">device_hub</i>New MioThink</li>
+    <li class="list-group-item context-menu-item" onclick="createNewInfiniteBoard()"><i class="material-icons">explore</i>New MioInfinite</li>
+    <li class="list-group-item context-menu-item" onclick="createNewFile('timeline')"><i class="material-icons">timeline</i>New MioEvents</li>
+    <li class="list-group-item context-menu-item" onclick="createNewFile('todo')"><i class="material-icons">checklist</i>New MioList</li>
     <li class="list-group-item context-menu-item dropdown-submenu" onmouseenter="showSubmenu(event)" onmouseleave="hideSubmenu(event)">
-      <span>📄 New File →</span>
+      <span><i class="material-icons">insert_drive_file</i>New File →</span>
       <ul class="submenu list-group">
-        <li class="list-group-item context-menu-item" onclick="createNewFile('markdown')">📝 Markdown</li>
-        <li class="list-group-item context-menu-item" onclick="createNewFile('code')">💻 Code</li>
-        <li class="list-group-item context-menu-item" onclick="createNewFile('todo')">✅ Todo List</li>
-        <li class="list-group-item context-menu-item" onclick="createNewFile('diagram')">🎨 Diagram</li>
-        <li class="list-group-item context-menu-item" onclick="createNewFile('table')">📊 Table</li>
-        <li class="list-group-item context-menu-item" onclick="createNewFile('blocks')">🧱 Blocks</li>
-        <li class="list-group-item context-menu-item" onclick="createNewInfiniteBoard()">🌌 Infinite Whiteboard</li>
-        <li class="list-group-item context-menu-item" onclick="createNewFile('proprietary_graph')">🕸️ Graph Workspace</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('markdown')"><i class="material-icons">text_fields</i>Markdown</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('code')"><i class="material-icons">code</i>Code</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('table')"><i class="material-icons">table_chart</i>Table</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('blocks')"><i class="material-icons">view_week</i>Blocks</li>
+        <li class="list-group-item context-menu-item" onclick="createNewFile('diagram')"><i class="material-icons">account_tree</i>Diagram</li>
       </ul>
     </li>
-    <li id="context-paste-item" class="list-group-item context-menu-item" onclick="contextMenuPaste()" style="display: none;">📋 Paste</li>
-    <li id="context-clear-item" class="list-group-item context-menu-item" onclick="contextMenuClearClipboard()" style="display: none;">🗑️ Clear Clipboard</li>
   </ul>
 </div>
 
@@ -1189,6 +1109,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Rename Modal -->
 {% include "p2/folder_view_rename_modal_partial.html" %}
+
+<!-- Delete Confirmation Modal -->
+{% include "p2/delete_confirmation_modal_partial.html" %}
 
 {% include "p2/folder_view_settings_partial.html" %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -1277,8 +1200,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Submenu handlers for context menu
   window.showSubmenu = function(e) {
-    const submenu = e.currentTarget.querySelector('.submenu');
-    if (submenu) submenu.style.display = 'block';
+    const li = e.currentTarget;
+    const submenu = li.querySelector('.submenu');
+    if (!submenu) return;
+    
+    // Reset styles to default for measurement
+    submenu.style.display = 'block';
+    submenu.style.visibility = 'hidden';
+    submenu.style.left = '100%';
+    submenu.style.right = 'auto';
+    submenu.style.top = '0';
+    submenu.style.bottom = 'auto';
+    submenu.style.marginLeft = '4px';
+    submenu.style.marginRight = '0';
+    
+    const rect = submenu.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    // Check right boundary
+    if (rect.right > windowWidth) {
+      submenu.style.left = 'auto';
+      submenu.style.right = '100%';
+      submenu.style.marginLeft = '0';
+      submenu.style.marginRight = '4px';
+    }
+    
+    // Check bottom boundary
+    if (rect.bottom > windowHeight) {
+      submenu.style.top = 'auto';
+      submenu.style.bottom = '0';
+    }
+    
+    submenu.style.visibility = 'visible';
   };
   
   window.hideSubmenu = function(e) {
@@ -1313,17 +1267,126 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Position the context menu
-    contextMenu.style.left = e.pageX + 'px';
-    contextMenu.style.top = e.pageY + 'px';
+    // Position the context menu with boundary checks
+    // First show it off-screen/hidden to measure dimensions
     contextMenu.style.display = 'block';
+    contextMenu.style.visibility = 'hidden';
+    
+    const menuWidth = contextMenu.offsetWidth;
+    const menuHeight = contextMenu.offsetHeight;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    
+    let left = e.pageX;
+    let top = e.pageY;
+    
+    // Check right boundary (if menu goes off right edge, show it to the left of cursor)
+    if (left + menuWidth > scrollX + windowWidth) {
+      left = left - menuWidth;
+    }
+    
+    // Check bottom boundary (if menu goes off bottom edge, show it above cursor)
+    if (top + menuHeight > scrollY + windowHeight) {
+      top = top - menuHeight;
+    }
+    
+    // Apply positions
+    contextMenu.style.left = left + 'px';
+    contextMenu.style.top = top + 'px';
+    contextMenu.style.visibility = 'visible';
   });
 
   // Hide context menu on click elsewhere
-  document.addEventListener('click', function() {
+  document.addEventListener('click', function(e) {
+    // Don't hide if clicking inside the context menu
+    if (e.target.closest('#context-menu')) {
+      console.log('[CONTEXT MENU] Click inside menu, not hiding');
+      return;
+    }
+    console.log('[CONTEXT MENU] Click outside menu, hiding');
     contextMenu.style.display = 'none';
     window.targetFolderId = null; // Clear target folder
   });
+
+  // Initialize floating paste button state on page load
+  // Wait for ClipboardOperations to be available
+  function initializeFloatingPasteButton() {
+    if (typeof window.updateFloatingPasteButton === 'function') {
+      if (window.ClipboardOperations) {
+        window.updateFloatingPasteButton();
+        console.log('[FLOATING PASTE] Initial state check complete');
+        
+        // Attach click handler
+        const pasteBtn = document.getElementById('floatingPasteBtn');
+        if (pasteBtn) {
+          pasteBtn.addEventListener('click', window.floatingPasteClick);
+          console.log('[FLOATING PASTE] Click listener attached');
+        }
+      } else {
+        console.log('[FLOATING PASTE] Waiting for ClipboardOperations module...');
+        setTimeout(initializeFloatingPasteButton, 100);
+      }
+    }
+  }
+  setTimeout(initializeFloatingPasteButton, 100);
+
+  // Listen for clipboard state changes
+  document.addEventListener('clipboardStateChanged', function(event) {
+    console.log('[FLOATING PASTE] Clipboard state changed event received:', event.detail);
+    if (typeof window.updateFloatingPasteButton === 'function') {
+      window.updateFloatingPasteButton();
+    }
+  });
+
+  // Update floating paste button visibility
+  window.updateFloatingPasteButton = function() {
+    const pasteBtn = document.getElementById('floatingPasteBtn');
+    
+    if (!pasteBtn) {
+      console.warn('[FLOATING PASTE] Button not found in DOM');
+      return;
+    }
+    
+    // Check if clipboard has data (via ClipboardOperations or localStorage)
+    let hasClipboard = false;
+    
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.hasClipboard === 'function') {
+      hasClipboard = window.ClipboardOperations.hasClipboard();
+      console.log('[FLOATING PASTE] Checked via ClipboardOperations:', hasClipboard);
+    } else {
+      // Fallback: check localStorage directly
+      try {
+        const clipboardData = localStorage.getItem('p2_clipboard');
+        hasClipboard = !!clipboardData;
+        console.log('[FLOATING PASTE] Checked via localStorage:', hasClipboard, clipboardData);
+      } catch (e) {
+        console.error('[FLOATING PASTE] Error checking clipboard:', e);
+      }
+    }
+    
+    // Show/hide paste button
+    if (hasClipboard) {
+      pasteBtn.classList.remove('hidden');
+      console.log('[FLOATING PASTE] Button shown');
+    } else {
+      pasteBtn.classList.add('hidden');
+      console.log('[FLOATING PASTE] Button hidden');
+    }
+  };
+
+  // Floating paste button click handler
+  window.floatingPasteClick = function() {
+    console.log('[FLOATING PASTE] Button clicked');
+    
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.triggerPaste === 'function') {
+      console.log('[FLOATING PASTE] Triggering paste via ClipboardOperations');
+      window.ClipboardOperations.triggerPaste();
+    } else {
+      console.error('[FLOATING PASTE] ClipboardOperations not available');
+    }
+  };
 
   // Function to open create folder modal
   window.openCreateFolderModal = function() {
@@ -1380,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.location.href = '/combined/new';
   };
 
-  // Function to create new infinite whiteboard
+  // Function to create new MioInfinite
   window.createNewInfiniteBoard = function() {
     contextMenu.style.display = 'none';
     window.location.href = '/infinite_boards/new';
@@ -2212,7 +2275,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (effectiveType === 'folder') {
       url = `/folders/${id}`;
     } else if (effectiveType === 'note') {
-      // Legacy MioNote editor (mionote_v2.html with Summernote)
+      // Legacy MioNote editor (file_edit_proprietary_note.html with Summernote)
       url = `/edit_note/${id}`;
     } else if (effectiveType === 'board' || effectiveType === 'whiteboard') {
       url = `/boards/edit/${id}`;
@@ -2252,14 +2315,19 @@ document.addEventListener('DOMContentLoaded', function() {
       window.batchSelected = [];
     }
     
+    // CRITICAL: Use fileType if available (for infinite whiteboards, graphs, etc.)
+    const fileType = card.dataset.fileType;
+    const effectiveType = (type === 'file' && fileType) ? fileType : type;
+    console.log(`[CARD CLICK] Effective type for clipboard: ${effectiveType}`);
+    
     // Check if already in batch
     const existingIndex = window.batchSelected.findIndex(
-      item => item.type === type && item.id === parseInt(id)
+      item => item.type === effectiveType && item.id === parseInt(id)
     );
     
     if (existingIndex >= 0) {
       // Remove from batch
-      console.log(`[CARD CLICK] Removing from batch: ${type} ${id}`);
+      console.log(`[CARD CLICK] Removing from batch: ${effectiveType} ${id}`);
       window.batchSelected.splice(existingIndex, 1);
       card.classList.remove('batch-selected-item');
       
@@ -2267,9 +2335,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const checkbox = card.querySelector('.batch-checkbox');
       if (checkbox) checkbox.remove();
     } else {
-      // Add to batch
-      console.log(`[CARD CLICK] Adding to batch: ${type} ${id}`);
-      window.batchSelected.push({ type, id: parseInt(id), card });
+      // Add to batch (use effectiveType so clipboard has specific file type)
+      console.log(`[CARD CLICK] Adding to batch: ${effectiveType} ${id}`);
+      window.batchSelected.push({ type: effectiveType, id: parseInt(id), card });
       card.classList.add('batch-selected-item');
       
       // Add visual checkbox
@@ -2281,12 +2349,16 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
-    // Update batch operations bar
-    updateBatchOperationsBar();
+    // Update batch operations bar (use ClipboardOperations module if available)
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.updateBatchUI === 'function') {
+      window.ClipboardOperations.updateBatchUI();
+    } else {
+      updateBatchOperationsBar();
+    }
   }
   
   /**
-   * Update batch operations bar visibility and count
+   * Update batch operations bar visibility and count (fallback for when ClipboardOperations not loaded)
    */
   function updateBatchOperationsBar() {
     const batchOps = document.getElementById('batch-operations');

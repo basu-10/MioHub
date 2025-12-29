@@ -205,7 +205,7 @@
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  z-index: 980;
+  z-index: 1050;
   min-width: 180px;
   display: none;
 }
@@ -444,23 +444,7 @@
 
 <!-- Folder Browser Sidebar -->
 <div class="folder-browser-sidebar collapsed" id="folderBrowserSidebar">
-  <div class="folder-browser-header">
-    <h6>
-      Hi, {{ current_user.username }}
-      </small>
-    </h6>
-    <div class="folder-browser-actions">
-      <button onclick="refreshFolderTree()" title="Refresh">
-        <i class="material-icons" style="font-size: 18px;">refresh</i>
-      </button>
-      <button onclick="(typeof openCreateFolderDescModal === 'function' ? openCreateFolderDescModal() : createNewFolder())" title="New Folder">
-        <i class="material-icons" style="font-size: 18px;">create_new_folder</i>
-      </button>
-      <button onclick="closeFolderBrowser()" title="Close">
-        <i class="material-icons" style="font-size: 18px;">close</i>
-      </button>
-    </div>
-  </div>
+
   <div class="folder-browser-tabs" role="tablist" aria-label="Folder sidebar tabs">
     <button class="folder-browser-tab-btn active" id="foldersTabBtn" onclick="switchFolderBrowserTab('folders')">Folders</button>
     <button class="folder-browser-tab-btn" id="pinnedTabBtn" onclick="switchFolderBrowserTab('pinned')">Social</button>

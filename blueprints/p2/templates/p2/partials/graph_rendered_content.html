@@ -1,0 +1,228 @@
+{# Partial template for rendered content overlays on graph nodes #}
+<style>
+  .graph-rendered-content-overlay {
+    position: absolute;
+    background: rgba(10, 10, 11, 0.95);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px;
+    overflow: hidden;
+    pointer-events: auto;
+    box-shadow: inset 0 0 8px rgba(20, 184, 166, 0.2);
+    z-index: 50;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-item {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body {
+    color: var(--white);
+    font-size: 11px;
+    line-height: 1.5;
+    height: calc(100% - 30px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body h1 {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 16px 0 8px 0;
+    color: var(--white);
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body h2 {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 14px 0 8px 0;
+    color: var(--white);
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body h3 {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 12px 0 6px 0;
+    color: var(--white);
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body p {
+    margin: 8px 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body ul,
+  .graph-rendered-content-overlay .rendered-content-body ol {
+    margin: 8px 0;
+    padding-left: 24px;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body li {
+    margin: 4px 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body code {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body pre {
+    background: var(--bg);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body pre code {
+    background: none;
+    padding: 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body th,
+  .graph-rendered-content-overlay .rendered-content-body td {
+    border: 1px solid var(--border-primary);
+    padding: 6px 8px;
+    text-align: left;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body th {
+    background: var(--bg);
+    font-weight: 600;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body .checklist {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body .checklist li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body .checklist input[type="checkbox"] {
+    margin: 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body hr {
+    border: none;
+    border-top: 1px solid var(--border-primary);
+    margin: 16px 0;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body .text-muted {
+    color: var(--muted);
+    font-style: italic;
+  }
+  
+  /* Scrollbar styling */
+  .graph-rendered-content-overlay .rendered-content-body::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 4px;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body::-webkit-scrollbar-thumb {
+    background: var(--border-primary);
+    border-radius: 4px;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-body::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+  
+  /* Resize handle */
+  .rendered-content-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--accent) 50%);
+    border-bottom-right-radius: 6px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  
+  .rendered-content-resize-handle:hover {
+    opacity: 1;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(20, 184, 166, 0.3);
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    flex: 1;
+  }
+  
+  .graph-rendered-content-overlay .rendered-content-actions {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .btn-icon-small {
+    padding: 3px;
+    min-width: unset;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-primary);
+    background: var(--bg);
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-icon-small:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: scale(1.1);
+  }
+  
+  .btn-icon-small.btn-danger:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+  }
+  
+  .btn-icon-small .material-icons {
+    font-size: 14px;
+  }
+</style>
+
+{# Container for all rendered content overlays - positioned by JavaScript #}
+<div id="graph-rendered-overlays"></div>

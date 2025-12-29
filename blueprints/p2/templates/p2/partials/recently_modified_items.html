@@ -1,0 +1,140 @@
+{% for recent in recent_items %}
+  <div class="recent-item">
+    {% if recent.type == 'note' %}
+      {# Legacy Note #}
+      <div class="card shadow-sm item-card recently-modified-card"
+           data-type="note"
+           data-id="{{ recent.item.id }}"
+           data-note-title="{{ recent.item.title }}"
+           data-is-public="{{ '1' if recent.item.is_public else '0' }}">
+        <div class="badge-container">
+          {% if recent.item.is_public %}
+          <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i></span>
+          {% endif %}
+          <span class="badge bg-info">Note</span>
+        </div>
+        <div class="card-body item-body" tabindex="0">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-blue);">description</i>
+            <a href="{{ url_for('notes.edit_note', note_id=recent.item.id) }}" class="text-decoration-none fw-semibold item-link flex-grow-1">
+              {{ recent.item.title }}
+            </a>
+          </div>
+          {% set recent_description = recent.item.description %}
+          {% if recent_description and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ recent_description }}</span>
+          </div>
+          {% endif %}
+          <div class="text-muted small">
+            <i class="material-icons" style="font-size: 14px;">access_time</i>
+            {{ recent.last_modified.strftime('%b %d, %Y %H:%M') if recent.last_modified else 'N/A' }}
+          </div>
+        </div>
+      </div>
+    {% elif recent.type == 'board' %}
+      {# Legacy Board #}
+      <div class="card shadow-sm item-card recently-modified-card"
+           data-type="board"
+           data-id="{{ recent.item.id }}"
+           data-board-title="{{ recent.item.title }}"
+           data-is-public="{{ '1' if recent.item.is_public else '0' }}">
+        <div class="badge-container">
+          {% if recent.item.is_public %}
+          <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i></span>
+          {% endif %}
+          <span class="badge bg-warning text-dark">Board</span>
+        </div>
+        <div class="card-body item-body" tabindex="0">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-yellow);">draw</i>
+            <a href="{{ url_for('boards.edit_board', board_id=recent.item.id) }}" class="text-decoration-none fw-semibold item-link flex-grow-1">
+              {{ recent.item.title }}
+            </a>
+          </div>
+          {% set recent_description = recent.item.description %}
+          {% if recent_description and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ recent_description }}</span>
+          </div>
+          {% endif %}
+          <div class="text-muted small">
+            <i class="material-icons" style="font-size: 14px;">access_time</i>
+            {{ recent.last_modified.strftime('%b %d, %Y %H:%M') if recent.last_modified else 'N/A' }}
+          </div>
+        </div>
+      </div>
+    {% elif recent.type == 'file' %}
+      {# File (all types including MioBook and graph) #}
+      {% set badge_label = (recent.file_type or 'file').replace('_', ' ')|title %}
+      {% set edit_href = url_for('file.edit_file', file_id=recent.item.id) %}
+      {% if recent.file_type in ['book', 'proprietary_blocks'] %}
+        {% set edit_href = url_for('combined.edit_combined', document_id=recent.item.id) %}
+      {% endif %}
+      {% if recent.file_type == 'proprietary_graph' %}
+        {% set edit_href = url_for('graph.view_graph', file_id=recent.item.id) %}
+      {% endif %}
+      {% if recent.file_type == 'proprietary_infinite_whiteboard' %}
+        {% set edit_href = url_for('infinite_boards.edit_infinite_board', board_id=recent.item.id) %}
+      {% endif %}
+      <div class="card shadow-sm item-card recently-modified-card"
+           data-type="file"
+           data-file-type="{{ recent.file_type }}"
+           data-id="{{ recent.item.id }}"
+           data-file-title="{{ recent.item.title }}"
+           data-is-public="{{ '1' if recent.item.is_public else '0' }}">
+        <div class="badge-container">
+          {% if recent.item.is_public %}
+          <span class="public-badge"><i class="material-icons" aria-hidden="true">public</i></span>
+          {% endif %}
+          <span class="badge bg-success">{{ badge_label }}</span>
+        </div>
+        <div class="card-body item-body" tabindex="0">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            {% if recent.file_type == 'markdown' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">article</i>
+            {% elif recent.file_type == 'todo' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-green);">checklist</i>
+            {% elif recent.file_type == 'diagram' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-purple);">account_tree</i>
+            {% elif recent.file_type == 'table' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-orange);">table_chart</i>
+            {% elif recent.file_type in ['book', 'proprietary_blocks'] %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-pink);">menu_book</i>
+            {% elif recent.file_type == 'proprietary_graph' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">device_hub</i>
+            {% elif recent.file_type == 'proprietary_infinite_whiteboard' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">grid_on</i>
+            {% elif recent.file_type == 'proprietary_whiteboard' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-yellow);">draw</i>
+            {% elif recent.file_type == 'proprietary_note' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">description</i>
+            {% elif recent.file_type == 'pdf' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent-orange);">picture_as_pdf</i>
+            {% elif recent.file_type == 'timeline' %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">timeline</i>
+            {% else %}
+              <i class="material-icons" style="font-size: 1.25rem; color: var(--accent);">insert_drive_file</i>
+            {% endif %}
+            <a href="{{ edit_href }}" class="text-decoration-none fw-semibold item-link flex-grow-1">
+              {{ recent.item.title }}
+            </a>
+          </div>
+          {% set recent_description = recent.item.description %}
+          {% if recent_description and display_prefs.show_previews %}
+          <div class="file-description content-preview mb-2">
+            <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+            <span>{{ recent_description }}</span>
+          </div>
+          {% endif %}
+          <div class="text-muted small">
+            <i class="material-icons" style="font-size: 14px;">access_time</i>
+            {{ recent.last_modified.strftime('%b %d, %Y %H:%M') if recent.last_modified else 'N/A' }}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endfor %}

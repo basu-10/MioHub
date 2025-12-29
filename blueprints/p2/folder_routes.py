@@ -5,7 +5,7 @@ from blueprints.p2.models import Folder, File, db, User
 from . import folder_bp  # Import the blueprint instance
 from datetime import datetime
 from sqlalchemy.orm import load_only
-from sqlalchemy import or_
+from sqlalchemy import or_, func, desc
 
 
 from blueprints.p2.folder_ops import (
@@ -21,6 +21,47 @@ from utilities_main import update_user_data_size
 from values_main import UPLOAD_FOLDER
 import os
 import json
+
+
+RECENT_PAGE_SIZE = 5
+RECENT_MAX_LIMIT = 30
+
+
+def get_display_prefs(user):
+    """Return a safe, default-filled display preferences dict for the user."""
+    prefs = user.user_prefs if isinstance(getattr(user, 'user_prefs', None), dict) else {}
+    display = dict(prefs.get('display', {}) or {})
+    display.setdefault('columns', 3)
+    display.setdefault('view_mode', 'grid')
+    display.setdefault('card_size', 'normal')
+    display.setdefault('show_previews', True)
+    return display
+
+
+def get_recent_items_for_user(owner_id, limit=RECENT_PAGE_SIZE, offset=0):
+    """Return a slice of recently modified files for a user, ordered newest first."""
+    safe_limit = max(1, min(limit or RECENT_PAGE_SIZE, RECENT_MAX_LIMIT))
+    safe_offset = max(0, offset or 0)
+
+    last_modified_expr = func.coalesce(File.last_modified, File.created_at)
+    query = File.query.filter_by(owner_id=owner_id).order_by(desc(last_modified_expr))
+
+    total_count = query.count()
+    files = query.offset(safe_offset).limit(safe_limit).all()
+
+    recent_items = [
+        {
+            'item': file_obj,
+            'type': 'file',
+            'file_type': file_obj.type,
+            'last_modified': file_obj.last_modified or file_obj.created_at,
+            'title': file_obj.title,
+            'folder_id': file_obj.folder_id
+        }
+        for file_obj in files
+    ]
+
+    return recent_items, total_count
 
 
 # Helper function to get correct card partial based on file type
@@ -154,9 +195,9 @@ def view_folder(folder_id):
             if item_type == 'folder':
                 # For folders, count total items (notes + boards + subfolders)
                 unpinned = sorted(unpinned, key=lambda x: len(x.notes) + len(x.boards) + len(x.children), reverse=True)
-            elif item_type in ['note', 'board']:
+            elif item_type in ['proprietary_note', 'proprietary_whiteboard']:
                 # For notes/boards, use content length (notes use content_html, boards use content_json)
-                unpinned = sorted(unpinned, key=lambda x: len(x.content_html or '') if item_type == 'note' else len(str(x.content_json or '')), reverse=True)
+                unpinned = sorted(unpinned, key=lambda x: len(x.content_html or '') if item_type == 'proprietary_note' else len(str(x.content_json or '')), reverse=True)
             elif item_type in ['combined', 'file']:
                 # For combined (books) and files, use get_content_size() method if available
                 # Legacy notes in combined list may not have this method
@@ -181,29 +222,20 @@ def view_folder(folder_id):
     
     # Get recently modified items if viewing root folder
     recent_items = []
+    recent_total_count = 0
+    recent_has_more = False
+    recent_next_offset = 0
+
     # Prefer explicit root flag, fall back to legacy parent_id==None
     is_root_folder = bool(getattr(folder, 'is_root', False) or folder.parent_id is None)
     if is_root_folder:
-        # Collect all items from across the user's workspace
-        from datetime import datetime
-        from sqlalchemy import desc
-        
-        recent_candidates = []
-        
-        # Get recent Files (all types: note, whiteboard, markdown, todo, etc.)
-        for file_obj in File.query.filter_by(owner_id=current_user.id).order_by(desc(File.last_modified)).limit(30).all():
-            recent_candidates.append({
-                'item': file_obj,
-                'type': 'file',
-                'file_type': file_obj.type,
-                'last_modified': file_obj.last_modified or file_obj.created_at,
-                'title': file_obj.title,
-                'folder_id': file_obj.folder_id
-            })
-        
-        # Sort all candidates by last_modified and take top 10
-        recent_candidates.sort(key=lambda x: x['last_modified'] or datetime.utcnow(), reverse=True)
-        recent_items = recent_candidates[:10]
+        recent_items, recent_total_count = get_recent_items_for_user(
+            current_user.id,
+            limit=RECENT_PAGE_SIZE,
+            offset=0
+        )
+        recent_has_more = len(recent_items) < recent_total_count
+        recent_next_offset = len(recent_items)
     
     # store folder_id and breadcrumb in session
     session['current_folder_id'] = folder.id
@@ -213,14 +245,7 @@ def view_folder(folder_id):
     all_folders = compute_folder_depths(all_folders_raw)
 
     # Get display preferences from user_prefs
-    user_prefs = current_user.user_prefs or {}
-    display_prefs = user_prefs.get('display', {})
-    
-    # Set default display preferences if not set
-    display_prefs.setdefault('columns', 3)
-    display_prefs.setdefault('view_mode', 'grid')
-    display_prefs.setdefault('card_size', 'normal')
-    display_prefs.setdefault('show_previews', True)
+    display_prefs = get_display_prefs(current_user)
 
     # DEBUG: Final counts being sent to template
     # print(f"DEBUG: Sending to template - Regular notes: {len(regular_notes)}, Combined docs: {len(combined_docs)}")
@@ -284,7 +309,60 @@ def view_folder(folder_id):
     except Exception:
         pinned_users = []
 
-    return render_template('p2/folder_view.html', folder=folder, notes=regular_notes, combined_docs=combined_docs, subfolders=subfolders, boards=boards, files=files, files_by_type=files_by_type, folder_breadcrumb=breadcrumb, all_folders=all_folders, current_sort=sort_by, display_prefs=display_prefs, pinned_users=pinned_users, recent_items=recent_items, is_root_folder=is_root_folder)
+    return render_template(
+        'p2/folder_view.html',
+        folder=folder,
+        notes=regular_notes,
+        combined_docs=combined_docs,
+        subfolders=subfolders,
+        boards=boards,
+        files=files,
+        files_by_type=files_by_type,
+        folder_breadcrumb=breadcrumb,
+        all_folders=all_folders,
+        current_sort=sort_by,
+        display_prefs=display_prefs,
+        pinned_users=pinned_users,
+        recent_items=recent_items,
+        recent_total_count=recent_total_count,
+        recent_has_more=recent_has_more,
+        recent_next_offset=recent_next_offset,
+        recent_page_size=RECENT_PAGE_SIZE,
+        is_root_folder=is_root_folder
+    )
+
+
+@folder_bp.route('/recent-items', methods=['GET'])
+@login_required
+def recent_items_partial():
+    """HTMX endpoint to fetch the next slice of recently modified items."""
+    offset = request.args.get('offset', 0, type=int) or 0
+    limit = request.args.get('limit', RECENT_PAGE_SIZE, type=int) or RECENT_PAGE_SIZE
+
+    limit = max(1, min(limit, RECENT_MAX_LIMIT))
+    offset = max(0, offset)
+
+    recent_items, total_count = get_recent_items_for_user(
+        current_user.id,
+        limit=limit,
+        offset=offset
+    )
+
+    has_more = (offset + len(recent_items)) < total_count
+    next_offset = offset + len(recent_items)
+
+    display_prefs = get_display_prefs(current_user)
+
+    return render_template(
+        'p2/partials/recently_modified_append.html',
+        recent_items=recent_items,
+        display_prefs=display_prefs,
+        recent_total_count=total_count,
+        recent_has_more=has_more,
+        recent_next_offset=next_offset,
+        recent_page_size=RECENT_PAGE_SIZE,
+        use_oob=True
+    )
 
 
 @folder_bp.route('/create', methods=['POST'])
@@ -534,7 +612,8 @@ def send_to_user_route():
         'table': 'table',
         'blocks': 'blocks',
         'code': 'code',
-        'pdf': 'pdf'
+        'pdf': 'pdf',
+        'timeline': 'timeline'
     }
     size_category_map = {
         'proprietary_note': 'note',
@@ -693,7 +772,8 @@ def batch_send_to_user_route():
         'table': 'table',
         'blocks': 'blocks',
         'code': 'code',
-        'pdf': 'pdf'
+        'pdf': 'pdf',
+        'timeline': 'timeline'
     }
     size_category_map = {
         'proprietary_note': 'note',
@@ -1366,10 +1446,10 @@ def set_public_route():
             for file_obj in f.files:
                 try:
                     file_obj.is_public = is_public
-                    # Track by type for backward compatibility
-                    if file_obj.type == 'note':
+                    # Track by type
+                    if file_obj.type == 'proprietary_note':
                         affected['notes'].append(file_obj.id)
-                    elif file_obj.type == 'whiteboard':
+                    elif file_obj.type == 'proprietary_whiteboard':
                         affected['boards'].append(file_obj.id)
                     else:
                         affected['files'].append(file_obj.id)
@@ -1383,7 +1463,7 @@ def set_public_route():
         return jsonify({'success': True, 'message': f"Folder {'public' if is_public else 'private'} set", 'affected': affected, 'is_public': is_public})
 
     # Note
-    elif item_type == 'note':
+    elif item_type == 'proprietary_note':
         note = File.query.filter_by(id=item_id, type='proprietary_note').first()
         if not note:
             return jsonify({'success': False, 'message': 'Note not found'}), 404
@@ -1394,7 +1474,7 @@ def set_public_route():
         return jsonify({'success': True, 'message': f"Note {'public' if is_public else 'private'} set", 'affected': {'notes': [note.id], 'folders': [], 'boards': [], 'files': []}, 'is_public': is_public})
 
     # Board
-    elif item_type == 'board':
+    elif item_type == 'proprietary_whiteboard':
         board = File.query.filter_by(id=item_id, type='proprietary_whiteboard').first()
         if not board:
             return jsonify({'success': False, 'message': 'Board not found'}), 404
@@ -1404,8 +1484,8 @@ def set_public_route():
         db.session.commit()
         return jsonify({'success': True, 'message': f"Board {'public' if is_public else 'private'} set", 'affected': {'boards': [board.id], 'notes': [], 'folders': [], 'files': []}, 'is_public': is_public})
 
-    # File (covers markdown, todo, diagram, book/MioBook, blocks, table, and other file types)
-    elif item_type in ['file', 'markdown', 'todo', 'diagram', 'book', 'blocks', 'table', 'note_file', 'whiteboard']:
+    # File (covers all file types including proprietary ones)
+    elif item_type in ['file', 'markdown', 'todo', 'diagram', 'proprietary_blocks', 'blocks', 'table', 'timeline', 'code', 'pdf', 'proprietary_infinite_whiteboard', 'proprietary_graph']:
         file_obj = File.query.get_or_404(item_id)
         if file_obj.owner_id != current_user.id:
             return jsonify({'success': False, 'message': 'Access denied'}), 403
@@ -2210,7 +2290,7 @@ def batch_paste_route():
                             success_count += 1
                         else:
                             failed_items.append(f"folder {item_id}")
-                    elif item_type == 'note':
+                    elif item_type == 'proprietary_note':
                         note = File.query.filter_by(id=item_id, type='proprietary_note').first()
                         if note and note.owner_id == current_user.id:
                             note.folder_id = target_folder_id
@@ -2218,7 +2298,7 @@ def batch_paste_route():
                             success_count += 1
                         else:
                             failed_items.append(f"note {item_id}")
-                    elif item_type == 'board':
+                    elif item_type == 'proprietary_whiteboard':
                         board = File.query.filter_by(id=item_id, type='proprietary_whiteboard').first()
                         if board and board.owner_id == current_user.id:
                             board.folder_id = target_folder_id
@@ -2226,7 +2306,7 @@ def batch_paste_route():
                             success_count += 1
                         else:
                             failed_items.append(f"board {item_id}")
-                    elif item_type == 'file' or item_type == 'book':
+                    elif item_type in ['file', 'proprietary_blocks', 'proprietary_infinite_whiteboard', 'proprietary_graph', 'timeline', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'pdf']:
                         # Handle both generic 'file' type and specific 'book' type (MioBooks are Files with type='proprietary_blocks')
                         file_obj = File.query.get(item_id)
                         if file_obj and file_obj.owner_id == current_user.id:
@@ -2244,7 +2324,7 @@ def batch_paste_route():
                             success_count += 1
                         else:
                             failed_items.append(f"folder {item_id}")
-                    elif item_type == 'note':
+                    elif item_type == 'proprietary_note':
                         original = File.query.filter_by(id=item_id, type='proprietary_note').first()
                         if original and original.owner_id == current_user.id:
                             # Check guest limit
@@ -2270,7 +2350,7 @@ def batch_paste_route():
                             success_count += 1
                         else:
                             failed_items.append(f"note {item_id}")
-                    elif item_type == 'board':
+                    elif item_type == 'proprietary_whiteboard':
                         original = File.query.filter_by(id=item_id, type='proprietary_whiteboard').first()
                         if original and original.owner_id == current_user.id:
                             # Check guest limit
@@ -2296,8 +2376,8 @@ def batch_paste_route():
                             success_count += 1
                         else:
                             failed_items.append(f"board {item_id}")
-                    elif item_type == 'file' or item_type == 'book':
-                        # Handle both generic 'file' type and specific 'book' type (MioBooks are Files with type='proprietary_blocks')
+                    elif item_type in ['file', 'proprietary_blocks', 'proprietary_infinite_whiteboard', 'proprietary_graph', 'timeline', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'pdf']:
+                        # Handle all file types
                         original = File.query.get(item_id)
                         if original and original.owner_id == current_user.id:
                             # Check guest limit
@@ -2364,7 +2444,7 @@ def batch_paste_route():
                     ).order_by(Folder.created_at.desc()).first()
                     if latest:
                         pasted_items['folders'].append(latest)
-                elif item_type == 'note':
+                elif item_type == 'proprietary_note':
                     latest = File.query.filter_by(
                         owner_id=current_user.id,
                         folder_id=target_folder_id,
@@ -2372,7 +2452,7 @@ def batch_paste_route():
                     ).order_by(File.created_at.desc()).first()
                     if latest:
                         pasted_items['notes'].append(latest)
-                elif item_type == 'board':
+                elif item_type == 'proprietary_whiteboard':
                     latest = File.query.filter_by(
                         owner_id=current_user.id,
                         folder_id=target_folder_id,
@@ -2380,7 +2460,7 @@ def batch_paste_route():
                     ).order_by(File.created_at.desc()).first()
                     if latest:
                         pasted_items['boards'].append(latest)
-                elif item_type in ['file', 'book']:
+                elif item_type in ['file', 'proprietary_blocks', 'proprietary_infinite_whiteboard', 'proprietary_graph', 'timeline', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'pdf']:
                     latest = File.query.filter_by(
                         owner_id=current_user.id,
                         folder_id=target_folder_id
@@ -2540,7 +2620,7 @@ def batch_delete_route():
                     else:
                         failed_items.append(f"folder {item_id}")
                         
-                elif item_type == 'note':
+                elif item_type == 'proprietary_note':
                     note = File.query.filter_by(id=item_id, type='proprietary_note').first()
                     if note and note.owner_id == current_user.id:
                         note_title = note.title
@@ -2553,7 +2633,7 @@ def batch_delete_route():
                     else:
                         failed_items.append(f"note {item_id}")
                         
-                elif item_type == 'board':
+                elif item_type == 'proprietary_whiteboard':
                     board = File.query.filter_by(id=item_id, type='proprietary_whiteboard').first()
                     if board and board.owner_id == current_user.id:
                         board_title = board.title
@@ -2566,7 +2646,7 @@ def batch_delete_route():
                     else:
                         failed_items.append(f"board {item_id}")
                         
-                elif item_type in ['file', 'book', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'proprietary_graph']:
+                elif item_type in ['file', 'book', 'proprietary_blocks', 'proprietary_infinite_whiteboard', 'proprietary_graph', 'timeline', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'pdf']:
                     # Handle all file types (markdown, todo, diagram, table, blocks, code, book, etc.)
                     file_obj = File.query.get(item_id)
                     if file_obj and file_obj.owner_id == current_user.id:
@@ -3268,19 +3348,34 @@ def batch_toggle_public_htmx():
                     continue
                 
                 # Map item types to File queries
-                if item_type == 'note':
+                if item_type == 'proprietary_note' or item_type == 'note':  # Support both new and legacy type
                     print(f"[BATCH PUBLIC HTMX] Querying note with ID {item_id}")
                     obj = File.query.filter_by(id=item_id, type='proprietary_note').first()
                     affected_sections.add('notes')
                     print(f"[BATCH PUBLIC HTMX] Note found: {obj is not None}")
-                elif item_type == 'board':
+                elif item_type == 'board' or item_type == 'whiteboard' or item_type == 'proprietary_whiteboard':
                     print(f"[BATCH PUBLIC HTMX] Querying board with ID {item_id}")
                     obj = File.query.filter_by(id=item_id, type='proprietary_whiteboard').first()
                     affected_sections.add('boards')
                     print(f"[BATCH PUBLIC HTMX] Board found: {obj is not None}")
-                elif item_type == 'book':
+                elif item_type == 'proprietary_blocks' or item_type == 'book':  # Support both new and legacy type
                     obj = File.query.filter_by(id=item_id, type='proprietary_blocks').first()
                     affected_sections.add('combined')
+                elif item_type == 'proprietary_infinite_whiteboard':
+                    print(f"[BATCH PUBLIC HTMX] Querying infinite whiteboard with ID {item_id}")
+                    obj = File.query.filter_by(id=item_id, type='proprietary_infinite_whiteboard').first()
+                    affected_sections.add('infinite_whiteboards')
+                    print(f"[BATCH PUBLIC HTMX] Infinite whiteboard found: {obj is not None}")
+                elif item_type == 'proprietary_graph':
+                    print(f"[BATCH PUBLIC HTMX] Querying graph with ID {item_id}")
+                    obj = File.query.filter_by(id=item_id, type='proprietary_graph').first()
+                    affected_sections.add('graphs')
+                    print(f"[BATCH PUBLIC HTMX] Graph found: {obj is not None}")
+                elif item_type == 'timeline':
+                    print(f"[BATCH PUBLIC HTMX] Querying timeline with ID {item_id}")
+                    obj = File.query.filter_by(id=item_id, type='timeline').first()
+                    affected_sections.add('timelines')
+                    print(f"[BATCH PUBLIC HTMX] Timeline found: {obj is not None}")
                 elif item_type == 'file':
                     obj = File.query.get(item_id)
                     if obj:

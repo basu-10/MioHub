@@ -38,6 +38,17 @@
       color: var(--text-primary);
       min-height: 100vh;
     }
+
+    /* Keep text selection legible on dark graphite/teal palette */
+    ::selection {
+      background: rgba(20, 184, 166, 0.28);
+      color: var(--white);
+    }
+
+    #editorjs *::selection {
+      background: rgba(20, 184, 166, 0.28);
+      color: var(--white);
+    }
     
     .editor-container {
       max-width: 900px;
@@ -106,6 +117,49 @@
       color: var(--text-primary);
     }
     
+    /* Heading size differentiation */
+    h1.ce-header {
+      font-size: 2.5rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    
+    h2.ce-header {
+      font-size: 2rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 0.875rem;
+    }
+    
+    h3.ce-header {
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 0.75rem;
+    }
+    
+    h4.ce-header {
+      font-size: 1.5rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 0.625rem;
+    }
+    
+    h5.ce-header {
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
+    }
+    
+    h6.ce-header {
+      font-size: 1.125rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
+    }
+    
     .ce-code__textarea {
       background: var(--bg-tertiary) !important;
       color: var(--text-primary) !important;
@@ -114,19 +168,67 @@
     
     .ce-toolbar__plus,
     .ce-toolbar__settings-btn {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
+      background: var(--bg-tertiary) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-primary) !important;
     }
     
     .ce-toolbar__plus:hover,
     .ce-toolbar__settings-btn:hover {
-      background: var(--hover-overlay);
+      background: var(--hover-overlay) !important;
     }
     
     .ce-popover {
       background: var(--bg-quaternary) !important;
       border: 1px solid var(--border-primary) !important;
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .ce-toolbar__actions,
+    .ce-inline-toolbar {
+      background: var(--bg-quaternary) !important;
+      border: 1px solid var(--border-primary) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+      border-radius: 8px !important;
+    }
+
+    .ce-popover__container {
+      background: var(--bg-tertiary) !important;
+      border: 1px solid var(--border-primary) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+      border-radius: 10px !important;
+      color: var(--text-primary) !important;
+    }
+
+    .ce-popover__container input,
+    .ce-popover__container .ce-popover__search,
+    .ce-popover__container .ce-popover__search input {
+      background: var(--bg-quaternary) !important;
+      color: var(--white) !important;
+      border: 1px solid var(--border-primary) !important;
+    }
+
+    .ce-inline-toolbar .ce-inline-toolbar__buttons,
+    .ce-inline-toolbar .ce-inline-toolbar__dropdown {
+      background: transparent !important;
+    }
+
+    .ce-inline-toolbar .ce-inline-tool,
+    .ce-inline-toolbar .ce-inline-toolbar__buttons button,
+    .ce-inline-toolbar svg {
+      color: var(--text-primary) !important;
+      fill: var(--text-primary) !important;
+      background: transparent !important;
+    }
+
+    .ce-inline-toolbar .ce-inline-tool:hover,
+    .ce-inline-toolbar .ce-inline-toolbar__buttons button:hover {
+      background: var(--hover-overlay) !important;
+    }
+
+    .ce-inline-toolbar .ce-inline-tool--active {
+      background: var(--hover-overlay) !important;
+      color: var(--accent) !important;
     }
     
     .ce-popover__item {
@@ -135,6 +237,91 @@
     
     .ce-popover__item:hover {
       background: var(--hover-overlay) !important;
+    }
+
+    .ce-popover__container button,
+    .ce-popover__container svg,
+    .ce-popover__container .ce-popover__item,
+    .ce-popover__container .ce-popover__item-icon {
+      color: var(--text-primary) !important;
+      fill: var(--text-primary) !important;
+      background: transparent !important;
+    }
+
+    .ce-popover__container button:hover,
+    .ce-popover__container .ce-popover__item:hover {
+      background: var(--hover-overlay) !important;
+    }
+
+    /* Nested submenu text + labels (block type picker) */
+    .ce-popover--nested,
+    .ce-popover__nested,
+    .ce-popover__item,
+    .ce-popover__item .ce-popover__item-label,
+    .ce-popover__item .ce-popover__item-icon,
+    .ce-popover--nested .ce-popover__item,
+    .ce-popover--nested .ce-popover__item-icon {
+      color: var(--white) !important;
+      fill: var(--white) !important;
+      font-weight: 600;
+    }
+
+    .ce-popover-item,
+    .ce-popover-item__title,
+    .ce-popover-item__icon,
+    .ce-popover-item__icon svg {
+      color: var(--white) !important;
+      fill: var(--white) !important;
+    }
+
+    .ce-popover-item--active,
+    .ce-popover-item:hover,
+    .ce-popover-item:focus {
+      background: rgba(20, 184, 166, 0.16) !important;
+    }
+
+    /* Prevent selected blocks from turning white; keep graphite/teal */
+    .ce-block--selected,
+    .ce-block--focused,
+    .ce-block--selected .ce-paragraph,
+    .ce-block--focused .ce-paragraph,
+    .ce-block--selected .cdx-block,
+    .ce-block--focused .cdx-block {
+      background: var(--bg-secondary) !important;
+      color: var(--text-primary) !important;
+      box-shadow: 0 0 0 1px var(--border-hover) inset !important;
+    }
+
+    .ce-block--selected a,
+    .ce-block--focused a {
+      color: var(--accent) !important;
+    }
+
+    /* Improve selection highlight for paragraphs and headers */
+    .ce-block--selected .ce-paragraph,
+    .ce-block--focused .ce-paragraph,
+    .ce-block--selected .ce-header,
+    .ce-block--focused .ce-header {
+      background: rgba(20, 184, 166, 0.25) !important;
+      box-shadow: 0 0 0 2px var(--accent) inset !important;
+      border-radius: 6px !important;
+      color: #000000 !important;
+    }
+
+    .ce-block--selected .ce-paragraph a,
+    .ce-block--focused .ce-paragraph a,
+    .ce-block--selected .ce-header a,
+    .ce-block--focused .ce-header a {
+      color: #0066cc !important;
+    }
+
+    .ce-popover--nested .ce-popover__item:hover,
+    .ce-popover--nested .ce-popover__item:focus {
+      background: var(--hover-overlay) !important;
+    }
+
+    .ce-popover__item:not(:last-child) {
+      border-bottom: 1px solid var(--border-secondary) !important;
     }
     
     .ce-popover__item-icon {
@@ -147,12 +334,16 @@
       border: 1px solid var(--border-primary) !important;
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
     }
-    
-    .ce-inline-tool {
+
+    .ce-inline-tool,
+    .ce-inline-toolbar button,
+    .ce-inline-toolbar svg {
       color: var(--text-primary) !important;
+      fill: var(--text-primary) !important;
     }
-    
-    .ce-inline-tool:hover {
+
+    .ce-inline-tool:hover,
+    .ce-inline-toolbar button:hover {
       background: var(--hover-overlay) !important;
     }
     

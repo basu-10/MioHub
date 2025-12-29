@@ -1,0 +1,286 @@
+<!-- View timeline (read-only) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ file.title }} - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+    
+    .viewer-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    
+    .viewer-header {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .timeline-canvas {
+      background: var(--card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 2rem;
+      min-height: 600px;
+      overflow-x: auto;
+      overflow-y: auto;
+    }
+    
+    .timeline-row {
+      position: relative;
+      margin-bottom: 3rem;
+      min-height: 200px;
+    }
+    
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+    
+    .timeline-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+    
+    .timeline-description {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    
+    .timeline-line {
+      position: relative;
+      height: 3px;
+      background: var(--accent);
+      margin: 1rem 0;
+    }
+    
+    .timeline-events {
+      position: relative;
+      min-height: 100px;
+    }
+    
+    .event-card {
+      position: absolute;
+      width: 150px;
+      background: var(--bg);
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      padding: 0.75rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .event-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+      border-color: var(--accent);
+    }
+    
+    /* Undated event cards - bookmark design with notch */
+    .event-card.undated {
+      width: 200px; /* larger */
+      border: none;
+      border-radius: 12px 12px 0 0;
+      background: rgba(10, 10, 11, 0.6);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      clip-path: polygon(
+        0 0,           /* top-left */
+        100% 0,        /* top-right */
+        100% calc(100% - 20px),  /* right side before notch */
+        50% 100%,      /* notch point at bottom center */
+        0 calc(100% - 20px)      /* left side before notch */
+      );
+    }
+    
+    .event-card.undated:hover {
+      box-shadow: 0 4px 16px rgba(20, 184, 166, 0.3);
+      background: rgba(10, 10, 11, 0.7);
+    }
+    
+    .event-card.undated .event-title,
+    .event-card.undated .event-description {
+      text-align: center;
+    }
+    
+    .event-connector {
+      position: absolute;
+      width: 2px;
+      background: var(--accent);
+      top: -20px;
+      left: 50%;
+      height: 20px;
+    }
+    
+    .event-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      top: -21px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    .event-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-date {
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-description {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="viewer-container">
+    <!-- Header -->
+    <div class="viewer-header">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <a href="{{ url_for('folders.view_folder', folder_id=file.folder_id) }}" 
+             class="btn btn-sm" 
+             style="background: var(--bg); color: var(--muted); border: 1px solid var(--border-primary);">
+            <span class="material-icons" style="font-size: 18px;">arrow_back</span>
+          </a>
+          <h1 class="h4 mb-0">
+            <span class="material-icons" style="vertical-align: middle; color: var(--accent);">timeline</span>
+            {{ file.title }}
+          </h1>
+        </div>
+        {% if file.owner_id == current_user.id %}
+        <a href="{{ url_for('file_bp.edit_file', file_id=file.id) }}" 
+           class="btn btn-sm" 
+           style="background: var(--accent); color: var(--bg);">
+          <span class="material-icons" style="font-size: 18px; vertical-align: middle;">edit</span>
+          Edit
+        </a>
+        {% endif %}
+      </div>
+      
+      {% if file.description %}
+      <div style="color: var(--muted); font-size: 0.95rem;">
+        {{ file.description }}
+      </div>
+      {% endif %}
+    </div>
+    
+    <!-- Timeline Canvas -->
+    <div class="timeline-canvas" id="timelineCanvas">
+      <div id="timelinesContainer">
+        <!-- Timeline rows will be dynamically rendered here -->
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // Load timeline data
+    const timelines = {{ file.content_json | tojson }};
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      renderTimelines();
+    });
+    
+    function renderTimelines() {
+      const container = document.getElementById('timelinesContainer');
+      
+      if (!timelines || timelines.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 3rem; color: var(--muted);">
+            <span class="material-icons" style="font-size: 64px; opacity: 0.5;">timeline</span>
+            <p style="margin-top: 1rem; font-size: 1.1rem;">No timelines available</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = '';
+      
+      timelines.forEach(timeline => {
+        const timelineRow = document.createElement('div');
+        timelineRow.className = 'timeline-row';
+        
+        const eventsHTML = timeline.events.map(event => {
+          const eventColor = event.color || '#14b8a6';
+          const eventEmoji = event.emoji || '';
+          const isUndated = !event.date;
+          const cardClass = isUndated ? 'event-card undated' : 'event-card';
+          const borderStyle = isUndated ? '' : `border-left: 3px solid ${eventColor};`;
+          
+          return `
+          <div class="${cardClass}" style="left: ${event.position}px; ${borderStyle}">
+            <div class="event-connector" style="background: ${eventColor};"></div>
+            <div class="event-dot" style="background: ${eventColor};"></div>
+            ${eventEmoji ? `<div class="event-icon" style="font-size: 2rem; text-align: center; margin-bottom: 0.5rem;">${eventEmoji}</div>` : ''}
+            <div class="event-title">${escapeHtml(event.title)}</div>
+            ${event.date ? `<div class="event-date" style="color: ${eventColor};">${formatDate(event.date)}</div>` : ''}
+            ${event.description ? `<div class="event-description">${escapeHtml(event.description)}</div>` : ''}
+          </div>
+        `;
+        }).join('');
+        
+        timelineRow.innerHTML = `
+          <div class="timeline-header">
+            <div>
+              <div class="timeline-name">${escapeHtml(timeline.name)}</div>
+              ${timeline.description ? `<div class="timeline-description">${escapeHtml(timeline.description)}</div>` : ''}
+            </div>
+          </div>
+          <div class="timeline-line"></div>
+          <div class="timeline-events">
+            ${eventsHTML}
+          </div>
+        `;
+        
+        container.appendChild(timelineRow);
+      });
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+  </script>
+</body>
+</html>

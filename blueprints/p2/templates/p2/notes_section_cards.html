@@ -1,7 +1,7 @@
 <!-- Notes Section Cards - For HTMX Rearrangement -->
 {% for note in notes %}
 <div class="col d-flex">
-  <div class="card flex-fill h-100 shadow-sm item-card" data-type="note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" data-is-pinned="{{ '1' if note.is_pinned else '0' }}">
+  <div class="card flex-fill h-100 shadow-sm item-card" data-type="proprietary_note" data-id="{{ note.id }}" data-note-description="{{ note.description_readable if note.description_readable else ('' if ((note.description or '').strip().startswith('[') or (note.description or '').strip().startswith('{')) else (note.description or '')) }}" data-is-public="{{ '1' if note.is_public else '0' }}" data-is-pinned="{{ '1' if note.is_pinned else '0' }}">
     <div class="badge-container">
       {% if note.is_pinned %}
       <span class="pin-badge" title="Pinned"><i class="material-icons" aria-hidden="true">push_pin</i><span class="visually-hidden">Pinned</span></span>

@@ -111,6 +111,54 @@ window.GraphEdges = (function() {
     window.GraphCanvas.render();
   }
 
+  // Utility function to wrap text into multiple lines
+  function wrapText(ctx, text, maxWidth, maxLines = 2) {
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+      const metrics = ctx.measureText(testLine);
+      
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = words[i];
+        
+        // Stop if we've reached max lines
+        if (lines.length >= maxLines - 1) {
+          // Add remaining words to last line with ellipsis if needed
+          const remaining = words.slice(i).join(' ');
+          const lastLineTest = currentLine + (currentLine ? ' ' : '') + remaining;
+          if (ctx.measureText(lastLineTest).width > maxWidth) {
+            // Truncate with ellipsis
+            let truncated = currentLine;
+            for (let j = i; j < words.length; j++) {
+              const test = truncated + ' ' + words[j] + '...';
+              if (ctx.measureText(test).width <= maxWidth) {
+                truncated = truncated + ' ' + words[j];
+              } else {
+                break;
+              }
+            }
+            lines.push(truncated + '...');
+          } else {
+            lines.push(lastLineTest);
+          }
+          return lines;
+        }
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+    
+    return lines.length > 0 ? lines : [text];
+  }
+
   function render(ctx, viewportX, viewportY, scale) {
     const nodes = window.GraphNodes.getNodes();
     
@@ -181,7 +229,7 @@ window.GraphEdges = (function() {
         drawArrowhead(ctx, arrowSegments.backward.from, arrowSegments.backward.to, strokeColor);
       }
       
-      // Draw label if exists
+      // Draw label if exists (with multi-line support)
       if (edge.label) {
         const midX = (startScreen.x + endScreen.x) / 2;
         const midY = (startScreen.y + endScreen.y) / 2;
@@ -189,20 +237,35 @@ window.GraphEdges = (function() {
         ctx.fillStyle = 'rgba(18, 21, 22, 0.9)';
         ctx.strokeStyle = 'rgba(154, 168, 173, 0.8)';
         ctx.lineWidth = 1;
+        ctx.font = '12px system-ui, -apple-system, sans-serif';
         
-        const textMetrics = ctx.measureText(edge.label);
+        // Word wrap for long labels (max 2 lines)
+        const maxWidth = 200;
+        const lines = wrapText(ctx, edge.label, maxWidth, 2);
+        const lineHeight = 16;
         const padding = 6;
-        const labelWidth = textMetrics.width + padding * 2;
-        const labelHeight = 20;
+        const labelHeight = lines.length * lineHeight + padding * 2;
         
+        // Calculate width based on longest line
+        let labelWidth = 0;
+        lines.forEach(line => {
+          const metrics = ctx.measureText(line);
+          labelWidth = Math.max(labelWidth, metrics.width);
+        });
+        labelWidth += padding * 2;
+        
+        // Draw background box
         ctx.fillRect(midX - labelWidth / 2, midY - labelHeight / 2, labelWidth, labelHeight);
         ctx.strokeRect(midX - labelWidth / 2, midY - labelHeight / 2, labelWidth, labelHeight);
         
+        // Draw text lines
         ctx.fillStyle = '#ECFFFF';
-        ctx.font = '12px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(edge.label, midX, midY);
+        const startY = midY - (lines.length - 1) * lineHeight / 2;
+        lines.forEach((line, i) => {
+          ctx.fillText(line, midX, startY + i * lineHeight);
+        });
       }
       
       ctx.restore();

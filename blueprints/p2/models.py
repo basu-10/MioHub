@@ -18,7 +18,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
 from extensions import db
-from sqlalchemy.dialects.mysql import JSON, LONGTEXT
+from sqlalchemy.dialects.mysql import JSON, LONGTEXT, VARCHAR, TEXT
 from sqlalchemy.orm import validates
 
 # Valid file type discriminators
@@ -37,9 +37,10 @@ VALID_FILE_TYPES = {
     'diagram',      # Monaco JSON
     'table',        # Luckysheet
     'blocks',       # Editor.js
+    'timeline',     # Timeline with events
     
     # Binary/Upload types
-    'pdf',          # PDF files (binary storage)
+    'pdf',          # PDF files (binary storage) (not yet implemented)
 }
 
 
@@ -67,8 +68,8 @@ class GraphNode(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     graph_id = db.Column(db.Integer, db.ForeignKey('graph_workspaces.id'), nullable=False, index=True)
-    title = db.Column(db.String(255), nullable=False)
-    summary = db.Column(db.Text, nullable=True)
+    title = db.Column(VARCHAR(255, charset='utf8mb4', collation='utf8mb4_unicode_ci'), nullable=False)
+    summary = db.Column(TEXT(charset='utf8mb4', collation='utf8mb4_unicode_ci'), nullable=True)
     position_json = db.Column(JSON, default={})  # {x, y}
     size_json = db.Column(JSON, default={})      # {w, h}
     style_json = db.Column(JSON, default={})     # colors, badges

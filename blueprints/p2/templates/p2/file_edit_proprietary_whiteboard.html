@@ -232,7 +232,7 @@ write text on canvas not modal
             <i class="material-icons mr-1">arrow_back</i> Back
           </a>
           {% if current_user.is_authenticated %}
-          <button class="btn btn-copy-public px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-md inline-flex items-center gap-2" data-board-id="{{ board.id }}" data-item-type="board">
+          <button class="btn btn-copy-public px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-md inline-flex items-center gap-2" data-board-id="{{ file.id }}" data-item-type="board">
             <i class="material-icons" style="font-size: 18px;">content_copy</i>
             Copy to My Profile
           </button>
@@ -240,17 +240,17 @@ write text on canvas not modal
         </div>
         <div class="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 class="text-2xl text-gray-100 font-semibold">{{ board.title or '(untitled)' }}</h1>
-            <p class="text-gray-300 text-sm">By {{ board.owner.username if board.owner else 'Unknown user' }}{% if board.created_at %} • {{ board.created_at.strftime('%Y-%m-%d') }}{% endif %}</p>
+            <h1 class="text-2xl text-gray-100 font-semibold">{{ file.title or '(untitled)' }}</h1>
+            <p class="text-gray-300 text-sm">By {{ file.owner.username if file.owner else 'Unknown user' }}{% if file.created_at %} • {{ file.created_at.strftime('%Y-%m-%d') }}{% endif %}</p>
           </div>
-          {% if board.is_public %}
+          {% if file.is_public %}
           <span class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-md">
             <i class="material-icons mr-1">public</i> Public
           </span>
           {% endif %}
         </div>
-        {% if board.description %}
-        <div class="text-gray-300 text-sm">{{ board.description }}</div>
+        {% if file.description %}
+        <div class="text-gray-300 text-sm">{{ file.description }}</div>
         {% endif %}
       </div>
     </div>
@@ -566,17 +566,17 @@ write text on canvas not modal
 
     <!-- Hidden Forms -->
 <!-- Automatically route to correct Flask endpoint depending on new vs. existing board -->
-<form id="save-form" action="{{ url_for('boards.edit_board', board_id=board.id) if board else url_for('boards.new_board') }}" method="POST" style="display:none;">
-    <input id="title-input" name="title" value="{{ board.title if board else 'Whiteboard' }}">
-    <input id="description-input" name="description" value="{{ board.description if board else '' }}">
+<form id="save-form" action="{{ url_for('boards.edit_board', board_id=file.id) if file else url_for('boards.new_board') }}" method="POST" style="display:none;">
+    <input id="title-input" name="title" value="{{ file.title if file else 'Whiteboard' }}">
+    <input id="description-input" name="description" value="{{ file.description if file else '' }}">
     <input id="content-input" name="content">
-    <input type="hidden" name="folder_id" id="folder-id-input" value="{{ board.folder_id if board else current_folder_id }}">
+    <input type="hidden" name="folder_id" id="folder-id-input" value="{{ file.folder_id if file else current_folder_id }}">
 </form>
 
 
     <input type="file" id="importFile" accept=".json" style="display:none;" onchange="handleImportFile(event)">
 
-    <script id="initial-board-data" type="application/json">{{ (board.content_json|tojson|safe) if board and board.content_json else 'null' }}</script>
+    <script id="initial-board-data" type="application/json">{{ (file.content_json|tojson|safe) if file and file.content_json else 'null' }}</script>
 
 
 <script>

@@ -18,6 +18,36 @@
     let textSelectionStart = null;
     let textSelectionEnd = null;
 
+    // Cursor blink state and timer
+    let cursorBlinkState = true;
+    let cursorBlinkTimer = null;
+
+    /**
+     * Start cursor blink animation
+     */
+    function startCursorBlink() {
+        stopCursorBlink();
+        cursorBlinkState = true;
+        
+        cursorBlinkTimer = setInterval(() => {
+            cursorBlinkState = !cursorBlinkState;
+            if (typeof IWB.requestRender === 'function') {
+                IWB.requestRender();
+            }
+        }, 500); // Blink every 500ms
+    }
+
+    /**
+     * Stop cursor blink animation
+     */
+    function stopCursorBlink() {
+        if (cursorBlinkTimer) {
+            clearInterval(cursorBlinkTimer);
+            cursorBlinkTimer = null;
+        }
+        cursorBlinkState = true;
+    }
+
     /**
      * Get text editing object (for toolbar state updates)
      */
@@ -74,6 +104,9 @@
 
         // Create invisible input element for keyboard handling
         createTextInputElement();
+        
+        // Start cursor blink animation
+        startCursorBlink();
         
         return textEditingObject;
     };
@@ -136,6 +169,7 @@
 
     /**
      * Calculate text dimensions for proper bounding box
+     * Supports word wrapping - wraps at 10 words per line
      */
     function updateTextDimensions(textObj) {
         if (!textObj || !textObj.text) {
@@ -152,15 +186,35 @@
         tempCtx.font = fontStyle;
         
         const lines = textObj.text.split('\n');
+        let wrappedLines = [];
         let maxWidth = 0;
         
+        // Apply word wrapping: 10 words per line
+        const WORDS_PER_LINE = 10;
+        
         lines.forEach(line => {
-            const metrics = tempCtx.measureText(line || ' ');
-            maxWidth = Math.max(maxWidth, metrics.width);
+            // Handle empty lines
+            if (!line || line.trim() === '') {
+                wrappedLines.push('');
+                return;
+            }
+            
+            const words = line.split(' ').filter(w => w); // Filter out empty strings
+            
+            // Split into chunks of 10 words
+            for (let i = 0; i < words.length; i += WORDS_PER_LINE) {
+                const chunk = words.slice(i, i + WORDS_PER_LINE).join(' ');
+                wrappedLines.push(chunk);
+                const metrics = tempCtx.measureText(chunk);
+                maxWidth = Math.max(maxWidth, metrics.width);
+            }
         });
         
+        // Store wrapped lines for rendering
+        textObj.wrappedLines = wrappedLines;
+        
         textObj.width = maxWidth + 8; // Add padding
-        textObj.height = lines.length * textObj.fontSize * 1.4; // Line height multiplier
+        textObj.height = wrappedLines.length * textObj.fontSize * 1.4; // Line height multiplier
     }
 
     /**
@@ -170,6 +224,9 @@
         if (!textEditingActive) return null;
         
         console.log('[TEXT] Finishing text editing');
+        
+        // Stop cursor blink animation
+        stopCursorBlink();
         
         const finalTextObj = textEditingObject;
         
@@ -228,6 +285,9 @@
     IWB.cancelTextEditing = function() {
         console.log('[TEXT] Canceling text editing');
         
+        // Stop cursor blink animation
+        stopCursorBlink();
+        
         textEditingActive = false;
         textEditingObject = null;
         textEditingPosition = null;
@@ -254,6 +314,7 @@
 
     /**
      * Draw text object on canvas
+     * Uses wrapped lines if available (when maxWidth is set)
      */
     IWB.drawTextObject = function(ctx, textObj) {
         if (!textObj || textObj.type !== 'text') return;
@@ -266,7 +327,8 @@
         ctx.textAlign = textObj.align || 'left';
         ctx.textBaseline = 'top';
         
-        const lines = (textObj.text || '').split('\n');
+        // Use wrapped lines if available, otherwise split by newlines
+        const lines = textObj.wrappedLines || (textObj.text || '').split('\n');
         const lineHeight = (textObj.fontSize || 18) * 1.4;
         
         lines.forEach((line, index) => {
@@ -289,7 +351,8 @@
         ctx.font = fontStyle;
         
         const text = textEditingObject.text || '';
-        const lines = text.split('\n');
+        // Use wrapped lines if available, otherwise split by newlines
+        const lines = textEditingObject.wrappedLines || text.split('\n');
         const lineHeight = (textEditingObject.fontSize || 18) * 1.4;
         
         // Draw the actual text with current color
@@ -307,22 +370,35 @@
         let cursorCharInLine = textCursor;
         let charCount = 0;
         
-        for (let i = 0; i < lines.length; i++) {
-            if (charCount + lines[i].length + 1 > textCursor) {
-                cursorLine = i;
-                cursorCharInLine = textCursor - charCount;
-                break;
+        // If using wrapped lines, we need to map cursor position differently
+        if (textEditingObject.wrappedLines) {
+            // Map cursor position to wrapped line
+            for (let i = 0; i < lines.length; i++) {
+                if (charCount + lines[i].length + 1 > textCursor) {
+                    cursorLine = i;
+                    cursorCharInLine = textCursor - charCount;
+                    break;
+                }
+                charCount += lines[i].length + 1; // +1 for space between words
             }
-            charCount += lines[i].length + 1; // +1 for newline
+        } else {
+            // Original newline-based logic
+            for (let i = 0; i < lines.length; i++) {
+                if (charCount + lines[i].length + 1 > textCursor) {
+                    cursorLine = i;
+                    cursorCharInLine = textCursor - charCount;
+                    break;
+                }
+                charCount += lines[i].length + 1; // +1 for newline
+            }
         }
         
         const textBeforeCursor = lines[cursorLine]?.substring(0, cursorCharInLine) || '';
         const cursorX = textEditingObject.x + ctx.measureText(textBeforeCursor).width;
         const cursorY = textEditingObject.y + (cursorLine * lineHeight);
         
-        // Blinking cursor effect
-        const blinkPhase = Math.floor(Date.now() / 500) % 2;
-        if (blinkPhase === 0) {
+        // Blinking cursor effect (controlled by interval timer)
+        if (cursorBlinkState) {
             ctx.strokeStyle = textEditingObject.color || '#14b8a6';
             ctx.lineWidth = 2;
             ctx.beginPath();

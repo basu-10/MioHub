@@ -4,62 +4,525 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>MioChat — Features</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
 	<style>
-		:root{--bg:#0a0a0b;--card:#121516;--muted:#9aa8ad;--accent:#14b8a6;--white:#ECFFFF;--radius:10px}
-		html,body{height:100%;min-height:100vh;margin:0;padding:0;font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;color:var(--white);background-color:var(--bg);background-image:radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);background-size:cover;background-repeat:no-repeat;background-attachment:fixed;background-position:center top}
-		.container{max-width:980px;margin:40px auto;padding:24px}
-		.topbar{display:flex;justify-content:flex-end;gap:10px}
-		.btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--accent);text-decoration:none;font-weight:600}
-		.hero{background:linear-gradient(180deg, rgba(18,21,22,0.96), rgba(10,10,11,0.96));border:1px solid rgba(255,255,255,0.04);padding:20px;border-radius:var(--radius);box-shadow:0 6px 18px rgba(2,6,23,0.5)}
-		h1{margin:0;font-size:28px}
-		p.lead{margin:6px 0 0 0;color:var(--muted)}
-		.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
-		.feature{background:linear-gradient(180deg, rgba(18,21,22,0.6), rgba(10,10,11,0.4));border:1px solid rgba(255,255,255,0.04);padding:14px;border-radius:12px;color:var(--white)}
-		.feature h3{margin:0 0 6px 0;font-size:16px}
-		.feature p{margin:0;color:var(--muted);font-size:13px}
-		.meta{margin-top:18px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;align-items:center}
-		a.link{color:var(--accent);text-decoration:none}
-		.back{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--white);text-decoration:none}
-		@media (max-width:520px){.container{padding:14px}h1{font-size:22px}}
+		:root {
+			--bg: #0a0a0b;
+			--card: #121516;
+			--muted: #9aa8ad;
+			--accent: #14b8a6;
+			--accent-strong: #0d9488;
+			--ochre: #b38b2c;
+			--ochre-strong: #8f6d1e;
+			--white: #ECFFFF;
+			--radius: 10px;
+		}
+		
+		* {
+			box-sizing: border-box;
+		}
+		
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+			color: var(--white);
+			background-color: var(--bg);
+			scroll-behavior: smooth;
+		}
+
+		body {
+			background: var(--bg);
+		}
+		
+		/* Top Navigation */
+		.topbar {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			z-index: 100;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 16px 40px;
+			background: rgba(10, 10, 11, 0.85);
+			backdrop-filter: blur(12px);
+			border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+		}
+		
+		.logo {
+			font-size: 20px;
+			font-weight: 700;
+			color: var(--white);
+			text-decoration: none;
+			letter-spacing: -0.5px;
+		}
+		
+		.logo span {
+			color: var(--accent);
+		}
+		
+		.nav-links {
+			display: flex;
+			gap: 12px;
+		}
+		
+		.btn-ghost {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 8px 16px;
+			border-radius: 8px;
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			background: transparent;
+			color: var(--white);
+			text-decoration: none;
+			font-weight: 500;
+			font-size: 14px;
+			transition: all 0.2s ease;
+		}
+		
+		.btn-ghost:hover {
+			background: rgba(20, 184, 166, 0.1);
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+		
+		.btn-primary {
+			background: var(--accent);
+			color: #0a0a0b;
+			border-color: var(--accent);
+		}
+		
+		.btn-primary:hover {
+			background: var(--accent-strong);
+			border-color: var(--accent-strong);
+			color: #0a0a0b;
+		}
+		
+		/* Hero Section */
+		.hero-shell {
+			background: linear-gradient(135deg, var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+			border-bottom-left-radius: 40px;
+			border-bottom-right-radius: 40px;
+			padding-bottom: 40px;
+			box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+		}
+
+		.hero-section {
+			padding: 120px 40px 80px;
+			text-align: center;
+			max-width: 900px;
+			margin: 0 auto;
+		}
+		
+		.hero-badge {
+			display: inline-block;
+			padding: 6px 14px;
+			background: linear-gradient(120deg, rgba(20, 184, 166, 0.18), rgba(179, 139, 44, 0.18));
+			border: 1px solid rgba(179, 139, 44, 0.55);
+			border-radius: 20px;
+			color: var(--white);
+			font-size: 13px;
+			font-weight: 600;
+			margin-bottom: 20px;
+			letter-spacing: 0.5px;
+		}
+		
+		.hero-title {
+			font-size: 56px;
+			font-weight: 700;
+			line-height: 1.1;
+			margin: 0 0 20px 0;
+			letter-spacing: -1.5px;
+			background: linear-gradient(135deg, var(--white) 0%, var(--accent) 100%);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+		
+		.hero-description {
+			font-size: 20px;
+			color: var(--muted);
+			line-height: 1.6;
+			margin: 0 0 32px 0;
+			max-width: 700px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+		
+		/* Features Section */
+		.features-wrapper {
+			max-width: 1400px;
+			margin: 40px auto 0;
+			padding: 0 40px 120px;
+		}
+		
+		.features-container {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 80px;
+			align-items: start;
+		}
+		
+		/* Left Column - Features */
+		.features-column {
+			position: relative;
+		}
+		
+		.feature-item {
+			padding: 60px 0 60px 14px;
+			opacity: 0.3;
+			transition: opacity 0.4s ease, border-color 0.3s ease;
+			border-left: 3px solid transparent;
+		}
+
+		.feature-item.active {
+			opacity: 1;
+			border-left-color: var(--ochre);
+		}
+		
+		.feature-item h2 {
+			font-size: 36px;
+			font-weight: 700;
+			margin: 0 0 16px 0;
+			color: var(--white);
+			letter-spacing: -0.5px;
+		}
+
+		.feature-item.active h2 {
+			color: var(--ochre);
+		}
+		
+		.feature-item p {
+			font-size: 18px;
+			line-height: 1.7;
+			color: var(--muted);
+			margin: 0;
+		}
+		
+		/* Right Column - Images */
+		.images-column {
+			position: sticky;
+			top: 120px;
+			height: 600px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		
+		.feature-image {
+			position: absolute;
+			width: 100%;
+			max-width: 550px;
+			border-radius: 16px;
+			opacity: 0;
+			transform: scale(0.95) translateY(20px);
+			transition: opacity 0.6s ease, transform 0.6s ease;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+			            0 0 0 1px rgba(255, 255, 255, 0.05);
+		}
+		
+		.feature-image.active {
+			opacity: 1;
+			transform: scale(1) translateY(0);
+		}
+		
+		.feature-image img {
+			width: 100%;
+			height: auto;
+			display: block;
+			border-radius: 16px;
+			background: var(--card);
+		}
+		
+		/* CTA Section */
+		.cta-section {
+			padding: 80px 40px;
+			text-align: center;
+			background: rgba(18, 21, 22, 0.6);
+			border-top: 1px solid rgba(255, 255, 255, 0.04);
+		}
+		
+		.cta-title {
+			font-size: 40px;
+			font-weight: 700;
+			margin: 0 0 16px 0;
+			color: var(--white);
+		}
+		
+		.cta-text {
+			font-size: 18px;
+			color: var(--muted);
+			margin: 0 0 32px 0;
+		}
+		
+		.cta-buttons {
+			display: flex;
+			gap: 16px;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.cta-buttons .btn-ghost.btn-large:last-child {
+			border-color: rgba(179, 139, 44, 0.65);
+			color: var(--white);
+		}
+
+		.cta-buttons .btn-ghost.btn-large:last-child:hover {
+			background: rgba(179, 139, 44, 0.12);
+			color: var(--ochre);
+			border-color: var(--ochre-strong);
+		}
+		
+		.btn-large {
+			padding: 14px 32px;
+			font-size: 16px;
+			font-weight: 600;
+		}
+		
+		/* Responsive Design */
+		@media (max-width: 1024px) {
+			.features-container {
+				grid-template-columns: 1fr;
+				gap: 40px;
+			}
+			
+			.images-column {
+				position: relative;
+				top: 0;
+				height: 400px;
+				order: -1;
+			}
+			
+			.feature-item {
+				padding: 40px 0;
+			}
+			
+			.hero-title {
+				font-size: 42px;
+			}
+		}
+		
+		@media (max-width: 768px) {
+			.topbar {
+				padding: 12px 20px;
+			}
+			
+			.hero-section {
+				padding: 100px 20px 60px;
+			}
+			
+			.hero-title {
+				font-size: 36px;
+			}
+			
+			.hero-description {
+				font-size: 16px;
+			}
+			
+			.features-wrapper {
+				padding: 0 20px 80px;
+			}
+			
+			.feature-item h2 {
+				font-size: 28px;
+			}
+			
+			.feature-item p {
+				font-size: 16px;
+			}
+			
+			.images-column {
+				height: 300px;
+			}
+			
+			.feature-image {
+				max-width: 100%;
+			}
+			
+			.cta-section {
+				padding: 60px 20px;
+			}
+			
+			.cta-title {
+				font-size: 32px;
+			}
+			
+			.cta-buttons {
+				flex-direction: column;
+				width: 100%;
+			}
+			
+			.btn-large {
+				width: 100%;
+			}
+		}
 	</style>
 </head>
 <body>
-	<div class="container">
-		<div class="topbar">
+	<!-- Top Navigation -->
+	<div class="topbar">
+		<a href="{{ url_for('core_blueprint.landing') }}" class="logo">
+			Mio<span>Chat</span>
+		</a>
+		<div class="nav-links">
 			<a class="btn-ghost" href="{{ url_for('p2_bp.login') }}">Sign in</a>
-			<a class="btn-ghost" href="{{ url_for('p2_bp.register') }}">Sign up</a>
+			<a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.register') }}">Sign up</a>
 		</div>
+	</div>
 
-		<div class="hero">
-			<h1>MioChat — Features</h1>
-			<p class="lead">A practical chat interface with memory, session history and helpful integrations.</p>
+	<!-- Hero Section -->
+	<div class="hero-shell">
+		<div class="hero-section">
+			<div class="hero-badge">Ephemeral solutions</div>
+			<h1 class="hero-title">A fully integrated chat interface</h1>
+			<p class="hero-description">
+				Reduce costs, grow revenue, and run your conversations more efficiently with memory, 
+				session history, and helpful integrations designed for practical AI chat.
+			</p>
+		</div>
+	</div>
 
-			<div class="grid">
-				<div class="feature">
-					<h3>Conversation memory</h3>
-					<p>Enable long-running memory to keep context across sessions and improve relevance.</p>
+	<!-- Features Section -->
+	<div class="features-wrapper">
+		<div class="features-container">
+			<!-- Left Column: Feature Descriptions -->
+			<div class="features-column">
+				<div class="feature-item" data-feature="memory">
+					<h2>Conversation memory</h2>
+					<p>
+						Enable long-running memory to keep context across sessions and improve relevance. 
+						The system learns from your interactions and maintains continuity even after days or weeks, 
+						making every conversation feel natural and contextual.
+					</p>
 				</div>
-				<div class="feature">
-					<h3>Session history</h3>
-					<p>Persisted chat sessions with timestamps and the ability to resume conversations later.</p>
+				
+				<div class="feature-item" data-feature="sessions">
+					<h2>Session history</h2>
+					<p>
+						Persisted chat sessions with timestamps and the ability to resume conversations later. 
+						Never lose track of important discussions—access your complete conversation history 
+						with quick search and filtering capabilities.
+					</p>
 				</div>
-				<div class="feature">
-					<h3>Model selection</h3>
-					<p>Choose from multiple configured models and adjust settings like temperature and length.</p>
+				
+				<div class="feature-item" data-feature="models">
+					<h2>Model selection</h2>
+					<p>
+						Choose from multiple configured models and adjust settings like temperature and length. 
+						Switch between different AI providers and models on the fly to find the perfect balance 
+						of speed, quality, and cost for your specific use case.
+					</p>
 				</div>
-				<div class="feature">
-					<h3>Safe streaming</h3>
-					<p>Lightweight streaming UI for responsive chat and incremental responses where supported.</p>
+				
+				<div class="feature-item" data-feature="streaming">
+					<h2>Safe streaming</h2>
+					<p>
+						Lightweight streaming UI for responsive chat and incremental responses where supported. 
+						See responses appear in real-time with smooth, efficient rendering that works even 
+						on slower connections or devices.
+					</p>
 				</div>
 			</div>
-
-			<div class="meta">
-				<div><a class="link" href="{{ url_for('p3_bp.chatbot') }}">Open MioChat</a></div>
-						<div>
-							<a class="back" href="{{ url_for('core_blueprint.landing') }}">← Back to MioHub</a>
-						</div>
+			
+			<!-- Right Column: Images -->
+			<div class="images-column">
+				<div class="feature-image" data-image="memory">
+					<img loading="lazy" src="{{ url_for('static', filename='images/features/p3/conversation-memory.png') }}" 
+					     alt="Conversation memory interface"
+					     onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22550%22%20height=%22350%22%3E%3Crect%20width=%22550%22%20height=%22350%22%20fill=%22%23121516%22/%3E%3Crect%20x=%2230%22%20y=%2230%22%20width=%22490%22%20height=%22290%22%20rx=%2216%22%20fill=%22%231a1d1e%22%20stroke=%22%2314b8a6%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2240%22%20y=%22210%22%20fill=%22%239aa8ad%22%20font-size=%2224%22%20font-family=%22Segoe%20UI%22%3EPlaceholder%20-%20Conversation%20memory%3C/text%3E%3C/svg%3E';">
+				</div>
+				<div class="feature-image" data-image="sessions">
+					<img loading="lazy" src="{{ url_for('static', filename='images/features/p3/session-history.png') }}" 
+					     alt="Session history dashboard"
+					     onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22550%22%20height=%22350%22%3E%3Crect%20width=%22550%22%20height=%22350%22%20fill=%22%23121516%22/%3E%3Crect%20x=%2230%22%20y=%2230%22%20width=%22490%22%20height=%22290%22%20rx=%2216%22%20fill=%22%231a1d1e%22%20stroke=%22%2314b8a6%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2240%22%20y=%22210%22%20fill=%22%239aa8ad%22%20font-size=%2224%22%20font-family=%22Segoe%20UI%22%3EPlaceholder%20-%20Session%20history%3C/text%3E%3C/svg%3E';">
+				</div>
+				<div class="feature-image" data-image="models">
+					<img loading="lazy" src="{{ url_for('static', filename='images/features/p3/model-selection.png') }}" 
+					     alt="Model selection panel"
+					     onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22550%22%20height=%22350%22%3E%3Crect%20width=%22550%22%20height=%22350%22%20fill=%22%23121516%22/%3E%3Crect%20x=%2230%22%20y=%2230%22%20width=%22490%22%20height=%22290%22%20rx=%2216%22%20fill=%22%231a1d1e%22%20stroke=%22%2314b8a6%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2240%22%20y=%22210%22%20fill=%22%239aa8ad%22%20font-size=%2224%22%20font-family=%22Segoe%20UI%22%3EPlaceholder%20-%20Model%20selection%3C/text%3E%3C/svg%3E';">
+				</div>
+				<div class="feature-image" data-image="streaming">
+					<img loading="lazy" src="{{ url_for('static', filename='images/features/p3/streaming-interface.png') }}" 
+					     alt="Streaming response interface"
+					     onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22550%22%20height=%22350%22%3E%3Crect%20width=%22550%22%20height=%22350%22%20fill=%22%23121516%22/%3E%3Crect%20x=%2230%22%20y=%2230%22%20width=%22490%22%20height=%22290%22%20rx=%2216%22%20fill=%22%231a1d1e%22%20stroke=%22%2314b8a6%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2240%22%20y=%22210%22%20fill=%22%239aa8ad%22%20font-size=%2224%22%20font-family=%22Segoe%20UI%22%3EPlaceholder%20-%20Streaming%3C/text%3E%3C/svg%3E';">
+				</div>
 			</div>
 		</div>
 	</div>
+
+	<!-- CTA Section -->
+	<div class="cta-section">
+		<h2 class="cta-title">Ready to get started?</h2>
+		<p class="cta-text">Join MioChat today and experience intelligent conversations.</p>
+		<div class="cta-buttons">
+			<a class="btn-ghost btn-primary btn-large" href="{{ url_for('p3_bp.chatbot') }}">
+				Open MioChat →
+			</a>
+			<a class="btn-ghost btn-large" href="{{ url_for('core_blueprint.landing') }}">
+				← Back to MioHub
+			</a>
+		</div>
+	</div>
+
+	<!-- Scroll Animation Script -->
+	<script>
+		// Scroll-based feature activation
+		const featureItems = document.querySelectorAll('.feature-item');
+		const featureImages = document.querySelectorAll('.feature-image');
+		
+		function updateActiveFeature() {
+			const windowHeight = window.innerHeight;
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+			const triggerPoint = scrollTop + (windowHeight * 0.5);
+			
+			let activeIndex = -1;
+			
+			featureItems.forEach((item, index) => {
+				const rect = item.getBoundingClientRect();
+				const itemTop = rect.top + scrollTop;
+				const itemBottom = itemTop + rect.height;
+				
+				if (triggerPoint >= itemTop && triggerPoint < itemBottom) {
+					activeIndex = index;
+				}
+			});
+			
+			// Update active states
+			featureItems.forEach((item, index) => {
+				if (index === activeIndex) {
+					item.classList.add('active');
+				} else {
+					item.classList.remove('active');
+				}
+			});
+			
+			featureImages.forEach((image, index) => {
+				if (index === activeIndex) {
+					image.classList.add('active');
+				} else {
+					image.classList.remove('active');
+				}
+			});
+		}
+		
+		// Throttle scroll events for performance
+		let scrollTimeout;
+		function handleScroll() {
+			if (scrollTimeout) {
+				window.cancelAnimationFrame(scrollTimeout);
+			}
+			scrollTimeout = window.requestAnimationFrame(updateActiveFeature);
+		}
+		
+		window.addEventListener('scroll', handleScroll);
+		window.addEventListener('resize', updateActiveFeature);
+		
+		// Initialize on page load
+		updateActiveFeature();
+	</script>
 </body>
 </html>

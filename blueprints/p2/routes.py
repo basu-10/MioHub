@@ -1629,64 +1629,22 @@ def view_user(user_id):
         if public_folder_ids:
             base_query = base_query.filter(~File.folder_id.in_(list(public_folder_ids)))
 
-        public_notes = base_query.filter(File.type == 'proprietary_note').all()
-        public_boards = base_query.filter(File.type == 'proprietary_whiteboard').all()
-        # Remaining public files of any other type
-        public_files = base_query.filter(~File.type.in_(['proprietary_note', 'proprietary_whiteboard'])).all()
+        # Get ALL public files (unified approach)
+        all_public_files = base_query.all()
     except Exception as e:
         print(f"Error loading public items for user {user_id}: {e}")
-        public_notes = []
-        public_boards = []
         public_folders = []
-        public_files = []
-
-    # sanitize previews for notes and boards
-    def sanitize_preview(raw_html):
-        if not raw_html:
-            return ''
-        allowed_tags = [
-            'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li',
-            'img', 'h1', 'h2', 'h3', 'h4', 'pre', 'code', 'blockquote', 'span', 'div'
-        ]
-        allowed_attrs = {
-            'a': ['href', 'title'],
-            'img': ['src', 'alt', 'title'],
-        }
-        cleaned = bleach.clean(raw_html, tags=allowed_tags, attributes=allowed_attrs, protocols=['http', 'https', 'data'], strip=True)
-        try:
-            soup = BeautifulSoup(cleaned, 'html.parser')
-            for img in soup.find_all('img'):
-                src = str(img.get('src') or '')
-                if not (src.startswith('/static/uploads/images/') or src.startswith('static/uploads/images/') or src.startswith('/uploads/images/') or src.startswith('uploads/images/') or src.startswith('data:image/')):
-                    img.decompose()
-            return str(soup)
-        except Exception:
-            return cleaned
-
-    for n in public_notes:
-        try:
-            # Get description from metadata_json if available
-            desc = n.metadata_json.get('description', '') if n.metadata_json else ''
-            n.sanitized_preview = sanitize_preview(n.content_html or desc or '')
-        except Exception:
-            n.sanitized_preview = ''
-
-    for b in public_boards:
-        try:
-            # use description or small excerpt of content
-            b.sanitized_preview = sanitize_preview(b.description or '')
-        except Exception:
-            b.sanitized_preview = ''
+        all_public_files = []
 
     # Group files by type for sectioned display
     files_by_type = {}
-    for file_obj in public_files:
+    for file_obj in all_public_files:
         file_type = file_obj.type
         if file_type not in files_by_type:
             files_by_type[file_type] = []
         files_by_type[file_type].append(file_obj)
 
-    return render_template('p2/public_profile.html', user=user, notes=public_notes, boards=public_boards, folders=public_folders, files=public_files, files_by_type=files_by_type)
+    return render_template('p2/public_profile.html', user=user, folders=public_folders, files_by_type=files_by_type)
 
 
 @p2_blueprint.route('/public/note/<int:note_id>')
@@ -1763,7 +1721,7 @@ def public_view_board(board_id):
 
     # Render MioDraw in read-only mode for public viewers
     return render_template(
-        'p2/mioboard_v4.html',
+        'p2/file_edit_proprietary_whiteboard.html',
         board=board,
         public_view=True,
         disable_editing=True,

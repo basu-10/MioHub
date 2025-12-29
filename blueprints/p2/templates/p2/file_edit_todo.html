@@ -153,7 +153,7 @@
           <div class="col-md-8">
             <label for="title" class="form-label">Title</label>
             <input type="text" class="form-control" id="title" name="title" 
-                   value="{% if file %}{{ file.title }}{% endif %}" required>
+                   value="{% if file %}{{ file.title }}{% endif %}">
           </div>
           <div class="col-md-4">
             <label class="form-label d-block">&nbsp;</label>
@@ -216,6 +216,12 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   
   <script>
+    function getDateStampTitle() {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
     let todoItems = {% if file and file.content_json and 'items' in file.content_json %}{{ file.content_json['items']|tojson }}{% else %}[]{% endif %};
     
     // Safety check: ensure todoItems is always an array
@@ -227,6 +233,12 @@
     let nextId = todoItems.length > 0 ? Math.max(...todoItems.map(t => t.id)) + 1 : 1;
     
     const todoList = document.getElementById('todo-list');
+
+    // If the title is blank (or user cleared it), fall back to a datetime stamp.
+    const titleInput = document.getElementById('title');
+    if (titleInput && !titleInput.value.trim()) {
+      titleInput.value = getDateStampTitle();
+    }
     
     // Initialize Sortable.js for drag-to-reorder
     const sortable = new Sortable(todoList, {
@@ -353,6 +365,13 @@
         }
         
         const formData = new FormData(document.getElementById('todo-form'));
+
+        const liveTitle = (titleInput?.value || '').trim();
+        if (!liveTitle) {
+          const stamped = getDateStampTitle();
+          if (titleInput) titleInput.value = stamped;
+          formData.set('title', stamped);
+        }
         formData.set('content', JSON.stringify({ items: todoItems }));
         
         const response = await fetch(window.location.href, {

@@ -1,0 +1,23 @@
+{# Recently Modified section extracted from folder_view for reuse and HTMX paging #}
+<div class="section-container recents-section" id="recents">
+  <div class="section-header recents-header">
+    <h3 class="section-title">
+      <i class="material-icons">history</i>
+      Recently Modified
+      <span class="count-badge">{{ recent_total_count }}</span>
+    </h3>
+    <div class="small recents-subtitle">
+      <i class="material-icons subtitle-icon">bolt</i>
+      Quick access to your most recent work across all folders
+    </div>
+  </div>
+
+  <div id="recently-modified-grid"
+       class="recently-modified-grid"
+       data-view-mode="{{ display_prefs.view_mode }}"
+       data-card-size="{{ display_prefs.card_size }}">
+    {% include 'p2/partials/recently_modified_items.html' %}
+  </div>
+
+  {% include 'p2/partials/recently_modified_load_more.html' %}
+</div>

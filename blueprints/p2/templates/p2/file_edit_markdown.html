@@ -65,12 +65,74 @@
       background: var(--bg);
     }
     
+    /* CodeMirror (Markdown Mode) Dark Theme - Aggressive Override */
     .toastui-editor-md-container .CodeMirror,
-    .toastui-editor-ww-container .ProseMirror {
-      background: var(--bg);
-      color: var(--white);
+    .toastui-editor-md-container .CodeMirror-scroll,
+    .toastui-editor-md-container .CodeMirror-sizer {
+      background: var(--bg) !important;
+      color: #ECFFFF !important;
     }
     
+    .CodeMirror-line,
+    .CodeMirror-line span,
+    .CodeMirror-line > span,
+    .CodeMirror-line > span > span,
+    .cm-header,
+    .cm-strong,
+    .cm-em,
+    .cm-link,
+    .cm-url,
+    .cm-comment,
+    .cm-quote,
+    .cm-keyword,
+    .cm-string {
+      color: #ECFFFF !important;
+    }
+    
+    .CodeMirror-cursor {
+      border-left: 2px solid var(--accent) !important;
+    }
+    
+    .CodeMirror-selected {
+      background: rgba(20, 184, 166, 0.3) !important;
+    }
+    
+    .CodeMirror-gutters {
+      background: var(--card) !important;
+      border-right: 1px solid var(--border-primary) !important;
+    }
+    
+    .CodeMirror-linenumber {
+      color: var(--muted) !important;
+    }
+    
+    /* Force all text elements to be visible */
+    .toastui-editor-md-container * {
+      color: #ECFFFF !important;
+    }
+    
+    /* ProseMirror (WYSIWYG Mode) Dark Theme */
+    .toastui-editor-ww-container .ProseMirror {
+      background: var(--bg) !important;
+      color: var(--white) !important;
+    }
+    
+    .ProseMirror p,
+    .ProseMirror li,
+    .ProseMirror h1,
+    .ProseMirror h2,
+    .ProseMirror h3,
+    .ProseMirror h4,
+    .ProseMirror h5,
+    .ProseMirror h6 {
+      color: var(--white) !important;
+    }
+    
+    .ProseMirror-selectednode {
+      outline: 2px solid var(--accent) !important;
+    }
+    
+    /* Preview Pane Dark Theme */
     .toastui-editor-md-preview {
       background: var(--bg);
       color: var(--white);
@@ -85,11 +147,30 @@
     .toastui-editor-md-preview code {
       background: var(--card);
       color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 3px;
     }
     
     .toastui-editor-md-preview pre {
       background: var(--card);
       border: 1px solid var(--border-primary);
+    }
+    
+    .toastui-editor-md-preview pre code {
+      background: transparent;
+      color: var(--white);
+      padding: 0;
+    }
+    
+    .toastui-editor-md-preview a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    
+    .toastui-editor-md-preview blockquote {
+      border-left: 4px solid var(--accent);
+      color: var(--muted);
+      padding-left: 1rem;
     }
     
     .ProseMirror {

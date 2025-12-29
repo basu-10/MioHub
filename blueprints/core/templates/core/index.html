@@ -4,140 +4,396 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MioHub</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
   <style>
-    :root{
-      --bg:#0a0a0b;
-      --card:#121516;
-      --muted:#9aa8ad;
-      --accent:#14b8a6;
-      --accent-strong:#0d9488;
-      --white:#ECFFFF;
-      --radius:12px;
+    :root {
+      --bg: #0a0a0b;
+      --card: #121516;
+      --muted: #9aa8ad;
+      --accent: #14b8a6;
+      --accent-strong: #0d9488;
+      --ochre: #b38b2c;
+      --ochre-strong: #8f6d1e;
+      --white: #ECFFFF;
+      --radius: 14px;
+      --rich-brown: #6d4c3d;
+      --cocoa-brown: #4a3728;
+      --ash-brown: #5a4a3f;
+      --deep-teal: #040D12;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #273449;
+      --graphite: #0b0e13;
     }
 
-    html,body{height:100%;min-height:100vh;margin:0;padding:0;font-family:Segoe UI, Roboto, Helvetica, Arial, sans-serif;color:var(--white);background-color:var(--bg);background-image:radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%), linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);background-size:cover;background-repeat:no-repeat;background-attachment:fixed;background-position:center top}
+    * { box-sizing: border-box; }
 
-  /* Make center fill viewport minus footer so extra padding doesn't force scroll */
-  .center{min-height:calc(100vh - 72px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 28px 28px 28px;gap:18px}
-    h1{margin:0;font-size:44px;font-weight:700;color:var(--white);letter-spacing:-0.5px}
-    p.lead{margin:0;color:var(--muted);font-size:15px}
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--white);
+      background: var(--graphite);
+      background-image:
+        radial-gradient(circle at 18% 16%, rgba(20, 184, 166, 0.12) 0%, rgba(20, 184, 166, 0.04) 30%, transparent 55%),
+        radial-gradient(circle at 80% 74%, rgba(179, 139, 44, 0.12) 0%, rgba(179, 139, 44, 0.05) 32%, transparent 60%),
+        radial-gradient(circle at 60% 40%, rgba(15, 23, 42, 0.22) 0%, transparent 60%),
+        linear-gradient(135deg, var(--slate-900) 0%, var(--slate-800) 45%, var(--slate-700) 70%, var(--card) 100%);
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      scroll-behavior: smooth;
+    }
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;width:100%;max-width:980px}
-    .tile{background:linear-gradient(180deg, rgba(18,21,22,0.6), rgba(10,10,11,0.4));border:1px solid rgba(255,255,255,0.04);padding:18px;border-radius:12px;color:var(--white);text-decoration:none;display:flex;flex-direction:column;gap:10px;transition:transform .18s ease,box-shadow .18s ease}
-    .tile:hover{transform:translateY(-6px);box-shadow:0 14px 30px rgba(20,184,166,0.06)}
-    .tile .icon{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white}
-    .tile h3{margin:0;font-size:18px;font-weight:700}
-    .tile p{margin:0;color:var(--muted);font-size:13px}
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 80;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 32px;
+      background: rgba(10, 10, 11, 0.85);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+    }
 
-  .btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--accent);text-decoration:none;font-weight:600;transition:box-shadow .18s ease,transform .12s ease,background .12s ease,color .12s ease}
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      color: var(--white);
+      text-decoration: none;
+    }
 
-  /* Glow on hover for the See features button */
-  .btn-ghost:hover{box-shadow:0 10px 30px rgba(20,184,166,0.14);transform:translateY(-3px);background:rgba(20,184,166,0.03);color:var(--white)}
-  .btn-ghost:focus{outline:2px solid rgba(20,184,166,0.12);outline-offset:2px}
+    .logo span { color: var(--accent); }
 
-  .tile-link{display:block;color:inherit;text-decoration:none}
+    .nav-links { display: flex; gap: 10px; }
 
-  .topbar{position:absolute;top:14px;right:18px;display:flex;gap:10px;align-items:center;z-index:40}
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: transparent;
+      color: var(--white);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
 
-  .footer{position:fixed;left:0;right:0;bottom:12px;color:var(--muted);font-size:13px;text-align:center;z-index:40}
+    .btn-ghost:hover {
+      background: rgba(20, 184, 166, 0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
 
-    @media (max-width:520px){h1{font-size:30px}}
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #0a0a0b;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+      color: #0a0a0b;
+    }
+
+    .btn-ochre {
+      border-color: rgba(179, 139, 44, 0.6);
+      color: var(--white);
+    }
+
+    .btn-ochre:hover {
+      background: rgba(179, 139, 44, 0.14);
+      border-color: var(--ochre-strong);
+      color: var(--ochre);
+    }
+
+    .hero-shell {
+      padding: 120px 30px 70px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.65) 40%, rgba(39, 52, 73, 0.55) 70%, rgba(18, 21, 22, 0.9) 100%);
+      border-bottom-left-radius: 32px;
+      border-bottom-right-radius: 32px;
+      box-shadow: 0 18px 40px rgba(11, 14, 19, 0.6), 0 0 90px rgba(179, 139, 44, 0.12);
+    }
+
+    .hero-section {
+      max-width: 920px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 7px 16px;
+      border-radius: 18px;
+      background: linear-gradient(120deg, rgba(20, 184, 166, 0.25), rgba(179, 139, 44, 0.22));
+      border: 1px solid rgba(179, 139, 44, 0.6);
+      color: var(--white);
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      margin-bottom: 16px;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1.2px;
+      background: linear-gradient(135deg, var(--white) 0%, var(--accent) 55%, var(--ochre) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-description {
+      margin: 14px auto 30px;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .features-wrapper {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 60px 30px 90px;
+    }
+
+    .section-title {
+      margin: 0 0 18px;
+      font-size: 30px;
+      font-weight: 760;
+      letter-spacing: -0.8px;
+      color: var(--white);
+      text-align: center;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 22px;
+    }
+
+    .card {
+      position: relative;
+      padding: 22px;
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(18, 21, 22, 0.92), rgba(12, 15, 19, 0.95));
+      border: 1px solid rgba(39, 52, 73, 0.5);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(20, 184, 166, 0.16), rgba(30, 41, 59, 0.12), transparent 60%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(20, 184, 166, 0.5);
+      background: linear-gradient(155deg, rgba(20, 184, 166, 0.12) 0%, rgba(30, 41, 59, 0.82) 45%, rgba(12, 15, 19, 0.96) 100%);
+      box-shadow: 0 18px 42px rgba(11, 14, 19, 0.55), 0 0 24px rgba(20, 184, 166, 0.22);
+    }
+
+    .card:hover::after { opacity: 1; }
+
+    .card-header {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #0a0a0b;
+      font-weight: 800;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.4px;
+    }
+
+    .card p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(20, 184, 166, 0.18);
+      color: var(--accent);
+      border: 1px solid rgba(20, 184, 166, 0.38);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .card-actions { display: flex; gap: 8px; }
+
+    .footer {
+      text-align: center;
+      padding: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(10, 10, 11, 0.85);
+    }
+
+    @media (max-width: 900px) {
+      .hero-title { font-size: 44px; }
+      .hero-description { font-size: 17px; }
+      .topbar { padding: 12px 18px; }
+    }
+
+    @media (max-width: 640px) {
+      .hero-shell { padding: 110px 18px 60px; }
+      .hero-title { font-size: 34px; letter-spacing: -0.6px; }
+      .hero-description { font-size: 16px; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .cta-row { flex-direction: column; }
+      .btn-ghost, .btn-primary { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
-  <!-- Top-right auth links for sign in / sign up -->
   <div class="topbar">
-    <a class="btn-ghost" href="{{ url_for('p2_bp.login') }}">Sign in</a>
-    <a class="btn-ghost" href="{{ url_for('p2_bp.register') }}">Sign up</a>
+    <a class="logo" href="{{ url_for('core_blueprint.landing') }}">Mio<span>Hub</span></a>
+    <div class="nav-links">
+      <a class="btn-ghost" href="{{ url_for('p2_bp.login') }}">Sign in</a>
+      <a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.register') }}">Sign up</a>
+    </div>
   </div>
 
-  <div class="center"> <!-- center area; footer spacing handled in CSS -->
-    <div style="text-align:center;max-width:900px">
+  <div class="hero-shell">
+    <div class="hero-section">
+      <div class="hero-badge">Workspace suite</div>
       {% if current_user and current_user.is_authenticated %}
-        <h1>Hi, {{ current_user.username }}, welcome to MioHub</h1>
+        <h1 class="hero-title">Welcome back, {{ current_user.username }}</h1>
+        <p class="hero-description">Pick up where you left off with your files, boards, and chats — everything stays synced, organized, and ready to open.</p>
       {% else %}
-        <h1>MioHub</h1>
+        <h1 class="hero-title">All of your work, one home</h1>
+        <p class="hero-description">MioHub blends documents, infinite boards, and conversational AI into a single space. Sign in to plan, create, and chat without losing context.</p>
       {% endif %}
-      <p class="lead">A collection of my daily drivers — documents, calculator, chatbot and small games.</p>
     </div>
+  </div>
 
-    <div class="grid">
-      <div class="tile">
-        <a class="tile-link" href="{{ url_for('p2_bp.dashboard') }}">
-          <div style="display:flex;align-items:center;gap:12px">
-          <div class="icon" style="background:linear-gradient(135deg,var(--accent),#3dd7b9)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"></path></svg>
+  <div class="features-wrapper">
+    <h2 class="section-title">Choose a workspace to start</h2>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-header">
+          <div class="icon" style="background: linear-gradient(135deg, var(--accent-strong), var(--cocoa-brown));">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="6" width="16" height="12" rx="2"></rect>
+              <path d="M4 10h16"></path>
+            </svg>
           </div>
           <div>
             <h3>MioSpace</h3>
-            <p>Document editor and boards — folders, notes, and collaboration.</p>
+            <p>Folders, notes, whiteboards, and combined documents with quotas and sharing baked in.</p>
           </div>
-          </div>
-        </a>
-        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;justify-content:flex-end">
+        </div>
+        <div class="pill-row">
+          <span class="pill">Folders</span>
+          <span class="pill">Notes</span>
+          <span class="pill">Whiteboards</span>
+          <span class="pill">Combined docs</span>
+        </div>
+        <div class="card-actions">
+          <a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.dashboard') }}">Open MioSpace</a>
           <a class="btn-ghost" href="{{ url_for('core_blueprint.features_p2') }}">See features</a>
         </div>
       </div>
 
-      <div class="tile">
-        <a class="tile-link" href="{{ url_for('p1_bp.product1') }}">
-          <div style="display:flex;align-items:center;gap:12px">
-          <div class="icon" style="background:linear-gradient(135deg,#6ee7b7,#34d399)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h6m0 10v-3"></path></svg>
-          </div>
-          <div>
-            <h3>MioCalc</h3>
-            <p>Advanced calculator with history and financial helpers.</p>
-          </div>
-          </div>
-        </a>
-        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;justify-content:flex-end">
-          <a class="btn-ghost" href="{{ url_for('core_blueprint.features_p1') }}">See features</a>
-        </div>
-      </div>
-
-      <div class="tile">
-        <a class="tile-link" href="{{ url_for('p3_bp.chatbot') }}">
-          <div style="display:flex;align-items:center;gap:12px">
-          <div class="icon" style="background:linear-gradient(135deg,#4fd1c5,#2dd4bf)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-6.219-8.48"></path></svg>
+      <div class="card">
+        <div class="card-header">
+          <div class="icon" style="background: linear-gradient(135deg, var(--slate-800), var(--accent));">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 11-6.219-8.48"></path>
+              <path d="M13 3v6h6"></path>
+            </svg>
           </div>
           <div>
             <h3>MioChat</h3>
-            <p>Open-source chatbot with memory and conversation history.</p>
+            <p>Conversation memory, session history, and model selection for practical, fast AI chat.</p>
           </div>
-          </div>
-        </a>
-        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;justify-content:flex-end">
+        </div>
+        <div class="pill-row">
+          <span class="pill">Memory</span>
+          <span class="pill">Session history</span>
+          <span class="pill">Streaming</span>
+        </div>
+        <div class="card-actions">
+          <a class="btn-ghost btn-primary" href="{{ url_for('p3_bp.chatbot') }}">Open MioChat</a>
           <a class="btn-ghost" href="{{ url_for('core_blueprint.features_p3') }}">See features</a>
         </div>
       </div>
 
-      <div class="tile">
-        <a class="tile-link" href="{{ url_for('p4_bp.product4') }}">
-          <div style="display:flex;align-items:center;gap:12px">
-          <div class="icon" style="background:linear-gradient(135deg,#c084fc,#f472b6)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path></svg>
-          </div>
+      <!-- Future tiles can be re-enabled when products ship
+      <div class="card">
+        <div class="card-header">
+          <div class="icon" style="background: linear-gradient(135deg, #c084fc, #f472b6);"></div>
           <div>
-            <h3>MioGames</h3>
-            <p>Small web games for fun and experiments.</p>
+            <h3>MioCalc</h3>
+            <p>Advanced calculator with timelines and AI-assisted evaluation.</p>
           </div>
-          </div>
-        </a>
-        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;justify-content:flex-end">
-          <a class="btn-ghost" href="{{ url_for('core_blueprint.features_p4') }}">See features</a>
+        </div>
+        <div class="pill-row">
+          <span class="pill">History</span>
+          <span class="pill">Finance</span>
+        </div>
+        <div class="card-actions">
+          <a class="btn-ghost btn-primary" href="{{ url_for('p1_bp.product1') }}">Launch</a>
+          <a class="btn-ghost" href="{{ url_for('core_blueprint.features_p1') }}">See features</a>
         </div>
       </div>
-    </div>
-
+      -->
     </div>
   </div>
 
-  <!-- Fixed footer pinned to the very bottom -->
-  <div class="footer" aria-hidden="false">
-    Built with ❤️ by Asesh Basu
+  <div class="footer">
+    Built with Love by Asesh Basu — MioHub
   </div>
-
 </body>
 </html>

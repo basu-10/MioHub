@@ -1,0 +1,24 @@
+# Feature Images for MioChat (Product 3)
+
+Place the following images in this directory:
+
+1. **conversation-memory.png** - Screenshot or mockup showing conversation memory in action
+2. **session-history.png** - Dashboard view with past chat sessions and timestamps
+3. **model-selection.png** - Interface showing model selection dropdown with options
+4. **streaming-interface.png** - Live streaming response with incremental text appearing
+
+## Image Specifications:
+- **Format**: PNG or WebP preferred
+- **Dimensions**: 1100x700px (16:10 aspect ratio) or similar
+- **Style**: Match the graphite/teal Carbon Teal theme
+- **Background**: Dark (#121516) with teal accents (#14b8a6)
+- **Content**: Actual screenshots from the chat interface showing each feature
+
+## Creating Placeholder Images:
+If you don't have the actual screenshots yet, you can create simple placeholders:
+1. Use a dark graphite background (#121516)
+2. Add teal accent borders/highlights (#14b8a6)
+3. Include descriptive text and mock UI elements
+4. Use the same font as the application (Segoe UI, Roboto, etc.)
+
+The images will display at max-width: 550px on desktop with automatic responsive scaling on mobile.

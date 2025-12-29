@@ -1,0 +1,21 @@
+<svg width="1100" height="700" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1100" height="700" fill="#121516"/>
+  <rect x="40" y="40" width="1020" height="620" rx="16" fill="#1a1d1e" stroke="#14b8a6" stroke-width="2"/>
+  
+  <!-- Chat bubbles -->
+  <rect x="80" y="80" width="400" height="80" rx="12" fill="#2a2d2e"/>
+  <text x="100" y="115" font-family="Arial, sans-serif" font-size="16" fill="#ECFFFF">User: What did we discuss last week?</text>
+  
+  <rect x="620" y="180" width="400" height="120" rx="12" fill="#0d9488"/>
+  <text x="640" y="215" font-family="Arial, sans-serif" font-size="16" fill="#0a0a0b">AI: Based on our conversation from</text>
+  <text x="640" y="245" font-family="Arial, sans-serif" font-size="16" fill="#0a0a0b">Dec 22, we discussed your project</text>
+  <text x="640" y="275" font-family="Arial, sans-serif" font-size="16" fill="#0a0a0b">timeline and budget requirements.</text>
+  
+  <!-- Memory indicator -->
+  <circle cx="100" cy="450" r="8" fill="#14b8a6"/>
+  <text x="120" y="456" font-family="Arial, sans-serif" font-size="14" fill="#9aa8ad">Memory active: Remembering 47 facts</text>
+  
+  <!-- Title -->
+  <text x="80" y="600" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#14b8a6">Conversation Memory</text>
+  <text x="80" y="635" font-family="Arial, sans-serif" font-size="18" fill="#9aa8ad">Context persists across sessions</text>
+</svg>

@@ -59,12 +59,15 @@ window.GraphNodes = (function() {
       attachments: n.attachments || []
     }));
 
+    console.log('Loaded nodes:', nodes.length, nodes);
+
     // Restore selection after reload so highlighting persists
     if (prevSelectedId) {
       selectedNode = nodes.find(n => n.id === prevSelectedId) || null;
     }
 
     window.GraphCanvas.render();
+    console.log('Initial render called after loading', nodes.length, 'nodes');
   }
 
   function handleMouseDown(e) {
@@ -193,13 +196,32 @@ window.GraphNodes = (function() {
   }
 
   function render(ctx, viewportX, viewportY, scale) {
+    if (!ctx || !nodes || nodes.length === 0) {
+      return; // Nothing to render
+    }
+
     nodes.forEach(node => {
-      const screenPos = window.GraphCanvas.worldToScreen(node.x, node.y);
-      const screenWidth = node.width * scale;
-      const screenHeight = node.height * scale;
+      try {
+        const screenPos = window.GraphCanvas.worldToScreen(node.x, node.y);
+        const screenWidth = node.width * scale;
+        const screenHeight = node.height * scale;
+
+        // Get style properties with defaults - ensure style object exists
+        const style = node.style || {};
+        const shape = style.shape || 'rounded';
+        const bgColor = style.backgroundColor || 'rgba(18, 21, 22, 0.95)';
+        const borderColor = style.borderColor || 'rgba(100, 100, 100, 0.5)';
+        const borderWidth = (style.borderWidth !== undefined && style.borderWidth !== null) ? style.borderWidth : 1;
+        const borderStyle = style.borderStyle || 'solid';
+        const borderDashPattern = Array.isArray(style.borderDashPattern) ? style.borderDashPattern : [];
+        const opacity = (style.opacity !== undefined && style.opacity !== null) ? style.opacity : 0.95;
+        const cornerRadius = ((style.cornerRadius !== undefined && style.cornerRadius !== null) ? style.cornerRadius : NODE_BORDER_RADIUS) * scale;
 
       // Node background
       ctx.save();
+      
+      // Apply opacity
+      ctx.globalAlpha = opacity;
       
       // Highlight selected node with glow effect
       if (selectedNode === node) {
@@ -207,37 +229,99 @@ window.GraphNodes = (function() {
         ctx.shadowBlur = 15 * scale;
       }
       
-      ctx.fillStyle = selectedNode === node ? 'rgba(20, 184, 166, 0.1)' : (node.style.backgroundColor || 'rgba(18, 21, 22, 0.95)');
-      ctx.strokeStyle = selectedNode === node ? '#14b8a6' : (node.style.borderColor || 'rgba(100, 100, 100, 0.5)');
-      ctx.lineWidth = selectedNode === node ? 3 * scale : 1 * scale;
+      // Set fill and stroke styles
+      ctx.fillStyle = selectedNode === node ? 'rgba(20, 184, 166, 0.1)' : bgColor;
+      ctx.strokeStyle = selectedNode === node ? '#14b8a6' : borderColor;
+      ctx.lineWidth = selectedNode === node ? 3 * scale : (borderWidth * scale);
+      
+      // Apply border dash pattern
+      if (borderStyle !== 'none' && borderDashPattern.length > 0) {
+        ctx.setLineDash(borderDashPattern.map(d => d * scale));
+      } else {
+        ctx.setLineDash([]);
+      }
 
-      // Rounded rectangle
-      const radius = NODE_BORDER_RADIUS * scale;
+      // Draw shape based on node.style.shape
       ctx.beginPath();
-      ctx.moveTo(screenPos.x + radius, screenPos.y);
-      ctx.lineTo(screenPos.x + screenWidth - radius, screenPos.y);
-      ctx.quadraticCurveTo(screenPos.x + screenWidth, screenPos.y, screenPos.x + screenWidth, screenPos.y + radius);
-      ctx.lineTo(screenPos.x + screenWidth, screenPos.y + screenHeight - radius);
-      ctx.quadraticCurveTo(screenPos.x + screenWidth, screenPos.y + screenHeight, screenPos.x + screenWidth - radius, screenPos.y + screenHeight);
-      ctx.lineTo(screenPos.x + radius, screenPos.y + screenHeight);
-      ctx.quadraticCurveTo(screenPos.x, screenPos.y + screenHeight, screenPos.x, screenPos.y + screenHeight - radius);
-      ctx.lineTo(screenPos.x, screenPos.y + radius);
-      ctx.quadraticCurveTo(screenPos.x, screenPos.y, screenPos.x + radius, screenPos.y);
+      
+      switch(shape) {
+        case 'rectangle':
+          // Sharp rectangle
+          ctx.rect(screenPos.x, screenPos.y, screenWidth, screenHeight);
+          break;
+          
+        case 'circle':
+          // Perfect circle (uses smaller dimension)
+          const circleRadius = Math.min(screenWidth, screenHeight) / 2;
+          const circleCenterX = screenPos.x + screenWidth / 2;
+          const circleCenterY = screenPos.y + screenHeight / 2;
+          ctx.arc(circleCenterX, circleCenterY, circleRadius, 0, Math.PI * 2);
+          break;
+          
+        case 'ellipse':
+          // Ellipse
+          const ellipseCenterX = screenPos.x + screenWidth / 2;
+          const ellipseCenterY = screenPos.y + screenHeight / 2;
+          const radiusX = screenWidth / 2;
+          const radiusY = screenHeight / 2;
+          ctx.ellipse(ellipseCenterX, ellipseCenterY, radiusX, radiusY, 0, 0, Math.PI * 2);
+          break;
+          
+        case 'rounded':
+        default:
+          // Rounded rectangle (default)
+          ctx.moveTo(screenPos.x + cornerRadius, screenPos.y);
+          ctx.lineTo(screenPos.x + screenWidth - cornerRadius, screenPos.y);
+          ctx.quadraticCurveTo(screenPos.x + screenWidth, screenPos.y, screenPos.x + screenWidth, screenPos.y + cornerRadius);
+          ctx.lineTo(screenPos.x + screenWidth, screenPos.y + screenHeight - cornerRadius);
+          ctx.quadraticCurveTo(screenPos.x + screenWidth, screenPos.y + screenHeight, screenPos.x + screenWidth - cornerRadius, screenPos.y + screenHeight);
+          ctx.lineTo(screenPos.x + cornerRadius, screenPos.y + screenHeight);
+          ctx.quadraticCurveTo(screenPos.x, screenPos.y + screenHeight, screenPos.x, screenPos.y + screenHeight - cornerRadius);
+          ctx.lineTo(screenPos.x, screenPos.y + cornerRadius);
+          ctx.quadraticCurveTo(screenPos.x, screenPos.y, screenPos.x + cornerRadius, screenPos.y);
+          break;
+      }
+      
       ctx.closePath();
       ctx.fill();
-      ctx.stroke();
+      
+      // Only draw border if style is not 'none'
+      if (borderStyle !== 'none') {
+        ctx.stroke();
+      }
+
+      // Reset global alpha for text rendering
+      ctx.globalAlpha = 1.0;
+
+      // Calculate text width constraint based on shape
+      // For circles/ellipses, constrain text to fit within the inscribed rectangle
+      let textMaxWidth = screenWidth - 2 * NODE_PADDING * scale;
+      if (shape === 'circle') {
+        // For circles, use ~70% of diameter to ensure text fits within circle
+        textMaxWidth = (Math.min(screenWidth, screenHeight) * 0.7) - 2 * NODE_PADDING * scale;
+      } else if (shape === 'ellipse') {
+        // For ellipses, use ~75% of width to account for curved boundaries
+        textMaxWidth = (screenWidth * 0.75) - 2 * NODE_PADDING * scale;
+      }
+
+      // Center text horizontally for circles/ellipses
+      let titleX = screenPos.x + NODE_PADDING * scale;
+      if (shape === 'circle' || shape === 'ellipse') {
+        titleX = screenPos.x + screenWidth / 2;
+        ctx.textAlign = 'center';
+      } else {
+        ctx.textAlign = 'left';
+      }
 
       // Node title
       ctx.fillStyle = '#ECFFFF';
       ctx.font = `bold ${14 * scale}px system-ui, -apple-system, sans-serif`;
-      ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      const titleX = screenPos.x + NODE_PADDING * scale;
       const titleY = screenPos.y + NODE_PADDING * scale;
-      ctx.fillText(truncateText(ctx, node.title, screenWidth - 2 * NODE_PADDING * scale), titleX, titleY);
+      ctx.fillText(truncateText(ctx, node.title, textMaxWidth), titleX, titleY);
 
       // Node summary
-      const summaryLines = node.summary ? wrapText(ctx, node.summary, screenWidth - 2 * NODE_PADDING * scale) : [];
+      const summaryLines = node.summary ? wrapText(ctx, node.summary, textMaxWidth) : [];
       const summaryLinesToRender = summaryLines.slice(0, 2);
       if (summaryLinesToRender.length) {
         ctx.fillStyle = '#9aa8ad';
@@ -248,12 +332,19 @@ window.GraphNodes = (function() {
         });
       }
 
+      // Reset text alignment for attachment chips
+      if (shape === 'circle' || shape === 'ellipse') {
+        ctx.textAlign = 'center';
+      } else {
+        ctx.textAlign = 'left';
+      }
+
       // Attachment preview chips (limited for at-a-glance context)
       const attachmentsPreview = (node.attachments || []).slice(0, 3);
       if (attachmentsPreview.length > 0) {
         const summaryBlockHeight = summaryLinesToRender.length * 14 * scale;
         const attachmentsStartY = (summaryLinesToRender.length > 0 ? titleY + 20 * scale + summaryBlockHeight : titleY + 20 * scale) + 8 * scale;
-        const maxLabelWidth = screenWidth - 2 * NODE_PADDING * scale;
+        const maxLabelWidth = textMaxWidth;
 
         ctx.fillStyle = '#14b8a6';
         ctx.font = `${10 * scale}px system-ui, -apple-system, sans-serif`;
@@ -285,6 +376,10 @@ window.GraphNodes = (function() {
       }
 
       ctx.restore();
+      } catch (error) {
+        console.error('Error rendering node:', node.id, error);
+        // Continue rendering other nodes even if one fails
+      }
     });
   }
 
@@ -449,6 +544,7 @@ window.GraphNodes = (function() {
     createNode,
     updateNode,
     deleteNode,
+    saveNodePosition,
     getNodes,
     getNodeAt,
     getSelectedNode,
