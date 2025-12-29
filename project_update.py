@@ -52,6 +52,22 @@ def _ensure_root_folder_for_user(*, user_id: int) -> Folder:
     return root
 
 
+def _reset_user_password_to_default(user: User) -> None:
+    """Reset an existing user's password to the default value based on their username/type."""
+    if user.username == DEFAULT_GUEST_USERNAME:
+        new_password = DEFAULT_GUEST_PASSWORD
+    elif user.username == DEFAULT_ADMIN_USERNAME:
+        new_password = DEFAULT_ADMIN_PASSWORD
+    elif user.username == DEFAULT_NORMAL_USERNAME:
+        new_password = DEFAULT_NORMAL_PASSWORD
+    else:
+        # For other users, use guest password as default
+        new_password = DEFAULT_GUEST_PASSWORD
+    
+    user.password_hash = generate_password_hash(new_password)
+    print(f"🔑 Password reset for user: {user.username}")
+
+
 def _create_user_with_root_and_welcome_file(
     *,
     username: str,
@@ -136,6 +152,7 @@ def init_app_and_tables():
                 print(f"✅ Guest user created: {guest_username} (user_type=guest)")
             else:
                 _ensure_root_folder_for_user(user_id=existing_guest.id)
+                _reset_user_password_to_default(existing_guest)
                 print(f"ℹ️ Guest user already exists: {existing_guest.username}")
 
             # 2) Ensure at least one admin exists
@@ -154,6 +171,7 @@ def init_app_and_tables():
                 print(f"✅ Admin user created: {admin_username} (user_type=admin)")
             else:
                 _ensure_root_folder_for_user(user_id=existing_admin_any.id)
+                _reset_user_password_to_default(existing_admin_any)
                 print(f"ℹ️ Admin user already exists (user_type=admin): {existing_admin_any.username}")
 
             # 3) Ensure at least one normal user exists
@@ -172,6 +190,7 @@ def init_app_and_tables():
                 print(f"✅ Normal user created: {normal_username} (user_type=user)")
             else:
                 _ensure_root_folder_for_user(user_id=existing_normal_any.id)
+                _reset_user_password_to_default(existing_normal_any)
                 print(f"ℹ️ Normal user already exists (user_type=user): {existing_normal_any.username}")
 
             db.session.commit()
