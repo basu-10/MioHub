@@ -29,6 +29,16 @@
 
   /* Make sure dropdown-menu matches project theme (uses variables from global CSS) */
   #sort-by-partial .dropdown-menu { min-width: 190px; }
+
+  /* Mobile responsive: hide sort text on mobile */
+  @media (max-width: 768px) {
+    #sort-by-partial .dropdown-toggle span {
+      display: none !important;
+    }
+    #sort-by-partial .dropdown-toggle {
+      padding: 0.25rem 0.5rem !important;
+    }
+  }
 </style>
 
 <script>

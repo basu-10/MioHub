@@ -56,6 +56,12 @@
     display: none; /* Hide text, show only icons on mobile */
   }
 
+  /* Make breadcrumb navigation more flexible on mobile */
+  nav[aria-label="breadcrumb"] {
+    max-width: 50% !important;
+    overflow: hidden !important;
+  }
+
   .breadcrumb-item + .breadcrumb-item::before {
     font-size: 0.75rem !important;
   }
@@ -74,9 +80,30 @@
     display: none; /* Hide button text, show only icons */
   }
 
-  /* Hide less critical buttons on mobile */
-  .folder-sticky-bar .btn-outline-secondary:not(.batch-operation) {
-    padding: 0.2rem 0.35rem !important;
+  /* Ensure view options remain visible on mobile */
+  .folder-sticky-bar .btn-outline-secondary {
+    padding: 0.25rem 0.5rem !important;
+    display: inline-flex !important;
+  }
+
+  /* Explicitly ensure View dropdown is visible on mobile */
+  #displaySettingsDropdown {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Make right-side controls more compact but always visible */
+  .folder-sticky-bar > div:last-child {
+    flex-shrink: 0 !important;
+    min-width: auto !important;
+    display: flex !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Ensure all control buttons are visible */
+  .folder-sticky-bar .dropdown {
+    display: inline-block !important;
   }
 }
 

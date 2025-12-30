@@ -15,7 +15,7 @@
 
   <!-- Markdown + code highlighting -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
 
   <style>
     :root {
@@ -353,11 +353,17 @@
       border-radius: 16px 0 0 16px;
       box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
       backdrop-filter: blur(10px);
-      transition: transform 0.32s ease, opacity 0.24s ease;
+      transition: transform 0.32s ease, opacity 0.24s ease, background 0.2s ease;
       display: flex;
       flex-direction: column;
       padding-top: 0;
       pointer-events: auto;
+      z-index: 120; /* Above top navbar and hero overlay */
+    }
+
+    #memory-panel.drag-over {
+      background: rgba(20, 184, 166, 0.08);
+      border-color: var(--accent, #14b8a6);
     }
 
     .sidebar-open { transform: translateX(0); }
@@ -569,6 +575,161 @@
     .input-bar { border-top: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
     .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
     #user-input { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); color: var(--white); border-radius: 12px; padding: 12px 14px; }
+
+    /* Attachment Zone Styles - Memory Panel Integration */
+    .attachment-zone-memory {
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .upload-area-compact {
+      border: 1px dashed rgba(20, 184, 166, 0.4);
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .upload-area-compact:hover {
+      background: rgba(20, 184, 166, 0.08);
+      border-color: var(--accent, #14b8a6);
+    }
+
+    .upload-area-compact.drag-over,
+    #memory-panel.drag-over .upload-area-compact {
+      background: rgba(20, 184, 166, 0.15);
+      border-color: var(--accent-strong, #0d9488);
+      border-width: 2px;
+    }
+
+    .upload-link {
+      color: var(--accent, #14b8a6);
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .upload-link:hover {
+      color: var(--accent-strong, #0d9488);
+    }
+
+    .attached-files-list-compact {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .attachment-card {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(10, 10, 11, 0.6);
+      border: 1px solid var(--accent, #14b8a6);
+      border-radius: 8px;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .attachment-card:hover {
+      background: rgba(20, 184, 166, 0.08);
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.15);
+    }
+
+    .attachment-card .file-icon {
+      color: var(--accent, #14b8a6);
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .attachment-card .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .attachment-card .file-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--white);
+    }
+
+    .attachment-card .file-size {
+      font-size: 0.75rem;
+      color: var(--muted, #9aa8ad);
+      margin-top: 2px;
+    }
+
+    .attachment-card .btn-group {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .attachment-card .btn-icon {
+      background: transparent;
+      border: none;
+      color: var(--white, #ecffff);
+      cursor: pointer;
+      padding: 0.4rem;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .attachment-card .btn-icon:hover {
+      background: rgba(20, 184, 166, 0.2);
+      color: var(--accent);
+    }
+
+    .attachment-card.inactive {
+      opacity: 0.5;
+      border-color: var(--muted, #9aa8ad);
+    }
+
+    .attachment-card.inactive:hover {
+      opacity: 0.7;
+    }
+
+    .summary-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--accent, #14b8a6);
+      color: var(--bg, #0a0a0b);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(20, 184, 166, 0.4);
+    }
+
+    .summary-badge.processing {
+      background: #fbbf24;
+      animation: pulse 1.5s infinite;
+    }
+
+    .summary-badge.failed {
+      background: #ef4444;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.95); }
+    }
 
     .chip {
       display: inline-flex;
@@ -995,10 +1156,33 @@
         </div>
         <button class="p-2 rounded-full bg-white/5" onclick="toggleMemoryPanel()">✕</button>
       </div>
+      
+      <!-- Attachment Zone (Inside Memory Panel) -->
+      {% if current_session %}
+      <div id="attachmentZone" class="attachment-zone-memory">
+        <div class="upload-area-compact" id="uploadArea">
+          <i class="material-icons" style="font-size: 24px;">attach_file</i>
+          <p style="margin: 0; font-size: 0.85rem;">Drag & drop files here or <label for="fileInput" class="upload-link">browse</label></p>
+          <input type="file" id="fileInput" multiple style="display: none;" 
+                 accept=".pdf,.docx,.doc,.xlsx,.xls,.png,.jpg,.jpeg,.gif,.webp,.py,.js,.ts,.html,.css,.md,.txt,.yaml,.json,.env">
+        </div>
+        
+        <!-- Attached Files List -->
+        <div id="attachedFilesList" class="attached-files-list-compact"></div>
+      </div>
+      {% endif %}
+      
       <div id="memory-content" class="p-3 space-y-2 overflow-y-auto flex-1 min-h-0 scroll-slim text-sm"></div>
       <div class="p-3 border-t border-white/5 space-y-2">
         <textarea id="new-memory-text" rows="3" class="w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm resize-none" placeholder="Add memory snippet..."></textarea>
-        <button class="w-full px-3 py-2 rounded-lg bg-[var(--accent)] text-white" onclick="addMemoryItem()">Add Memory</button>
+        <div class="flex gap-2">
+          <button class="flex-1 px-3 py-2 rounded-lg bg-[var(--accent)] text-white" onclick="addMemoryItem()">Add Memory</button>
+          {% if current_session %}
+          <button class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10" onclick="document.getElementById('fileInput').click()" title="Attach file as context">
+            <i class="material-icons" style="font-size: 20px;">attach_file</i>
+          </button>
+          {% endif %}
+        </div>
       </div>
     </aside>
   </div>
@@ -1096,10 +1280,14 @@
       if (memoryOpen) {
         panel.classList.remove('memory-closed');
         panel.classList.add('memory-open');
+        panel.style.transform = 'translateX(0)';
+        panel.style.opacity = '1';
         main.style.marginRight = memoryOpen && shouldOffsetMain ? `${panelWidth}px` : '0';
       } else {
         panel.classList.add('memory-closed');
         panel.classList.remove('memory-open');
+        panel.style.transform = 'translateX(110%)';
+        panel.style.opacity = '0';
         main.style.marginRight = '0';
       }
       // Sync again after class changes
@@ -1119,6 +1307,11 @@
     function toggleMemoryPanel() {
       memoryOpen = !memoryOpen;
       applyMemoryState();
+
+      // Load attachments only when opening panel
+      if (memoryOpen) {
+        loadAttachments();
+      }
       
       // When opening memory, dismiss hero and lock to chat view
       if (memoryOpen) {
@@ -1946,7 +2139,364 @@
         syncMemoryPanelTop();
         applyMemoryState();
       }, 100);
+
+      // Initialize attachment upload functionality
+      initAttachmentUpload();
     });
+
+    // ========================================================================
+    // ATTACHMENT UPLOAD FUNCTIONALITY
+    // ========================================================================
+
+    function initAttachmentUpload() {
+      const uploadArea = document.getElementById('uploadArea');
+      const fileInput = document.getElementById('fileInput');
+      const memoryPanel = document.getElementById('memory-panel');
+      
+      if (!uploadArea || !fileInput) return;
+
+      // Prevent default drag behaviors on memory panel and upload area
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+        if (memoryPanel) {
+          memoryPanel.addEventListener(eventName, preventDefaults, false);
+        }
+        document.body.addEventListener(eventName, preventDefaults, false);
+      });
+
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      // Highlight on drag over memory panel or upload area
+      ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+          uploadArea.classList.add('drag-over');
+        });
+        if (memoryPanel) {
+          memoryPanel.addEventListener(eventName, () => {
+            if (memoryPanel.classList.contains('memory-open')) {
+              memoryPanel.classList.add('drag-over');
+            }
+          });
+        }
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+          uploadArea.classList.remove('drag-over');
+        });
+        if (memoryPanel) {
+          memoryPanel.addEventListener(eventName, () => {
+            memoryPanel.classList.remove('drag-over');
+          });
+        }
+      });
+
+      // Handle dropped files on upload area
+      uploadArea.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+      });
+
+      // Handle dropped files on memory panel
+      if (memoryPanel) {
+        memoryPanel.addEventListener('drop', (e) => {
+          if (memoryPanel.classList.contains('memory-open')) {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+          }
+        });
+      }
+
+      // Handle file input change
+      fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+      });
+
+      // Make upload area clickable
+      uploadArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+    }
+
+    async function handleFiles(files) {
+      for (const file of files) {
+        await uploadFile(file);
+      }
+    }
+
+    async function uploadFile(file) {
+      {% if not current_session %}
+      alert('Please create or select a session first');
+      return;
+      {% endif %}
+
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const attachedFilesList = document.getElementById('attachedFilesList');
+      
+      // Show upload progress
+      const tempCard = createAttachmentCard({
+        filename: file.name,
+        file_type: 'uploading',
+        file_size: file.size,
+        icon: 'fa-spinner fa-spin',
+        id: 'temp-' + Date.now()
+      }, true);
+      attachedFilesList.appendChild(tempCard);
+      
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setActive(`Uploading ${file.name}...`);
+      }
+
+      try {
+        const response = await fetch('/sessions/{{ current_session.id if current_session else 0 }}/attachments/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Replace temp card with actual attachment
+          tempCard.remove();
+          const card = createAttachmentCard(data.attachment);
+          attachedFilesList.appendChild(card);
+          
+          if (window.TelemetryPanel) {
+            const msg = data.duplicate ? `${file.name} (duplicate)` : `Uploaded ${file.name}`;
+            window.TelemetryPanel.setIdle(msg);
+          }
+        } else {
+          tempCard.remove();
+          alert('Upload failed: ' + data.error);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle('Upload failed');
+          }
+        }
+      } catch (error) {
+        tempCard.remove();
+        console.error('Upload error:', error);
+        alert('Upload error: ' + error.message);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle('Upload error');
+        }
+      }
+    }
+
+    function createAttachmentCard(attachment, isTemp = false) {
+      const card = document.createElement('div');
+      card.className = `attachment-card ${attachment.is_active === false ? 'inactive' : ''}`;
+      if (!isTemp) {
+        card.dataset.attachmentId = attachment.id;
+      }
+      
+      const sizeStr = formatFileSize(attachment.file_size);
+      const iconClass = getFileIcon(attachment.file_type);
+      
+      let badgeHTML = '';
+      if (attachment.summary_status === 'completed') {
+        badgeHTML = '<span class="summary-badge">✓</span>';
+      } else if (attachment.summary_status === 'processing') {
+        badgeHTML = '<span class="summary-badge processing">⏳</span>';
+      } else if (attachment.summary_status === 'failed') {
+        badgeHTML = '<span class="summary-badge failed">✗</span>';
+      }
+
+      card.innerHTML = `
+        <i class="material-icons file-icon">${iconClass}</i>
+        <div class="file-info">
+          <div class="file-name" title="${escapeHtml(attachment.filename)}">${escapeHtml(attachment.filename)}</div>
+          <div class="file-size">${sizeStr}</div>
+        </div>
+        ${isTemp ? '' : `
+        <div class="btn-group">
+          <button class="btn-icon" title="Summarize" onclick="summarizeAttachment(${attachment.id})">
+            <i class="material-icons" style="font-size: 18px;">description</i>
+          </button>
+          <button class="btn-icon" title="Toggle Active" onclick="toggleAttachment(${attachment.id})">
+            <i class="material-icons" style="font-size: 18px;">${attachment.is_active !== false ? 'check_circle' : 'radio_button_unchecked'}</i>
+          </button>
+          <a href="/p2/files/${attachment.file_id}/view" target="_blank" class="btn-icon" title="Open in MioSpace">
+            <i class="material-icons" style="font-size: 18px;">open_in_new</i>
+          </a>
+          <button class="btn-icon" title="Delete" onclick="deleteAttachment(${attachment.id})">
+            <i class="material-icons" style="font-size: 18px;">delete</i>
+          </button>
+        </div>
+        `}
+        ${badgeHTML}
+      `;
+      
+      return card;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function getFileIcon(fileType) {
+      const icons = {
+        'pdf': 'picture_as_pdf',
+        'docx': 'description',
+        'doc': 'description',
+        'xlsx': 'table_chart',
+        'xls': 'table_chart',
+        'image': 'image',
+        'py': 'code',
+        'js': 'code',
+        'html': 'code',
+        'css': 'code',
+        'ts': 'code',
+        'md': 'article',
+        'txt': 'article',
+        'yaml': 'settings',
+        'json': 'data_object',
+        'uploading': 'hourglass_empty'
+      };
+      return icons[fileType] || 'insert_drive_file';
+    }
+
+    async function summarizeAttachment(attachmentId) {
+      const card = document.querySelector(`[data-attachment-id="${attachmentId}"]`);
+      if (!card) return;
+      
+      let badge = card.querySelector('.summary-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        card.appendChild(badge);
+      }
+      badge.className = 'summary-badge processing';
+      badge.textContent = '⏳';
+      
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setActive('Generating summary...');
+      }
+      
+      try {
+        const response = await fetch(`/attachments/${attachmentId}/summarize`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          badge.className = 'summary-badge';
+          badge.textContent = '✓';
+          
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle('Summary complete');
+          }
+          
+          // TODO: Show summary preview modal
+          if (data.summary_text) {
+            alert('Summary created: ' + data.summary_text);
+          }
+        } else {
+          badge.className = 'summary-badge failed';
+          badge.textContent = '✗';
+          alert('Summarization failed: ' + data.error);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle('Summary failed');
+          }
+        }
+      } catch (error) {
+        badge.className = 'summary-badge failed';
+        badge.textContent = '✗';
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle('Summary error');
+        }
+      }
+    }
+
+    async function toggleAttachment(attachmentId) {
+      try {
+        const response = await fetch(`/attachments/${attachmentId}/toggle`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const card = document.querySelector(`[data-attachment-id="${attachmentId}"]`);
+          if (card) {
+            card.classList.toggle('inactive', !data.is_active);
+            
+            const icon = card.querySelector('.btn-group .btn-icon:nth-child(2) i');
+            if (icon) {
+              icon.textContent = data.is_active ? 'check_circle' : 'radio_button_unchecked';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function deleteAttachment(attachmentId) {
+      if (!confirm('Remove this attachment? (The file will remain in MioSpace)')) return;
+      
+      try {
+        const response = await fetch(`/attachments/${attachmentId}/delete`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const card = document.querySelector(`[data-attachment-id="${attachmentId}"]`);
+          if (card) {
+            card.remove();
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function loadAttachments() {
+      {% if not current_session %}
+      return;
+      {% endif %}
+
+      try {
+        const response = await fetch('/sessions/{{ current_session.id if current_session else 0 }}/attachments');
+        if (!response.ok) {
+          console.warn('Attachments request failed', response.status, response.statusText);
+          return;
+        }
+
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseErr) {
+          console.error('Failed to parse attachments response as JSON', parseErr);
+          return;
+        }
+        
+        const attachedFilesList = document.getElementById('attachedFilesList');
+        if (attachedFilesList) {
+          attachedFilesList.innerHTML = '';
+          if (data.attachments && data.attachments.length > 0) {
+            data.attachments.forEach(att => {
+              const card = createAttachmentCard(att);
+              attachedFilesList.appendChild(card);
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load attachments:', error);
+      }
+    }
   </script>
 </body>
 </html>

@@ -41,6 +41,30 @@ VALID_FILE_TYPES = {
     
     # Binary/Upload types
     'pdf',          # PDF files (binary storage) (not yet implemented)
+    
+    # Text file types (for chat attachments and code files)
+    'txt',          # Plain text files
+    'py',           # Python source files
+    'js',           # JavaScript files
+    'ts',           # TypeScript files
+    'html',         # HTML files
+    'css',          # CSS files
+    'yaml',         # YAML configuration files
+    'json',         # JSON data files
+    'env',          # Environment variable files
+    'md',           # Markdown files (alternate to 'markdown')
+    
+    # Document types
+    'docx',         # Microsoft Word documents
+    'doc',          # Legacy Word documents
+    'xlsx',         # Microsoft Excel spreadsheets
+    'xls',          # Legacy Excel spreadsheets
+    
+    # Image types
+    'image',        # Generic image type (PNG, JPG, etc.)
+    
+    # Unknown/fallback
+    'unknown',      # Unrecognized file types
 }
 
 

@@ -81,6 +81,11 @@
     .telemetry-widget {
       max-width: 120px;
     }
+
+    /* Hide welcome text on mobile */
+    .navbar-welcome-text {
+      display: none !important;
+    }
   }
 
   @media (max-width: 575px) {
@@ -167,7 +172,7 @@
 
       <!-- Brand / User Greeting -->
       <a class="text-xl font-semibold text-white hover:text-gray-200 no-underline flex items-center" href="{{ url_for('folders.view_folder', folder_id=current_folder_id or current_user.folders[0].id) }}">
-        Hi {{ current_user.username }}, welcome to MioSpace
+        <span class="navbar-welcome-text">Hi {{ current_user.username }}, welcome to MioSpace</span>
         {%- if current_user.user_type %}
           <span class="ml-2 text-gray-300 text-xs font-medium uppercase px-2 py-0.5 rounded user-type-badge" title="{{ current_user.user_type }}">{{ current_user.user_type|capitalize }}</span>
         {%- endif %}
