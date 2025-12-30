@@ -1,10 +1,38 @@
 <!-- folder_view_top_sticky_options_bar_partial.html -->
 <!-- Folder options bar positioned below navbar within the fixed header container -->
+<style>
+/* Carbon Teal theme for options bar */
+.folder-sticky-bar {
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important;
+  border-bottom: 1px solid var(--border-primary) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  min-height: 40px !important;
+}
+.breadcrumb-custom {
+  background: transparent !important;
+}
+.breadcrumb-link {
+  color: var(--accent) !important;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+  text-shadow: 0 0 8px rgba(20, 184, 166, 0.3);
+}
+.breadcrumb-link:hover {
+  color: var(--accent-strong) !important;
+  text-shadow: 0 0 12px rgba(13, 148, 136, 0.5);
+}
+.breadcrumb-current {
+  color: var(--white) !important;
+}
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--muted) !important;
+}
+</style>
 <script>
   localStorage.setItem("currentFolderId", "{{ folder.id }}");
 </script>
 
-<div class="folder-sticky-bar d-flex justify-content-between align-items-center flex-nowrap gap-3 mb-0" style="position: relative; /* No longer sticky - contained in fixed header */">
+<div class="folder-sticky-bar d-flex justify-content-between align-items-center flex-nowrap gap-3 mb-0" style="position: relative; /* No longer sticky - contained in fixed header */; padding: 0.4rem 1.5rem;">
   <!-- Left side: Breadcrumb navigation (aligned horizontally with other items) -->
   <nav aria-label="breadcrumb" class="mb-0" style="flex: 1 1 auto; min-width: 0;">
     <ol class="breadcrumb breadcrumb-custom mb-0">

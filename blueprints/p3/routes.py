@@ -17,6 +17,42 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 # Initialize LLM client (supports Groq, OpenRouter, Fireworks, Together)
 llm_client = LLMClient()
+logger = logging.getLogger(__name__)
+
+
+def _build_llm_messages(user_message: str, memory_items: list[str]) -> list[dict]:
+    """Create the LLM messages payload using memory first, then the user prompt."""
+    llm_messages: list[dict] = []
+
+    if memory_items:
+        memory_items_formatted = "\n".join(
+            config.CHAT_MEMORY_ITEM_FORMAT.format(item=item) for item in memory_items
+        )
+        memory_context = config.CHAT_MEMORY_TEMPLATE.format(memory_items=memory_items_formatted)
+        llm_messages.append({"role": "system", "content": memory_context})
+
+    llm_messages.append({"role": "user", "content": user_message})
+    return llm_messages
+
+
+def _generate_ai_reply(user_message: str, memory_items: list[str], model: str) -> str:
+    """Call the configured LLM provider and return the assistant reply."""
+    llm_messages = _build_llm_messages(user_message, memory_items)
+    try:
+        llm_client.model = model
+        ai_response = llm_client.chat(
+            messages=llm_messages,
+            temperature=0.7,
+            max_tokens=2048
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.error("LLM API error: %s", exc)
+        ai_response = "Connection error. Please check your API configuration."
+    except Exception as exc:  # noqa: BLE001
+        logger.error("LLM error: %s", exc)
+        ai_response = f"Error: {str(exc)}"
+
+    return ai_response
 
 @p3_blueprint.route('/chatbot')
 @login_required
@@ -121,37 +157,13 @@ def chat():
     db.session.add(user_message_obj)
     db.session.commit()
 
-    # --- Build conversation ONLY from memory_items ---
-    llm_messages = []
-
-    if memory_items:
-        memory_items_formatted = "\n".join(config.CHAT_MEMORY_ITEM_FORMAT.format(item=item) for item in memory_items)
-        memory_context = config.CHAT_MEMORY_TEMPLATE.format(memory_items=memory_items_formatted)
-        llm_messages.append({"role": "system", "content": memory_context})
-
-    # Always include the latest user message
-    llm_messages.append({"role": "user", "content": user_message})
+    llm_messages = _build_llm_messages(user_message, memory_items)
 
     print(f"Sending to LLM: {llm_messages}")
     print(f"Using model: {current_model}")
     print(f"Using provider: {config.PROVIDER}")
 
-    try:
-        # Use LLMClient for provider-agnostic LLM calls
-        llm_client.model = current_model
-        ai_response = llm_client.chat(
-            messages=llm_messages,
-            temperature=0.7,
-            max_tokens=2048
-        )
-    except requests.exceptions.RequestException as e:
-        # Network/API errors
-        print(f"LLM API Error: {str(e)}")
-        ai_response = f"Connection error. Please check your API configuration."
-    except Exception as e:
-        # Other errors
-        print(f"LLM Error: {str(e)}")
-        ai_response = f"Error: {str(e)}"
+    ai_response = _generate_ai_reply(user_message, memory_items, current_model)
 
     # Save AI response
     ai_message = ChatMessage(
@@ -170,8 +182,133 @@ def chat():
 
     return jsonify({
         'reply': ai_response,
-        'model': current_model
+        'model': current_model,
+        'user_message_id': user_message_obj.id,
+        'assistant_message_id': ai_message.id
     })
+
+
+@p3_blueprint.route('/chat/requery', methods=['POST'])
+@login_required
+def requery_chat_message():
+    data = request.get_json() or {}
+    message_id = data.get('message_id')
+    new_message = (data.get('message') or '').strip()
+    memory_items = data.get('memory', [])
+
+    try:
+        message_id = int(message_id)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid message id'}), 400
+
+    if not message_id or not new_message:
+        return jsonify({'error': 'Message id and updated text are required'}), 400
+
+    current_session_id = session.get('current_chat_session_id')
+    if not current_session_id:
+        return jsonify({'error': 'No active session'}), 400
+
+    chat_session = ChatSession.query.filter_by(
+        id=current_session_id,
+        user_id=current_user.id
+    ).first()
+    if not chat_session:
+        return jsonify({'error': 'Session not found'}), 404
+
+    user_message = ChatMessage.query.filter_by(
+        id=message_id,
+        session_id=current_session_id,
+        role='user'
+    ).first()
+    if not user_message:
+        return jsonify({'error': 'Message not found'}), 404
+
+    # Find the assistant reply that immediately follows this user message (oldest assistant after it)
+    assistant_message = ChatMessage.query.filter(
+        ChatMessage.session_id == current_session_id,
+        ChatMessage.role == 'assistant',
+        ChatMessage.created_at > user_message.created_at
+    ).order_by(ChatMessage.created_at.asc()).first()
+
+    replaced_assistant_id = assistant_message.id if assistant_message else None
+    target_created_at = assistant_message.created_at if assistant_message else datetime.utcnow()
+
+    if assistant_message:
+        db.session.delete(assistant_message)
+
+    current_model = session.get('current_model', config.DEFAULT_CHAT_MODEL)
+
+    # Update the existing user message with new text and model context
+    user_message.content = new_message
+    user_message.model = current_model
+
+    ai_response = _generate_ai_reply(new_message, memory_items, current_model)
+
+    # Ensure chronological ordering: assistant timestamp should not precede user message
+    if target_created_at < user_message.created_at:
+        target_created_at = user_message.created_at
+
+    new_assistant_message = ChatMessage(
+        session_id=current_session_id,
+        model=current_model,
+        role='assistant',
+        content=ai_response,
+        created_at=target_created_at
+    )
+
+    db.session.add(new_assistant_message)
+    chat_session.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'reply': ai_response,
+        'model': current_model,
+        'user_message_id': user_message.id,
+        'assistant_message_id': new_assistant_message.id,
+        'replaced_assistant_id': replaced_assistant_id
+    })
+
+
+@p3_blueprint.route('/chat/report', methods=['POST'])
+@login_required
+def report_chat_message():
+    data = request.get_json() or {}
+    message_id = data.get('message_id')
+    reason = (data.get('reason') or '').strip()
+
+    try:
+        message_id = int(message_id)
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'Invalid message id'}), 400
+
+    current_session_id = session.get('current_chat_session_id')
+    if not current_session_id:
+        return jsonify({'status': 'error', 'message': 'No active session'}), 400
+
+    chat_session = ChatSession.query.filter_by(
+        id=current_session_id,
+        user_id=current_user.id
+    ).first()
+    if not chat_session:
+        return jsonify({'status': 'error', 'message': 'Session not found'}), 404
+
+    message = ChatMessage.query.filter_by(
+        id=message_id,
+        session_id=current_session_id
+    ).first()
+
+    if not message:
+        return jsonify({'status': 'error', 'message': 'Message not found'}), 404
+
+    logger.info(
+        "Chat message flagged by user %s in session %s (message %s): %s",
+        current_user.id,
+        current_session_id,
+        message_id,
+        reason or 'No reason provided'
+    )
+
+    return jsonify({'status': 'ok'})
 
 @p3_blueprint.route('/get_memory')
 @login_required
@@ -442,3 +579,172 @@ def p3_admin_dashboard():
                          recent_sessions=recent_sessions,
                          model_stats=model_stats,
                          available_models=config.AVAILABLE_CHAT_MODELS)
+
+
+# =============================================================================
+# CHAT ATTACHMENTS API ROUTES (Phase 3)
+# =============================================================================
+
+from blueprints.p3.chat_attachment_service import (
+    create_attachment_from_upload,
+    create_summary_for_attachment,
+    get_or_create_session_folder
+)
+from blueprints.p3.models import ChatAttachment
+from werkzeug.utils import secure_filename
+
+# Allowed file extensions for attachments
+ALLOWED_EXTENSIONS = {
+    'pdf', 'docx', 'doc', 'xlsx', 'xls',
+    'png', 'jpg', 'jpeg', 'gif', 'webp',
+    'py', 'js', 'ts', 'html', 'css',
+    'md', 'txt', 'yaml', 'yml', 'json', 'env'
+}
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@p3_blueprint.route('/sessions/<int:session_id>/attachments/upload', methods=['POST'])
+@login_required
+def upload_attachment(session_id):
+    """Upload file as attachment to chat session"""
+    session_obj = ChatSession.query.get_or_404(session_id)
+    
+    # Permission check
+    if session_obj.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Check file in request
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'File type not supported'}), 400
+    
+    try:
+        attachment, bytes_added = create_attachment_from_upload(
+            session_id, current_user.id, file
+        )
+        
+        return jsonify({
+            'success': True,
+            'attachment': {
+                'id': attachment.id,
+                'filename': attachment.original_filename,
+                'file_type': attachment.file_type,
+                'file_size': attachment.file_size,
+                'file_id': attachment.file_id,
+                'icon': attachment.get_file_icon(),
+                'is_active': attachment.is_active,
+                'summary_status': attachment.summary_status
+            },
+            'bytes_added': bytes_added,
+            'duplicate': bytes_added == 0
+        })
+    
+    except Exception as e:
+        logger.error(f"Upload attachment error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@p3_blueprint.route('/attachments/<int:attachment_id>/summarize', methods=['POST'])
+@login_required
+def summarize_attachment(attachment_id):
+    """Generate summary for attachment"""
+    attachment = ChatAttachment.query.get_or_404(attachment_id)
+    
+    # Permission check
+    if attachment.session.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Check if already summarized
+    if attachment.summary_status == 'completed':
+        return jsonify({
+            'success': True,
+            'message': 'Summary already exists',
+            'summary_file_id': attachment.summary_file_id
+        })
+    
+    try:
+        summary_file = create_summary_for_attachment(attachment_id)
+        
+        return jsonify({
+            'success': True,
+            'summary_file_id': summary_file.id,
+            'summary_text': summary_file.content_text[:500] + '...' if len(summary_file.content_text) > 500 else summary_file.content_text
+        })
+    
+    except Exception as e:
+        logger.error(f"Summarize attachment error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@p3_blueprint.route('/attachments/<int:attachment_id>/toggle', methods=['POST'])
+@login_required
+def toggle_attachment_active(attachment_id):
+    """Toggle attachment active status (include in context or not)"""
+    attachment = ChatAttachment.query.get_or_404(attachment_id)
+    
+    # Permission check
+    if attachment.session.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    attachment.is_active = not attachment.is_active
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'is_active': attachment.is_active
+    })
+
+
+@p3_blueprint.route('/attachments/<int:attachment_id>/delete', methods=['DELETE'])
+@login_required
+def delete_attachment(attachment_id):
+    """Delete attachment (soft delete - keeps file in MioSpace)"""
+    attachment = ChatAttachment.query.get_or_404(attachment_id)
+    
+    # Permission check
+    if attachment.session.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Just remove link, keep file in MioSpace
+    db.session.delete(attachment)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+
+@p3_blueprint.route('/sessions/<int:session_id>/attachments', methods=['GET'])
+@login_required
+def list_attachments(session_id):
+    """Get all attachments for session"""
+    session_obj = ChatSession.query.get_or_404(session_id)
+    
+    # Permission check
+    if session_obj.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    attachments = ChatAttachment.query.filter_by(session_id=session_id).order_by(
+        ChatAttachment.uploaded_at.desc()
+    ).all()
+    
+    return jsonify({
+        'attachments': [{
+            'id': att.id,
+            'filename': att.original_filename,
+            'file_type': att.file_type,
+            'file_size': att.file_size,
+            'file_id': att.file_id,
+            'icon': att.get_file_icon(),
+            'is_active': att.is_active,
+            'summary_status': att.summary_status,
+            'uploaded_at': att.uploaded_at.isoformat()
+        } for att in attachments]
+    })

@@ -1,101 +1,117 @@
 <!-- 📁 Navbar -->
-<style>
-/* Carbon Teal theme variables (shared) */
-:root{
-  --bg:#0a0a0b;
-  --card:#121516;
-  --muted:#9aa8ad;
-  --accent:#14b8a6;
-  --accent-strong:#0d9488;
-  --white:#ECFFFF;
-  --radius:10px;
-
-  --bg-primary: var(--bg);
-  --bg-secondary: var(--card);
-  --bg-tertiary: rgba(18,21,22,0.98);
-  --bg-quaternary: #0a171b;
-
-  --text-primary: var(--white);
-  --text-secondary: var(--muted);
-  --text-muted: var(--muted);
-
-  --border-primary: var(--muted);
-  --border-secondary: rgba(255,255,255,0.02);
-  --border-hover: rgba(13,148,136,0.12);
-
-  --accent-green: var(--accent);
-  --accent-green-hover: var(--accent-strong);
-  --hover-overlay: rgba(20,184,166,0.06);
-}
-/* Apply page background for Carbon Teal theme */
-html,body{background-color:var(--bg);color:var(--text-primary);background-image:radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);background-size:cover;background-repeat:no-repeat;background-attachment:fixed;background-position:center top}
-</style>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/telemetry_panel.css') }}">
 <style>
-/* Scoped overrides to map common utility classes to Carbon Teal appearance */
-.bg-gray-900 { background: var(--bg) !important; }
-.bg-gray-800 { background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; }
-.bg-gray-800\/60 { background: linear-gradient(135deg, rgba(18,21,22,0.6), rgba(10,23,27,0.6)) !important; }
-.bg-gray-800.bg-opacity-50 { background: linear-gradient(135deg, rgba(18,21,22,0.5), rgba(10,23,27,0.5)) !important; }
-.public-profile-card, .card, .item-card { background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; border:1px solid var(--border-primary) !important; color:var(--text-primary) !important; }
-.card-title, .text-white, h1, h2, h3, h4 { color: var(--text-primary) !important; }
-.text-gray-200, .text-gray-300, .text-gray-400, .text-gray-500 { color: var(--text-secondary) !important; }
-.item-body, .card-body, .note-description, .board-description, .content-preview { color: var(--text-primary) !important; }
-.btn, .btn-sm { background: transparent !important; color: var(--text-primary) !important; border: 1px solid var(--border-primary) !important; }
-.btn-outline-primary, .btn-outline-success, .btn-outline-warning, .btn-outline-light { border-color: var(--border-primary) !important; color: var(--text-primary) !important; background: transparent !important; }
-.bg-green-600 { background-color: var(--accent) !important; color: var(--text-primary) !important; }
-.bg-blue-600 { background-color: var(--accent-strong) !important; color: var(--text-primary) !important; }
-#dropdowns:where(.dropdown-custom, .fab-dropdown) { background: linear-gradient(180deg,var(--bg-secondary), var(--bg-tertiary)) !important; border:1px solid var(--border-primary); box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  /* Scoped overrides for navbar elements to align with Carbon Teal theme */
+  .bg-gray-900 { background: var(--bg) !important; }
+  .bg-gray-800 { background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; }
+  .text-white { color: var(--text-primary) !important; }
+  .text-gray-200, .text-gray-300, .text-gray-400 { color: var(--text-secondary) !important; }
 
-/* Small badge for displaying the current user's type with a subtle border */
-.user-type-badge {
-  border: 1px solid var(--muted);
-  color: var(--text-secondary);
-  display: inline-block;
-  padding: 0.125rem 0.5rem; /* aligns with px-2 py-0.5 */
-  border-radius: 6px;
-  font-size: 0.75rem; /* matches text-xs */
-  line-height: 1;
-  vertical-align: middle;
-  background: transparent;
-}
+  /* User type badge styling */
+  .user-type-badge {
+    border: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    background: transparent;
+    padding: 0.125rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    line-height: 1;
+    vertical-align: middle;
+  }
 
-/* Dropdown link text and icon color: ensure light text for readability */
-.dropdown-custom li a,
-#switchDropdown a,
-#userDropdown a {
-  color: var(--text-primary) !important;
-  background: transparent !important;
-}
+  /* Dropdown styles */
+  .dropdown-custom {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .dropdown-custom li a {
+    color: var(--text-primary) !important;
+  }
+  .dropdown-custom li a:hover {
+    background: var(--hover-overlay);
+  }
+  .dropdown-custom li a .material-icons {
+    color: var(--accent) !important;
+  }
+  .dropdown-custom li a .muted {
+    color: var(--text-secondary) !important;
+  }
 
-/* Slightly muted helper text inside dropdowns */
-.dropdown-custom li a .muted {
-  color: var(--text-secondary) !important;
-}
-
-/* Icons in dropdowns should use accent or white for contrast */
-.dropdown-custom li a .material-icons {
-  color: var(--accent) !important;
-  margin-right: 8px;
-}
-#exportImportModal .bg-gray-800, #exportImportModal .bg-gray-800.bg-opacity-50 { background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; }
-#exportImportModal .bg-yellow-900 { background: rgba(92,64,0,0.5); }
-#exportImportModal .text-yellow-200, #exportImportModal .text-yellow-800 { color: #f6e7c2 !important; }
-#exportImportModal a.inline-flex { color: var(--text-primary) !important; }
-#toast-container div { background: rgba(255,255,255,0.06); color: var(--text-primary) !important; }
-  /* Moved asset-card styles to note toolbar partial for editor scoping */
+  /* Modal theming */
+  #exportImportModal .bg-gray-800 { 
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; 
+  }
 </style>
 <!-- Navbar inherits z-index from header container (950) -->
 <nav class="bg-gray-900 text-white w-full shadow-lg">
   <div class="w-full px-6">
     <div class="flex justify-between items-center h-16">
-      <!-- Brand -->
-      <a class="text-xl font-semibold text-white hover:text-gray-200 no-underline flex items-center" href="{{ url_for('folders.view_folder', folder_id=current_folder_id or current_user.folders[0].id) }}">
+      <!-- Combined Logo/Brand Dropdown -->
+      <div class="relative dropdown">
+        <button id="mainMenuBtn" class="flex items-center hover:bg-gray-800 rounded-lg px-3 py-2 transition duration-200" aria-haspopup="true" aria-expanded="false" aria-controls="mainMenuDropdown">
+          <div class="miospace-logo mr-2">
+            <span class="mio">Mio</span><span class="space">Space</span>
+          </div>
+          <i class="material-icons text-sm" style="color: var(--accent);">arrow_drop_down</i>
+        </button>
         
-        Hi {{ current_user.username }}
-        , welcome to MioSpace
+        <!-- Combined Dropdown Menu -->
+        <ul id="mainMenuDropdown" class="absolute left-0 top-full mt-1 w-64 dropdown-custom hidden z-50" role="menu" aria-labelledby="mainMenuBtn" style="max-height: 80vh; overflow-y: auto;">
+          
+          <!-- Navigation Section -->
+          <li class="px-3 py-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted); border-bottom: 1px solid var(--border-primary);">
+            Navigation
+          </li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('core_blueprint.landing') }}">
+            <i class="material-icons mr-2 text-sm">home</i>Home
+          </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p3_bp.chatbot') }}">
+            <i class="material-icons mr-2 text-sm">chat</i>MioChat
+          </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p1_bp.product1') }}">
+            <i class="material-icons mr-2 text-sm">calculate</i>MioCalc
+          </a></li>
 
+          <!-- Divider -->
+          <li class="my-2" style="border-top: 1px solid var(--border-primary);"></li>
+
+          <!-- User Section -->
+          <li class="px-3 py-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted); border-bottom: 1px solid var(--border-primary);">
+            User Settings
+          </li>
+          <li id="userStorageItem"><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="#" onclick="event.preventDefault();">
+            <i class="material-icons mr-2 text-sm">storage</i>
+            {% set used_mb = (current_user.total_data_size or 0) / (1024 * 1024) %}
+            {% if current_user.user_type == 'guest' %}
+              {% set remaining_mb = 50 - used_mb %}
+              <span id="storageText">{{ "%.1f"|format(used_mb) }} / {{ "%.1f"|format(remaining_mb if remaining_mb > 0 else 0) }} MB</span>
+            {% else %}
+              <span id="storageText">{{ "%.1f"|format(used_mb) }} MB</span>
+            {% endif %}
+          </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.assets') }}">
+            <i class="material-icons mr-2 text-sm">photo</i>Picture Assets
+          </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.profile') }}">
+            <i class="material-icons mr-2 text-sm">person</i>Profile
+          </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openExportImportModal()">
+            <i class="material-icons mr-2 text-sm">import_export</i>Export/Import Data
+          </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openSettingsModal()">
+            <i class="material-icons mr-2 text-sm">settings</i>Settings
+          </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.logout') }}">
+            <i class="material-icons mr-2 text-sm">logout</i>Logout
+          </a></li>
+        </ul>
+      </div>
+
+      <!-- Brand / User Greeting -->
+      <a class="text-xl font-semibold text-white hover:text-gray-200 no-underline flex items-center" href="{{ url_for('folders.view_folder', folder_id=current_folder_id or current_user.folders[0].id) }}">
+        Hi {{ current_user.username }}, welcome to MioSpace
         {%- if current_user.user_type %}
           <span class="ml-2 text-gray-300 text-xs font-medium uppercase px-2 py-0.5 rounded user-type-badge" title="{{ current_user.user_type }}">{{ current_user.user_type|capitalize }}</span>
         {%- endif %}
@@ -103,69 +119,8 @@ html,body{background-color:var(--bg);color:var(--text-primary);background-image:
       
       <!-- Navigation Items -->
       <div class="flex items-center space-x-4">
-
         <!-- TelemetryPanel: Oscilloscope-style diagnostic display -->
         {% include 'p2/telemetry_panel_partial.html' %}
-
-        <!-- Switch To Dropdown -->
-        <div class="relative dropdown">
-          <button id="switchBtn" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200 flex items-center">
-            Switch to
-            <i class="material-icons ml-1 text-sm">arrow_drop_down</i>
-          </button>
-          <ul id="switchDropdown" class="absolute right-0 top-full mt-1 w-48 dropdown-custom hidden z-50">
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('core_blueprint.landing') }}">
-              <i class="material-icons mr-2 text-sm">home</i>Home
-            </a></li>
-
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p3_bp.chatbot') }}">
-              <i class="material-icons mr-2 text-sm">chat</i>MioChat
-            </a></li>
-
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p1_bp.product1') }}">
-              <i class="material-icons mr-2 text-sm">calculate</i>MioCalc
-            </a></li>
-
-          </ul>
-        </div>
-
-        <!-- User Dropdown -->
-        <div class="relative dropdown">
-          <button id="userBtn" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200 flex items-center" aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown">
-            User
-            <i class="material-icons ml-1 text-sm">arrow_drop_down</i>
-          </button>
-          <!-- Anchor user dropdown to the right side so it opens leftwards near screen edges.
-               Add 'dropdown-menu-end' so Popper (if present) uses bottom-end placement and avoids overflow. -->
-          <ul id="userDropdown" class="absolute right-0 top-full mt-1 w-48 dropdown-custom hidden z-50 dropdown-menu-end" role="menu" aria-labelledby="userBtn">
-            <li id="userStorageItem"><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="#" onclick="event.preventDefault();">
-              <i class="material-icons mr-2 text-sm">storage</i>
-              {% set used_mb = (current_user.total_data_size or 0) / (1024 * 1024) %}
-              {% if current_user.user_type == 'guest' %}
-                {% set remaining_mb = 50 - used_mb %}
-                <span id="storageText">Used/Remaining: {{ "%.1f"|format(used_mb) }} MB / {{ "%.1f"|format(remaining_mb if remaining_mb > 0 else 0) }} MB</span>
-              {% else %}
-                <span id="storageText">Used: {{ "%.1f"|format(used_mb) }} MB (Unlimited)</span>
-              {% endif %}
-            </a></li>
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.assets') }}">
-              <i class="material-icons mr-2 text-sm">photo</i>Picture Assets
-            </a></li>
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.profile') }}">
-              <i class="material-icons mr-2 text-sm">person</i>Profile
-            </a></li>
-
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openExportImportModal()">
-              <i class="material-icons mr-2 text-sm">import_export</i>Export/Import Data
-            </a></li>
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openSettingsModal()">
-              <i class="material-icons mr-2 text-sm">settings</i>Settings
-            </a></li>
-            <li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.logout') }}">
-              <i class="material-icons mr-2 text-sm">logout</i>Logout
-            </a></li>
-          </ul>
-        </div>
       </div>
     </div>
   </div>
@@ -216,6 +171,49 @@ document.addEventListener('visibilitychange', function() {
 // Initial call after DOM ready
 document.addEventListener('DOMContentLoaded', function() {
   updateStorageText();
+});
+</script>
+
+<!-- Main Menu Dropdown Handler -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const mainMenuBtn = document.getElementById('mainMenuBtn');
+  const mainMenuDropdown = document.getElementById('mainMenuDropdown');
+  
+  if (mainMenuBtn && mainMenuDropdown) {
+    // Toggle dropdown on button click
+    mainMenuBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isHidden = mainMenuDropdown.classList.contains('hidden');
+      
+      // Close all other dropdowns first
+      document.querySelectorAll('.dropdown-custom').forEach(dd => dd.classList.add('hidden'));
+      
+      if (isHidden) {
+        mainMenuDropdown.classList.remove('hidden');
+        mainMenuBtn.setAttribute('aria-expanded', 'true');
+      } else {
+        mainMenuDropdown.classList.add('hidden');
+        mainMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!mainMenuBtn.contains(e.target) && !mainMenuDropdown.contains(e.target)) {
+        mainMenuDropdown.classList.add('hidden');
+        mainMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    
+    // Close dropdown when clicking a link inside it
+    mainMenuDropdown.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function() {
+        mainMenuDropdown.classList.add('hidden');
+        mainMenuBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
 });
 </script>
 
@@ -486,6 +484,19 @@ document.addEventListener('DOMContentLoaded', function () {
 #switchBtn:hover, #userBtn:hover {
   background: var(--bg-tertiary) !important;
   color: var(--text-primary) !important;
+}
+
+/* MioSpace logo styling - two-tone like MioHub */
+.miospace-logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.miospace-logo .mio {
+  color: #ffffff;
+}
+.miospace-logo .space {
+  color: var(--accent);
 }
 </style>
 

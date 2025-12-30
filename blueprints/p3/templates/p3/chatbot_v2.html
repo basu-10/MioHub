@@ -463,6 +463,60 @@
       overflow-y: auto;
       max-height: 600px;
     }
+
+    .chat-entry { display: flex; flex-direction: column; gap: 6px; }
+    .chat-entry.items-end { align-items: flex-end; }
+    .chat-entry.items-start { align-items: flex-start; }
+
+    .chat-action-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .chat-entry:hover .chat-action-bar,
+    .chat-entry.actions-visible .chat-action-bar {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .chat-entry.editing .bubble-user {
+      outline: 2px dashed var(--accent);
+      outline-offset: 2px;
+    }
+
+    .chat-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .chat-action-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(20, 184, 166, 0.1);
+    }
+
+    .chat-action-bar.align-end { align-self: flex-end; }
+    .chat-action-bar.align-start { align-self: flex-start; }
     
     /* Style scrollbars for bubbles */
     .bubble-user::-webkit-scrollbar,
@@ -862,26 +916,49 @@
           <div id="chat-box" class="scroll-slim overflow-y-auto">
             <div class="max-w-4xl mx-auto space-y-4">
               {% if current_session %}
+                {% set last_user_message_id = None %}
                 {% for chat in chats %}
                   {% if chat.role == "user" %}
+                  {% set last_user_message_id = chat.id %}
                   <div class="flex justify-end">
-                    <div class="bubble-user text-white p-3 rounded-2xl max-w-[70%]">
-                      <div class="text-xs text-black/70 mb-1">You</div>
-                      <div class="whitespace-pre-wrap">{{ chat.content }}</div>
+                    <div class="chat-entry items-end max-w-[70%]" data-role="user" data-message-id="{{ chat.id }}" data-raw-content="{{ chat.content|e }}">
+                      <div class="bubble-user text-white p-3 rounded-2xl w-full">
+                        <div class="text-xs text-black/70 mb-1">You</div>
+                        <div class="whitespace-pre-wrap chat-text">{{ chat.content }}</div>
+                      </div>
+                      <div class="chat-action-bar align-end">
+                        <button class="chat-action-btn" title="Copy" onclick="copyChatMessage(this)">
+                          <span class="material-icons" style="font-size: 18px;">content_copy</span>
+                        </button>
+                        <button class="chat-action-btn" title="Edit &amp; resend" onclick="startEditRequery(this)">
+                          <span class="material-icons" style="font-size: 18px;">edit</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                   {% else %}
                   <div class="flex justify-start">
-                    <div class="bubble-ai p-3 rounded-2xl max-w-[80%]">
-                      <div class="flex items-center gap-2 mb-1">
-                        <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
-                        {% if chat.model %}
-                        <span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">{{ chat.model }}</span>
-                        {% endif %}
+                    <div class="chat-entry items-start max-w-[80%]" data-role="assistant" data-message-id="{{ chat.id }}" data-parent-id="{{ last_user_message_id }}" data-raw-content="{{ chat.content|e }}">
+                      <div class="bubble-ai p-3 rounded-2xl w-full">
+                        <div class="flex items-center gap-2 mb-1">
+                          <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
+                          {% if chat.model %}
+                          <span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">{{ chat.model }}</span>
+                          {% endif %}
+                        </div>
+                        <div class="prose prose-invert max-w-none" data-markdown="{{ chat.content|e }}"></div>
                       </div>
-                      <div class="prose prose-invert max-w-none" data-markdown="{{ chat.content|e }}"></div>
+                      <div class="chat-action-bar align-start">
+                        <button class="chat-action-btn" title="Copy" onclick="copyChatMessage(this)">
+                          <span class="material-icons" style="font-size: 18px;">content_copy</span>
+                        </button>
+                        <button class="chat-action-btn" title="Report wrong answer" onclick="reportAnswer(this)">
+                          <span class="material-icons" style="font-size: 18px;">flag</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
+                  {% set last_user_message_id = None %}
                   {% endif %}
                 {% endfor %}
               {% else %}
@@ -893,9 +970,14 @@
             {% if current_session %}
             <div class="input-wrapper">
               <textarea id="user-input" rows="1" class="flex-1 resize-none focus:outline-none" placeholder="Type your message..."></textarea>
-              <button class="btn-ghost btn-solid" onclick="sendMessage()">Send</button>
+              <button id="send-button" class="btn-ghost btn-solid" onclick="sendMessage()">Send</button>
             </div>
-            <div class="text-xs text-[var(--muted)]">Press Enter to send, Shift+Enter for newline. Memory items marked off stay out of context.</div>
+            <div id="edit-mode-banner" class="hidden text-xs text-[var(--accent)] flex items-center gap-2">
+              <span class="material-icons" style="font-size: 16px;">edit</span>
+              <span>Editing a previous question. Sending will replace its answer.</span>
+              <button class="px-2 py-1 rounded bg-white/10 border border-white/10" onclick="resetEditMode()">Cancel</button>
+            </div>
+            <div id="input-hint" class="text-xs text-[var(--muted)]">Press Enter to send, Shift+Enter for newline. Memory items marked off stay out of context.</div>
             {% else %}
             <div class="text-center text-sm text-[var(--muted)]">Open or create a conversation to start.</div>
             {% endif %}
@@ -970,6 +1052,7 @@
     let isScrollLocked = false;
     let heroVisible = true;
     let heroDismissed = false;
+    let editState = { messageId: null };
 
     // ========== SIDEBAR MODULE ==========
     function applySidebarState() {
@@ -1217,6 +1300,144 @@
       }
     });
 
+    // ========== CHAT ENTRY UTILS MODULE ========== 
+    async function copyTextToClipboard(text, button) {
+      if (!text) {
+        alert('No text to copy');
+        return;
+      }
+
+      const icon = button ? button.querySelector('.material-icons') : null;
+      const originalIcon = icon ? icon.textContent : '';
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+
+        if (icon) {
+          icon.textContent = 'check';
+          setTimeout(() => { icon.textContent = originalIcon; }, 1000);
+        }
+      } catch (err) {
+        console.error('Error copying text:', err);
+        alert('Failed to copy text');
+        if (icon) icon.textContent = originalIcon;
+      }
+    }
+
+    function copyChatMessage(button) {
+      const entry = button.closest('.chat-entry');
+      if (!entry) return;
+      const text = entry.dataset.rawContent || entry.querySelector('.chat-text')?.textContent || '';
+      copyTextToClipboard(text, button);
+    }
+
+    function toggleActionBar(entry) {
+      if (!entry) return;
+      const alreadyVisible = entry.classList.contains('actions-visible');
+      document.querySelectorAll('.chat-entry.actions-visible').forEach(el => {
+        if (el !== entry) el.classList.remove('actions-visible');
+      });
+      if (alreadyVisible) {
+        entry.classList.remove('actions-visible');
+      } else {
+        entry.classList.add('actions-visible');
+      }
+    }
+
+    function attachChatEntryListeners(entry) {
+      if (!entry || entry.dataset.actionsBound === 'true') return;
+      entry.dataset.actionsBound = 'true';
+      entry.addEventListener('click', (event) => {
+        if (event.target.closest('.chat-action-btn')) return;
+        toggleActionBar(entry);
+      });
+    }
+
+    function updateEditModeUI(targetEntry) {
+      const banner = document.getElementById('edit-mode-banner');
+      const sendBtn = document.getElementById('send-button');
+      const hint = document.getElementById('input-hint');
+      document.querySelectorAll('.chat-entry.editing').forEach(el => el.classList.remove('editing'));
+
+      if (targetEntry) {
+        targetEntry.classList.add('editing');
+        if (banner) banner.classList.remove('hidden');
+        if (sendBtn) sendBtn.textContent = 'Update & resend';
+        if (hint) hint.textContent = 'Editing previous question. Sending will replace its answer.';
+      } else {
+        if (banner) banner.classList.add('hidden');
+        if (sendBtn) sendBtn.textContent = 'Send';
+        if (hint) hint.textContent = 'Press Enter to send, Shift+Enter for newline. Memory items marked off stay out of context.';
+      }
+    }
+
+    function resetEditMode() {
+      editState = { messageId: null };
+      updateEditModeUI(null);
+    }
+
+    function startEditRequery(button) {
+      const entry = button.closest('.chat-entry');
+      if (!entry || entry.dataset.role !== 'user') return;
+      if (!entry.dataset.messageId) {
+        alert('Message is still sending. Please wait.');
+        return;
+      }
+
+      editState = { messageId: entry.dataset.messageId };
+      const rawText = entry.dataset.rawContent || entry.querySelector('.chat-text')?.textContent || '';
+      const input = document.getElementById('user-input');
+      if (input) {
+        input.value = rawText;
+        input.focus();
+      }
+      updateEditModeUI(entry);
+    }
+
+    function findAssistantEntry(userMessageId) {
+      if (!userMessageId) return null;
+      return document.querySelector(`.chat-entry[data-role="assistant"][data-parent-id="${userMessageId}"]`);
+    }
+
+    async function reportAnswer(button) {
+      const entry = button.closest('.chat-entry');
+      if (!entry || entry.dataset.role !== 'assistant') return;
+      const messageId = entry.dataset.messageId;
+      if (!messageId) {
+        alert('Unable to report this message.');
+        return;
+      }
+
+      const reason = prompt('Tell us what went wrong (optional):', '') || '';
+      try {
+        const res = await fetch('/chat/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message_id: messageId, reason })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          alert('Thanks for the report. We will review this reply.');
+        } else {
+          alert(data.message || 'Reporting failed');
+        }
+      } catch (err) {
+        console.error('Error reporting message:', err);
+        alert('Reporting failed: ' + err.message);
+      }
+    }
+
     // ========== MEMORY LOAD/RENDER MODULE ==========
     async function loadMemoryItems() {
       try {
@@ -1289,35 +1510,8 @@
         alert('No text to copy');
         return;
       }
-      
       const btn = event ? event.target.closest('button') : null;
-      const original = btn ? btn.textContent : '';
-      
-      try {
-        // Try modern Clipboard API first
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          // Fallback for older browsers or non-HTTPS contexts
-          const textarea = document.createElement('textarea');
-          textarea.value = text;
-          textarea.style.position = 'fixed';
-          textarea.style.opacity = '0';
-          document.body.appendChild(textarea);
-          textarea.select();
-          const success = document.execCommand('copy');
-          document.body.removeChild(textarea);
-          if (!success) throw new Error('execCommand failed');
-        }
-        
-        if (btn) {
-          btn.textContent = '✓';
-          setTimeout(() => { btn.textContent = original; }, 1000);
-        }
-      } catch (e) {
-        console.error('Error copying to clipboard:', e);
-        alert('Failed to copy text: ' + e.message);
-      }
+      await copyTextToClipboard(text, btn);
     }
 
     // ========== MEMORY TOGGLE MODULE ==========
@@ -1403,22 +1597,157 @@
       }
     }
 
+    function buildUserRow({ id, text }) {
+      const row = document.createElement('div');
+      row.className = 'flex justify-end';
+      const entry = document.createElement('div');
+      entry.className = 'chat-entry items-end max-w-[70%]';
+      entry.dataset.role = 'user';
+      if (id) entry.dataset.messageId = id;
+      entry.dataset.rawContent = text;
+      entry.innerHTML = `
+        <div class="bubble-user text-white p-3 rounded-2xl w-full">
+          <div class="text-xs text-white/80 mb-1">You</div>
+          <div class="whitespace-pre-wrap chat-text">${escapeHtml(text)}</div>
+        </div>
+        <div class="chat-action-bar align-end">
+          <button class="chat-action-btn" title="Copy" onclick="copyChatMessage(this)">
+            <span class="material-icons" style="font-size: 18px;">content_copy</span>
+          </button>
+          <button class="chat-action-btn" title="Edit &amp; resend" onclick="startEditRequery(this)">
+            <span class="material-icons" style="font-size: 18px;">edit</span>
+          </button>
+        </div>
+      `;
+      row.appendChild(entry);
+      attachChatEntryListeners(entry);
+      return row;
+    }
+
+    function buildAssistantRow({ id, parentId, rawText, model }) {
+      const row = document.createElement('div');
+      row.className = 'flex justify-start';
+      const entry = document.createElement('div');
+      entry.className = 'chat-entry items-start max-w-[80%]';
+      entry.dataset.role = 'assistant';
+      if (id) entry.dataset.messageId = id;
+      if (parentId) entry.dataset.parentId = parentId;
+      entry.dataset.rawContent = rawText || '';
+      entry.innerHTML = `
+        <div class="bubble-ai p-3 rounded-2xl w-full">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
+            ${model ? `<span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">${escapeHtml(model)}</span>` : ''}
+          </div>
+          <div class="prose prose-invert max-w-none chat-text" data-markdown=""></div>
+        </div>
+        <div class="chat-action-bar align-start">
+          <button class="chat-action-btn" title="Copy" onclick="copyChatMessage(this)">
+            <span class="material-icons" style="font-size: 18px;">content_copy</span>
+          </button>
+          <button class="chat-action-btn" title="Report wrong answer" onclick="reportAnswer(this)">
+            <span class="material-icons" style="font-size: 18px;">flag</span>
+          </button>
+        </div>
+      `;
+      const proseEl = entry.querySelector('[data-markdown]');
+      if (proseEl) {
+        proseEl.dataset.markdown = rawText || '';
+      }
+      row.appendChild(entry);
+      attachChatEntryListeners(entry);
+      return row;
+    }
+
+    async function requeryExistingMessage(message, activeMemory) {
+      const chatBox = document.getElementById('chat-box');
+      if (!chatBox) return;
+      const container = chatBox.querySelector('.max-w-4xl');
+      const targetEntry = document.querySelector(`.chat-entry[data-role="user"][data-message-id="${editState.messageId}"]`);
+      if (!targetEntry) {
+        alert('Original message not found.');
+        resetEditMode();
+        return;
+      }
+
+      const userRow = targetEntry.closest('.flex');
+      targetEntry.dataset.rawContent = message;
+      const textEl = targetEntry.querySelector('.chat-text');
+      if (textEl) textEl.textContent = message;
+
+      try {
+        const res = await fetch('/chat/requery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message_id: editState.messageId, message, memory: activeMemory })
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Server returned ${res.status}: ${errorText}`);
+        }
+
+        const data = await res.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        targetEntry.dataset.messageId = data.user_message_id;
+
+        const existingAssistant = findAssistantEntry(editState.messageId);
+        if (existingAssistant) {
+          const rowToRemove = existingAssistant.closest('.flex');
+          if (rowToRemove) {
+            rowToRemove.remove();
+          } else {
+            existingAssistant.remove();
+          }
+        }
+
+        const newAssistantRow = buildAssistantRow({
+          id: data.assistant_message_id,
+          parentId: data.user_message_id,
+          rawText: data.reply || '',
+          model: data.model
+        });
+
+        if (userRow) {
+          userRow.insertAdjacentElement('afterend', newAssistantRow);
+        } else {
+          container.appendChild(newAssistantRow);
+        }
+
+        renderMarkdownContainers();
+        chatBox.scrollTop = chatBox.scrollHeight;
+        resetEditMode();
+      } catch (e) {
+        console.error('Requery failed:', e);
+        alert(`Error requerying message: ${e.message || e}`);
+      }
+    }
+
     async function sendMessage() {
       const input = document.getElementById('user-input');
       const message = (input.value || '').trim();
       if (!message) return;
 
+      const activeMemory = memoryItems.filter(m => m.enabled !== false).map(m => m.text);
+
+      if (editState.messageId) {
+        await requeryExistingMessage(message, activeMemory);
+        return;
+      }
+
       const chatBox = document.getElementById('chat-box');
+      if (!chatBox) return;
       const container = chatBox.querySelector('.max-w-4xl');
 
-      const userDiv = document.createElement('div');
-      userDiv.className = 'flex justify-end';
-      userDiv.innerHTML = `<div class="bubble-user text-white p-3 rounded-2xl max-w-[70%]"><div class="text-xs text-white/80 mb-1">You</div><div class="whitespace-pre-wrap">${escapeHtml(message)}</div></div>`;
-      container.appendChild(userDiv);
+      const userRow = buildUserRow({ id: null, text: message });
+      container.appendChild(userRow);
+      const userEntry = userRow.querySelector('.chat-entry');
       chatBox.scrollTop = chatBox.scrollHeight;
       input.value = '';
 
-      const activeMemory = memoryItems.filter(m => m.enabled !== false).map(m => m.text);
       try {
         const res = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ message, memory: activeMemory })});
         
@@ -1433,56 +1762,25 @@
         if (data.error) {
           throw new Error(data.error);
         }
-        
-        // Safe markdown parsing with fallback
-        let html;
-        try {
-          if (typeof marked !== 'undefined' && marked && marked.parse) {
-            html = marked.parse(data.reply || '', {
-              highlight: function(code, lang) {
-                if (typeof hljs === 'undefined' || !hljs) return code;
-                try {
-                  if (hljs.getLanguage && hljs.getLanguage(lang)) {
-                    return hljs.highlight(code, { language: lang }).value;
-                  }
-                  if (hljs.highlightAuto) {
-                    return hljs.highlightAuto(code).value;
-                  }
-                } catch (hlError) {
-                  console.warn('Highlight error:', hlError);
-                }
-                return code;
-              }
-            });
-          } else {
-            // Fallback if marked is not loaded
-            html = escapeHtml(data.reply || '').replace(/\n/g, '<br>');
-          }
-        } catch (parseError) {
-          console.error('Markdown parse error:', parseError);
-          // Fallback to plain text with line breaks
-          html = escapeHtml(data.reply || '').replace(/\n/g, '<br>');
+
+        if (userEntry && data.user_message_id) {
+          userEntry.dataset.messageId = data.user_message_id;
+          userEntry.dataset.rawContent = message;
         }
-        
-        const aiDiv = document.createElement('div');
-        aiDiv.className = 'flex justify-start';
-        aiDiv.innerHTML = `
-          <div class="bubble-ai p-3 rounded-2xl max-w-[80%]">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
-              ${data.model ? `<span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">${data.model}</span>` : ''}
-            </div>
-            <div class="prose prose-invert max-w-none">${html}</div>
-          </div>`;
-        container.appendChild(aiDiv);
+        const aiRow = buildAssistantRow({
+          id: data.assistant_message_id,
+          parentId: data.user_message_id,
+          rawText: data.reply || '',
+          model: data.model
+        });
+        container.appendChild(aiRow);
+        renderMarkdownContainers();
         chatBox.scrollTop = chatBox.scrollHeight;
       } catch (e) {
         console.error('Send failed:', e);
-        // Show more detailed error message
         const errorMsg = e.message || 'Unknown error occurred';
         alert(`Error sending message: ${errorMsg}`);
         
-        // Add error bubble to chat
         const errorDiv = document.createElement('div');
         errorDiv.className = 'flex justify-start';
         errorDiv.innerHTML = `
@@ -1630,6 +1928,7 @@
       setTimeout(() => {
         renderMarkdownContainers();
       }, 200);
+      document.querySelectorAll('.chat-entry').forEach(attachChatEntryListeners);
       
       loadMemoryItems();
       initInputResize();

@@ -1,6 +1,6 @@
 /* folder_view.css - Dedicated CSS for folder view page */
 
-/* Page background: subtle teal radial highlight like register.html */
+/* Page background: sophisticated multi-tone gradient with teal and ochre accents */
 html,body{
     height:100%;
     min-height:100vh;
@@ -10,8 +10,9 @@ html,body{
     color:var(--text-primary);
     background-color:var(--bg);
     background-image:
-        radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),
-        linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+      radial-gradient(circle at 12% 18%, rgba(20,184,166,0.06) 0%, rgba(20,184,166,0.02) 14%, transparent 36%),
+      radial-gradient(circle at 88% 82%, rgba(179,139,44,0.04) 0%, rgba(179,139,44,0.01) 18%, transparent 42%),
+      linear-gradient(135deg,var(--bg) 0%, var(--card) 45%, var(--bg-quaternary) 100%);
     background-size:cover;
     background-repeat:no-repeat;
     background-attachment:fixed;
@@ -49,7 +50,7 @@ html,body{
 
 /* Pin badge shown on items that are pinned */
 .pin-badge {
-  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  background: linear-gradient(135deg, var(--rich-brown) 0%, var(--cocoa-brown) 100%);
   color: var(--white);
   padding: 3px 8px;
   border-radius: 999px;
@@ -57,7 +58,7 @@ html,body{
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  box-shadow: 0 4px 14px rgba(245,158,11,0.25);
+  box-shadow: 0 4px 14px rgba(109,76,61,0.35);
   white-space: nowrap;
 }
 .pin-badge .material-icons { 
@@ -117,8 +118,9 @@ html,body{
   padding: 0.75rem 1rem;
   border-radius: 12px;
   border: 1px solid var(--border-primary);
+  border-top: 2px solid rgba(179,139,44,0.15);
   background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12), 0 1px 0 rgba(179,139,44,0.08);
   backdrop-filter: blur(6px);
   overflow-x: auto; /* keep compact on small screens by allowing horizontal scroll */
   overflow-y: visible; /* allow dropdowns to extend beyond the sticky bar vertically */
@@ -178,7 +180,7 @@ html,body{
     }
 
     .breadcrumb-link:hover {
-      background: var(--hover-overlay);
+      background: linear-gradient(135deg, var(--hover-overlay) 0%, rgba(179,139,44,0.06) 100%);
       color: var(--text-primary);
       text-decoration: none;
     }
@@ -191,7 +193,7 @@ html,body{
     }
 
     .breadcrumb-custom .breadcrumb-item.active .breadcrumb-current {
-      background: var(--bg-tertiary);
+      background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(179,139,44,0.04) 100%);
       padding: 6px 10px;
       border-radius: 7px;
     }
@@ -205,7 +207,7 @@ html,body{
       border-radius: 10px;
       transition: all 0.2s ease;
       position: relative; 
-      color: #c8cebdd7;
+      color: var(--text-primary);
       z-index: 10;
     box-sizing: border-box;
     overflow: hidden; /* Prevent children from overflowing and pushing layout */
@@ -215,7 +217,10 @@ html,body{
   background: var(--bg-quaternary);
   border-color: var(--border-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 0 20px rgba(20, 184, 166, 0.08),
+    0 0 10px rgba(179, 139, 44, 0.06);
 }
     /* Ensure card body doesn't clip dropdown */
     .card-body {
@@ -553,42 +558,84 @@ html,body{
   border: 1px solid var(--border-primary);
 }
 
-.folders-section .section-title .material-icons { color: var(--accent); }
+.folders-section .section-title .material-icons { color: var(--ochre); }
 .folders-section .count-badge {
-  background: var(--accent);
-  box-shadow: 0 2px 8px rgba(20,184,166,0.3);
+  background: linear-gradient(135deg, var(--ochre) 0%, var(--ochre-strong) 100%);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(179,139,44,0.35);
+  border: none;
 }
 
-.notes-section .section-title .material-icons { color: var(--accent); }
+.notes-section .section-title .material-icons { color: var(--rich-brown); }
 .notes-section .count-badge {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--rich-brown) 0%, var(--cocoa-brown) 100%);
   color: var(--white);
-  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  box-shadow: 0 2px 8px rgba(109,76,61,0.35);
   border: none;
 }
 
-.boards-section .section-title .material-icons { color: var(--accent); }
+.boards-section .section-title .material-icons { color: var(--rich-brown); }
 .boards-section .count-badge {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--rich-brown) 0%, var(--cocoa-brown) 100%);
   color: var(--white);
-  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  box-shadow: 0 2px 8px rgba(109,76,61,0.35);
   border: none;
 }
 
-.combined-section .section-title .material-icons { color: var(--accent); }
+.combined-section .section-title .material-icons { color: var(--rich-brown); }
 .combined-section .count-badge {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--rich-brown) 0%, var(--cocoa-brown) 100%);
   color: var(--white);
-  box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  box-shadow: 0 2px 8px rgba(109,76,61,0.35);
   border: none;
 }
 
-/* File Sections - Apply green accent styling to all file types */
+/* File Sections - Default styling */
 .files-section .section-title .material-icons { color: var(--accent); }
 .files-section .count-badge {
   background: var(--accent);
   color: var(--white);
   box-shadow: 0 2px 8px rgba(20,184,166,0.22);
+  border: none;
+}
+
+/* Mio* Proprietary File Sections - Brown gradient */
+#infinite-whiteboards .section-title .material-icons,
+#graph-workspaces .section-title .material-icons,
+#todo .section-title .material-icons,
+#timeline .section-title .material-icons { 
+  color: var(--rich-brown); 
+}
+
+#infinite-whiteboards .count-badge,
+#graph-workspaces .count-badge,
+#todo .count-badge,
+#timeline .count-badge {
+  background: linear-gradient(135deg, var(--rich-brown) 0%, var(--cocoa-brown) 100%);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(109,76,61,0.35);
+  border: none;
+}
+
+/* 3rd Party File Sections - Blue-gray gradient */
+#markdown .section-title .material-icons,
+#code .section-title .material-icons,
+#diagram .section-title .material-icons,
+#table .section-title .material-icons,
+#pdf .section-title .material-icons,
+#blocks .section-title .material-icons { 
+  color: #5A9BD5; 
+}
+
+#markdown .count-badge,
+#code .count-badge,
+#diagram .count-badge,
+#table .count-badge,
+#pdf .count-badge,
+#blocks .count-badge {
+  background: linear-gradient(135deg, #5A9BD5 0%, #4A7BA7 100%);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(90,155,213,0.35);
   border: none;
 }
 
@@ -765,12 +812,12 @@ html,body{
 }
 
 /* Section-Specific Background Colors */
-/* Folders - distinct color for folder organization */
+/* Folders - warm ochre accent for folder organization */
 .folders-section {
-  background: #16221f60 !important;
+  background: linear-gradient(135deg, rgba(179,139,44,0.08) 0%, rgba(143,109,30,0.05) 100%) !important;
 }
 
-/* Mio* products - unified color for proprietary products */
+/* Mio* proprietary products - brown palette for all proprietary products */
 .notes-section,
 .boards-section,
 .combined-section,
@@ -778,17 +825,17 @@ html,body{
 #graph-workspaces,
 #todo,
 #timeline {
-  background: #1a1e2260 !important;
+  background: linear-gradient(135deg, rgba(109,76,61,0.08) 0%, rgba(74,55,40,0.05) 100%) !important;
 }
 
-/* 3rd party files - separate color for external integrations */
+/* 3rd party files - blue-gray gradient for external integrations */
 #markdown,
 #code,
 #diagram,
 #table,
 #pdf,
 #blocks {
-  background: #22201660 !important;
+  background: linear-gradient(135deg, rgba(90,155,213,0.08) 0%, rgba(74,123,167,0.05) 100%) !important;
 }
 
 /* Paste animation for newly inserted items */
@@ -820,6 +867,7 @@ html,body{
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
 .section-nav {
   background: var(--bg-quaternary);
   border-radius: 14px;
@@ -893,8 +941,10 @@ html,body{
 }
 
 .nav-top-btn:hover {
-  background: linear-gradient(135deg, var(--blue-80) 0%, var(--emerald-80) 100%);
-  box-shadow: 0 3px 10px rgba(20, 184, 166, 0.2);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--ochre) 100%);
+  color: var(--white);
+  border-color: var(--ochre);
+  box-shadow: 0 3px 10px rgba(20, 184, 166, 0.24), 0 3px 10px rgba(179, 139, 44, 0.18);
 }
 
 /* Responsive adjustments for mobile */
@@ -1116,7 +1166,17 @@ html {
 
 /* Folder Description Styling */
 /* Shared description styling for folders, notes, and boards */
-.folder-description,
+.folder-description {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(179, 139, 44, 0.08);
+  border-left: 3px solid var(--ochre);
+  border-radius: 6px;
+  max-height: 4.5em; /* ~3 lines */
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
 .note-description,
 .board-description {
   margin-top: 0.75rem;
@@ -1141,7 +1201,11 @@ html {
   background: transparent;
 }
 
-.folder-description::-webkit-scrollbar-thumb,
+.folder-description::-webkit-scrollbar-thumb {
+  background: var(--ochre);
+  border-radius: 2px;
+}
+
 .note-description::-webkit-scrollbar-thumb,
 .board-description::-webkit-scrollbar-thumb {
   background: var(--accent-green);
@@ -1165,7 +1229,7 @@ html {
 }
 
 .detail-table thead {
-  background: rgba(20, 184, 166, 0.1);
+  background: linear-gradient(135deg, rgba(179,139,44,0.08) 0%, rgba(20,184,166,0.08) 100%);
   color: var(--text-primary);
   border-bottom: 2px solid var(--border-primary);
 }
@@ -1443,10 +1507,10 @@ html {
   position: absolute;
   left: 100%;
   top: 0;
-  background: var(--bg-quaternary);
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
   border-radius: 10px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   min-width: 170px;
   padding: 6px;
   margin-left: 6px;
