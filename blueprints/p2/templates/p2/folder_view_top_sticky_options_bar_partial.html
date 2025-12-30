@@ -27,6 +27,79 @@
 .breadcrumb-item + .breadcrumb-item::before {
   color: var(--muted) !important;
 }
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .folder-sticky-bar {
+    padding: 0.3rem 0.75rem !important;
+    min-height: 36px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .folder-sticky-bar .gap-2,
+  .folder-sticky-bar .gap-3 {
+    gap: 0.5rem !important;
+  }
+
+  /* Make breadcrumb more compact on mobile */
+  .breadcrumb {
+    font-size: 0.8rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  .breadcrumb-link .material-icons {
+    font-size: 14px !important;
+  }
+
+  .breadcrumb-link span,
+  .breadcrumb-current span {
+    display: none; /* Hide text, show only icons on mobile */
+  }
+
+  .breadcrumb-item + .breadcrumb-item::before {
+    font-size: 0.75rem !important;
+  }
+
+  /* Make buttons more compact on mobile */
+  .folder-sticky-bar .btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .folder-sticky-bar .btn .material-icons {
+    font-size: 16px !important;
+  }
+
+  .folder-sticky-bar .btn-text {
+    display: none; /* Hide button text, show only icons */
+  }
+
+  /* Hide less critical buttons on mobile */
+  .folder-sticky-bar .btn-outline-secondary:not(.batch-operation) {
+    padding: 0.2rem 0.35rem !important;
+  }
+}
+
+@media (max-width: 575px) {
+  .folder-sticky-bar {
+    padding: 0.25rem 0.5rem !important;
+    min-height: 32px !important;
+  }
+
+  /* Even more compact on very small screens */
+  .breadcrumb {
+    font-size: 0.75rem !important;
+  }
+
+  .folder-sticky-bar .btn {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  .folder-sticky-bar .btn .material-icons {
+    font-size: 14px !important;
+  }
+}
 </style>
 <script>
   localStorage.setItem("currentFolderId", "{{ folder.id }}");

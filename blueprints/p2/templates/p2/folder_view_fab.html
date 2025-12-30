@@ -209,6 +209,98 @@
   bottom: 0;
   width: 8px;
 }
+
+/* Mobile responsive adjustments for FAB */
+@media (max-width: 768px) {
+  /* Position FAB better on mobile */
+  .fixed.bottom-0.right-0.p-3 {
+    padding: 0.75rem !important;
+    bottom: 0.5rem !important;
+    right: 0.5rem !important;
+  }
+
+  /* Make FAB slightly smaller on mobile */
+  .fab-button {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .floating-paste-button {
+    width: 50px !important;
+    height: 50px !important;
+    bottom: 4rem !important;
+    right: 0.5rem !important;
+  }
+
+  .fab-button .material-icons,
+  .floating-paste-button .material-icons {
+    font-size: 22px !important;
+  }
+
+  /* Make dropdown more mobile-friendly */
+  .fab-dropdown {
+    width: 200px !important;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .fab-dropdown-item {
+    padding: 10px 12px !important;
+    font-size: 0.9rem !important;
+  }
+
+  .fab-dropdown-item .material-icons {
+    font-size: 20px !important;
+  }
+
+  /* Position submenu better on mobile */
+  .fab-submenu {
+    right: 100% !important;
+    left: auto !important;
+    margin-right: 0.5rem !important;
+    width: 180px !important;
+  }
+}
+
+@media (max-width: 575px) {
+  /* Even smaller FAB on very small screens */
+  .fab-button {
+    width: 45px !important;
+    height: 45px !important;
+  }
+
+  .floating-paste-button {
+    width: 45px !important;
+    height: 45px !important;
+    bottom: 3.5rem !important;
+  }
+
+  .fab-button .material-icons,
+  .floating-paste-button .material-icons {
+    font-size: 20px !important;
+  }
+
+  .fab-dropdown {
+    width: calc(100vw - 1rem) !important;
+    right: 0.5rem !important;
+  }
+
+  .fab-dropdown-item {
+    padding: 12px 10px !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Stack submenu on top instead of side on very small screens */
+  .fab-submenu {
+    position: fixed !important;
+    bottom: 50% !important;
+    right: 0.5rem !important;
+    left: 0.5rem !important;
+    margin: 0 !important;
+    width: auto !important;
+    transform: translateY(50%);
+  }
+}
 </style>
 
 <script>

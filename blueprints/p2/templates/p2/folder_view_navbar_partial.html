@@ -43,6 +43,62 @@
   #exportImportModal .bg-gray-800 { 
     background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important; 
   }
+
+  /* Mobile responsive navbar */
+  @media (max-width: 768px) {
+    .px-6 {
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+    }
+
+    .h-16 {
+      height: 3.5rem !important;
+    }
+
+    /* Hide less critical navbar elements on mobile */
+    .user-type-badge {
+      font-size: 0.65rem !important;
+      padding: 0.1rem 0.35rem !important;
+    }
+
+    /* Make navbar text smaller on mobile */
+    nav .text-xl {
+      font-size: 1.1rem !important;
+    }
+
+    nav .text-sm {
+      font-size: 0.75rem !important;
+    }
+
+    /* Adjust dropdown positioning for mobile */
+    .dropdown-custom {
+      max-width: 90vw;
+      left: 5vw !important;
+      right: 5vw !important;
+    }
+
+    /* Telemetry panel mobile adjustments */
+    .telemetry-widget {
+      max-width: 120px;
+    }
+  }
+
+  @media (max-width: 575px) {
+    .px-6 {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+
+    /* Hide non-essential text on very small screens */
+    .hidden-xs-text {
+      display: none !important;
+    }
+
+    /* Make MioSpace brand smaller */
+    nav .text-xl {
+      font-size: 1rem !important;
+    }
+  }
 </style>
 <!-- Navbar inherits z-index from header container (950) -->
 <nav class="bg-gray-900 text-white w-full shadow-lg">
