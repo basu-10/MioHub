@@ -21,51 +21,70 @@ from extensions import db
 from sqlalchemy.dialects.mysql import JSON, LONGTEXT, VARCHAR, TEXT
 from sqlalchemy.orm import validates
 
-# Valid file type discriminators
-VALID_FILE_TYPES = {
-    # Proprietary products (with proprietary_ prefix)
+# File type constants organized by usage pattern
+# 
+# Upload Type Mapping Documentation:
+# - UPLOADABLE_FILE_TYPES must be mapped to CREATABLE_FILE_TYPES for database storage
+# - See .DOCS/reference/file-types/FILE_UPLOAD_TYPE_MAPPING.md for conversion strategy
+#
+# Quick Reference:
+#   txt, py, js, ts, html, css, yaml, json, env, md  →  'code' (Monaco Editor)
+#   docx, doc                                        →  'proprietary_note' (EasyMDE)
+#   xlsx, xls                                        →  'table' (Luckysheet)
+#   pdf                                              →  'pdf' (view only)
+#   image                                            →  'image' (TOAST UI Image Editor)
+#   unknown                                          →  'code' (plaintext fallback)
+
+# Types that can be created through the UI ("New File" menu)
+CREATABLE_FILE_TYPES = {
+    # Proprietary products
     'proprietary_note',              # MioNote (rich HTML editor)
     'proprietary_whiteboard',        # MioDraw (canvas drawing)
     'proprietary_blocks',            # MioBook (combined documents)
     'proprietary_infinite_whiteboard',  # Infinite Canvas
     'proprietary_graph',             # Graph knowledge workspace
     
-    # Third-party integrations (no prefix)
-    'markdown',     # Toast UI Editor (markdown and plain text)
-    'code',         # Monaco Editor
-    'todo',         # SortableJS
-    'diagram',      # Monaco JSON
-    'table',        # Luckysheet
-    'blocks',       # Editor.js
+    # Third-party editors
+    'markdown',     # Toast UI Editor
+    'code',         # Monaco Editor (supports: txt, py, js, ts, html, css, yaml, json, md)
+    'todo',         # SortableJS task lists
+    'diagram',      # Monaco JSON diagrams
+    'table',        # Luckysheet spreadsheets (target for xlsx/xls uploads)
+    'blocks',       # Editor.js blocks
     'timeline',     # Timeline with events
-    
-    # Binary/Upload types
-    'pdf',          # PDF files (binary storage) (not yet implemented)
-    
-    # Text file types (for chat attachments and code files)
-    'txt',          # Plain text files
-    'py',           # Python source files
-    'js',           # JavaScript files
-    'ts',           # TypeScript files
-    'html',         # HTML files
-    'css',          # CSS files
-    'yaml',         # YAML configuration files
-    'json',         # JSON data files
-    'env',          # Environment variable files
-    'md',           # Markdown files (alternate to 'markdown')
-    
-    # Document types
-    'docx',         # Microsoft Word documents
-    'doc',          # Legacy Word documents
-    'xlsx',         # Microsoft Excel spreadsheets
-    'xls',          # Legacy Excel spreadsheets
-    
-    # Image types
-    'image',        # Generic image type (PNG, JPG, etc.)
-    
-    # Unknown/fallback
-    'unknown',      # Unrecognized file types
 }
+
+# Types that can be uploaded as attachments (chat, file uploads)
+# NOTE: These must be MAPPED to CREATABLE_FILE_TYPES during upload processing
+UPLOADABLE_FILE_TYPES = {
+    # Text/code files → map to 'code' type with Monaco language detection
+    'txt',          # Plain text files → code (plaintext)
+    'py',           # Python source files → code (python)
+    'js',           # JavaScript files → code (javascript)
+    'ts',           # TypeScript files → code (typescript)
+    'html',         # HTML files → code (html)
+    'css',          # CSS files → code (css)
+    'yaml',         # YAML configuration files → code (yaml)
+    'json',         # JSON data files → code (json)
+    'env',          # Environment variable files → code (plaintext)
+    'md',           # Markdown files → code (markdown)
+    
+    # Document files → map to appropriate editors
+    'pdf',          # PDF documents → pdf (view only, no edit)
+    'docx',         # Microsoft Word documents → proprietary_note (with conversion)
+    'doc',          # Legacy Word documents → proprietary_note (with conversion)
+    'xlsx',         # Microsoft Excel spreadsheets → table (Luckysheet format)
+    'xls',          # Legacy Excel spreadsheets → table (Luckysheet format)
+    
+    # Image files → no mapping needed
+    'image',        # Generic image type (PNG, JPG, WEBP, etc.) → image
+    
+    # Fallback → map to 'code' with plaintext
+    'unknown',      # Unrecognized file types → code (plaintext, best effort)
+}
+
+# Combined set for File model validation (union of creatable + uploadable)
+VALID_FILE_TYPES = CREATABLE_FILE_TYPES | UPLOADABLE_FILE_TYPES
 
 
 class GraphWorkspace(db.Model):
@@ -297,7 +316,13 @@ class File(db.Model):
     def validate_type(self, key, value):
         """Validate file type is in allowed list."""
         if value not in VALID_FILE_TYPES:
-            raise ValueError(f"Invalid file type: {value}. Must be one of: {', '.join(sorted(VALID_FILE_TYPES))}")
+            creatable = ', '.join(sorted(CREATABLE_FILE_TYPES))
+            uploadable = ', '.join(sorted(UPLOADABLE_FILE_TYPES))
+            raise ValueError(
+                f"Invalid file type: {value}. "
+                f"Creatable types: {creatable}. "
+                f"Uploadable types: {uploadable}."
+            )
         return value
 
 

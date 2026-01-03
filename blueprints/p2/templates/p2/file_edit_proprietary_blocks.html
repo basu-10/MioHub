@@ -583,11 +583,20 @@
         
         /* Editor Wrappers */
         .markdown-editor-wrapper,
-        .code-editor-wrapper,
-        .editorjs-wrapper {
+        .code-editor-wrapper {
             border: 1px solid #2a2c31;
             border-radius: 6px;
             overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .editorjs-wrapper {
+            border: 1px solid #2a2c31;
+            border-radius: 6px;
+            overflow-y: auto;
+            overflow-x: hidden;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -612,10 +621,16 @@
             overflow: hidden !important;
         }
         
-        .markdown-editor,
+        .markdown-editor {
+            height: 100%;
+            flex: 1;
+        }
+        
         .editorjs-editor {
             height: 100%;
             flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         
         .toastui-editor-defaultUI .ProseMirror {

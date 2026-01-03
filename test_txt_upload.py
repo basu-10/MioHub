@@ -2,22 +2,45 @@
 Quick test script to verify .txt file upload functionality for chat attachments
 Run this after starting the Flask app to test the integration
 """
-from blueprints.p2.models import VALID_FILE_TYPES
+from blueprints.p2.models import VALID_FILE_TYPES, CREATABLE_FILE_TYPES, UPLOADABLE_FILE_TYPES
 from utilities_main import get_file_type_from_extension, parse_document_for_chat
 import tempfile
 import os
 
 def test_txt_in_valid_types():
     """Test that 'txt' is in VALID_FILE_TYPES"""
-    print("Testing VALID_FILE_TYPES...")
+    print("Testing file type constants...")
+    
+    # Test that txt is in uploadable types
+    assert 'txt' in UPLOADABLE_FILE_TYPES, "'txt' not found in UPLOADABLE_FILE_TYPES"
+    print("✓ 'txt' is in UPLOADABLE_FILE_TYPES")
+    
+    # Test that txt is in valid types (union)
     assert 'txt' in VALID_FILE_TYPES, "'txt' not found in VALID_FILE_TYPES"
     print("✓ 'txt' is in VALID_FILE_TYPES")
     
-    # Also check other text file types
+    # Test separation of creatable vs uploadable
+    assert 'proprietary_note' in CREATABLE_FILE_TYPES, "proprietary_note should be creatable"
+    assert 'proprietary_note' not in UPLOADABLE_FILE_TYPES, "proprietary_note should not be uploadable"
+    assert 'txt' in UPLOADABLE_FILE_TYPES, "txt should be uploadable"
+    assert 'txt' not in CREATABLE_FILE_TYPES, "txt should not be creatable"
+    print("✓ CREATABLE_FILE_TYPES and UPLOADABLE_FILE_TYPES are properly separated")
+    
+    # Test that VALID_FILE_TYPES is the union
+    assert VALID_FILE_TYPES == CREATABLE_FILE_TYPES | UPLOADABLE_FILE_TYPES, \
+        "VALID_FILE_TYPES should be union of CREATABLE and UPLOADABLE"
+    print("✓ VALID_FILE_TYPES is correctly computed as union")
+    
+    # Check counts
+    print(f"✓ CREATABLE_FILE_TYPES: {len(CREATABLE_FILE_TYPES)} types")
+    print(f"✓ UPLOADABLE_FILE_TYPES: {len(UPLOADABLE_FILE_TYPES)} types")
+    print(f"✓ VALID_FILE_TYPES: {len(VALID_FILE_TYPES)} types (union)")
+    
+    # Also check other text file types are in uploadable
     text_types = ['py', 'js', 'ts', 'html', 'css', 'yaml', 'json', 'env', 'md']
     for ftype in text_types:
-        assert ftype in VALID_FILE_TYPES, f"'{ftype}' not found in VALID_FILE_TYPES"
-    print(f"✓ All text file types present: {', '.join(text_types)}")
+        assert ftype in UPLOADABLE_FILE_TYPES, f"'{ftype}' not found in UPLOADABLE_FILE_TYPES"
+    print(f"✓ All text file types present in UPLOADABLE_FILE_TYPES: {', '.join(text_types)}")
 
 
 def test_file_type_detection():
@@ -72,12 +95,29 @@ def test_txt_parser():
 
 
 def test_all_supported_extensions():
-    """Print all supported file types"""
-    print("\nAll supported file types:")
-    sorted_types = sorted(VALID_FILE_TYPES)
-    for i, ftype in enumerate(sorted_types, 1):
+    """Print all supported file types by category"""
+    print("\n" + "="*60)
+    print("File Types by Category:")
+    print("="*60)
+    
+    print("\nCreatable File Types (UI menu):")
+    sorted_creatable = sorted(CREATABLE_FILE_TYPES)
+    for i, ftype in enumerate(sorted_creatable, 1):
         print(f"  {i:2d}. {ftype}")
-    print(f"\nTotal: {len(VALID_FILE_TYPES)} file types supported")
+    print(f"  Total: {len(CREATABLE_FILE_TYPES)} types")
+    
+    print("\nUploadable File Types (attachments):")
+    sorted_uploadable = sorted(UPLOADABLE_FILE_TYPES)
+    for i, ftype in enumerate(sorted_uploadable, 1):
+        print(f"  {i:2d}. {ftype}")
+    print(f"  Total: {len(UPLOADABLE_FILE_TYPES)} types")
+    
+    print("\nAll Valid File Types (union):")
+    sorted_all = sorted(VALID_FILE_TYPES)
+    for i, ftype in enumerate(sorted_all, 1):
+        print(f"  {i:2d}. {ftype}")
+    print(f"  Total: {len(VALID_FILE_TYPES)} types")
+    print("="*60)
 
 
 if __name__ == '__main__':

@@ -136,7 +136,7 @@ def create_attachment_from_upload(session_id, user_id, uploaded_file):
     try:
         # Calculate hash for deduplication
         file_hash = calculate_file_hash(temp_path)
-        file_type = get_file_type_from_extension(uploaded_file.filename)
+        upload_type, db_type, language = get_file_type_from_extension(uploaded_file.filename)
         file_size = os.path.getsize(temp_path)
         
         # Check for duplicate
@@ -147,9 +147,14 @@ def create_attachment_from_upload(session_id, user_id, uploaded_file):
             file_record = existing_file
             bytes_added = 0
         else:
-            # Create new File record
-            # Determine content storage based on file type
-            if file_type == 'image':
+            # Create new File record with mapped type
+            # Determine content storage based on database type
+            metadata = {
+                'original_filename': uploaded_file.filename,
+                'original_type': upload_type,  # Preserve original extension
+            }
+            
+            if db_type == 'image':
                 # Use existing image handling from p2
                 from blueprints.p2.utils import save_uploaded_image_for_user
                 image_filename, img_bytes = save_uploaded_image_for_user(temp_path, user_id)
@@ -160,33 +165,86 @@ def create_attachment_from_upload(session_id, user_id, uploaded_file):
                     type='image',
                     title=uploaded_file.filename,
                     content_text=f"/static/uploads/images/{image_filename}",
-                    metadata_json={'original_filename': uploaded_file.filename}
+                    metadata_json=metadata
                 )
                 bytes_added = img_bytes
+                
+            elif db_type == 'code':
+                # Text/code files → content_text with language metadata
+                with open(temp_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    file_content = f.read()
+                
+                metadata['language'] = language  # Monaco language identifier
+                file_record = File(
+                    owner_id=user_id,
+                    folder_id=session_folder.id,
+                    type='code',
+                    title=uploaded_file.filename,
+                    content_text=file_content,
+                    metadata_json=metadata
+                )
+                bytes_added = file_size
+                
+            elif db_type == 'pdf':
+                # PDF → content_blob (view only)
+                with open(temp_path, 'rb') as f:
+                    file_content = f.read()
+                
+                metadata['mime_type'] = 'application/pdf'
+                file_record = File(
+                    owner_id=user_id,
+                    folder_id=session_folder.id,
+                    type='pdf',
+                    title=uploaded_file.filename,
+                    content_blob=file_content,
+                    metadata_json=metadata
+                )
+                bytes_added = file_size
+                
+            elif db_type in ['proprietary_note', 'table']:
+                # Documents requiring conversion (docx, xlsx) → store as blob temporarily
+                # TODO: Implement proper conversion to note/table formats
+                with open(temp_path, 'rb') as f:
+                    file_content = f.read()
+                
+                metadata['needs_conversion'] = True
+                metadata['target_type'] = db_type
+                metadata['mime_type'] = f'application/{upload_type}'
+                
+                file_record = File(
+                    owner_id=user_id,
+                    folder_id=session_folder.id,
+                    type=db_type,
+                    title=uploaded_file.filename,
+                    content_blob=file_content,  # Temporary blob storage
+                    metadata_json=metadata
+                )
+                bytes_added = file_size
+                
             else:
-                # Store as blob for binary files
+                # Fallback: store as blob
                 with open(temp_path, 'rb') as f:
                     file_content = f.read()
                 
                 file_record = File(
                     owner_id=user_id,
                     folder_id=session_folder.id,
-                    type=file_type,
+                    type=db_type,
                     title=uploaded_file.filename,
                     content_blob=file_content,
-                    metadata_json={'original_filename': uploaded_file.filename}
+                    metadata_json=metadata
                 )
                 bytes_added = file_size
             
             db.session.add(file_record)
             db.session.flush()
         
-        # Create ChatAttachment link
+        # Create ChatAttachment link (store upload_type for UI display)
         attachment = ChatAttachment(
             session_id=session_id,
             file_id=file_record.id,
             original_filename=uploaded_file.filename,
-            file_type=file_type,
+            file_type=upload_type,  # Use upload_type for UI/icon display
             file_size=file_size,
             file_hash=file_hash,
             summary_status='pending'

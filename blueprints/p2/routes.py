@@ -5,7 +5,7 @@ from flask import Flask, json, render_template, request, jsonify, session, redir
 from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlparse
 
-from blueprints.p2.models import  User, Folder, File, VALID_FILE_TYPES
+from blueprints.p2.models import  User, Folder, File, VALID_FILE_TYPES, CREATABLE_FILE_TYPES, UPLOADABLE_FILE_TYPES
 from extensions import db, login_manager
 from sqlalchemy.exc import OperationalError
 import time

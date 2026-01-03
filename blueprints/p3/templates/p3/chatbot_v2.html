@@ -1164,7 +1164,7 @@
           <i class="material-icons" style="font-size: 24px;">attach_file</i>
           <p style="margin: 0; font-size: 0.85rem;">Drag & drop files here or <label for="fileInput" class="upload-link">browse</label></p>
           <input type="file" id="fileInput" multiple style="display: none;" 
-                 accept=".pdf,.docx,.doc,.xlsx,.xls,.png,.jpg,.jpeg,.gif,.webp,.py,.js,.ts,.html,.css,.md,.txt,.yaml,.json,.env">
+                 accept=".pdf,.docx,.doc,.xlsx,.xls,.png,.jpg,.jpeg,.gif,.webp,.svg,.py,.js,.ts,.html,.css,.md,.txt,.yaml,.yml,.json,.env">
         </div>
         
         <!-- Attached Files List -->
@@ -2341,22 +2341,36 @@
     }
 
     function getFileIcon(fileType) {
+      // Map upload file types to Material Icons
+      // Matches mapping in utilities_main.py get_file_type_from_extension()
       const icons = {
+        // Document types
         'pdf': 'picture_as_pdf',
         'docx': 'description',
         'doc': 'description',
         'xlsx': 'table_chart',
         'xls': 'table_chart',
+        
+        // Image types
         'image': 'image',
+        
+        // Code/text types (all map to 'code' in database)
         'py': 'code',
         'js': 'code',
+        'ts': 'code',
         'html': 'code',
         'css': 'code',
-        'ts': 'code',
-        'md': 'article',
-        'txt': 'article',
         'yaml': 'settings',
+        'yml': 'settings',
         'json': 'data_object',
+        'env': 'lock',
+        'txt': 'article',
+        'md': 'article',
+        
+        // Unknown fallback
+        'unknown': 'help_outline',
+        
+        // Upload in progress
         'uploading': 'hourglass_empty'
       };
       return icons[fileType] || 'insert_drive_file';

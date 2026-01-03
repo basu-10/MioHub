@@ -222,31 +222,57 @@ def parse_document_for_chat(file_path, file_type):
 
 
 def get_file_type_from_extension(filename):
-    """Map file extension to internal file type identifier"""
+    """Map file extension to internal file type identifier
+    
+    Returns tuple: (upload_type, db_type, language)
+    - upload_type: Original extension for UI display and metadata
+    - db_type: Database-supported type from CREATABLE_FILE_TYPES
+    - language: Monaco Editor language identifier (for code types)
+    
+    See: .DOCS/reference/file-types/FILE_UPLOAD_TYPE_MAPPING.md
+    """
     ext = Path(filename).suffix.lower().lstrip('.')
     
-    # Image types
-    if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']:
-        return 'image'
+    # Image types → 'image' (no mapping needed)
+    if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg']:
+        return ('image', 'image', None)
     
-    # Map extensions to types
-    type_map = {
-        'pdf': 'pdf',
-        'docx': 'docx',
-        'doc': 'doc',
-        'xlsx': 'xlsx',
-        'xls': 'xls',
-        'py': 'py',
-        'js': 'js',
-        'ts': 'ts',
+    # Text/code files → 'code' type with Monaco language
+    code_map = {
+        'txt': 'plaintext',
+        'py': 'python',
+        'js': 'javascript',
+        'ts': 'typescript',
         'html': 'html',
         'css': 'css',
         'yaml': 'yaml',
         'yml': 'yaml',
-        'env': 'env',
         'json': 'json',
-        'md': 'md',
-        'txt': 'txt',
+        'md': 'markdown',
+        'env': 'plaintext',
     }
+    if ext in code_map:
+        return (ext, 'code', code_map[ext])
     
-    return type_map.get(ext, 'unknown')
+    # Document files → map to native editors
+    doc_map = {
+        'pdf': ('pdf', 'pdf', None),          # View only
+        'docx': ('docx', 'proprietary_note', None),  # Convert to note
+        'doc': ('doc', 'proprietary_note', None),    # Convert to note
+        'xlsx': ('xlsx', 'table', None),      # Convert to Luckysheet
+        'xls': ('xls', 'table', None),        # Convert to Luckysheet
+    }
+    if ext in doc_map:
+        return doc_map[ext]
+    
+    # Unknown → code with plaintext fallback
+    return ('unknown', 'code', 'plaintext')
+
+
+def get_file_type_for_chat_attachment(filename):
+    """Legacy wrapper for chat attachments - returns upload_type only
+    
+    DEPRECATED: Use get_file_type_from_extension() for new code
+    """
+    upload_type, _, _ = get_file_type_from_extension(filename)
+    return upload_type
