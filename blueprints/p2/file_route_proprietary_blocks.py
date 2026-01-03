@@ -45,6 +45,34 @@ def process_miobook_images(content_data, user_id):
 
     return content_data, total_bytes
 
+
+def generate_default_miobook_title():
+    """Return the default MioBook title using the shared timestamp convention."""
+    return f"MioBook {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+
+def extract_miobook_submission(request):
+    """Extract user-provided fields for MioBook creation/update from JSON or form payloads."""
+    payload = request.get_json(silent=True) if request.is_json else None
+
+    if payload:
+        raw_title = (payload.get('title') or '').strip()
+        raw_folder_id = payload.get('folder_id')
+        content_json_raw = payload.get('content_json', '{}')
+    else:
+        raw_title = (request.form.get('title', '') or '').strip()
+        raw_folder_id = request.form.get('folder_id', type=int)
+        content_json_raw = request.form.get('content_json', '{}')
+
+    folder_id = None
+    if raw_folder_id is not None:
+        try:
+            folder_id = int(raw_folder_id)
+        except (TypeError, ValueError):
+            folder_id = None
+
+    return raw_title, folder_id, content_json_raw
+
 @combined_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_combined():
@@ -69,9 +97,9 @@ def new_combined():
 
     if request.method == 'POST':
         try:
-            # Get form data
-            title = request.form.get('title', '').strip() or f"MioBook {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            folder_id = request.form.get("folder_id", type=int) or current_folder_id
+            raw_title, requested_folder_id, content_json_raw = extract_miobook_submission(request)
+            title = raw_title or generate_default_miobook_title()
+            folder_id = requested_folder_id or current_folder_id
             
             # Validate folder ownership
             if folder_id:
@@ -80,18 +108,19 @@ def new_combined():
                     folder_id = current_folder_id
 
             # Get the combined content (new format with version)
-            content_json_str = request.get_json().get('content_json', '{}') if request.is_json else request.form.get('content_json', '{}')
-            
             # Parse the combined content to validate it
             try:
-                content_data = json.loads(content_json_str)
+                if isinstance(content_json_raw, dict):
+                    content_data = content_json_raw
+                else:
+                    content_data = json.loads(content_json_raw)
                 if not isinstance(content_data, dict):
                     content_data = {'version': '1.0', 'blocks': []}
                 if 'version' not in content_data:
                     content_data['version'] = '1.0'
                 if 'blocks' not in content_data or not isinstance(content_data['blocks'], list):
                     content_data['blocks'] = []
-            except json.JSONDecodeError:
+            except (TypeError, json.JSONDecodeError):
                 content_data = {'version': '1.0', 'blocks': []}
             
             # Persist embedded images (e.g., whiteboard) to disk for dedupe/storage accounting
@@ -160,7 +189,8 @@ def new_combined():
     return render_template('p2/file_edit_proprietary_blocks.html', 
                          folders=folders, 
                          current_folder=current_folder,
-                         folder_id=current_folder_id)
+                         folder_id=current_folder_id,
+                         default_title=generate_default_miobook_title())
 
 @combined_bp.route('/edit/<int:document_id>', methods=['GET', 'POST'])
 @login_required
@@ -290,7 +320,8 @@ def edit_combined(document_id):
                          document=document,  # Keep for backward compatibility
                          folders=folders, 
                          current_folder=current_folder,
-                         folder_id=current_folder.id if current_folder else None)
+                         folder_id=current_folder.id if current_folder else None,
+                         default_title=document.title or generate_default_miobook_title())
 
 
 # Legacy save_note_block and save_board_block routes removed

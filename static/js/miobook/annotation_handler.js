@@ -15,12 +15,33 @@ class AnnotationHandler {
             return;
         }
         
-        console.log(`[Annotation] Initializing ${annotationId}`);
-        
         const editorContainer = annotationEl.querySelector('.annotation-editor');
         if (!editorContainer) {
             console.error('[Annotation] Editor container not found');
             return;
+        }
+        
+        // Check if Editor.js is already attached to this DOM element
+        if (editorContainer.dataset.editorjsInitialized === 'true') {
+            console.log('[Annotation] Editor.js already attached:', annotationId);
+            return;
+        }
+        
+        // Check if already initialized in the Map
+        if (this.instances.has(annotationId)) {
+            console.log('[Annotation] Already has instance in Map:', annotationId);
+            return;
+        }
+        
+        // Mark immediately to prevent race conditions
+        editorContainer.dataset.editorjsInitialized = 'true';
+        
+        console.log(`[Annotation] Initializing ${annotationId}`);
+        
+        // Wait for Editor.js to be loaded
+        if (typeof EditorJS === 'undefined') {
+            console.log('[Annotation] Waiting for Editor.js...');
+            await this.waitForEditorJS();
         }
         
         // Parse existing content
@@ -53,11 +74,14 @@ class AnnotationHandler {
                 console.warn('[Annotation] Failed to parse content:', e, contentAttr);
             }
         }
-        
-        // Wait for Editor.js to be loaded
-        if (typeof EditorJS === 'undefined') {
-            console.log('[Annotation] Waiting for Editor.js...');
-            await this.waitForEditorJS();
+
+        // Collapse multiple empty paragraphs into a single placeholder block to avoid duplicate prompts
+        if (Array.isArray(initialData.blocks) && initialData.blocks.length > 1) {
+            const emptyParagraph = (b) => b?.type === 'paragraph' && (!b.data?.text || b.data.text.trim() === '');
+            const allEmpty = initialData.blocks.every(emptyParagraph);
+            if (allEmpty) {
+                initialData = { blocks: [initialData.blocks[0] || { type: 'paragraph', data: { text: '' } }] };
+            }
         }
         
         try {
@@ -110,6 +134,7 @@ class AnnotationHandler {
             
         } catch (error) {
             console.error('[Annotation] Failed to initialize:', error);
+            editorContainer.dataset.editorjsInitialized = 'false';
         }
     }
     
@@ -125,12 +150,32 @@ class AnnotationHandler {
     }
     
     async getContent(annotationEl) {
-        const annotationId = annotationEl.dataset.annotationId;
+        // Get annotation ID from the card or the element itself
+        const card = annotationEl.closest('.annotation-card') || annotationEl;
+        const annotationId = card.dataset.annotationId || annotationEl.dataset.annotationId;
+        
+        console.log('[Annotation] getContent called for:', annotationId);
+        
         const editor = this.instances.get(annotationId);
         
         if (!editor) {
             console.warn('[Annotation] No editor instance found for', annotationId);
-            return null;
+            console.log('[Annotation] Available instances:', Array.from(this.instances.keys()));
+            
+            // Try to get content from data attribute as fallback
+            const editorContainer = card.querySelector('.annotation-editor');
+            if (editorContainer && editorContainer.dataset.content) {
+                try {
+                    let parsed = JSON.parse(editorContainer.dataset.content);
+                    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+                    console.log('[Annotation] Returning fallback content from data attribute');
+                    return parsed;
+                } catch (e) {
+                    console.warn('[Annotation] Failed to parse fallback content:', e);
+                }
+            }
+            
+            return { blocks: [] };
         }
         
         try {

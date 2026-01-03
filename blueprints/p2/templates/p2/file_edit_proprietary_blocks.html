@@ -67,9 +67,21 @@
     
     <style>
         body {
-            background: #0d0e10;
+            background:
+                radial-gradient(120% 120% at 20% 20%, rgba(22, 163, 144, 0.08), transparent 48%),
+                radial-gradient(110% 110% at 80% 0%, rgba(234, 179, 8, 0.06), transparent 44%),
+                linear-gradient(160deg, #0c111a 0%, #0b1018 35%, #0a0c14 100%);
             color: #e1e3e5;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            background-attachment: fixed;
+        }
+        
+        /* Page shell stretches to 95% viewport while keeping a comfortable cap */
+        .page-shell {
+            width: min(95vw, 1800px);
+            margin: 0 auto;
+            padding: 0 0 40px;
         }
         
         /* Block Row Wrapper - Two Column Layout */
@@ -81,6 +93,11 @@
             min-height: 500px;
             max-height: 500px;
             align-items: stretch;
+            background: linear-gradient(145deg, rgba(18, 27, 36, 0.82), rgba(10, 16, 24, 0.94));
+            border: 1px solid rgba(20, 184, 166, 0.08);
+            border-radius: 14px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.02);
+            padding: 12px;
         }
         
         .block-row.dragging {
@@ -109,10 +126,223 @@
             transition: width 0.3s ease;
             display: flex;
             flex-direction: column;
+            background: linear-gradient(180deg, rgba(20, 184, 166, 0.08), rgba(20, 184, 166, 0.02));
+            border: 1px solid rgba(20, 184, 166, 0.15);
+            border-radius: 10px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 24px rgba(0, 0, 0, 0.22);
+            padding: 12px;
+            gap: 12px;
         }
         
         .annotation-column.hidden {
             display: none;
+        }
+
+        .annotation-scroll-wrapper {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 4px 4px 10px;
+            flex: 1;
+            align-items: stretch;
+            scrollbar-gutter: stable both-edges;
+            scroll-behavior: smooth;
+            position: relative;
+        }
+
+        .annotation-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: #16181c;
+            border: 1px solid #2a2c31;
+            border-radius: 6px;
+            gap: 10px;
+        }
+
+        .annotation-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            padding: 2px 10px;
+            background: rgba(20, 184, 166, 0.12);
+            border: 1px solid #1f4a46;
+            color: #0af5d4;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .annotation-nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .annotation-nav-btn {
+            background: transparent;
+            border: 1px solid #2a2c31;
+            color: #7a7f8a;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+        }
+
+        .annotation-nav-btn:hover:not(:disabled) {
+            background: rgba(20, 184, 166, 0.12);
+            border-color: #14b8a6;
+            color: #14b8a6;
+        }
+
+        .annotation-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .annotation-nav-btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .annotation-toolbar-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #c3c6cb;
+            font-weight: 600;
+        }
+
+        .annotation-add-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #1f2a2f;
+            color: #14b8a6;
+            border: 1px solid #1f4a46;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .annotation-add-btn:hover {
+            background: rgba(20, 184, 166, 0.15);
+            border-color: #14b8a6;
+            color: #0af5d4;
+        }
+
+        .annotation-add-btn:active {
+            transform: translateY(1px);
+        }
+
+        .annotation-scroll-wrapper::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .annotation-scroll-wrapper::-webkit-scrollbar-thumb {
+            background: #14b8a6;
+            border-radius: 999px;
+            border: 2px solid #1a1b1f;
+        }
+
+        .annotation-card {
+            flex: 0 0 360px;
+            max-width: 420px;
+            min-height: 100%;
+        }
+
+        .annotation-card .block-item {
+            height: 100%;
+        }
+
+        .annotation-menu {
+            position: fixed;
+            background: #1a1b1f;
+            border: 1px solid #2a2c31;
+            border-radius: 10px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+            padding: 8px;
+            min-width: 240px;
+            z-index: 3000;
+        }
+
+        .annotation-menu h4 {
+            margin: 4px 8px 8px;
+            font-size: 12px;
+            color: #9aa8ad;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .annotation-menu .annotation-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #c3c6cb;
+            transition: all 0.12s ease;
+        }
+
+        .annotation-menu .annotation-option:hover {
+            background: rgba(20, 184, 166, 0.12);
+            color: #14b8a6;
+        }
+
+        .annotation-menu .annotation-option i {
+            width: 18px;
+            text-align: center;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 4000;
+        }
+
+        .toast {
+            background: #1a1b1f;
+            border: 1px solid #2a2c31;
+            color: #c3c6cb;
+            padding: 10px 14px;
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            animation: fadeIn 0.15s ease;
+        }
+
+        .toast.success {
+            border-color: #0f766e;
+            color: #14b8a6;
+        }
+
+        .toast.warn {
+            border-color: #a16207;
+            color: #facc15;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         /* Resizer Handle */
@@ -146,26 +376,28 @@
         
         /* Block Styles */
         .block-item {
-            background: #1a1b1f;
-            border: 1px solid #2a2c31;
-            border-radius: 8px;
+            background: linear-gradient(165deg, #101722, #0c141c 55%, #0b1219 100%);
+            border: 1px solid #1f2a35;
+            border-radius: 10px;
             transition: all 0.2s ease;
             height: 100%;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
         }
         
         /* Annotation Block */
         .annotation-block {
-            background: #1a1b1f;
-            border: 1px solid #2a2c31;
-            border-radius: 8px;
+            background: linear-gradient(165deg, #111924, #0c141c 55%, #0b1219 100%);
+            border: 1px solid #1f2a35;
+            border-radius: 10px;
             transition: all 0.2s ease;
             height: 100%;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.26);
         }
         
         .annotation-block .annotation-header {
@@ -241,6 +473,19 @@
             background: rgba(255, 255, 255, 0.05);
             color: #c3c6cb;
         }
+
+        /* Hide selected controls until the user hovers or focuses the block */
+        .hover-reveal {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .block-item:hover .hover-reveal,
+        .block-item:focus-within .hover-reveal {
+            opacity: 1;
+            pointer-events: auto;
+        }
         
         /* Overflow Menu */
         .overflow-menu-btn {
@@ -309,45 +554,43 @@
         
         /* Insert Separator Line */
         .insert-separator {
-            position: relative;
-            height: 2px;
-            margin: 16px 0;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 12px;
+            margin: 16px 0;
+            padding: 10px 12px;
             cursor: pointer;
             transition: all 0.2s ease;
         }
         
         .insert-separator-line {
-            position: absolute;
-            width: 100%;
+            flex: 1;
             height: 1px;
-            background: linear-gradient(90deg, transparent, #3d4047 20%, #3d4047 80%, transparent);
-            opacity: 0.3;
+            background: linear-gradient(90deg, #3d4047, transparent);
+            opacity: 0.5;
             transition: all 0.2s ease;
         }
         
         .insert-separator:hover .insert-separator-line {
             opacity: 1;
             height: 2px;
-            background: linear-gradient(90deg, transparent, #14b8a6 20%, #14b8a6 80%, transparent);
+            background: linear-gradient(90deg, #14b8a6, transparent);
         }
         
         .insert-separator-trigger {
-            position: relative;
             background: #1a1b1f;
             border: 1px solid #3d4047;
             color: #7a7f8a;
             padding: 6px 16px;
             border-radius: 20px;
             font-size: 12px;
-            opacity: 0.5;
+            opacity: 0.7;
             transition: all 0.2s ease;
-            z-index: 10;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
+            order: -1; /* Keep the pill on the left even if DOM order varies */
+            flex-shrink: 0;
         }
         
         .insert-separator:hover .insert-separator-trigger {
@@ -601,6 +844,14 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* Make Editor.js blocks span most of the available width while leaving room for the two action buttons */
+        .editorjs-wrapper .ce-block__content,
+        .editorjs-wrapper .ce-toolbar__content {
+            max-width: none;
+            width: calc(100% - 80px);
+            margin-left: 62px;
+        }
         
         .monaco-editor {
             min-height: 200px;
@@ -674,7 +925,7 @@
             display: block;
         }
         
-        /* Insert Block Menu */
+        /* Insert Main Block Menu */
         .insert-block-menu {
             position: fixed;
             background: #2a2c31;
@@ -723,20 +974,27 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            background: #0d0e10;
-            padding: 20px 0;
-            margin-bottom: 20px;
+            background:
+                radial-gradient(120% 140% at 12% 0%, rgba(20, 184, 166, 0.12), transparent 42%),
+                radial-gradient(120% 140% at 88% -10%, rgba(234, 179, 8, 0.10), transparent 38%),
+                linear-gradient(145deg, #0f1722 0%, #0d141e 40%, #0b1018 100%);
+            padding: 22px 24px;
+            margin: 0 -12px 22px;
+            border-radius: 0 0 18px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(20, 184, 166, 0.06);
         }
         
         .document-title-input {
-            background: #1a1b1f;
-            border: 1px solid #2a2c31;
+            background: linear-gradient(180deg, #141b24, #0f161f);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             color: #e1e3e5;
             padding: 12px 16px;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 18px;
             font-weight: 600;
             width: 100%;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
         
         .document-title-input:focus {
@@ -819,7 +1077,7 @@
     </style>
 </head>
 <body>
-    <div class="max-w-5xl mx-auto px-4 py-6">
+    <div class="page-shell mx-auto px-4 py-6">
         <!-- Sticky Header -->
         <div class="sticky-header">
             <div class="flex items-center gap-4">
@@ -827,7 +1085,7 @@
                        id="documentTitle" 
                        class="document-title-input flex-1" 
                        placeholder="Untitled Document" 
-                       value="{{ file.title if file else '' }}">
+                      value="{{ file.title if file else default_title }}">
                 
                 <button onclick="window.MioBook.saveDocument()" 
                         class="save-document-btn px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-all flex items-center gap-2">
@@ -846,11 +1104,11 @@
         <div id="contentBlocks">
             <!-- Initial insert separator -->
             <div class="insert-separator" onclick="showInsertMenuAtSeparator(event, 0)">
-                <div class="insert-separator-line"></div>
                 <div class="insert-separator-trigger">
                     <i class="fas fa-plus"></i>
-                    <span>Insert Block</span>
+                    <span>Insert Main Block</span>
                 </div>
+                <div class="insert-separator-line"></div>
             </div>
             
             {% if file and file.content_json %}
@@ -858,57 +1116,88 @@
                 {% if content_data and content_data.blocks %}
                     {% set main_blocks = [] %}
                     {% set annotations = {} %}
-                    
-                    {# Separate main blocks from annotations #}
+
+                    {# Normalize blocks so legacy annotation records attach to parents #}
                     {% for block in content_data.blocks %}
                         {% if block.type == 'annotation' %}
-                            {% set _ = annotations.update({block.parentId: block}) %}
+                            {% if block.parentId %}
+                                {% if annotations.get(block.parentId) %}
+                                    {% set _ = annotations.get(block.parentId).append(block) %}
+                                {% else %}
+                                    {% set _ = annotations.update({block.parentId: [block]}) %}
+                                {% endif %}
+                            {% endif %}
                         {% else %}
                             {% set _ = main_blocks.append(block) %}
                         {% endif %}
                     {% endfor %}
-                    
-                    {# Render main blocks with their annotations #}
+
+                    {# Render main blocks with annotation containers #}
                     {% for block in main_blocks %}
-                        {% set annotation = annotations.get(block.id) %}
+                        {% set block_annotations = block.annotations if block.annotations is defined else annotations.get(block.id, []) %}
+                        {% set has_annotations = (block_annotations | length) > 0 %}
                         {% set split_ratio = block.splitRatio if block.splitRatio else 50 %}
-                        {% set main_width = split_ratio ~ '%' %}
-                        {% set annotation_width = (100 - split_ratio) ~ '%' %}
-                        
+                        {% set main_width = has_annotations and (split_ratio ~ '%') or '' %}
+                        {% set annotation_width = has_annotations and ((100 - split_ratio) ~ '%') or '' %}
+                        {% set show_annotations = block.annotationShow if block.annotationShow is defined else has_annotations %}
+
                         <!-- Block Row -->
-                        <div class="block-row" data-block-id="{{ block.id }}" data-split-ratio="{{ split_ratio }}" {% if annotation %}data-annotation-show="{% if block.annotationShow == false %}false{% else %}true{% endif %}"{% endif %}>
-                            <div class="main-block-column" style="width: {{ main_width if annotation else '' }}">
+                        <div class="block-row" data-block-id="{{ block.id }}" data-split-ratio="{{ split_ratio }}"{% if has_annotations %} data-annotation-show="{{ 'false' if show_annotations == false else 'true' }}"{% endif %}>
+                            <div class="main-block-column" style="{{ 'width: ' ~ main_width if has_annotations else '' }}">
+                                {% set container_type = 'main' %}
+                                {% set has_annotations = has_annotations %}
+                                {% set annotation_show = show_annotations %}
                                 {% include 'p2/blocks/block_row_content.html' %}
                             </div>
-                            
-                            {% if annotation %}
+
+                            {% if has_annotations %}
+                                {% set block_main = block %}
                                 <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
-                                <div class="annotation-column{% if block.annotationShow == false %} hidden{% endif %}" style="width: {{ annotation_width }}">
-                                    <div class="annotation-block" data-annotation-id="{{ annotation.id }}" data-parent-id="{{ block.id }}">
-                                        <div class="annotation-header">
-                                            <div class="flex items-center gap-2 flex-1">
-                                                <i class="fas fa-comment-alt text-teal-400"></i>
-                                                <span class="block-type-label">Annotation</span>
+                                <div class="annotation-column{% if show_annotations == false %} hidden{% endif %}" style="width: {{ annotation_width }}" data-parent-id="{{ block.id }}">
+                                    <div class="annotation-toolbar">
+                                        <div class="annotation-toolbar-title">
+                                            <i class="fas fa-comment-alt text-teal-400"></i>
+                                            <span>Annotations</span>
+                                            <span class="annotation-count" aria-label="Annotation count" data-annotation-count="{{ block_annotations | length }}">{{ block_annotations | length }}</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="annotation-nav-controls">
+                                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'prev')" title="Previous Annotation">
+                                                    <i class="fas fa-angle-double-left"></i>
+                                                </button>
+                                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'next')" title="Next Annotation">
+                                                    <i class="fas fa-angle-double-right"></i>
+                                                </button>
                                             </div>
-                                            <button type="button" class="annotation-control-btn remove" onclick="window.MioBook.deleteAnnotation(this)" title="Delete Annotation">
-                                                <i class="fas fa-trash"></i>
+                                            <button type="button" class="annotation-add-btn" onclick="window.MioBook.openAnnotationMenu(this)">
+                                                <i class="fas fa-plus"></i> Add
                                             </button>
                                         </div>
-                                        <div class="annotation-content">
-                                            <div class="annotation-editor" data-content="{{ annotation.content | tojson | forceescape }}"></div>
-                                        </div>
+                                    </div>
+                                    <div class="annotation-scroll-wrapper" data-parent-id="{{ block.id }}">
+                                        {% for annotation_block in block_annotations %}
+                                            {% set annotation_id = annotation_block.id if annotation_block.id else 'annotation-' ~ loop.index0 %}
+                                            <div class="annotation-card" data-annotation-id="{{ annotation_id }}">
+                                                {% set container_type = 'annotation' %}
+                                                {% set parent_id = block_main.id %}
+                                                {% set has_annotations = false %}
+                                                {% set block = annotation_block %}
+                                                {% include 'p2/blocks/block_row_content.html' %}
+                                                {% set block = block_main %}
+                                            </div>
+                                        {% endfor %}
                                     </div>
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Insert separator after each block row -->
                         <div class="insert-separator" onclick="showInsertMenuAtSeparator(event, {{ loop.index }})">
-                            <div class="insert-separator-line"></div>
                             <div class="insert-separator-trigger">
                                 <i class="fas fa-plus"></i>
-                                <span>Insert Block</span>
+                                <span>Insert Main Block</span>
                             </div>
+                            <div class="insert-separator-line"></div>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -920,7 +1209,7 @@
         <div class="text-center py-20 text-graphite-400">
             <i class="fas fa-file-alt text-6xl mb-4 text-graphite-700"></i>
             <h3 class="text-xl font-medium mb-2">Start building your document</h3>
-            <p class="mb-6">Click the "Insert Block" line above to add your first content block</p>
+            <p class="mb-6">Click the "Insert Main Block" line above to add your first content block</p>
         </div>
         {% endif %}
     </div>
@@ -994,23 +1283,23 @@
             // Initialize existing blocks
             await initializeExistingBlocks();
             
-            // Initialize existing annotation blocks
-            const annotationBlocks = document.querySelectorAll('.annotation-block');
-            console.log(`[MioBook] Found ${annotationBlocks.length} annotation blocks`);
-            for (const annotationEl of annotationBlocks) {
-                await window.AnnotationHandler?.initialize(annotationEl);
-            }
+            // Initialize annotation containers (sortables + toggle states)
+            window.MioBook.initializeAllAnnotationContainers();
             
             // Initialize layout-dependent UI
             const refreshLayoutUI = () => {
                 initializeOverflowMenus();
                 window.MioBook?.updateAllResizeHandles();
+                window.MioBook?.initializeAllAnnotationContainers();
             };
 
             refreshLayoutUI();
 
             // Re-check on window resize
             window.addEventListener('resize', debounce(refreshLayoutUI, 200));
+            
+            // Set up MutationObserver to auto-initialize newly added blocks
+            setupBlockObserver();
         });
         
         async function initializeExistingBlocks() {
@@ -1067,6 +1356,9 @@
                             break;
                         case 'whiteboard':
                             await window.AtramentHandler?.initialize(blockEl);
+                            break;
+                        case 'annotation':
+                            await window.AnnotationHandler?.initialize(blockEl.closest('.annotation-card') || blockEl);
                             break;
                     }
                 } catch (e) {
@@ -1142,6 +1434,107 @@
             }
         }
         
+        // Helper function to initialize a single block (used by observer and existing blocks)
+        async function initializeSingleBlock(blockEl) {
+            if (!blockEl || blockEl.classList.contains('annotation-block')) return;
+            
+            const already = blockEl.dataset.mbInit;
+            if (already === '1' || already === 'in-progress') {
+                console.log('[MioBook] Block already initialized, skipping:', blockEl.dataset.blockId, already);
+                return;
+            }
+            
+            const type = blockEl.dataset.type;
+            blockEl.dataset.mbInit = 'in-progress';
+            
+            console.log(`[MioBook] Initializing new ${type} block`, blockEl.dataset.blockId);
+            
+            try {
+                switch (type) {
+                    case 'markdown':
+                        await window.MarkdownHandler?.initialize(blockEl);
+                        break;
+                    case 'todo':
+                        await window.TodoHandler?.initialize(blockEl);
+                        break;
+                    case 'code':
+                        await window.CodeHandler?.initialize(blockEl);
+                        break;
+                    case 'blocks':
+                        await window.EditorJSHandler?.initialize(blockEl);
+                        break;
+                    case 'whiteboard':
+                        await window.AtramentHandler?.initialize(blockEl);
+                        break;
+                }
+                blockEl.dataset.mbInit = '1';
+                blockEl.dataset.initState = 'ready';
+                console.log(`[MioBook] ${type} block initialized successfully`);
+            } catch (e) {
+                console.error(`[MioBook] Failed to initialize ${type} block:`, e);
+                blockEl.dataset.mbInit = 'failed';
+            }
+        }
+        
+        // Set up MutationObserver to watch for newly added blocks
+        function setupBlockObserver() {
+            const contentBlocks = document.getElementById('contentBlocks');
+            if (!contentBlocks) return;
+            
+            const observer = new MutationObserver(async (mutations) => {
+                const blocksToInit = [];
+                
+                for (const mutation of mutations) {
+                    if (mutation.type !== 'childList') continue;
+                    
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+                        
+                        // Check if it's a block-row (main blocks)
+                        if (node.classList?.contains('block-row')) {
+                            const blockItem = node.querySelector('.main-block-column .block-item');
+                            if (blockItem && blockItem.dataset.mbInit !== '1') {
+                                blocksToInit.push(blockItem);
+                            }
+                        }
+                        
+                        // Check if it's a block-item directly
+                        if (node.classList?.contains('block-item') && !node.classList.contains('annotation-block')) {
+                            if (node.dataset.mbInit !== '1') {
+                                blocksToInit.push(node);
+                            }
+                        }
+                        
+                        // Check descendants for annotation blocks
+                        const annotationCards = node.querySelectorAll?.('.annotation-card .block-item');
+                        annotationCards?.forEach(annBlock => {
+                            if (annBlock.dataset.mbInit !== '1') {
+                                console.log('[MioBook] New annotation block detected, initializing...');
+                                window.AnnotationHandler?.initialize(annBlock.closest('.annotation-card') || annBlock);
+                                annBlock.dataset.mbInit = '1';
+                            }
+                        });
+                    }
+                }
+                
+                // Initialize all detected blocks sequentially
+                if (blocksToInit.length > 0) {
+                    console.log(`[MioBook] ${blocksToInit.length} new block(s) detected, initializing...`);
+                    for (const block of blocksToInit) {
+                        await initializeSingleBlock(block);
+                    }
+                    console.log('[MioBook] All new blocks initialized');
+                }
+            });
+            
+            observer.observe(contentBlocks, {
+                childList: true,
+                subtree: true
+            });
+            
+            console.log('[MioBook] Block observer initialized');
+        }
+        
         function addBlock(type, position = null, referenceBlockId = null) {
             console.log('[MioBook] Adding block:', type, 'position:', position, 'ref:', referenceBlockId);
             window.MioBook.addBlock(type, position, referenceBlockId);
@@ -1186,7 +1579,7 @@
             }
         }
         
-        // Insert block menu handling
+        // Insert Main Block menu handling
         let currentInsertMenu = null;
         let currentInsertPosition = null;
         let currentInsertReference = null;
@@ -1362,7 +1755,7 @@
                 if (!overflowBtn) {
                     // Create overflow menu button
                     overflowBtn = document.createElement('button');
-                    overflowBtn.className = 'control-btn overflow-menu-btn';
+                    overflowBtn.className = 'control-btn overflow-menu-btn hover-reveal';
                     overflowBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i>';
                     overflowBtn.title = 'More options';
                     
@@ -1387,6 +1780,9 @@
                         }
                     });
                 }
+
+                // Ensure hover reveal class is present even if the button already existed
+                overflowBtn.classList.add('hover-reveal');
                 
                 // Ensure overflow button participates in layout measurements
                 overflowBtn.style.display = 'block';

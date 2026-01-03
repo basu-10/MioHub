@@ -1,5 +1,8 @@
 {# Block content template for block-row structure #}
-<div class="block-item" data-type="{{ block.type }}" data-block-id="{{ block.id }}">
+{% set container_type = container_type if container_type is defined else 'main' %}
+{% set has_annotations = has_annotations if has_annotations is defined else false %}
+{% set annotation_show = annotation_show if annotation_show is defined else (block.annotationShow if block.annotationShow is defined else true) %}
+<div class="block-item" data-type="{{ block.type }}" data-block-id="{{ block.id }}" data-container="{{ container_type }}"{% if parent_id is defined and parent_id %} data-parent-id="{{ parent_id }}"{% endif %}>
     <div class="block-header">
         <div class="drag-handle" title="Drag to reorder">
             <i class="fas fa-grip-vertical"></i>
@@ -41,38 +44,49 @@
                 <i class="fas fa-draw-polygon text-dirty-yellow-400"></i>
                 <span class="block-type-label">Whiteboard</span>
             </div>
+        {% elif block.type == 'annotation' %}
+            <div class="flex items-center gap-2">
+                <i class="fas fa-comment-alt text-teal-400"></i>
+                <span class="block-type-label">Annotation</span>
+            </div>
         {% endif %}
         <input type="text" class="block-title-input" placeholder="Block Title" value="{{ block.title if block.title else '' }}">
         <div class="block-controls">
-            {% if annotation %}
-                {% if block.annotationShow == false %}
-                    <button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="Show Annotation">
-                        <i class="fas fa-eye-slash"></i>
-                    </button>
+            {% if container_type == 'main' %}
+                {% if has_annotations %}
+                    {% if annotation_show == false %}
+                        <button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="Show Annotations">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    {% else %}
+                        <button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="Hide Annotations">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    {% endif %}
                 {% else %}
-                    <button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="Hide Annotation">
-                        <i class="fas fa-eye"></i>
+                    <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                        <i class="fas fa-comment-alt"></i>
                     </button>
                 {% endif %}
+                {% if block.type == 'whiteboard' %}
+                    <button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                {% endif %}
+                <button type="button" class="control-btn hover-reveal move-up-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button type="button" class="control-btn hover-reveal move-down-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
             {% else %}
-                <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
-                    <i class="fas fa-comment-alt"></i>
+                <button type="button" class="control-btn" onclick="window.MioBook.deleteAnnotationBlock(this)" title="Delete Annotation">
+                    <i class="fas fa-trash"></i>
                 </button>
             {% endif %}
-            {% if block.type == 'whiteboard' %}
-                <button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
-                    <i class="fas fa-pen"></i>
-                </button>
-            {% endif %}
-            <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
-                <i class="fas fa-chevron-up"></i>
-            </button>
-            <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
-                <i class="fas fa-chevron-down"></i>
-            </button>
-            <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
-                <i class="fas fa-trash"></i>
-            </button>
         </div>
     </div>
     <div class="block-content">
@@ -128,6 +142,8 @@
                         style="display: block; cursor: default; touch-action: none;"
                         data-content="{{ block.content | tojson | forceescape }}"></canvas>
             </div>
+        {% elif block.type == 'annotation' %}
+            <div class="annotation-editor" data-content="{{ block.content | tojson | forceescape }}"></div>
         {% endif %}
     </div>
 </div>

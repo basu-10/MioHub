@@ -9,6 +9,11 @@ class MioBookCore {
         this.folderId = folderId;
         this.autoSaveInterval = null;
         this.isDirty = false;
+        this.lastActiveBlockRow = null;
+        this.activeAnnotationMenu = null;
+        this.activeAnnotationMenuRow = null;
+        this.menuOutsideHandler = null;
+        this.menuKeydownHandler = null;
         
         this.init();
     }
@@ -18,6 +23,9 @@ class MioBookCore {
         
         // Initialize Sortable for drag-and-drop
         this.initializeSortable();
+
+        // Track active block focus
+        this.setupActiveBlockTracking();
         
         // Setup auto-save
         this.setupAutoSave();
@@ -70,8 +78,77 @@ class MioBookCore {
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
                 this.saveDocument();
+                return;
+            }
+
+            // Ctrl+Shift+A to add annotation to active block
+            if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+                e.preventDefault();
+                this.handleAddAnnotationShortcut();
+                return;
+            }
+
+            // Ctrl+Shift+H to toggle annotations visibility for active block
+            if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+                e.preventDefault();
+                this.handleToggleAnnotationShortcut();
+                return;
+            }
+
+            // Escape closes annotation menu
+            if (e.key === 'Escape' && this.activeAnnotationMenu) {
+                this.closeAnnotationMenu();
             }
         });
+    }
+
+    setupActiveBlockTracking() {
+        const container = document.getElementById('contentBlocks');
+        if (!container) return;
+
+        const trackRow = (el) => {
+            const row = el?.closest?.('.block-row');
+            if (row) {
+                this.lastActiveBlockRow = row;
+            }
+        };
+
+        container.addEventListener('focusin', (e) => trackRow(e.target));
+        container.addEventListener('mousedown', (e) => trackRow(e.target));
+    }
+
+    getActiveBlockRow() {
+        if (this.lastActiveBlockRow?.isConnected) return this.lastActiveBlockRow;
+        return document.querySelector('.block-row');
+    }
+
+    handleAddAnnotationShortcut() {
+        const row = this.getActiveBlockRow();
+        if (!row) return;
+        const button = row.querySelector('.annotation-add-btn') || row.querySelector('.block-controls .control-btn');
+
+        if (button?.classList.contains('annotation-add-btn')) {
+            button.focus();
+            this.openAnnotationMenu(button);
+        } else {
+            this.addAnnotationForRow(row);
+        }
+    }
+
+    handleToggleAnnotationShortcut() {
+        const row = this.getActiveBlockRow();
+        if (!row) return;
+        const toggleBtn = row.querySelector('.block-controls .control-btn[onclick*="Annotation"]');
+        if (toggleBtn && toggleBtn.getAttribute('onclick')?.includes('toggle')) {
+            this.toggleAnnotation(toggleBtn);
+        } else if (row.querySelector('.annotation-card')) {
+            const fallbackBtn = toggleBtn || row.querySelector('.annotation-add-btn');
+            if (fallbackBtn) {
+                this.toggleAnnotation(fallbackBtn);
+            }
+        } else {
+            this.showToast('No annotations to toggle on this block.', 'warn');
+        }
     }
     
     markDirty() {
@@ -81,80 +158,47 @@ class MioBookCore {
     async collectBlocksData() {
         const blocks = [];
         const blockRows = document.querySelectorAll('#contentBlocks .block-row');
-        
+
         for (let i = 0; i < blockRows.length; i++) {
             const blockRow = blockRows[i];
-            const blockEl = blockRow.querySelector('.block-item');
+            const blockEl = blockRow.querySelector('.main-block-column .block-item');
             if (!blockEl) continue;
-            
-            const type = blockEl.dataset.type;
-            const blockId = blockEl.dataset.blockId || `block-${Date.now()}-${i}`;
-            const title = blockEl.querySelector('.block-title-input')?.value || '';
-            const splitRatio = parseInt(blockRow.dataset.splitRatio) || 50;
-            
-            let content = null;
-            let metadata = {};
-            
-            switch (type) {
-                case 'markdown':
-                    content = window.MarkdownHandler?.getContent(blockEl);
-                    break;
-                    
-                case 'todo':
-                    content = window.TodoHandler?.getContent(blockEl);
-                    break;
-                    
-                case 'code':
-                    const codeData = window.CodeHandler?.getContent(blockEl);
-                    content = codeData?.content;
-                    metadata = codeData?.metadata || {};
-                    break;
-                    
-                case 'blocks':
-                    content = await window.EditorJSHandler?.getContent(blockEl);
-                    break;
-                    
-                case 'whiteboard':
-                    content = window.AtramentHandler?.getContent(blockEl);
-                    break;
-            }
-            
-            // Check for annotation block
-            const annotationEl = blockRow.querySelector('.annotation-block');
-            let annotationId = null;
-            
-            if (annotationEl) {
-                annotationId = annotationEl.dataset.annotationId || `annotation-${Date.now()}-${i}`;
-                const annotationContent = await window.AnnotationHandler?.getContent(annotationEl);
-                
-                // Add annotation as separate block
-                blocks.push({
-                    id: annotationId,
-                    type: 'annotation',
-                    parentId: blockId,
-                    content: annotationContent
+
+            const mainBlock = await this.extractBlockData(blockEl);
+            if (!mainBlock) continue;
+
+            mainBlock.order = i;
+            mainBlock.splitRatio = parseInt(blockRow.dataset.splitRatio, 10) || 50;
+
+            const annotations = [];
+            const annotationItems = blockRow.querySelectorAll('.annotation-column .block-item');
+            annotationItems.forEach((annotationEl, idx) => {
+                annotations.push({
+                    ...this.extractBlockShell(annotationEl),
+                    order: idx
                 });
-            }
-            
-            // Default to true (visible) if not explicitly set
-            const annotationShow = blockRow.dataset.annotationShow !== 'false';
-            
-            blocks.push({
-                id: blockId,
-                type: type,
-                title: title,
-                content: content,
-                metadata: metadata,
-                annotationId: annotationId,
-                splitRatio: splitRatio,
-                annotationShow: annotationShow
             });
+
+            // Resolve annotation content asynchronously where needed
+            for (let j = 0; j < annotations.length; j++) {
+                const annotationEl = annotationItems[j];
+                annotations[j] = await this.extractBlockData(annotationEl, annotations[j]);
+                annotations[j].parentId = mainBlock.id;
+            }
+
+            if (annotations.length) {
+                mainBlock.annotations = annotations;
+                mainBlock.annotationShow = blockRow.dataset.annotationShow !== 'false';
+            }
+
+            blocks.push(mainBlock);
         }
-        
+
         return blocks;
     }
     
     async saveDocument(silent = false) {
+        console.log('[MioBook] ==================== SAVE STARTED ====================');
         console.log('[MioBook] saveDocument called, silent:', silent, 'isDirty:', this.isDirty, 'documentId:', this.documentId);
         
         const title = document.getElementById('documentTitle')?.value?.trim();
@@ -170,6 +214,7 @@ class MioBookCore {
         console.log('[MioBook] Collecting blocks data...');
         const blocks = await this.collectBlocksData();
         console.log('[MioBook] Collected', blocks.length, 'blocks');
+        console.log('[MioBook] Block details:', blocks.map(b => ({ id: b.id, type: b.type, contentLength: JSON.stringify(b.content).length })));
         
         const data = {
             title: title,
@@ -231,6 +276,281 @@ class MioBookCore {
             return false;
         }
     }
+
+    extractBlockShell(blockEl) {
+        if (!blockEl) return null;
+        return {
+            id: blockEl.dataset.blockId || `block-${Date.now()}`,
+            type: blockEl.dataset.type || 'markdown',
+            title: blockEl.querySelector('.block-title-input')?.value || '',
+            metadata: {}
+        };
+    }
+
+    async extractBlockData(blockEl, baseData = null) {
+        if (!blockEl) return null;
+        const data = baseData ? { ...baseData } : this.extractBlockShell(blockEl);
+
+        let content = null;
+        let metadata = data.metadata || {};
+
+        switch (data.type) {
+            case 'markdown':
+                content = window.MarkdownHandler?.getContent(blockEl);
+                break;
+            case 'todo':
+                content = window.TodoHandler?.getContent(blockEl);
+                break;
+            case 'code':
+                const codeData = window.CodeHandler?.getContent(blockEl);
+                content = codeData?.content;
+                metadata = codeData?.metadata || {};
+                break;
+            case 'blocks':
+                content = await window.EditorJSHandler?.getContent(blockEl);
+                break;
+            case 'whiteboard':
+                content = window.AtramentHandler?.getContent(blockEl);
+                break;
+            case 'annotation':
+                content = await window.AnnotationHandler?.getContent(blockEl.closest('.annotation-card') || blockEl);
+                break;
+            default:
+                content = null;
+        }
+
+        return {
+            ...data,
+            content,
+            metadata
+        };
+    }
+
+    escapeAttribute(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;');
+    }
+
+    serializeContent(content) {
+        try {
+            return this.escapeAttribute(JSON.stringify(content ?? ''));
+        } catch (e) {
+            console.warn('[MioBook] Failed to serialize content', e);
+            return '';
+        }
+    }
+
+    createDefaultBlockData(type, id = null) {
+        const blockId = id || `${type}-${Date.now()}`;
+        const metadata = type === 'code' ? { language: 'python' } : {};
+        const defaultContent = {
+            markdown: '',
+            todo: [],
+            code: '',
+            blocks: { blocks: [] },
+            whiteboard: '',
+            annotation: { blocks: [] }
+        };
+
+        return {
+            id: blockId,
+            type,
+            title: '',
+            content: defaultContent[type] ?? '',
+            metadata,
+            annotations: [],
+            splitRatio: 50,
+            annotationShow: true
+        };
+    }
+
+    getBlockIcon(type) {
+        const map = {
+            markdown: { icon: 'fa-markdown', color: 'text-teal-400', label: 'Markdown' },
+            todo: { icon: 'fa-tasks', color: 'text-dirty-yellow-400', label: 'Todo List' },
+            code: { icon: 'fa-code', color: 'text-teal-400', label: 'Code' },
+            blocks: { icon: 'fa-th-large', color: 'text-dirty-yellow-400', label: 'Rich Blocks' },
+            whiteboard: { icon: 'fa-draw-polygon', color: 'text-dirty-yellow-400', label: 'Whiteboard' },
+            annotation: { icon: 'fa-comment-alt', color: 'text-teal-400', label: 'Annotation' }
+        };
+        return map[type] || { icon: 'fa-sticky-note', color: 'text-graphite-400', label: 'Block' };
+    }
+
+    renderBlock(blockData, { containerType = 'main', hasAnnotations = false, parentId = null } = {}) {
+        const { icon, color, label } = this.getBlockIcon(blockData.type);
+        const blockId = blockData.id;
+        const title = blockData.title || '';
+        const contentAttr = this.serializeContent(blockData.content);
+        const language = blockData.metadata?.language || 'python';
+
+        const renderControls = () => {
+            if (containerType === 'main') {
+                const annotationButton = hasAnnotations
+                    ? `<button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="${blockData.annotationShow === false ? 'Show Annotations' : 'Hide Annotations'}">
+                            <i class="fas ${blockData.annotationShow === false ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                       </button>`
+                    : `<button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                            <i class="fas fa-comment-alt"></i>
+                       </button>`;
+
+                const whiteboardEdit = containerType === 'main' && blockData.type === 'whiteboard'
+                    ? `<button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
+                            <i class="fas fa-pen"></i>
+                       </button>`
+                    : '';
+
+                return `${annotationButton}${whiteboardEdit}
+                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                        <button type="button" class="control-btn" onclick="window.MioBook.moveBlockDown(this)" title="Move Down">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <button type="button" class="control-btn" onclick="window.MioBook.deleteBlock(this)" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>`;
+            }
+
+            return `<button type="button" class="control-btn" onclick="window.MioBook.deleteAnnotationBlock(this)" title="Delete Annotation">
+                        <i class="fas fa-trash"></i>
+                    </button>`;
+        };
+
+        let contentHTML = '';
+        switch (blockData.type) {
+            case 'markdown':
+                contentHTML = `<div class="markdown-editor-wrapper"><div class="markdown-editor" data-content="${contentAttr}"></div></div>`;
+                break;
+            case 'todo':
+                contentHTML = `<div class="todo-list-wrapper">
+                        <div class="todo-list" data-content="${contentAttr}"></div>
+                        <button type="button" class="add-todo-btn" onclick="window.TodoHandler.addItem(this)">
+                            <i class="fas fa-plus"></i> Add Task
+                        </button>
+                    </div>`;
+                break;
+            case 'code':
+                contentHTML = `<div class="code-editor-wrapper">
+                        <div class="monaco-editor" data-language="${this.escapeAttribute(language)}" data-content="${contentAttr}"></div>
+                    </div>`;
+                break;
+            case 'blocks':
+                contentHTML = `<div class="editorjs-wrapper"><div class="editorjs-editor" data-content="${contentAttr}"></div></div>`;
+                break;
+            case 'whiteboard':
+                contentHTML = `<div class="atrament-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
+                        <button type="button" class="atrament-mode-btn atrament-draw active">
+                            <i class="fas fa-pen"></i> Draw
+                        </button>
+                        <button type="button" class="atrament-mode-btn atrament-erase">
+                            <i class="fas fa-eraser"></i> Erase
+                        </button>
+                        <div style="border-left: 1px solid #3d4047; height: 24px;"></div>
+                        <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
+                            Color:
+                            <input type="color" class="atrament-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
+                            Size:
+                            <input type="range" class="atrament-size" min="1" max="20" value="2" style="width: 100px;">
+                        </label>
+                        <button type="button" class="atrament-action-btn atrament-attach" title="Attach image">
+                            <i class="fas fa-paperclip"></i> Image
+                        </button>
+                        <input type="file" class="atrament-image-input" accept="image/*" style="display:none">
+                        <div style="flex: 1;"></div>
+                        <button type="button" class="atrament-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>
+                    </div>
+                    <div style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10;">
+                        <canvas class="atrament-canvas" style="display: block; cursor: default; touch-action: none;" data-content="${contentAttr}"></canvas>
+                    </div>`;
+                break;
+            case 'annotation':
+                contentHTML = `<div class="annotation-editor" data-content="${contentAttr}"></div>`;
+                break;
+            default:
+                contentHTML = '<div class="p-4 text-graphite-400">Unsupported block type</div>';
+        }
+
+        return `
+            <div class="block-item" data-type="${blockData.type}" data-block-id="${blockId}" data-container="${containerType}"${parentId ? ` data-parent-id="${parentId}"` : ''}>
+                <div class="block-header">
+                    <div class="drag-handle" title="Drag to reorder">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas ${icon} ${color}"></i>
+                        <span class="block-type-label">${label}</span>
+                        ${blockData.type === 'code' ? `<select class="language-selector" onchange="window.CodeHandler.changeLanguage(this)">
+                                <option value="python" ${language === 'python' ? 'selected' : ''}>Python</option>
+                                <option value="javascript" ${language === 'javascript' ? 'selected' : ''}>JavaScript</option>
+                                <option value="typescript" ${language === 'typescript' ? 'selected' : ''}>TypeScript</option>
+                                <option value="html" ${language === 'html' ? 'selected' : ''}>HTML</option>
+                                <option value="css" ${language === 'css' ? 'selected' : ''}>CSS</option>
+                                <option value="json" ${language === 'json' ? 'selected' : ''}>JSON</option>
+                                <option value="sql" ${language === 'sql' ? 'selected' : ''}>SQL</option>
+                                <option value="markdown" ${language === 'markdown' ? 'selected' : ''}>Markdown</option>
+                                <option value="yaml" ${language === 'yaml' ? 'selected' : ''}>YAML</option>
+                                <option value="bash" ${language === 'bash' ? 'selected' : ''}>Bash</option>
+                            </select>` : ''}
+                    </div>
+                    <input type="text" class="block-title-input" placeholder="Block Title" value="${this.escapeAttribute(title)}">
+                    <div class="block-controls">
+                        ${renderControls()}
+                    </div>
+                </div>
+                <div class="block-content">${contentHTML}</div>
+            </div>
+        `;
+    }
+
+    renderAnnotationCard(annotationData, parentId) {
+        return `
+            <div class="annotation-card" data-annotation-id="${annotationData.id}" data-parent-id="${parentId}">
+                ${this.renderBlock(annotationData, { containerType: 'annotation', parentId })}
+            </div>
+        `;
+    }
+
+    renderBlockRow(blockData) {
+        const hasAnnotations = Array.isArray(blockData.annotations) && blockData.annotations.length > 0;
+        const splitRatioRaw = blockData.splitRatio || 50;
+        const splitRatio = Math.min(70, Math.max(30, splitRatioRaw));
+        const annotationVisible = blockData.annotationShow !== false;
+        const mainWidth = hasAnnotations ? ` style="width: ${splitRatio}%"` : '';
+        const annotationWidth = hasAnnotations ? ` style="width: ${100 - splitRatio}%"` : '';
+
+        const annotationsHTML = hasAnnotations ? blockData.annotations.map((ann) => this.renderAnnotationCard(ann, blockData.id)).join('') : '';
+
+        return `
+            <div class="block-row" data-block-id="${blockData.id}" data-split-ratio="${splitRatio}"${hasAnnotations ? ` data-annotation-show="${annotationVisible ? 'true' : 'false'}"` : ''}>
+                <div class="main-block-column"${mainWidth}>
+                    ${this.renderBlock(blockData, { containerType: 'main', hasAnnotations, parentId: null })}
+                </div>
+                ${hasAnnotations ? `
+                    <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
+                    <div class="annotation-column${annotationVisible ? '' : ' hidden'}"${annotationWidth} data-parent-id="${blockData.id}">
+                        <div class="annotation-toolbar">
+                            <div class="annotation-toolbar-title">
+                                <i class="fas fa-comment-alt text-teal-400"></i>
+                                <span>Annotations</span>
+                            </div>
+                            <button type="button" class="annotation-add-btn" onclick="window.MioBook.openAnnotationMenu(this)">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                        <div class="annotation-scroll-wrapper" data-parent-id="${blockData.id}">
+                            ${annotationsHTML}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
     
     showSaveSuccess() {
         const saveBtn = document.querySelector('.save-document-btn');
@@ -249,42 +569,22 @@ class MioBookCore {
     async addBlock(type, position = null, referenceBlockId = null) {
         const container = document.getElementById('contentBlocks');
         if (!container) return;
-        
-        const blockId = `block-${Date.now()}`;
-        let blockHTML = '';
-        
-        switch (type) {
-            case 'markdown':
-                blockHTML = this.createMarkdownBlockHTML(blockId);
-                break;
-            case 'todo':
-                blockHTML = this.createTodoBlockHTML(blockId);
-                break;
-            case 'code':
-                blockHTML = this.createCodeBlockHTML(blockId);
-                break;
-            case 'blocks':
-                blockHTML = this.createEditorJSBlockHTML(blockId);
-                break;
-            case 'whiteboard':
-                blockHTML = this.createAtramentBlockHTML(blockId);
-                break;
-        }
-        
-        // Insert based on position
+
+        const blockData = this.createDefaultBlockData(type);
+        const blockHTML = this.renderBlockRow(blockData);
+
         if (position && referenceBlockId) {
-            const referenceBlock = document.querySelector(`[data-block-id="${referenceBlockId}"]`);
-            if (referenceBlock) {
+            const referenceRow = document.querySelector(`.block-row[data-block-id="${referenceBlockId}"]`);
+            if (referenceRow) {
                 if (position === 'before') {
-                    referenceBlock.insertAdjacentHTML('beforebegin', blockHTML);
+                    referenceRow.insertAdjacentHTML('beforebegin', blockHTML);
                 } else if (position === 'after') {
-                    referenceBlock.insertAdjacentHTML('afterend', blockHTML);
+                    referenceRow.insertAdjacentHTML('afterend', blockHTML);
                 }
             } else {
                 container.insertAdjacentHTML('beforeend', blockHTML);
             }
         } else {
-            // Find last separator and insert before it
             const separators = container.querySelectorAll('.insert-separator');
             const lastSeparator = separators[separators.length - 1];
             if (lastSeparator) {
@@ -293,84 +593,66 @@ class MioBookCore {
                 container.insertAdjacentHTML('beforeend', blockHTML);
             }
         }
-        
-        // Initialize the new block - find it by blockId
-        const newBlock = document.querySelector(`[data-block-id="${blockId}"]`);
-        if (newBlock) {
-            // Add separator after the new block
+
+        const newRow = document.querySelector(`.block-row[data-block-id="${blockData.id}"]`);
+        const newBlock = newRow?.querySelector('.block-item');
+        if (newRow && newBlock) {
             const separatorIndex = this.getBlockIndex(newBlock) + 1;
             const separatorHTML = this.createSeparatorHTML(separatorIndex);
-            newBlock.insertAdjacentHTML('afterend', separatorHTML);
-            
+            newRow.insertAdjacentHTML('afterend', separatorHTML);
+
             await this.initializeBlock(newBlock, type);
+            this.initializeAnnotationSortable(newRow);
             this.updateSeparatorIndices();
         }
-        
+
         this.markDirty();
     }
     
     async addBlockAtIndex(type, index) {
         const container = document.getElementById('contentBlocks');
         if (!container) return;
-        
-        const blockId = `block-${Date.now()}`;
-        let blockHTML = '';
-        
-        switch (type) {
-            case 'markdown':
-                blockHTML = this.createMarkdownBlockHTML(blockId);
-                break;
-            case 'todo':
-                blockHTML = this.createTodoBlockHTML(blockId);
-                break;
-            case 'code':
-                blockHTML = this.createCodeBlockHTML(blockId);
-                break;
-            case 'blocks':
-                blockHTML = this.createEditorJSBlockHTML(blockId);
-                break;
-            case 'whiteboard':
-                blockHTML = this.createAtramentBlockHTML(blockId);
-                break;
-        }
-        
+
+        const blockData = this.createDefaultBlockData(type);
+        const blockHTML = this.renderBlockRow(blockData);
+
         const separators = container.querySelectorAll('.insert-separator');
         const targetSeparator = separators[index];
-        
+
         if (targetSeparator) {
-            // Insert after the separator
             targetSeparator.insertAdjacentHTML('afterend', blockHTML);
-            
-            // Find the newly added block
-            const newBlock = document.querySelector(`[data-block-id="${blockId}"]`);
-            if (newBlock) {
-                // Add separator after the new block
+
+            const newRow = document.querySelector(`.block-row[data-block-id="${blockData.id}"]`);
+            const newBlock = newRow?.querySelector('.block-item');
+            if (newRow && newBlock) {
                 const separatorHTML = this.createSeparatorHTML(index + 1);
-                newBlock.insertAdjacentHTML('afterend', separatorHTML);
-                
+                newRow.insertAdjacentHTML('afterend', separatorHTML);
+
                 await this.initializeBlock(newBlock, type);
+                this.initializeAnnotationSortable(newRow);
                 this.updateSeparatorIndices();
             }
         }
-        
+
         this.markDirty();
     }
     
     createSeparatorHTML(index) {
         return `
             <div class="insert-separator" onclick="showInsertMenuAtSeparator(event, ${index})">
-                <div class="insert-separator-line"></div>
                 <div class="insert-separator-trigger">
                     <i class="fas fa-plus"></i>
-                    <span>Insert Block</span>
+                    <span>Insert Main Block</span>
                 </div>
+                <div class="insert-separator-line"></div>
             </div>
         `;
     }
     
     getBlockIndex(blockEl) {
-        const blocks = document.querySelectorAll('#contentBlocks .block-item');
-        return Array.from(blocks).indexOf(blockEl);
+        const blockRow = blockEl.closest('.block-row');
+        const rows = document.querySelectorAll('#contentBlocks .block-row');
+        return Array.from(rows).indexOf(blockRow);
     }
     
     updateSeparatorIndices() {
@@ -425,6 +707,9 @@ class MioBookCore {
                 console.log('[MioBook] About to call AtramentHandler.initialize, handler exists:', !!window.AtramentHandler);
                 await window.AtramentHandler?.initialize(blockEl);
                 console.log('[MioBook] AtramentHandler.initialize returned');
+                break;
+            case 'annotation':
+                await window.AnnotationHandler?.initialize(blockEl.closest('.annotation-card') || blockEl);
                 break;
         }
     }
@@ -715,36 +1000,35 @@ class MioBookCore {
     deleteBlock(button) {
         if (confirm('Are you sure you want to delete this block?')) {
             const blockRow = button.closest('.block-row');
-            const block = blockRow?.querySelector('.block-item');
-            if (!block) return;
-            
-            const type = block.dataset.type;
-            
-            // Cleanup before removal
-            switch (type) {
-                case 'code':
-                    window.CodeHandler?.destroy(block);
-                    break;
-                case 'blocks':
-                    window.EditorJSHandler?.destroy(block);
-                    break;
-                case 'whiteboard':
-                    window.AtramentHandler?.destroy(block);
-                    break;
-            }
-            
-            // Cleanup annotation if exists
-            const annotationEl = blockRow.querySelector('.annotation-block');
-            if (annotationEl) {
-                window.AnnotationHandler?.destroy(annotationEl);
-            }
-            
-            // Remove the entire row
+            const blockItems = blockRow?.querySelectorAll('.block-item') || [];
+            blockItems.forEach((item) => this.destroyBlockInstance(item));
+
             blockRow.remove();
-            
-            // Rebuild all separators to maintain proper structure
+
             this.rebuildSeparators();
             this.markDirty();
+        }
+    }
+
+    destroyBlockInstance(blockEl) {
+        if (!blockEl) return;
+        const type = blockEl.dataset.type;
+
+        switch (type) {
+            case 'code':
+                window.CodeHandler?.destroy(blockEl);
+                break;
+            case 'blocks':
+                window.EditorJSHandler?.destroy(blockEl);
+                break;
+            case 'whiteboard':
+                window.AtramentHandler?.destroy(blockEl);
+                break;
+            case 'annotation':
+                window.AnnotationHandler?.destroy(blockEl.closest('.annotation-card') || blockEl);
+                break;
+            default:
+                break;
         }
     }
     
@@ -756,133 +1040,343 @@ class MioBookCore {
         }
     }
     
-    addAnnotation(button) {
+    async addAnnotation(button, type = 'annotation') {
         const blockRow = button.closest('.block-row');
         if (!blockRow) return;
-        
-        // Check if annotation already exists
-        if (blockRow.querySelector('.annotation-column')) {
-            return;
-        }
-        
-        const blockId = blockRow.dataset.blockId;
-        const annotationId = `annotation-${Date.now()}`;
-        const splitRatio = parseInt(blockRow.dataset.splitRatio) || 50;
-        
-        // Calculate widths based on split ratio
-        const mainWidth = `${splitRatio}%`;
-        const annotationWidth = `${100 - splitRatio}%`;
-        
-        const annotationHTML = `
-            <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
-            <div class="annotation-column" style="width: ${annotationWidth}">
-                <div class="annotation-block" data-annotation-id="${annotationId}" data-parent-id="${blockId}">
-                    <div class="annotation-header">
-                        <div class="flex items-center gap-2 flex-1">
-                            <i class="fas fa-comment-alt text-teal-400"></i>
-                            <span class="block-type-label">Annotation</span>
-                        </div>
-                        <button type="button" class="annotation-control-btn remove" onclick="window.MioBook.deleteAnnotation(this)" title="Delete Annotation">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                    <div class="annotation-content">
-                        <div class="annotation-editor" data-content=""></div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Set main column width
-        const mainColumn = blockRow.querySelector('.main-block-column');
-        if (mainColumn) {
-            mainColumn.style.width = mainWidth;
-        }
-        
-        // Set annotation show state
-        blockRow.dataset.annotationShow = 'true';
-        
-        blockRow.insertAdjacentHTML('beforeend', annotationHTML);
-        
-        // Initialize the annotation
-        const annotationEl = blockRow.querySelector('.annotation-block');
-        if (annotationEl) {
-            window.AnnotationHandler?.initialize(annotationEl);
-        }
-        
-        // Change button to toggle annotation visibility
-        button.innerHTML = '<i class="fas fa-eye"></i>';
-        button.setAttribute('title', 'Hide Annotation');
-        button.setAttribute('onclick', 'window.MioBook.toggleAnnotation(this)');
-        
-        this.markDirty();
+        this.addAnnotationForRow(blockRow, type);
     }
-    
+
+    async addAnnotationForRow(blockRow, type = 'annotation') {
+        if (!blockRow) return;
+
+        this.closeAnnotationMenu();
+
+        const { annotationColumn, wrapper } = this.ensureAnnotationContainer(blockRow);
+        if (!wrapper) return;
+
+        const annotationData = this.createDefaultBlockData(type, `annotation-${Date.now()}`);
+        annotationData.parentId = blockRow.dataset.blockId;
+
+        wrapper.insertAdjacentHTML('beforeend', this.renderAnnotationCard(annotationData, annotationData.parentId));
+
+        const newBlockEl = wrapper.querySelector(`.annotation-card[data-annotation-id="${annotationData.id}"] .block-item`);
+        if (newBlockEl) {
+            await this.initializeBlock(newBlockEl, annotationData.type);
+        }
+
+        this.initializeAnnotationSortable(blockRow);
+        this.updateMainAnnotationButton(blockRow, true);
+        this.updateAnnotationCount(blockRow);
+        blockRow.dataset.annotationShow = 'true';
+
+        const annotationCol = blockRow.querySelector('.annotation-column');
+        if (annotationCol) {
+            annotationCol.classList.remove('hidden');
+        }
+
+        this.positionResizeHandle(blockRow);
+        this.markDirty();
+        this.lastActiveBlockRow = blockRow;
+
+        // Scroll to the newly added annotation card
+        const newCard = wrapper.querySelector(`.annotation-card[data-annotation-id="${annotationData.id}"]`);
+        if (newCard) {
+            this.scrollToAnnotationCard(wrapper, newCard);
+        }
+
+        const count = wrapper.querySelectorAll('.annotation-card').length;
+        this.checkAnnotationSoftLimit(count);
+        this.showToast('Annotation added.', 'success');
+    }
+
     toggleAnnotation(button) {
         const blockRow = button.closest('.block-row');
         if (!blockRow) return;
-        
+
         const annotationColumn = blockRow.querySelector('.annotation-column');
         if (!annotationColumn) return;
-        
-        const isHidden = annotationColumn.classList.contains('hidden');
-        
-        if (isHidden) {
-            // Show annotation
-            annotationColumn.classList.remove('hidden');
-            blockRow.dataset.annotationShow = 'true';
-            button.innerHTML = '<i class="fas fa-eye"></i>';
-            button.setAttribute('title', 'Hide Annotation');
-        } else {
-            // Hide annotation
-            annotationColumn.classList.add('hidden');
-            blockRow.dataset.annotationShow = 'false';
-            button.innerHTML = '<i class="fas fa-eye-slash"></i>';
-            button.setAttribute('title', 'Show Annotation');
-        }
-        
+
+        const isHidden = annotationColumn.classList.toggle('hidden');
+        blockRow.dataset.annotationShow = isHidden ? 'false' : 'true';
+
+        button.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        button.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
+
         this.markDirty();
     }
-    
-    deleteAnnotation(button) {
+
+    deleteAnnotationBlock(button) {
+        const card = button.closest('.annotation-card');
         const blockRow = button.closest('.block-row');
-        if (!blockRow) return;
-        
-        if (confirm('Delete annotation? This cannot be undone.')) {
-            const annotationColumn = blockRow.querySelector('.annotation-column');
-            const resizeHandle = blockRow.querySelector('.resize-handle');
-            const mainColumn = blockRow.querySelector('.main-block-column');
-            
-            if (annotationColumn) {
-                const annotationEl = annotationColumn.querySelector('.annotation-block');
-                if (annotationEl) {
-                    window.AnnotationHandler?.destroy(annotationEl);
-                }
-                annotationColumn.remove();
-            }
-            
-            if (resizeHandle) {
-                resizeHandle.remove();
-            }
-            
-            // Reset main column width
-            if (mainColumn) {
-                mainColumn.style.width = '';
-            }
-            
-            // Remove annotation show state
-            delete blockRow.dataset.annotationShow;
-            
-            // Change button back to add annotation
-            const addBtn = blockRow.querySelector('.block-controls .control-btn[onclick*="Annotation"]');
-            if (addBtn) {
-                addBtn.innerHTML = '<i class="fas fa-comment-alt"></i>';
-                addBtn.setAttribute('title', 'Add Annotation');
-                addBtn.setAttribute('onclick', 'window.MioBook.addAnnotation(this)');
-            }
-            
-            this.markDirty();
+        if (!card || !blockRow) return;
+
+        if (!confirm('Delete annotation? This cannot be undone.')) return;
+
+        const blockEl = card.querySelector('.block-item');
+        this.destroyBlockInstance(blockEl);
+        card.remove();
+
+        const wrapper = blockRow.querySelector('.annotation-scroll-wrapper');
+        const remaining = wrapper ? wrapper.querySelectorAll('.annotation-card').length : 0;
+
+        if (remaining === 0) {
+            this.removeAnnotationContainer(blockRow);
+        } else {
+            this.initializeAnnotationSortable(blockRow, true);
+            blockRow.dataset.annotationShow = 'true';
         }
+
+        this.updateAnnotationCount(blockRow);
+        this.updateMainAnnotationButton(blockRow, remaining > 0);
+        this.positionResizeHandle(blockRow);
+        this.markDirty();
+    }
+
+    openAnnotationMenu(button) {
+        const blockRow = button?.closest?.('.block-row') || this.getActiveBlockRow();
+        if (!blockRow) return;
+
+        this.closeAnnotationMenu();
+        this.activeAnnotationMenuRow = blockRow;
+
+        const menu = document.createElement('div');
+        menu.className = 'annotation-menu';
+        menu.innerHTML = `
+            <h4>Add Annotation</h4>
+            <div class="annotation-option" data-type="annotation">
+                <i class="fas fa-comment-dots"></i>
+                <div>
+                    <div style="font-weight: 600; font-size: 13px; color: #e5e7eb;">Rich Note</div>
+                    <div style="font-size: 12px; color: #9aa8ad;">Add a Rich Text annotation beside this block.</div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(menu);
+        this.activeAnnotationMenu = menu;
+
+        const rect = button.getBoundingClientRect();
+        const top = rect.bottom + 6;
+        const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 12);
+        menu.style.top = `${top}px`;
+        menu.style.left = `${Math.max(8, left)}px`;
+
+        const onOutside = (e) => {
+            if (!menu.contains(e.target) && e.target !== button) {
+                this.closeAnnotationMenu();
+            }
+        };
+        const onKeydown = (e) => {
+            if (e.key === 'Escape') {
+                this.closeAnnotationMenu();
+            }
+        };
+
+        this.menuOutsideHandler = onOutside;
+        this.menuKeydownHandler = onKeydown;
+        document.addEventListener('mousedown', onOutside);
+        document.addEventListener('keydown', onKeydown);
+
+        menu.querySelectorAll('.annotation-option').forEach((option) => {
+            option.addEventListener('click', () => {
+                const type = option.dataset.type || 'annotation';
+                this.addAnnotationForRow(blockRow, type);
+            });
+        });
+    }
+
+    closeAnnotationMenu() {
+        if (this.activeAnnotationMenu) {
+            this.activeAnnotationMenu.remove();
+            this.activeAnnotationMenu = null;
+        }
+
+        if (this.menuOutsideHandler) {
+            document.removeEventListener('mousedown', this.menuOutsideHandler);
+            this.menuOutsideHandler = null;
+        }
+
+        if (this.menuKeydownHandler) {
+            document.removeEventListener('keydown', this.menuKeydownHandler);
+            this.menuKeydownHandler = null;
+        }
+
+        this.activeAnnotationMenuRow = null;
+    }
+
+    ensureAnnotationContainer(blockRow) {
+        const blockId = blockRow.dataset.blockId;
+        let annotationColumn = blockRow.querySelector('.annotation-column');
+        let wrapper = blockRow.querySelector('.annotation-scroll-wrapper');
+
+        if (!annotationColumn) {
+            const splitRatio = parseInt(blockRow.dataset.splitRatio, 10) || 50;
+            const mainColumn = blockRow.querySelector('.main-block-column');
+            const mainRatio = Math.min(70, Math.max(30, splitRatio));
+            const annotationRatio = 100 - mainRatio;
+
+            if (mainColumn) {
+                mainColumn.style.width = `${mainRatio}%`;
+            }
+
+            blockRow.dataset.splitRatio = Math.round(mainRatio);
+
+            const handleHTML = '<div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>';
+            const columnHTML = `
+                <div class="annotation-column" style="width: ${annotationRatio}%" data-parent-id="${blockId}">
+                    <div class="annotation-toolbar">
+                        <div class="annotation-toolbar-title">
+                            <i class="fas fa-comment-alt text-teal-400"></i>
+                            <span>Annotations</span>
+                            <span class="annotation-count" aria-label="Annotation count" data-annotation-count="0">0</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="annotation-nav-controls">
+                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'prev')" title="Previous Annotation">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </button>
+                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'next')" title="Next Annotation">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </button>
+                            </div>
+                            <button type="button" class="annotation-add-btn" onclick="window.MioBook.openAnnotationMenu(this)">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                    <div class="annotation-scroll-wrapper" data-parent-id="${blockId}"></div>
+                </div>
+            `;
+
+            if (mainColumn) {
+                mainColumn.insertAdjacentHTML('afterend', handleHTML + columnHTML);
+            }
+
+            annotationColumn = blockRow.querySelector('.annotation-column');
+            wrapper = blockRow.querySelector('.annotation-scroll-wrapper');
+            blockRow.dataset.annotationShow = 'true';
+        }
+
+        return { annotationColumn, wrapper };
+    }
+
+    removeAnnotationContainer(blockRow) {
+        const annotationColumn = blockRow.querySelector('.annotation-column');
+        const resizeHandle = blockRow.querySelector('.resize-handle');
+        const mainColumn = blockRow.querySelector('.main-block-column');
+
+        if (annotationColumn) {
+            const nestedBlocks = annotationColumn.querySelectorAll('.block-item');
+            nestedBlocks.forEach((b) => this.destroyBlockInstance(b));
+            annotationColumn.remove();
+        }
+
+        if (resizeHandle) {
+            resizeHandle.remove();
+        }
+
+        if (mainColumn) {
+            mainColumn.style.width = '';
+        }
+
+        delete blockRow.dataset.annotationShow;
+    }
+
+    updateMainAnnotationButton(blockRow, hasAnnotations) {
+        const addBtn = blockRow.querySelector('.block-controls .control-btn[onclick*="Annotation"]');
+        if (!addBtn) return;
+
+        if (hasAnnotations) {
+            const isHidden = blockRow.dataset.annotationShow === 'false';
+            addBtn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+            addBtn.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
+            addBtn.setAttribute('onclick', 'window.MioBook.toggleAnnotation(this)');
+        } else {
+            addBtn.innerHTML = '<i class="fas fa-comment-alt"></i>';
+            addBtn.setAttribute('title', 'Add Annotation');
+            addBtn.setAttribute('onclick', 'window.MioBook.addAnnotation(this)');
+        }
+    }
+
+    checkAnnotationSoftLimit(count) {
+        const thresholds = [5, 10, 15, 20];
+        if (thresholds.includes(count)) {
+            this.showToast(`You now have ${count} annotations on this block. Consider condensing if it feels cluttered.`, 'warn');
+        }
+    }
+
+    ensureToastContainer() {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+        return container;
+    }
+
+    showToast(message, variant = 'info') {
+        const container = this.ensureToastContainer();
+        const toast = document.createElement('div');
+        toast.className = `toast ${variant === 'warn' ? 'warn' : variant}`;
+
+        const icon = variant === 'success' ? 'fa-check-circle' : variant === 'warn' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+        toast.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-4px)';
+            setTimeout(() => toast.remove(), 200);
+        }, 2800);
+    }
+
+    initializeAnnotationSortable(blockRow, force = false) {
+        const wrapper = blockRow?.querySelector('.annotation-scroll-wrapper');
+        if (!wrapper) return;
+        if (wrapper.dataset.sortableInit === '1' && !force) return;
+        if (wrapper.dataset.sortableInit === '1' && force && wrapper._sortable) {
+            wrapper._sortable.destroy();
+            wrapper.dataset.sortableInit = '0';
+        }
+
+        wrapper._sortable = Sortable.create(wrapper, {
+            handle: '.drag-handle',
+            animation: 150,
+            draggable: '.annotation-card',
+            direction: 'horizontal',
+            onEnd: () => {
+                this.markDirty();
+            }
+        });
+
+        wrapper.dataset.sortableInit = '1';
+    }
+
+    initializeAllAnnotationContainers() {
+        const rows = document.querySelectorAll('.block-row');
+        rows.forEach((row) => {
+            const hasAnnotations = !!row.querySelector('.annotation-card');
+            if (hasAnnotations) {
+                this.initializeAnnotationSortable(row);
+                this.positionResizeHandle(row);
+                row.dataset.annotationShow = row.dataset.annotationShow === 'false' ? 'false' : 'true';
+            }
+            this.updateAnnotationCount(row);
+            this.updateMainAnnotationButton(row, hasAnnotations);
+        });
+    }
+
+    updateAnnotationCount(blockRow) {
+        if (!blockRow) return;
+        const countEl = blockRow.querySelector('.annotation-count');
+        if (!countEl) return;
+
+        const wrapper = blockRow.querySelector('.annotation-scroll-wrapper');
+        const count = wrapper ? wrapper.querySelectorAll('.annotation-card').length : 0;
+        countEl.textContent = count;
+        countEl.dataset.annotationCount = String(count);
     }
 
     updateAllResizeHandles() {
@@ -913,36 +1407,103 @@ class MioBookCore {
         const startX = event.clientX;
         const containerWidth = blockRow.offsetWidth;
         const startMainWidth = mainColumn.offsetWidth;
-        const startAnnotationWidth = annotationColumn.offsetWidth;
 
-        // Position the handle at the current split before dragging
         handle.style.left = `${(startMainWidth / containerWidth) * 100}%`;
-        
+
         const onMouseMove = (e) => {
             const deltaX = e.clientX - startX;
-            const newMainWidth = Math.max(200, Math.min(containerWidth - 200, startMainWidth + deltaX));
-            const newAnnotationWidth = containerWidth - newMainWidth - 16; // 16px gap
-            
-            const mainPercentage = (newMainWidth / containerWidth) * 100;
-            const annotationPercentage = (newAnnotationWidth / containerWidth) * 100;
-            
+            const rawPercentage = ((startMainWidth + deltaX) / containerWidth) * 100;
+            const mainPercentage = Math.min(70, Math.max(30, rawPercentage));
+            const annotationPercentage = 100 - mainPercentage;
+
             mainColumn.style.width = `${mainPercentage}%`;
             annotationColumn.style.width = `${annotationPercentage}%`;
 
             handle.style.left = `${mainPercentage}%`;
-            
-            // Store the split ratio
+
             blockRow.dataset.splitRatio = Math.round(mainPercentage);
         };
-        
+
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
             this.markDirty();
         };
-        
+
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
+    }
+
+    /**
+     * Navigate to the next or previous annotation within the scroll wrapper
+     * @param {HTMLElement} button - The navigation button element
+     * @param {string} direction - 'next' or 'prev'
+     */
+    navigateAnnotation(button, direction) {
+        const blockRow = button.closest('.block-row');
+        if (!blockRow) return;
+
+        const wrapper = blockRow.querySelector('.annotation-scroll-wrapper');
+        if (!wrapper) return;
+
+        const cards = Array.from(wrapper.querySelectorAll('.annotation-card'));
+        if (cards.length === 0) return;
+
+        // Find the currently visible card (or closest to being centered in view)
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const wrapperCenter = wrapperRect.left + wrapperRect.width / 2;
+
+        // Find card closest to center of wrapper viewport
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+
+        cards.forEach((card, index) => {
+            const cardRect = card.getBoundingClientRect();
+            const cardCenter = cardRect.left + cardRect.width / 2;
+            const distance = Math.abs(cardCenter - wrapperCenter);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = index;
+            }
+        });
+
+        // Navigate to next/prev card
+        let targetIndex;
+        if (direction === 'next') {
+            targetIndex = Math.min(closestIndex + 1, cards.length - 1);
+        } else {
+            targetIndex = Math.max(closestIndex - 1, 0);
+        }
+
+        // Only scroll if we're actually moving to a different card
+        if (targetIndex !== closestIndex) {
+            const targetCard = cards[targetIndex];
+            this.scrollToAnnotationCard(wrapper, targetCard);
+        }
+    }
+
+    /**
+     * Scroll the annotation wrapper to center a specific card
+     * @param {HTMLElement} wrapper - The annotation scroll wrapper
+     * @param {HTMLElement} card - The annotation card to scroll to
+     */
+    scrollToAnnotationCard(wrapper, card) {
+        if (!wrapper || !card) return;
+
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+
+        // Calculate scroll position to center the card in the wrapper
+        const wrapperCenter = wrapperRect.width / 2;
+        const cardCenter = card.offsetLeft + cardRect.width / 2;
+        const scrollTarget = cardCenter - wrapperCenter;
+
+        // Smooth scroll to the target position
+        wrapper.scrollTo({
+            left: Math.max(0, scrollTarget),
+            behavior: 'smooth'
+        });
     }
     
     destroy() {
