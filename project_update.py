@@ -7,6 +7,7 @@ Intended use:
 
 Invariants enforced:
 - Tables exist (db.create_all is idempotent)
+- Missing columns added to existing tables (chat_attachments summary columns, etc.)
 - At least one `User` with `user_type='admin'`
 - At least one `User` with `user_type='user'`
 - A `root` folder (Folder.is_root=True) exists for any accounts created here
@@ -15,7 +16,7 @@ This script does NOT drop tables/columns.
 """
 
 import config
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from flask import Flask
 from blueprints.p2.models import db, User, File, Folder
 from werkzeug.security import generate_password_hash
@@ -110,6 +111,56 @@ def _create_user_with_root_and_welcome_file(
 
     return user
 
+def _ensure_missing_columns():
+    """Add any missing columns to existing tables without dropping anything.
+    
+    IMPORTANT: This is the centralized location for all column additions.
+    When adding new columns to the models, add the corresponding ALTER TABLE
+    logic here to ensure project_update.py can bootstrap fresh deployments
+    and update existing databases without requiring separate migration scripts.
+    
+    Pattern for adding new column checks:
+    1. Check if table exists in tables list
+    2. Get existing columns for that table
+    3. Check if new column exists, if not add to missing_columns list
+    4. Execute ALTER TABLE with all missing columns in one statement
+    5. Commit and print confirmation
+    """
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+    
+    # Check chat_attachments table for summary-related columns
+    if 'chat_attachments' in tables:
+        existing_columns = {col['name'] for col in inspector.get_columns('chat_attachments')}
+        
+        missing_columns = []
+        if 'original_content_hash' not in existing_columns:
+            missing_columns.append('original_content_hash VARCHAR(64)')
+        if 'summary_is_stale' not in existing_columns:
+            missing_columns.append('summary_is_stale BOOLEAN DEFAULT FALSE')
+        if 'word_count' not in existing_columns:
+            missing_columns.append('word_count INT')
+        if 'summary_word_count' not in existing_columns:
+            missing_columns.append('summary_word_count INT')
+        
+        if missing_columns:
+            alter_statement = "ALTER TABLE chat_attachments " + ", ".join(
+                f"ADD COLUMN {col_def}" for col_def in missing_columns
+            )
+            db.session.execute(text(alter_statement))
+            db.session.commit()
+            print(f"✅ Added missing columns to chat_attachments: {', '.join(missing_columns)}")
+        else:
+            print("✅ chat_attachments: all columns present")
+    
+    # Add checks for other tables here as needed in future migrations
+    # Example:
+    # if 'users' in tables:
+    #     existing_columns = {col['name'] for col in inspector.get_columns('users')}
+    #     if 'new_column' not in existing_columns:
+    #         db.session.execute(text("ALTER TABLE users ADD COLUMN new_column VARCHAR(100)"))
+    #         db.session.commit()
+
 # Step 1: Initialize Flask + SQLAlchemy and create tables
 def init_app_and_tables():
     app = Flask(__name__)
@@ -132,6 +183,9 @@ def init_app_and_tables():
             print("✅ All tables created.")
         else:
             print("✅ Tables verified (create_all).")
+        
+        # Ensure missing columns are added to existing tables
+        _ensure_missing_columns()
 
         try:
             existing_usernames = {u[0] for u in db.session.query(User.username).all()}
