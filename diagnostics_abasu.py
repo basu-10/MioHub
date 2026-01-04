@@ -13,7 +13,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple
 import platform
-from util import format_table
+from diagnostics_abasu_util import format_table
 import zipfile
 import shutil
 
@@ -1890,7 +1890,7 @@ def show_last_modified_files():
                     continue
             
             # Print table
-            from util import format_table
+            from diagnostics_abasu_util import format_table
             headers = ["#", "File Path", "Modified", "Size"]
             print(format_table(
                 table_rows, 
