@@ -847,6 +847,37 @@
       font-size: 13px;
     }
 
+
+    .pill-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(13, 148, 136, 0.65));
+      border: 1px solid rgba(20, 184, 166, 0.75);
+      color: var(--white);
+      box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.18), 0 10px 24px rgba(13, 148, 136, 0.25);
+    }
+
+    .pill-brand .brand-mio { color: var(--white); }
+    .pill-brand .brand-chat { color: var(--accent); }
+
+    .pill-model {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(179, 139, 44, 0.28), rgba(143, 109, 30, 0.52));
+      border: 1px solid rgba(179, 139, 44, 0.6);
+      color: var(--white);
+      box-shadow: 0 0 0 1px rgba(179, 139, 44, 0.18), 0 6px 18px rgba(143, 109, 30, 0.22);
+    }
     .modal {
       padding: 0;
       border: none;
@@ -1375,7 +1406,6 @@
           </div>
           <div class="flex items-center gap-2">
             <button class="btn-ghost" onclick="toggleMemoryPanel()" title="Toggle memory">Memory</button>
-            <button class="btn-ghost" onclick="openSettings()">Settings</button>
           </div>
         </header>
 
@@ -1411,9 +1441,11 @@
                     <div class="chat-entry items-start max-w-[80%]" data-role="assistant" data-message-id="{{ chat.id }}" data-parent-id="{{ last_user_message_id }}" data-raw-content="{{ chat.content|e }}">
                       <div class="bubble-ai p-3 rounded-2xl w-full">
                         <div class="flex items-center gap-2 mb-1">
-                          <span class="text-xs px-2 py-1 rounded-full bg-white/5 text-white">MioChat</span>
+                          <span class="pill-brand">
+                            <span class="brand-mio">Mio</span><span class="brand-chat">Chat</span>
+                          </span>
                           {% if chat.model %}
-                          <span class="text-[10px] px-2 py-1 rounded-full bg-white/5 text-[var(--muted)]">{{ chat.model }}</span>
+                          <span class="pill-model">{{ chat.model }}</span>
                           {% endif %}
                         </div>
                         <div class="prose prose-invert max-w-none" data-markdown="{{ chat.content|e }}"></div>
