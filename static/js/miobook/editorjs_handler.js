@@ -60,11 +60,24 @@ class EditorJSHandler {
             tools: {
                 header: {
                     class: window.Header,
-                    inlineToolbar: true
+                    inlineToolbar: true,
+                    config: {
+                        placeholder: 'Enter a heading',
+                        levels: [1, 2, 3, 4, 5, 6],
+                        defaultLevel: 2
+                    },
+                    // Explicit conversion config to keep "Convert to → Heading" working across versions
+                    conversion: {
+                        export: 'text',
+                        import: 'text'
+                    }
                 },
                 list: {
                     class: window.NestedList,
-                    inlineToolbar: true
+                    inlineToolbar: true,
+                    config: {
+                        defaultStyle: 'unordered'
+                    }
                 },
                 checklist: {
                     class: window.Checklist,
@@ -72,7 +85,11 @@ class EditorJSHandler {
                 },
                 quote: {
                     class: window.Quote,
-                    inlineToolbar: true
+                    inlineToolbar: true,
+                    config: {
+                        quotePlaceholder: 'Enter a quote',
+                        captionPlaceholder: 'Quote\'s author'
+                    }
                 },
                 delimiter: window.Delimiter,
                 table: {

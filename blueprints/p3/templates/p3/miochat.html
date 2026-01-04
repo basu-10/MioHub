@@ -422,6 +422,29 @@
       padding: 14px 16px;
     }
 
+    .chat-shell-header {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .chat-shell-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+
+    .chat-shell-header h1 { font-size: 20px; line-height: 1.15; }
+    .chat-shell-header p { margin: 0; }
+    .chat-shell-meta .chip { padding: 7px 9px; font-size: 13px; gap: 6px; }
+    .chat-shell-meta .btn-ghost { padding: 7px 9px; font-size: 13px; }
+
     .pill-ghost {
       padding: 6px 12px;
       border-radius: 10px;
@@ -446,6 +469,15 @@
     /* Full-height chat in dismissed hero state */
     body:not(.hero-visible) .chat-shell {
       min-height: calc(100vh - 140px);
+    }
+
+    @media (max-width: 640px) {
+      .chat-shell { padding: 12px; gap: 10px; }
+      .chat-shell-header { gap: 6px; padding-bottom: 4px; margin-bottom: 4px; }
+      .chat-shell-header h1 { font-size: 17px; }
+      .chat-shell-meta { width: 100%; justify-content: flex-start; gap: 6px; }
+      .chat-shell-meta .chip { padding: 6px 8px; font-size: 12px; }
+      .chat-shell-meta .btn-ghost { padding: 6px 8px; font-size: 12px; }
     }
 
     .bubble-user { 
@@ -1390,28 +1422,26 @@
     <!-- Main column -->
     <div class="main-column" id="main-column">
       <div class="main-inner">
-        <header class="panel toolbar">
-          <div class="flex items-center gap-3">
-            {% if current_session %}
-            <div class="flex-1">
+        <section class="panel chat-shell">
+          <div class="chat-shell-header">
+            <div class="flex flex-col gap-1 min-w-[200px]">
+              {% if current_session %}
               <p class="text-xs text-[var(--muted)]">{{ chats[0].created_at.strftime('%Y-%m-%d') if chats and chats|length > 0 else 'New chat' }}</p>
               <h1 class="text-xl font-semibold truncate">{{ chats[0].content[:50] if chats and chats|length > 0 and chats[0].role == 'user' else 'Chat session' }}</h1>
-            </div>
-            {% else %}
-            <div class="flex-1">
+              {% else %}
               <p class="text-xs text-[var(--muted)]">MioChat</p>
               <h1 class="text-xl font-semibold">Select a conversation</h1>
+              {% endif %}
             </div>
-            {% endif %}
-          </div>
-          <div class="flex items-center gap-2">
-            <button class="btn-ghost" onclick="toggleMemoryPanel()" title="Toggle memory">Memory</button>
-          </div>
-        </header>
-
-        <section class="panel chat-shell">
-          <div class="flex items-center justify-start">
-            <div class="chip">Active model: <span id="chip-model" class="font-semibold text-white">{{ current_model }}</span></div>
+            <div class="chat-shell-meta">
+              <div class="chip">
+                <span class="material-icons" style="font-size: 16px;">smart_toy</span>
+                <span id="chip-model" class="font-semibold text-white">{{ current_model }}</span>
+              </div>
+              <button class="btn-ghost" onclick="toggleMemoryPanel()" title="Toggle memory">
+                <span class="material-icons" style="font-size: 18px;">memory</span>
+              </button>
+            </div>
           </div>
           <div id="chat-box" class="scroll-slim overflow-y-auto">
             <div class="max-w-4xl mx-auto space-y-4">

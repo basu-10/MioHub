@@ -92,34 +92,50 @@ class AnnotationHandler {
                 minHeight: 100,
                 tools: {
                     header: {
-                        class: Header,
+                        class: window.Header,
+                        inlineToolbar: true,
                         config: {
                             placeholder: 'Header',
                             levels: [2, 3, 4],
                             defaultLevel: 3
+                        },
+                        // Keep Convert to → Heading working consistently
+                        conversion: {
+                            export: 'text',
+                            import: 'text'
                         }
                     },
                     list: {
-                        class: NestedList,
-                        inlineToolbar: true
+                        class: window.NestedList,
+                        inlineToolbar: true,
+                        config: {
+                            defaultStyle: 'unordered'
+                        }
                     },
                     checklist: {
-                        class: Checklist,
+                        class: window.Checklist,
                         inlineToolbar: true
                     },
-                    quote: Quote,
-                    delimiter: Delimiter,
-                    table: Table,
-                    code: CodeTool,
+                    quote: {
+                        class: window.Quote,
+                        inlineToolbar: true,
+                        config: {
+                            quotePlaceholder: 'Enter a quote',
+                            captionPlaceholder: 'Quote\'s author'
+                        }
+                    },
+                    delimiter: window.Delimiter,
+                    table: window.Table,
+                    code: window.CodeTool,
                     inlineCode: {
-                        class: InlineCode,
+                        class: window.InlineCode,
                         shortcut: 'CMD+SHIFT+M'
                     },
                     marker: {
-                        class: Marker,
+                        class: window.Marker,
                         shortcut: 'CMD+SHIFT+H'
                     },
-                    underline: Underline
+                    underline: window.Underline
                 },
                 onChange: () => {
                     if (window.MioBook) {
