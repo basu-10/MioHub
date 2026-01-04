@@ -118,55 +118,91 @@ def _ensure_missing_columns():
     """Add any missing columns to existing tables without dropping anything.
     
     IMPORTANT: This is the centralized location for all column additions.
-    When adding new columns to the models, add the corresponding ALTER TABLE
-    logic here to ensure project_update.py can bootstrap fresh deployments
-    and update existing databases without requiring separate migration scripts.
+    Automatically compares SQLAlchemy model definitions with actual database schema
+    and adds any missing columns across ALL tables.
     
-    Pattern for adding new column checks:
-    1. Check if table exists in tables list
-    2. Get existing columns for that table
-    3. Check if new column exists, if not add to missing_columns list
-    4. Execute ALTER TABLE with all missing columns in one statement
-    5. Commit and print confirmation
+    This function uses SQLAlchemy's metadata to dynamically check all registered
+    models, making it future-proof as new columns are added to models.
     """
     inspector = inspect(db.engine)
-    tables = inspector.get_table_names()
+    db_tables = set(inspector.get_table_names())
     
-    # Check chat_attachments table for summary-related columns
-    if 'chat_attachments' in tables:
-        existing_columns = {col['name'] for col in inspector.get_columns('chat_attachments')}
+    # Track if any updates were made
+    tables_updated = []
+    
+    # Iterate through all tables defined in SQLAlchemy metadata
+    for table_name, table_obj in db.metadata.tables.items():
+        if table_name not in db_tables:
+            # Table doesn't exist yet, will be created by db.create_all()
+            continue
         
+        # Get existing columns in the database
+        existing_db_columns = {col['name'] for col in inspector.get_columns(table_name)}
+        
+        # Get columns defined in the model
+        model_columns = {col.name: col for col in table_obj.columns}
+        
+        # Find missing columns
         missing_columns = []
-        if 'original_content_hash' not in existing_columns:
-            missing_columns.append('original_content_hash VARCHAR(64)')
-        if 'summary_is_stale' not in existing_columns:
-            missing_columns.append('summary_is_stale BOOLEAN DEFAULT FALSE')
-        if 'word_count' not in existing_columns:
-            missing_columns.append('word_count INT')
-        if 'summary_word_count' not in existing_columns:
-            missing_columns.append('summary_word_count INT')
+        for col_name, col_obj in model_columns.items():
+            if col_name not in existing_db_columns:
+                # Determine column definition
+                col_type = col_obj.type
+                nullable = "NULL" if col_obj.nullable else "NOT NULL"
+                default = ""
+                
+                # Map SQLAlchemy types to MySQL types
+                if hasattr(col_type, 'length') and col_type.length:
+                    type_str = f"VARCHAR({col_type.length})"
+                elif str(col_type) == 'TEXT':
+                    type_str = "TEXT"
+                elif str(col_type) == 'LONGTEXT':
+                    type_str = "LONGTEXT"
+                elif str(col_type) == 'INTEGER':
+                    type_str = "INT"
+                elif str(col_type) == 'BOOLEAN':
+                    type_str = "BOOLEAN"
+                    if col_obj.default is not None:
+                        default = "DEFAULT FALSE" if not col_obj.default.arg else "DEFAULT TRUE"
+                elif str(col_type) == 'DATETIME':
+                    type_str = "DATETIME"
+                elif 'JSON' in str(col_type):
+                    type_str = "JSON"
+                else:
+                    type_str = str(col_type)
+                
+                col_def = f"{col_name} {type_str}"
+                if default:
+                    col_def += f" {default}"
+                if not col_obj.nullable and not default:
+                    # Only add NOT NULL if there's no default (safer for existing data)
+                    pass
+                
+                missing_columns.append(col_def)
         
+        # Add missing columns if any
         if missing_columns:
-            alter_statement = "ALTER TABLE chat_attachments " + ", ".join(
-                f"ADD COLUMN {col_def}" for col_def in missing_columns
-            )
-            db.session.execute(text(alter_statement))
-            db.session.commit()
-            print("[+] Schema Updates:")
-            print(f"    -> chat_attachments: added {len(missing_columns)} column(s)")
-            for col in missing_columns:
+            try:
+                alter_statement = f"ALTER TABLE {table_name} " + ", ".join(
+                    f"ADD COLUMN {col_def}" for col_def in missing_columns
+                )
+                db.session.execute(text(alter_statement))
+                db.session.commit()
+                tables_updated.append((table_name, missing_columns))
+            except Exception as e:
+                print(f"[!] Error adding columns to {table_name}: {str(e)}")
+                db.session.rollback()
+    
+    # Print results
+    if tables_updated:
+        print("[+] Schema Updates:")
+        for table_name, columns in tables_updated:
+            print(f"    -> {table_name}: added {len(columns)} column(s)")
+            for col in columns:
                 col_name = col.split()[0]
                 print(f"       * {col_name}")
-        else:
-            print("[OK] Schema Status: All columns present")
-    
-    # Add checks for other tables here as needed in future migrations
-    # Example:
-    # if 'users' in tables:
-    #     existing_columns = {col['name'] for col in inspector.get_columns('users')}
-    #     if 'new_column' not in existing_columns:
-    #         db.session.execute(text("ALTER TABLE users ADD COLUMN new_column VARCHAR(100)"))
-    #         db.session.commit()
+    else:
+        print("[OK] Schema Status: All columns present")
 
 # Step 1: Initialize Flask + SQLAlchemy and create tables
 def init_app_and_tables():
