@@ -16,11 +16,15 @@ This script does NOT drop tables/columns.
 """
 
 import config
+import logging
 from sqlalchemy import inspect, text
 from flask import Flask
 from blueprints.p2.models import db, User, File, Folder
 from werkzeug.security import generate_password_hash
 from datetime import datetime
+
+# Suppress SQLAlchemy verbose logging
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 
 
 DEFAULT_GUEST_USERNAME = "testuser"
@@ -66,7 +70,6 @@ def _reset_user_password_to_default(user: User) -> None:
         new_password = DEFAULT_GUEST_PASSWORD
     
     user.password_hash = generate_password_hash(new_password)
-    print(f"🔑 Password reset for user: {user.username}")
 
 
 def _create_user_with_root_and_welcome_file(
@@ -149,9 +152,13 @@ def _ensure_missing_columns():
             )
             db.session.execute(text(alter_statement))
             db.session.commit()
-            print(f"✅ Added missing columns to chat_attachments: {', '.join(missing_columns)}")
+            print("[+] Schema Updates:")
+            print(f"    -> chat_attachments: added {len(missing_columns)} column(s)")
+            for col in missing_columns:
+                col_name = col.split()[0]
+                print(f"       * {col_name}")
         else:
-            print("✅ chat_attachments: all columns present")
+            print("[OK] Schema Status: All columns present")
     
     # Add checks for other tables here as needed in future migrations
     # Example:
@@ -179,15 +186,24 @@ def init_app_and_tables():
 
         # create_all is idempotent: it will create any missing tables.
         db.create_all()
+        
+        print("\n" + "="*70)
+        print("MioHub Project Update - Database Bootstrap & Repair")
+        print("="*70 + "\n")
+        
         if not tables:
-            print("✅ All tables created.")
+            print("[*] Status: Fresh database detected")
+            print("    -> All tables created successfully\n")
         else:
-            print("✅ Tables verified (create_all).")
+            print("[*] Status: Existing database detected")
+            print("    -> All tables verified\n")
         
         # Ensure missing columns are added to existing tables
         _ensure_missing_columns()
+        print()
 
         try:
+            print("[#] User Account Management:\n")
             existing_usernames = {u[0] for u in db.session.query(User.username).all()}
 
             # 1) Ensure the default guest user exists (keeps existing repo expectations)
@@ -203,11 +219,15 @@ def init_app_and_tables():
                     create_welcome_file=True,
                 )
                 existing_usernames.add(guest_username)
-                print(f"✅ Guest user created: {guest_username} (user_type=guest)")
+                print(f"    [+] Created guest user: {guest_username}")
+                print(f"        Password: {DEFAULT_GUEST_PASSWORD}")
+                print(f"        Type: guest\n")
             else:
                 _ensure_root_folder_for_user(user_id=existing_guest.id)
                 _reset_user_password_to_default(existing_guest)
-                print(f"ℹ️ Guest user already exists: {existing_guest.username}")
+                print(f"    [!] Reset password: {existing_guest.username}")
+                print(f"        Password: {DEFAULT_GUEST_PASSWORD}")
+                print(f"        Type: guest\n")
 
             # 2) Ensure at least one admin exists
             existing_admin_any = User.query.filter_by(user_type="admin").first()
@@ -222,11 +242,15 @@ def init_app_and_tables():
                     create_welcome_file=False,
                 )
                 existing_usernames.add(admin_username)
-                print(f"✅ Admin user created: {admin_username} (user_type=admin)")
+                print(f"    [+] Created admin user: {admin_username}")
+                print(f"        Password: {DEFAULT_ADMIN_PASSWORD}")
+                print(f"        Type: admin\n")
             else:
                 _ensure_root_folder_for_user(user_id=existing_admin_any.id)
                 _reset_user_password_to_default(existing_admin_any)
-                print(f"ℹ️ Admin user already exists (user_type=admin): {existing_admin_any.username}")
+                print(f"    [!] Reset password: {existing_admin_any.username}")
+                print(f"        Password: {DEFAULT_ADMIN_PASSWORD}")
+                print(f"        Type: admin\n")
 
             # 3) Ensure at least one normal user exists
             existing_normal_any = User.query.filter_by(user_type="user").first()
@@ -241,13 +265,21 @@ def init_app_and_tables():
                     create_welcome_file=True,
                 )
                 existing_usernames.add(normal_username)
-                print(f"✅ Normal user created: {normal_username} (user_type=user)")
+                print(f"    [+] Created normal user: {normal_username}")
+                print(f"        Password: {DEFAULT_NORMAL_PASSWORD}")
+                print(f"        Type: user\n")
             else:
                 _ensure_root_folder_for_user(user_id=existing_normal_any.id)
                 _reset_user_password_to_default(existing_normal_any)
-                print(f"ℹ️ Normal user already exists (user_type=user): {existing_normal_any.username}")
+                print(f"    [!] Reset password: {existing_normal_any.username}")
+                print(f"        Password: {DEFAULT_NORMAL_PASSWORD}")
+                print(f"        Type: user\n")
 
             db.session.commit()
+            
+            print("="*70)
+            print("[OK] Project update completed successfully!")
+            print("="*70 + "\n")
         except Exception:
             db.session.rollback()
             raise
