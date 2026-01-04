@@ -56,12 +56,17 @@ class ChatAttachment(db.Model):
     summary_file_id = db.Column(db.Integer, db.ForeignKey('files.id'), nullable=True)
     summary_status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
     summary_error = db.Column(db.Text, nullable=True)  # Error message if failed
+    original_content_hash = db.Column(db.String(64), nullable=True, index=True)
+    summary_is_stale = db.Column(db.Boolean, default=False, nullable=False)
+    word_count = db.Column(db.Integer, nullable=True)
+    summary_word_count = db.Column(db.Integer, nullable=True)
     
     # Metadata (denormalized for performance)
     original_filename = db.Column(db.String(500), nullable=False)
     file_type = db.Column(db.String(50), nullable=False)  # pdf, docx, image, xlsx, etc.
     file_size = db.Column(db.Integer, nullable=False)  # Bytes
     file_hash = db.Column(db.String(64), index=True)  # SHA256 for deduplication
+    file_path = db.Column(db.String(500), nullable=True)  # Disk path for non-DB storage (e.g., PDFs)
     
     # Timestamps
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

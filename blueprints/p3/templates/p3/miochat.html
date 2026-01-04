@@ -623,10 +623,31 @@
       gap: 0.5rem;
       max-height: 200px;
       overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* Custom scrollbar styling for attached files list */
+    .attached-files-list-compact::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .attached-files-list-compact::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+    }
+
+    .attached-files-list-compact::-webkit-scrollbar-thumb {
+      background: rgba(20, 184, 166, 0.3);
+      border-radius: 4px;
+    }
+
+    .attached-files-list-compact::-webkit-scrollbar-thumb:hover {
+      background: rgba(20, 184, 166, 0.5);
     }
 
     .attachment-card {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem 0.75rem;
@@ -660,6 +681,12 @@
       overflow: hidden;
       text-overflow: ellipsis;
       color: var(--white);
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .attachment-card .file-name:hover {
+      color: var(--accent, #14b8a6);
     }
 
     .attachment-card .file-size {
@@ -691,6 +718,32 @@
       color: var(--accent);
     }
 
+    .session-folder-banner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .session-folder-banner .label {
+      font-size: 0.75rem;
+      color: var(--muted, #9aa8ad);
+    }
+
+    .session-folder-link {
+      color: var(--accent, #14b8a6);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .session-folder-link:hover {
+      text-decoration: underline;
+    }
+
     .attachment-card.inactive {
       opacity: 0.5;
       border-color: var(--muted, #9aa8ad);
@@ -709,7 +762,7 @@
       border-radius: 50%;
       width: 24px;
       height: 24px;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       font-size: 0.75rem;
@@ -724,6 +777,57 @@
 
     .summary-badge.failed {
       background: #ef4444;
+    }
+
+    .summary-link-bar {
+      width: 100%;
+      flex-basis: 100%;
+      margin-top: 0.5rem;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(20, 184, 166, 0.08);
+      color: var(--accent, #14b8a6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      font-size: 0.85rem;
+    }
+
+    .summary-link-bar:hover {
+      background: rgba(20, 184, 166, 0.15);
+    }
+
+    .summary-link-bar .material-icons {
+      font-size: 16px;
+    }
+
+    .summary-link-bar.stale {
+      background: rgba(239, 68, 68, 0.08);
+      color: #fbbf24;
+    }
+
+    .summary-link-bar .regenerate-btn {
+      background: transparent;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      transition: background 0.2s ease;
+    }
+
+    .summary-link-bar .regenerate-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .summary-link-bar .regenerate-btn .material-icons {
+      font-size: 16px;
     }
 
     @keyframes pulse {
@@ -743,7 +847,20 @@
       font-size: 13px;
     }
 
-    .modal { padding: 1rem; }
+    .modal {
+      padding: 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      max-width: none;
+      max-height: none;
+      box-shadow: none;
+    }
+    
+    .modal::backdrop {
+      background: rgba(0, 0, 0, 0.7);
+    }
+    
     .modal-box {
       width: 90vw;
       max-width: 1200px;
@@ -753,6 +870,198 @@
       border: 1px solid rgba(255, 255, 255, 0.05);
       box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
     }
+
+    .settings-modal {
+      position: relative;
+      max-width: 760px;
+      padding: 1.5rem;
+      background: linear-gradient(150deg, rgba(12, 15, 19, 0.96), rgba(15, 23, 42, 0.94));
+      border: 1px solid rgba(20, 184, 166, 0.26);
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+      border-radius: var(--radius);
+    }
+
+    .settings-modal::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 20% 20%, rgba(20, 184, 166, 0.14), transparent 35%),
+                  radial-gradient(circle at 82% 12%, rgba(179, 139, 44, 0.12), transparent 40%);
+      opacity: 0.8;
+    }
+
+    .settings-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      margin: -6px -6px 14px;
+      border-radius: calc(var(--radius) - 4px);
+      background: linear-gradient(120deg, rgba(20, 184, 166, 0.16), rgba(179, 139, 44, 0.14));
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .settings-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 30% 30%, rgba(20, 184, 166, 0.36), rgba(12, 15, 19, 0.9));
+      color: var(--accent);
+      border: 1px solid rgba(20, 184, 166, 0.36);
+      box-shadow: 0 10px 30px rgba(20, 184, 166, 0.25);
+    }
+
+    .settings-kicker {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 11px;
+      margin: 0 0 4px;
+    }
+
+    .settings-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--white);
+    }
+
+    .settings-subtext {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .settings-close {
+      margin-left: auto;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .settings-close:hover {
+      color: var(--white);
+      border-color: var(--accent);
+      box-shadow: 0 10px 24px rgba(20, 184, 166, 0.3);
+    }
+
+    .settings-body {
+      position: relative;
+      display: grid;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .setting-card {
+      position: relative;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+      overflow: hidden;
+    }
+
+    .setting-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(20, 184, 166, 0.18), transparent 45%);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .setting-card h4 {
+      margin: 0 0 4px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--white);
+    }
+
+    .setting-card p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .setting-card .field-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .setting-card select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--white);
+      font-weight: 600;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .setting-card select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.16);
+    }
+
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      position: relative;
+    }
+
+    .btn-soft {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--white);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-soft:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-accent {
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--accent);
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #0a0a0b;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 28px rgba(20, 184, 166, 0.32);
+      transition: transform 0.1s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 16px 34px rgba(20, 184, 166, 0.4); }
+    .btn-accent:active { transform: translateY(0); }
 
     #editMemoryModal h3 { color: #d4af37; border-bottom: 2px solid #d4af37; padding-bottom: 0.5rem; }
     #editMemoryModal .btn-save { background: linear-gradient(135deg, #d4af37, #b8941f); color: #0a0a0b; font-weight: 700; }
@@ -1160,6 +1469,12 @@
       <!-- Attachment Zone (Inside Memory Panel) -->
       {% if current_session %}
       <div id="attachmentZone" class="attachment-zone-memory">
+        {% if session_folder_url %}
+        <div class="session-folder-banner">
+          <span class="label">Your files are kept here:</span>
+          <a href="{{ session_folder_url }}" class="session-folder-link" target="_blank" rel="noopener">{{ session_folder_name }}</a>
+        </div>
+        {% endif %}
         <div class="upload-area-compact" id="uploadArea">
           <i class="material-icons" style="font-size: 24px;">attach_file</i>
           <p style="margin: 0; font-size: 0.85rem;">Drag & drop files here or <label for="fileInput" class="upload-link">browse</label></p>
@@ -1189,20 +1504,39 @@
 
   <!-- Settings Modal -->
   <dialog id="settingsModal" class="modal">
-    <div class="modal-box text-sm">
-      <h3 class="text-lg font-semibold mb-3">Settings</h3>
-      <label class="block mb-2">Model</label>
-      <select id="model-select" class="w-full p-2 rounded bg-white/5 border border-white/10">
-        {% for model in models %}
-          <option value="{{ model }}" {% if model == current_model %}selected{% endif %}>{{ model }}</option>
-        {% endfor %}
-      </select>
-      <div class="modal-action mt-4">
-        <form method="dialog" class="flex gap-2">
-          <button class="px-3 py-2 rounded bg-white/10">Cancel</button>
-          <button type="button" class="px-3 py-2 rounded bg-[var(--accent)] text-white" onclick="saveSettings()">Save</button>
-        </form>
+    <div class="modal-box settings-modal text-sm">
+      <div class="settings-header">
+        <div class="settings-icon"><i class="material-icons">tune</i></div>
+        <div>
+          <div class="settings-kicker">Session controls</div>
+          <h3 class="settings-title">Settings</h3>
+          <p class="settings-subtext">Choose how MioChat thinks before you start typing.</p>
+        </div>
+        <button type="button" class="settings-close" onclick="document.getElementById('settingsModal').close()">
+          <i class="material-icons" style="font-size: 18px;">close</i>
+        </button>
       </div>
+
+      <div class="settings-body">
+        <div class="setting-card">
+          <div class="field-label">
+            <i class="material-icons" style="font-size: 16px;">memory</i>
+            <span>Model</span>
+          </div>
+          <h4>Choose your assistant</h4>
+          <p>Pick the model powering this chat. Changes apply to the current session.</p>
+          <select id="model-select">
+            {% for model in models %}
+              <option value="{{ model }}" {% if model == current_model %}selected{% endif %}>{{ model }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <form method="dialog" class="settings-actions">
+        <button type="submit" class="btn-soft">Cancel</button>
+        <button type="button" class="btn-accent" onclick="saveSettings()">Save changes</button>
+      </form>
     </div>
   </dialog>
 
@@ -2296,6 +2630,7 @@
       
       const sizeStr = formatFileSize(attachment.file_size);
       const iconClass = getFileIcon(attachment.file_type);
+      const openUrl = attachment.open_url || `/p2/files/${attachment.file_id}/view`;
       
       let badgeHTML = '';
       if (attachment.summary_status === 'completed') {
@@ -2306,23 +2641,24 @@
         badgeHTML = '<span class="summary-badge failed">✗</span>';
       }
 
+      const hasSummary = attachment.summary_file_id || attachment.summary_status === 'completed' || attachment.summary_status === 'processing';
+      
       card.innerHTML = `
         <i class="material-icons file-icon">${iconClass}</i>
         <div class="file-info">
-          <div class="file-name" title="${escapeHtml(attachment.filename)}">${escapeHtml(attachment.filename)}</div>
+          <div class="file-name" title="${escapeHtml(attachment.filename)}" onclick="window.open('${openUrl}', '_blank')">${escapeHtml(attachment.filename)}</div>
           <div class="file-size">${sizeStr}</div>
         </div>
         ${isTemp ? '' : `
         <div class="btn-group">
-          <button class="btn-icon" title="Summarize" onclick="summarizeAttachment(${attachment.id})">
-            <i class="material-icons" style="font-size: 18px;">description</i>
-          </button>
           <button class="btn-icon" title="Toggle Active" onclick="toggleAttachment(${attachment.id})">
             <i class="material-icons" style="font-size: 18px;">${attachment.is_active !== false ? 'check_circle' : 'radio_button_unchecked'}</i>
           </button>
-          <a href="/p2/files/${attachment.file_id}/view" target="_blank" class="btn-icon" title="Open in MioSpace">
-            <i class="material-icons" style="font-size: 18px;">open_in_new</i>
-          </a>
+          ${!hasSummary ? `
+          <button class="btn-icon" title="Summarize" onclick="summarizeAttachment(${attachment.id})">
+            <i class="material-icons" style="font-size: 18px;">description</i>
+          </button>
+          ` : ''}
           <button class="btn-icon" title="Delete" onclick="deleteAttachment(${attachment.id})">
             <i class="material-icons" style="font-size: 18px;">delete</i>
           </button>
@@ -2330,8 +2666,51 @@
         `}
         ${badgeHTML}
       `;
+
+      if (attachment.summary_file_id) {
+        card.dataset.summaryFileId = attachment.summary_file_id;
+      }
+      if (attachment.summary_file_url) {
+        addSummaryBar(card, attachment.summary_file_url, attachment.summary_is_stale);
+      }
       
       return card;
+    }
+
+    function addSummaryBar(card, summaryUrl, isStale = false) {
+      if (!card || !summaryUrl) return;
+      let bar = card.querySelector('.summary-link-bar');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.className = 'summary-link-bar';
+        bar.innerHTML = `
+          <i class="material-icons">short_text</i>
+          <span>Summary available</span>
+          <button class="regenerate-btn" title="Regenerate summary" onclick="event.stopPropagation(); regenerateSummary(${card.dataset.attachmentId})">
+            <i class="material-icons">refresh</i>
+          </button>
+        `;
+        card.appendChild(bar);
+        
+        // Main bar click opens summary
+        bar.addEventListener('click', (e) => {
+          if (!e.target.closest('.regenerate-btn')) {
+            window.open(summaryUrl, '_blank');
+          }
+        });
+      }
+      
+      bar.classList.toggle('stale', !!isStale);
+      const label = bar.querySelector('span');
+      if (label) {
+        label.textContent = isStale ? 'Summary may be outdated' : 'Summary available';
+      }
+      
+      // Show/hide regenerate button based on stale status
+      const regenBtn = bar.querySelector('.regenerate-btn');
+      if (regenBtn) {
+        regenBtn.style.display = isStale ? 'flex' : 'none';
+      }
     }
 
     function formatFileSize(bytes) {
@@ -2376,6 +2755,55 @@
       return icons[fileType] || 'insert_drive_file';
     }
 
+    async function regenerateSummary(attachmentId) {
+      if (!confirm('Regenerate summary? This will replace the existing summary file.')) return;
+      
+      const card = document.querySelector(`[data-attachment-id="${attachmentId}"]`);
+      if (!card) return;
+      
+      // Update badge to processing
+      let badge = card.querySelector('.summary-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        card.appendChild(badge);
+      }
+      badge.className = 'summary-badge processing';
+      badge.textContent = '⏳';
+      
+      // Remove existing summary bar
+      const existingBar = card.querySelector('.summary-link-bar');
+      if (existingBar) {
+        existingBar.remove();
+      }
+      
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setActive('Regenerating summary...');
+      }
+      
+      try {
+        // First, reset the attachment summary status
+        const resetResponse = await fetch(`/attachments/${attachmentId}/reset_summary`, {
+          method: 'POST'
+        });
+        
+        if (!resetResponse.ok) {
+          throw new Error('Failed to reset summary status');
+        }
+        
+        // Then trigger summarization
+        await summarizeAttachment(attachmentId);
+        
+      } catch (error) {
+        console.error('Regenerate error:', error);
+        badge.className = 'summary-badge failed';
+        badge.textContent = '✗';
+        alert('Failed to regenerate summary: ' + error.message);
+        if (window.TelemetryPanel) {
+          window.TelemetryPanel.setIdle('Regeneration failed');
+        }
+      }
+    }
+
     async function summarizeAttachment(attachmentId) {
       const card = document.querySelector(`[data-attachment-id="${attachmentId}"]`);
       if (!card) return;
@@ -2406,10 +2834,9 @@
           if (window.TelemetryPanel) {
             window.TelemetryPanel.setIdle('Summary complete');
           }
-          
-          // TODO: Show summary preview modal
-          if (data.summary_text) {
-            alert('Summary created: ' + data.summary_text);
+
+          if (data.summary_file_url) {
+            addSummaryBar(card, data.summary_file_url, false);
           }
         } else {
           badge.className = 'summary-badge failed';

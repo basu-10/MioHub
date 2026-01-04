@@ -49,6 +49,19 @@ def delete_folder(folder_id):
         # Delete all files in this folder (replaces separate note/board deletion)
         files_in_folder = File.query.filter_by(folder_id=f.id).all()
         for file_obj in files_in_folder:
+            # Remove chat attachments that reference this file to satisfy FK constraints
+            try:
+                from blueprints.p3.models import ChatAttachment
+
+                attachments = ChatAttachment.query.filter_by(file_id=file_obj.id).all()
+                for attachment in attachments:
+                    db.session.delete(attachment)
+
+                # Clear any summaries that point at this file
+                ChatAttachment.query.filter_by(summary_file_id=file_obj.id).update({"summary_file_id": None})
+            except Exception as exc:
+                print(f"[DELETE FOLDER] Failed to clean chat attachments for file {file_obj.id}: {exc}")
+
             db.session.delete(file_obj)
 
         # Recursively delete all subfolders

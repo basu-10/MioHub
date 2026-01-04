@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ file.title if file else 'Edit MioBlocks' }} - MioBlocks Editor</title>
+    <title>{{ file.title if file else 'Edit MioBooks' }} - MioBooks Editor</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -626,9 +626,12 @@
             overflow-x: hidden;
         }
 
-        /* Atrament toolbar buttons */
-        .atrament-toolbar .atrament-mode-btn,
-        .atrament-toolbar .atrament-action-btn {
+        /* Konva toolbar buttons */
+        .konva-toolbar .konva-tool-btn,
+        .konva-toolbar .konva-undo,
+        .konva-toolbar .konva-redo,
+        .konva-toolbar .konva-image-btn,
+        .konva-toolbar .konva-clear {
             padding: 6px 12px;
             background: transparent;
             border: 1px solid #3d4047;
@@ -642,15 +645,22 @@
             gap: 6px;
         }
 
-        .atrament-toolbar .atrament-mode-btn.active {
+        .konva-toolbar .konva-tool-btn.active {
             background: rgba(20, 184, 166, 0.2);
             border-color: #14b8a6;
             color: #14b8a6;
             box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.15);
         }
 
-        .atrament-toolbar .atrament-action-btn.loading {
+        .konva-toolbar .konva-image-btn.loading {
             opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .konva-toolbar .konva-undo:disabled,
+        .konva-toolbar .konva-redo:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
             pointer-events: none;
         }
 
@@ -1241,6 +1251,7 @@
     <script>
         var require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/konva@9.3.16/konva.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
     <script>
         // Load Monaco Editor using AMD loader
@@ -1255,7 +1266,7 @@
     <script src="{{ url_for('static', filename='js/miobook/todo_handler.js') }}"></script>
     <script src="{{ url_for('static', filename='js/miobook/code_handler.js') }}"></script>
     <script src="{{ url_for('static', filename='js/miobook/editorjs_handler.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/miobook/atrament_handler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/miobook/konva_handler.js') }}"></script>
     <script src="{{ url_for('static', filename='js/miobook/annotation_handler.js') }}"></script>
     
     <script>
@@ -1352,10 +1363,10 @@
                             await window.CodeHandler?.initialize(blockEl);
                             break;
                         case 'blocks':
-                            await window.EditorJSHandler?.initialize(blockEl);
+                            await window.KonvaHandler?.initialize(blockEl);
                             break;
                         case 'whiteboard':
-                            await window.AtramentHandler?.initialize(blockEl);
+                            await window.KonvaHandler?.initialize(blockEl);
                             break;
                         case 'annotation':
                             await window.AnnotationHandler?.initialize(blockEl.closest('.annotation-card') || blockEl);
@@ -1464,7 +1475,7 @@
                         await window.EditorJSHandler?.initialize(blockEl);
                         break;
                     case 'whiteboard':
-                        await window.AtramentHandler?.initialize(blockEl);
+                        await window.KonvaHandler?.initialize(blockEl);
                         break;
                 }
                 blockEl.dataset.mbInit = '1';

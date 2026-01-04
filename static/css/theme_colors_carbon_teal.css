@@ -1,4 +1,4 @@
-/* Carbon Teal color variables extracted from folder_view.html
+/* Carbon Teal color variables extracted from folder_view_miospace.html
    Purpose: centralize color variables so templates can share them.
 */
 :root{
@@ -58,7 +58,7 @@
     --ct-white-60: rgba(255,255,255,0.6);
     --radius:10px;
 
-    /* Backwards-compatible aliases used throughout folder_view.html */
+    /* Backwards-compatible aliases used throughout folder_view_miospace.html */
     --bg-primary: var(--bg);
     --bg-secondary: var(--card);
     --bg-tertiary: rgba(18,21,22,0.98);

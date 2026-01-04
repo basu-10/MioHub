@@ -240,7 +240,7 @@ def view_folder(folder_id):
     except Exception:
         pinned_users = []
 
-    return render_template('p2/folder_view.html', folder=folder, notes=regular_notes, combined_docs=combined_docs, subfolders=subfolders, files=files, files_by_type=files_by_type, folder_breadcrumb=breadcrumb, all_folders=all_folders, current_sort=sort_by, display_prefs=display_prefs, pinned_users=pinned_users, recent_items=recent_items, is_root_folder=is_root_folder)
+    return render_template('p2/folder_view_miospace.html', folder=folder, notes=regular_notes, combined_docs=combined_docs, subfolders=subfolders, files=files, files_by_type=files_by_type, folder_breadcrumb=breadcrumb, all_folders=all_folders, current_sort=sort_by, display_prefs=display_prefs, pinned_users=pinned_users, recent_items=recent_items, is_root_folder=is_root_folder)
 
 
 @folder_bp.route('/create', methods=['POST'])

@@ -8,6 +8,12 @@ import os
 import requests
 from providers import LLMClient
 from sqlalchemy.orm.attributes import flag_modified
+from blueprints.p3.chat_attachment_service import (
+    create_attachment_from_upload,
+    create_summary_for_attachment,
+    get_or_create_session_folder,
+    build_chat_context_with_summaries
+)
 import config
 import logging
 
@@ -95,6 +101,14 @@ def chatbot():
     messages = []
     if current_session:
         messages = ChatMessage.query.filter_by(session_id=current_session_id).order_by(ChatMessage.created_at).all()
+
+    session_folder = None
+    session_folder_name = None
+    session_folder_url = None
+    if current_session:
+        session_folder = get_or_create_session_folder(current_session.id, current_user.id)
+        session_folder_name = session_folder.name
+        session_folder_url = url_for('folders.view_folder', folder_id=session_folder.id)
     
     after_messages_query = time.time()
     print(f"[DEBUG] Get current session messages ({len(messages)} messages): {after_messages_query - after_sessions_query:.3f}s")
@@ -105,10 +119,12 @@ def chatbot():
     before_render = time.time()
     print(f"[DEBUG] Model config: {before_render - after_messages_query:.3f}s")
 
-    result = render_template('p3/chatbot_v2.html',
+    result = render_template('p3/miochat.html',
                          sessions=user_sessions,
                          chats=messages,
                          current_session=current_session,
+                         session_folder_name=session_folder_name,
+                         session_folder_url=session_folder_url,
                          models=config.AVAILABLE_CHAT_MODELS,
                          current_model=current_model)
     
@@ -147,6 +163,14 @@ def chat():
         chat_session.updated_at = datetime.utcnow()
         db.session.commit()  # Commit title update immediately
 
+    # Build context from attachment summaries (Phase 4)
+    attachment_context = build_chat_context_with_summaries(current_session_id)
+    
+    # Combine memory items with attachment context
+    combined_memory = memory_items.copy()
+    if attachment_context:
+        combined_memory.insert(0, attachment_context)
+
     # Save user message
     user_message_obj = ChatMessage(
         session_id=current_session_id,
@@ -157,13 +181,13 @@ def chat():
     db.session.add(user_message_obj)
     db.session.commit()
 
-    llm_messages = _build_llm_messages(user_message, memory_items)
+    llm_messages = _build_llm_messages(user_message, combined_memory)
 
     print(f"Sending to LLM: {llm_messages}")
     print(f"Using model: {current_model}")
     print(f"Using provider: {config.PROVIDER}")
 
-    ai_response = _generate_ai_reply(user_message, memory_items, current_model)
+    ai_response = _generate_ai_reply(user_message, combined_memory, current_model)
 
     # Save AI response
     ai_message = ChatMessage(
@@ -238,11 +262,19 @@ def requery_chat_message():
 
     current_model = session.get('current_model', config.DEFAULT_CHAT_MODEL)
 
+    # Build context from attachment summaries (Phase 4) - same as /chat route
+    attachment_context = build_chat_context_with_summaries(current_session_id)
+    
+    # Combine memory items with attachment context
+    combined_memory = memory_items.copy()
+    if attachment_context:
+        combined_memory.insert(0, attachment_context)
+
     # Update the existing user message with new text and model context
     user_message.content = new_message
     user_message.model = current_model
 
-    ai_response = _generate_ai_reply(new_message, memory_items, current_model)
+    ai_response = _generate_ai_reply(new_message, combined_memory, current_model)
 
     # Ensure chronological ordering: assistant timestamp should not precede user message
     if target_created_at < user_message.created_at:
@@ -585,11 +617,6 @@ def p3_admin_dashboard():
 # CHAT ATTACHMENTS API ROUTES (Phase 3)
 # =============================================================================
 
-from blueprints.p3.chat_attachment_service import (
-    create_attachment_from_upload,
-    create_summary_for_attachment,
-    get_or_create_session_folder
-)
 from blueprints.p3.models import ChatAttachment
 from werkzeug.utils import secure_filename
 
@@ -604,6 +631,22 @@ ALLOWED_EXTENSIONS = {
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def build_attachment_open_url(file_obj):
+    """Resolve the correct editor/view URL for an attachment's underlying file."""
+    if not file_obj:
+        return None
+    if file_obj.type in ('proprietary_note', 'note'):
+        return url_for('notes.edit_note', note_id=file_obj.id)
+    return url_for('file.view_file', file_id=file_obj.id)
+
+
+def build_summary_edit_url(summary_file_id):
+    """Return the edit URL for a generated summary file."""
+    if not summary_file_id:
+        return None
+    return url_for('file.edit_file', file_id=summary_file_id)
 
 
 @p3_blueprint.route('/sessions/<int:session_id>/attachments/upload', methods=['POST'])
@@ -642,7 +685,11 @@ def upload_attachment(session_id):
                 'file_id': attachment.file_id,
                 'icon': attachment.get_file_icon(),
                 'is_active': attachment.is_active,
-                'summary_status': attachment.summary_status
+                'summary_status': attachment.summary_status,
+                'summary_file_id': attachment.summary_file_id,
+                'summary_is_stale': attachment.summary_is_stale,
+                'summary_file_url': build_summary_edit_url(attachment.summary_file_id),
+                'open_url': build_attachment_open_url(attachment.file)
             },
             'bytes_added': bytes_added,
             'duplicate': bytes_added == 0
@@ -668,7 +715,10 @@ def summarize_attachment(attachment_id):
         return jsonify({
             'success': True,
             'message': 'Summary already exists',
-            'summary_file_id': attachment.summary_file_id
+            'summary_file_id': attachment.summary_file_id,
+            'summary_file_url': build_summary_edit_url(attachment.summary_file_id),
+            'summary_is_stale': attachment.summary_is_stale,
+            'summary_status': attachment.summary_status
         })
     
     try:
@@ -677,12 +727,33 @@ def summarize_attachment(attachment_id):
         return jsonify({
             'success': True,
             'summary_file_id': summary_file.id,
-            'summary_text': summary_file.content_text[:500] + '...' if len(summary_file.content_text) > 500 else summary_file.content_text
+            'summary_file_url': build_summary_edit_url(summary_file.id),
+            'summary_is_stale': False,
+            'summary_status': 'completed'
         })
     
     except Exception as e:
         logger.error(f"Summarize attachment error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@p3_blueprint.route('/attachments/<int:attachment_id>/reset_summary', methods=['POST'])
+@login_required
+def reset_attachment_summary(attachment_id):
+    """Reset attachment summary status to allow regeneration"""
+    attachment = ChatAttachment.query.get_or_404(attachment_id)
+    
+    # Permission check
+    if attachment.session.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Reset summary status and clear staleness
+    attachment.summary_status = 'pending'
+    attachment.summary_is_stale = False
+    attachment.summary_error = None
+    db.session.commit()
+    
+    return jsonify({'success': True})
 
 
 @p3_blueprint.route('/attachments/<int:attachment_id>/toggle', methods=['POST'])
@@ -745,6 +816,10 @@ def list_attachments(session_id):
             'icon': att.get_file_icon(),
             'is_active': att.is_active,
             'summary_status': att.summary_status,
-            'uploaded_at': att.uploaded_at.isoformat()
+            'summary_file_id': att.summary_file_id,
+            'summary_is_stale': att.summary_is_stale,
+            'summary_file_url': build_summary_edit_url(att.summary_file_id),
+            'uploaded_at': att.uploaded_at.isoformat(),
+            'open_url': build_attachment_open_url(att.file)
         } for att in attachments]
     })

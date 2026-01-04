@@ -7,7 +7,7 @@ TEMPLATES_PATH = Path(__file__).resolve().parents[1] / 'blueprints' / 'p2' / 'te
 env = Environment(loader=FileSystemLoader(str(TEMPLATES_PATH)))
 
 templates_to_check = [
-    'p2/folder_view.html',
+    'p2/folder_view_miospace.html',
 ]
 
 errors = False

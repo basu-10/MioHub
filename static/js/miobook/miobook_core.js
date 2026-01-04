@@ -310,7 +310,7 @@ class MioBookCore {
                 content = await window.EditorJSHandler?.getContent(blockEl);
                 break;
             case 'whiteboard':
-                content = window.AtramentHandler?.getContent(blockEl);
+                content = await window.KonvaHandler?.getContent(blockEl);
                 break;
             case 'annotation':
                 content = await window.AnnotationHandler?.getContent(blockEl.closest('.annotation-card') || blockEl);
@@ -350,7 +350,7 @@ class MioBookCore {
             todo: [],
             code: '',
             blocks: { blocks: [] },
-            whiteboard: '',
+            whiteboard: { version: 'konva-v1', stageJSON: null },
             annotation: { blocks: [] }
         };
 
@@ -396,7 +396,7 @@ class MioBookCore {
                        </button>`;
 
                 const whiteboardEdit = containerType === 'main' && blockData.type === 'whiteboard'
-                    ? `<button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
+                    ? `<button type="button" class="konva-edit-btn control-btn" title="Edit (enable drawing)">
                             <i class="fas fa-pen"></i>
                        </button>`
                     : '';
@@ -440,33 +440,42 @@ class MioBookCore {
                 contentHTML = `<div class="editorjs-wrapper"><div class="editorjs-editor" data-content="${contentAttr}"></div></div>`;
                 break;
             case 'whiteboard':
-                contentHTML = `<div class="atrament-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
-                        <button type="button" class="atrament-mode-btn atrament-draw active">
+                contentHTML = `<div class="konva-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
+                        <button type="button" class="konva-tool-btn konva-draw active">
                             <i class="fas fa-pen"></i> Draw
                         </button>
-                        <button type="button" class="atrament-mode-btn atrament-erase">
+                        <button type="button" class="konva-tool-btn konva-erase">
                             <i class="fas fa-eraser"></i> Erase
+                        </button>
+                        <button type="button" class="konva-tool-btn konva-drag" title="Drag / move objects">
+                            <i class="fas fa-hand-paper"></i> Drag
                         </button>
                         <div style="border-left: 1px solid #3d4047; height: 24px;"></div>
                         <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
                             Color:
-                            <input type="color" class="atrament-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
+                            <input type="color" class="konva-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
                         </label>
                         <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
                             Size:
-                            <input type="range" class="atrament-size" min="1" max="20" value="2" style="width: 100px;">
+                            <input type="range" class="konva-size" min="1" max="30" value="4" style="width: 120px;">
                         </label>
-                        <button type="button" class="atrament-action-btn atrament-attach" title="Attach image">
+                        <button type="button" class="konva-undo" title="Undo" style="padding: 6px 10px; border: 1px solid #3d4047; background: transparent; color: #c3c6cb; border-radius: 4px; font-size: 12px;">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button type="button" class="konva-redo" title="Redo" style="padding: 6px 10px; border: 1px solid #3d4047; background: transparent; color: #c3c6cb; border-radius: 4px; font-size: 12px;">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button type="button" class="konva-image-btn" title="Insert image" style="padding: 6px 10px; border: 1px solid #3d4047; background: transparent; color: #c3c6cb; border-radius: 4px; font-size: 12px; display:flex; gap:6px; align-items:center;">
                             <i class="fas fa-paperclip"></i> Image
                         </button>
-                        <input type="file" class="atrament-image-input" accept="image/*" style="display:none">
+                        <input type="file" class="konva-image-input" accept="image/*" style="display:none">
                         <div style="flex: 1;"></div>
-                        <button type="button" class="atrament-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        <button type="button" class="konva-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
                             <i class="fas fa-trash"></i> Clear
                         </button>
                     </div>
-                    <div style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10;">
-                        <canvas class="atrament-canvas" style="display: block; cursor: default; touch-action: none;" data-content="${contentAttr}"></canvas>
+                    <div class="konva-stage-shell" style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10; min-height: 360px;">
+                        <div class="konva-stage" style="width: 100%; height: 480px;" data-content="${contentAttr}"></div>
                     </div>`;
                 break;
             case 'annotation':
@@ -704,9 +713,9 @@ class MioBookCore {
                 await window.EditorJSHandler?.initialize(blockEl);
                 break;
             case 'whiteboard':
-                console.log('[MioBook] About to call AtramentHandler.initialize, handler exists:', !!window.AtramentHandler);
-                await window.AtramentHandler?.initialize(blockEl);
-                console.log('[MioBook] AtramentHandler.initialize returned');
+                console.log('[MioBook] About to call KonvaHandler.initialize, handler exists:', !!window.KonvaHandler);
+                await window.KonvaHandler?.initialize(blockEl);
+                console.log('[MioBook] KonvaHandler.initialize returned');
                 break;
             case 'annotation':
                 await window.AnnotationHandler?.initialize(blockEl.closest('.annotation-card') || blockEl);
@@ -904,7 +913,7 @@ class MioBookCore {
                             </div>
                             <input type="text" class="block-title-input" placeholder="Block Title" value="">
                             <div class="block-controls">
-                                <button type="button" class="atrament-edit-btn control-btn" title="Edit (enable drawing)">
+                                <button type="button" class="konva-edit-btn control-btn" title="Edit (enable drawing)">
                                     <i class="fas fa-pen"></i>
                                 </button>
                                 <button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
@@ -922,35 +931,44 @@ class MioBookCore {
                             </div>
                         </div>
                         <div class="block-content">
-                            <div class="atrament-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
-                                <button type="button" class="atrament-mode-btn atrament-draw active">
+                            <div class="konva-toolbar" style="display: none; gap: 12px; align-items: center; padding: 12px; background: #0d0e10; border: 1px solid #2a2c31; border-radius: 6px 6px 0 0; border-bottom: none;">
+                                <button type="button" class="konva-tool-btn konva-draw active">
                                     <i class="fas fa-pen"></i> Draw
                                 </button>
-                                <button type="button" class="atrament-mode-btn atrament-erase">
+                                <button type="button" class="konva-tool-btn konva-erase">
                                     <i class="fas fa-eraser"></i> Erase
+                                </button>
+                                <button type="button" class="konva-tool-btn konva-drag" title="Drag / move objects">
+                                    <i class="fas fa-hand-paper"></i> Drag
                                 </button>
                                 <div style="border-left: 1px solid #3d4047; height: 24px;"></div>
                                 <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
                                     Color:
-                                    <input type="color" class="atrament-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
+                                    <input type="color" class="konva-color" value="#14b8a6" style="width: 32px; height: 24px; border: 1px solid #3d4047; border-radius: 4px; cursor: pointer;">
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 6px; color: #c3c6cb; font-size: 12px;">
                                     Size:
-                                    <input type="range" class="atrament-size" min="1" max="20" value="2" style="width: 100px;">
+                                    <input type="range" class="konva-size" min="1" max="30" value="4" style="width: 120px;">
                                 </label>
-                                <button type="button" class="atrament-action-btn atrament-attach" title="Attach image">
+                                <button type="button" class="konva-undo" title="Undo" style="padding: 6px 10px; border: 1px solid #3d4047; background: transparent; color: #c3c6cb; border-radius: 4px; font-size: 12px;">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button type="button" class="konva-redo" title="Redo" style="padding: 6px 10px; border: 1px solid #3d4047; background: transparent; color: #c3c6cb; border-radius: 4px; font-size: 12px;">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                                <button type="button" class="konva-image-btn" title="Insert image" style="padding: 6px 10px; border: 1px solid #3d4047; background: transparent; color: #c3c6cb; border-radius: 4px; font-size: 12px; display:flex; gap:6px; align-items:center;">
                                     <i class="fas fa-paperclip"></i> Image
                                 </button>
-                                <input type="file" class="atrament-image-input" accept="image/*" style="display:none">
+                                <input type="file" class="konva-image-input" accept="image/*" style="display:none">
                                 <div style="flex: 1;"></div>
-                                <button type="button" class="atrament-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                <button type="button" class="konva-clear" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                     <i class="fas fa-trash"></i> Clear
                                 </button>
                             </div>
-                            <div style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10;">
-                                <canvas class="atrament-canvas" 
-                                        style="display: block; cursor: default; touch-action: none;"
-                                        data-content=""></canvas>
+                            <div class="konva-stage-shell" style="border: 1px solid #2a2c31; border-radius: 6px; overflow: hidden; background: #0d0e10; min-height: 360px;">
+                                <div class="konva-stage" 
+                                        style="width: 100%; height: 480px;"
+                                        data-content=""></div>
                             </div>
                         </div>
                     </div>
@@ -1022,7 +1040,7 @@ class MioBookCore {
                 window.EditorJSHandler?.destroy(blockEl);
                 break;
             case 'whiteboard':
-                window.AtramentHandler?.destroy(blockEl);
+                window.KonvaHandler?.destroy(blockEl);
                 break;
             case 'annotation':
                 window.AnnotationHandler?.destroy(blockEl.closest('.annotation-card') || blockEl);

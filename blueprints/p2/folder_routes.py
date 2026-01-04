@@ -2,6 +2,7 @@
 from flask import Blueprint, request, redirect, url_for, flash, render_template, session, jsonify, current_app
 from flask_login import login_required, current_user
 from blueprints.p2.models import Folder, File, db, User
+from blueprints.p3.models import ChatSession
 from . import folder_bp  # Import the blueprint instance
 from datetime import datetime
 from sqlalchemy.orm import load_only
@@ -138,6 +139,16 @@ def view_folder(folder_id):
         File.owner_id == current_user.id,
         File.type != 'book'
     ).all()
+
+    # Include chat attachments that were hash-deduped into other folders so the
+    # session folder still shows every file the chat references.
+    session_for_folder = ChatSession.query.filter_by(session_folder_id=folder.id).first()
+    if session_for_folder:
+        existing_ids = {file_obj.id for file_obj in files}
+        for attachment in session_for_folder.attachments.all():
+            if attachment.file and attachment.file.id not in existing_ids:
+                files.append(attachment.file)
+                existing_ids.add(attachment.file.id)
     
     # DEBUG: Print all notes and files found
     # print(f"\n{'='*80}")
@@ -310,7 +321,7 @@ def view_folder(folder_id):
         pinned_users = []
 
     return render_template(
-        'p2/folder_view.html',
+        'p2/folder_view_miospace.html',
         folder=folder,
         notes=regular_notes,
         combined_docs=combined_docs,
