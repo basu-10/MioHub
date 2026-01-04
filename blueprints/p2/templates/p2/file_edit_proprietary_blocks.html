@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ file.title if file else 'Edit MioBooks' }} - MioBooks Editor</title>
+    <title>{{ file.title if file else 'Edit MioBlocks' }} - MioBlocks Editor</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1260,7 +1260,7 @@
         });
     </script>
     
-    <!-- MioBook Modules -->
+    <!-- MioBlocks Modules -->
     <script src="{{ url_for('static', filename='js/miobook/miobook_core.js') }}"></script>
     <script src="{{ url_for('static', filename='js/miobook/markdown_handler.js') }}"></script>
     <script src="{{ url_for('static', filename='js/miobook/todo_handler.js') }}"></script>
@@ -1274,7 +1274,7 @@
         const currentDocumentId = {{ file.id if file else 'null' }};
         const currentFolderId = {{ folder_id if folder_id else 'null' }};
         
-        // Initialize MioBook
+        // Initialize MioBlocks
         let MioBook;
         
         document.addEventListener('DOMContentLoaded', async function() {
@@ -1363,7 +1363,7 @@
                             await window.CodeHandler?.initialize(blockEl);
                             break;
                         case 'blocks':
-                            await window.KonvaHandler?.initialize(blockEl);
+                            await window.EditorJSHandler?.initialize(blockEl);
                             break;
                         case 'whiteboard':
                             await window.KonvaHandler?.initialize(blockEl);
