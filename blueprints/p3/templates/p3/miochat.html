@@ -437,13 +437,15 @@
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
-      justify-content: flex-start;
+      justify-content: space-between;
+      width: 100%;
     }
 
     .chat-shell-header h1 { font-size: 20px; line-height: 1.15; }
     .chat-shell-header p { margin: 0; }
     .chat-shell-meta .chip { padding: 7px 9px; font-size: 13px; gap: 6px; }
     .chat-shell-meta .btn-ghost { padding: 7px 9px; font-size: 13px; }
+    .chat-shell-meta .memory-btn { margin-left: auto; }
 
     .pill-ghost {
       padding: 6px 12px;
@@ -478,6 +480,7 @@
       .chat-shell-meta { width: 100%; justify-content: flex-start; gap: 6px; }
       .chat-shell-meta .chip { padding: 6px 8px; font-size: 12px; }
       .chat-shell-meta .btn-ghost { padding: 6px 8px; font-size: 12px; }
+      .chat-shell-meta .memory-btn { margin-left: 0; }
     }
 
     .bubble-user { 
@@ -1438,7 +1441,7 @@
                 <span class="material-icons" style="font-size: 16px;">smart_toy</span>
                 <span id="chip-model" class="font-semibold text-white">{{ current_model }}</span>
               </div>
-              <button class="btn-ghost" onclick="toggleMemoryPanel()" title="Toggle memory">
+              <button class="btn-ghost memory-btn" onclick="toggleMemoryPanel()" title="Toggle memory">
                 <span class="material-icons" style="font-size: 18px;">memory</span>
               </button>
             </div>
