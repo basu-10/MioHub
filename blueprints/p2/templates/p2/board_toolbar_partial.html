@@ -9,11 +9,11 @@
                 <div class="flex items-center gap-1.5 bg-white rounded-lg px-2 py-1.5 border border-gray-200 shadow-sm min-w-[180px]">
                     <i class="fas fa-edit text-gray-400 text-xs"></i>
                     <div class="flex flex-col flex-1 min-w-0">
-                        <input type="text" id="board-title" placeholder="Title" 
-                               value="{{ board.title if board else 'Whiteboard' }}" 
+                           <input type="text" id="board-title" placeholder="Title" 
+                               value="{{ file.title if file else 'Whiteboard' }}" 
                                class="bg-transparent text-xs font-medium text-gray-700 focus:outline-none w-full">
-                        <input type="text" id="board-description" placeholder="Description" 
-                               value="{{ board.description if board else '' }}" 
+                           <input type="text" id="board-description" placeholder="Description" 
+                               value="{{ file.description if file else '' }}" 
                                maxlength="500"
                                class="bg-transparent text-[10px] text-gray-500 focus:outline-none w-full">
                     </div>
