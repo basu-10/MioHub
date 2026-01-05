@@ -50,13 +50,13 @@ write text on canvas not modal
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Page Whiteboard</title>
+    <title>MioPages - Multi Page Whiteboard</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
-<!-- Whiteboard Modules -->
+<!-- Whiteboard(Miopage) Modules -->
 <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_shapes.js') }}"></script>
 <script src="{{ url_for('p2_bp.static', filename='js/whiteboard_textboxes.js') }}"></script>
 
@@ -264,7 +264,12 @@ write text on canvas not modal
   <!-- Floating Page Controls -->
   <div id="page-controls-container" class="fixed bottom-6 right-6 z-40">
             <div class="bg-white/90 backdrop-blur-md border border-apple-gray-200 rounded-xl shadow-lg p-2 flex items-center space-x-1">
-                <button id="prev-page" title="Previous Page" class="p-2 rounded-lg hover:bg-apple-gray-100 transition-colors duration-200">
+                <button id="add-page-before" title="Insert New Page Before Current Page" class="p-2 rounded-lg hover:bg-apple-gray-100 transition-colors duration-200">
+                  <i class="fas fa-plus text-apple-gray-700"></i>
+                </button>
+                <div class="w-px h-6 bg-apple-gray-300 mx-1"></div>
+
+              <button id="prev-page" title="Previous Page" class="p-2 rounded-lg hover:bg-apple-gray-100 transition-colors duration-200">
                     <i class="fas fa-chevron-left text-apple-gray-700"></i>
                 </button>
                 <div class="px-3 py-1 text-sm font-medium text-apple-gray-700 min-w-[3rem] text-center" id="page-info">1 / 1</div>
@@ -272,9 +277,12 @@ write text on canvas not modal
                     <i class="fas fa-chevron-right text-apple-gray-700"></i>
                 </button>
                 <div class="w-px h-6 bg-apple-gray-300 mx-1"></div>
+                
                 <button id="add-page" title="Insert New Page After Current Page" class="p-2 rounded-lg hover:bg-apple-gray-100 transition-colors duration-200">
                     <i class="fas fa-plus text-apple-gray-700"></i>
                 </button>
+                <div class="w-px h-6 bg-apple-gray-300 mx-1"></div>
+
                 <button id="delete-page" title="Delete Current Page" class="p-2 rounded-lg hover:bg-red-100 transition-colors duration-200">
                     <i class="fas fa-trash text-red-600"></i>
                 </button>
@@ -304,7 +312,7 @@ write text on canvas not modal
     <div class="overlay" id="text-editor-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
         <div class="modal" style="background: white; padding: 20px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
             <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">Edit Text</h3>
-            <textarea id="text-editor-textarea" placeholder="Enter your text here..." style="width: 100%; height: 150px; border: 1px solid #ddd; border-radius: 5px; padding: 10px; resize: vertical; font-family: inherit;"></textarea>
+            <textarea id="text-editor-textarea" placeholder="Enter your text here..." style="width: 100%; min-height: 150px; height: 150px; border: 1px solid #ddd; border-radius: 5px; padding: 10px; resize: none; font-family: inherit; box-sizing: border-box; overflow-y: hidden; max-height: 70vh;"></textarea>
             <div class="buttons" style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
                 <button id="text-editor-cancel" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer;">Cancel</button>
                 <button id="text-editor-save" style="padding: 8px 16px; border: none; background: #007AFF; color: white; border-radius: 5px; cursor: pointer;">Save</button>
@@ -567,7 +575,7 @@ write text on canvas not modal
     <!-- Hidden Forms -->
 <!-- Automatically route to correct Flask endpoint depending on new vs. existing board -->
 <form id="save-form" action="{{ url_for('boards.edit_board', board_id=file.id) if file else url_for('boards.new_board') }}" method="POST" style="display:none;">
-    <input id="title-input" name="title" value="{{ file.title if file else 'Whiteboard' }}">
+    <input id="title-input" name="title" value="{{ file.title if file else 'MioPage' }}">
     <input id="description-input" name="description" value="{{ file.description if file else '' }}">
     <input id="content-input" name="content">
     <input type="hidden" name="folder_id" id="folder-id-input" value="{{ file.folder_id if file else current_folder_id }}">
@@ -696,7 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <script>
 /* =========================
-   Enhanced Multi-Page Whiteboard
+   Enhanced Multi-Page Whiteboard(Miopage)
    ========================= */
 
 /* ======= Model ======= */
@@ -739,6 +747,9 @@ let isSaving = false;
 
 // Global clipboard for copy/paste across pages
 let globalClipboard = null;
+let lastInternalClipboardAt = 0;
+let lastOsClipboardAt = 0;
+let lastOsClipboardSignature = null;
 // Position where context menu was opened (for paste positioning)
 let contextMenuPosition = null;
 // Current mouse position for keyboard paste
@@ -794,6 +805,170 @@ function positionPastedObjects(objects, basePosition) {
     
     return clone;
   });
+}
+
+function markInternalClipboardUpdated() {
+  lastInternalClipboardAt = Date.now();
+}
+
+function updateOsClipboardSignature(signature, timestampOverride) {
+  if (!signature) return;
+  const nextTimestamp = timestampOverride ?? Date.now();
+  if (signature !== lastOsClipboardSignature) {
+    lastOsClipboardSignature = signature;
+    lastOsClipboardAt = nextTimestamp;
+  } else if (timestampOverride !== undefined) {
+    lastOsClipboardAt = nextTimestamp;
+  }
+}
+
+async function compressClipboardImage(blob) {
+  const baseDataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+  return await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const targetPixels = 1.2 * 1000000;
+      const currentPixels = img.width * img.height;
+      let w = img.width;
+      let h = img.height;
+
+      if (currentPixels > targetPixels) {
+        const scale = Math.sqrt(targetPixels / currentPixels);
+        w = Math.round(img.width * scale);
+        h = Math.round(img.height * scale);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      const signature = `image:${blob.type}:${blob.size}:${w}x${h}:${compressedDataUrl.length}`;
+      resolve({ dataUrl: compressedDataUrl, width: w, height: h, signature });
+    };
+    img.onerror = reject;
+    img.src = baseDataUrl;
+  });
+}
+
+async function readOsClipboardContent() {
+  try {
+    if (navigator.clipboard?.read) {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageTypes = item.types.filter(type => type.startsWith('image/'));
+        if (imageTypes.length > 0) {
+          const imageType = imageTypes[0];
+          const blob = await item.getType(imageType);
+          const compressed = await compressClipboardImage(blob);
+          const candidateTimestamp = compressed.signature === lastOsClipboardSignature ? lastOsClipboardAt : Date.now();
+          return { type: 'image', ...compressed, signature: compressed.signature, candidateTimestamp };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('OS clipboard image read failed', err);
+  }
+
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      const signature = `text:${text.length}:${text.substring(0, 64)}`;
+      const candidateTimestamp = signature === lastOsClipboardSignature ? lastOsClipboardAt : Date.now();
+      return { type: 'text', text, signature, candidateTimestamp };
+    }
+  } catch (err) {
+    console.warn('OS clipboard text read failed', err);
+  }
+
+  return null;
+}
+
+async function pasteFromOsClipboard(osContent, basePosition) {
+  if (!osContent) return false;
+
+  if (osContent.type === 'image') {
+    const startX = basePosition?.x ?? 50;
+    const startY = basePosition?.y ?? 160;
+    addObject({
+      id: nextObjectId++,
+      type: 'image',
+      layer: BASE_OBJECT_LAYER,
+      props: { src: osContent.dataUrl, x: startX, y: startY, w: osContent.width, h: osContent.height }
+    });
+    selectedId = nextObjectId - 1;
+    multiSelectedIds = new Set([selectedId]);
+    redraw();
+    return true;
+  }
+
+  if (osContent.type === 'text') {
+    const fs = parseInt(document.getElementById('text-size').value, 10) || 24;
+    addTextAcrossPages(osContent.text, fs, basePosition?.x ?? 50, basePosition?.y ?? 160);
+    selectedId = null;
+    multiSelectedIds.clear();
+    return true;
+  }
+
+  return false;
+}
+
+function pasteFromInternalClipboard(basePosition) {
+  if (!globalClipboard || globalClipboard.length === 0) return false;
+
+  const pastePosition = basePosition || { x: 100, y: 100 };
+  const positionedObjects = positionPastedObjects(globalClipboard, pastePosition);
+  const clones = positionedObjects.map(obj => {
+    obj.id = nextObjectId++;
+    return { type: 'add', object: obj };
+  });
+
+  executeCommand({ type: 'batch', commands: clones });
+  multiSelectedIds = new Set(clones.map(c => c.object.id));
+  selectedId = null;
+  resetUIControls();
+  redraw();
+  return true;
+}
+
+async function handlePasteAtPosition(basePosition) {
+  const osContent = await readOsClipboardContent();
+  const hasInternal = !!(globalClipboard && globalClipboard.length > 0);
+  const osTimestamp = osContent?.candidateTimestamp ?? 0;
+  const recentlyCopiedInternally = lastInternalClipboardAt && (Date.now() - lastInternalClipboardAt < 500);
+  const osIsNewer = osContent && !recentlyCopiedInternally && (!hasInternal || osTimestamp >= lastInternalClipboardAt);
+
+  if (osIsNewer) {
+    const pasted = await pasteFromOsClipboard(osContent, basePosition);
+    if (pasted) {
+      updateOsClipboardSignature(osContent.signature, osTimestamp);
+      return true;
+    }
+  }
+
+  if (hasInternal) {
+    const pasted = pasteFromInternalClipboard(basePosition);
+    if (pasted) return true;
+  }
+
+  if (osContent) {
+    const pasted = await pasteFromOsClipboard(osContent, basePosition);
+    if (pasted) {
+      updateOsClipboardSignature(osContent.signature, osTimestamp);
+      return true;
+    }
+  }
+
+  alert('Clipboard is empty or contains unsupported content.');
+  return false;
 }
 
 // Current page state (loaded from pages array)
@@ -993,6 +1168,14 @@ function insertPageAtCurrentLocation() {
   // Insert after current page
   pages.splice(currentPageIndex + 1, 0, newPage);
   currentPageIndex = currentPageIndex + 1;
+  loadPageState(currentPageIndex);
+  updatePageControls();
+}
+
+function insertPageBeforeCurrent() {
+  saveCurrentPageState();
+  const newPage = createNewPage();
+  pages.splice(currentPageIndex, 0, newPage);
   loadPageState(currentPageIndex);
   updatePageControls();
 }
@@ -2426,7 +2609,11 @@ function openTextEditor(textObj) {
   const objText = textObj.props?.text || textObj.text || '';
   textEditorTextarea.value = objText;
   textEditorOverlay.style.display = 'flex';
-  setTimeout(() => { textEditorTextarea.focus(); textEditorTextarea.select(); }, 100);
+  requestAnimationFrame(() => {
+    resizeTextEditorTextarea();
+    textEditorTextarea.focus();
+    textEditorTextarea.select();
+  });
 }
 
 function closeTextEditor(save = false) {
@@ -2462,10 +2649,22 @@ function closeTextEditor(save = false) {
 textEditorSave.addEventListener('click', () => closeTextEditor(true));
 textEditorCancel.addEventListener('click', () => closeTextEditor(false));
 textEditorOverlay.addEventListener('click', (e) => { if (e.target === textEditorOverlay) closeTextEditor(false); });
+textEditorTextarea.addEventListener('input', resizeTextEditorTextarea);
+textEditorTextarea.addEventListener('focus', resizeTextEditorTextarea);
 textEditorTextarea.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeTextEditor(false);
   else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) closeTextEditor(true);
 });
+
+function resizeTextEditorTextarea() {
+  if (!textEditorTextarea) return;
+  textEditorTextarea.style.height = 'auto';
+  const maxHeight = Math.max(window.innerHeight * 0.7, 240);
+  const scrollHeight = textEditorTextarea.scrollHeight;
+  const nextHeight = Math.min(scrollHeight, maxHeight);
+  textEditorTextarea.style.height = `${nextHeight}px`;
+  textEditorTextarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+}
 
 /* ======= Crop Modal ======= */
 let croppingImageId = null;
@@ -2559,7 +2758,7 @@ document.getElementById('crop-overlay').addEventListener('click', (e) => {
 });
 
 // Add keyboard support for crop modal
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', async (e) => {
   if (document.getElementById('crop-overlay').style.display === 'flex') {
     if (e.key === 'Escape') {
       closeCropModal(false);
@@ -2639,7 +2838,7 @@ document.querySelectorAll('.crop-handle').forEach(handle => {
 });
 
 /* ======= Keyboard Events ======= */
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', async (e) => {
   if(e.key === 'Shift') {
     shiftPressed = true;
     updateStatus();
@@ -2766,12 +2965,14 @@ document.addEventListener('keydown', (e) => {
       const selectedObjects = Array.from(multiSelectedIds).map(id => findById(id)).filter(Boolean);
       if (selectedObjects.length > 0) {
         globalClipboard = selectedObjects.map(o => structuredCloneSafe(o));
+        markInternalClipboardUpdated();
       }
     } else if (selectedId !== null) {
       // Copy single selected object
       const o = findById(selectedId);
       if (o) {
         globalClipboard = [structuredCloneSafe(o)];
+        markInternalClipboardUpdated();
       }
     }
   }
@@ -2779,19 +2980,8 @@ document.addEventListener('keydown', (e) => {
   // Ctrl+V to paste at current mouse position
   if (e.ctrlKey && e.key === 'v') {
     e.preventDefault();
-    if (globalClipboard && globalClipboard.length > 0) {
-      const pastePosition = currentMousePosition || {x: 100, y: 100}; // Default to (100, 100) if no mouse position
-      const positionedObjects = positionPastedObjects(globalClipboard, pastePosition);
-      const clones = positionedObjects.map(obj => {
-        obj.id = nextObjectId++;
-        return {type:"add", object: obj};
-      });
-      executeCommand({ type:"batch", commands: clones });
-      multiSelectedIds = new Set(clones.map(c => c.object.id));
-      selectedId = null;
-      resetUIControls();
-      redraw();
-    }
+    const pastePosition = currentMousePosition || { x: 100, y: 100 };
+    await handlePasteAtPosition(pastePosition);
   }
   
   // Arrow keys to move selected objects (like in Paint) - always prevent default scrolling
@@ -2895,6 +3085,7 @@ document.getElementById('next-page').addEventListener('click', () => {
   }
 });
 
+document.getElementById('add-page-before').addEventListener('click', insertPageBeforeCurrent);
 document.getElementById('add-page').addEventListener('click', insertPageAtCurrentLocation);
 document.getElementById('delete-page').addEventListener('click', deleteCurrentPage);
 
@@ -3576,18 +3767,15 @@ canvas.addEventListener('contextmenu', (ev)=>{
     multiSelectedIds.clear();
     redraw();
 
-    // Show paste menu if clipboard has content
-    if (globalClipboard && globalClipboard.length > 0) {
-      // Hide all buttons except paste
-      ctxMenu.querySelectorAll('button').forEach(btn => {
-        btn.style.display = btn.dataset.cmd === 'paste' ? 'block' : 'none';
-      });
-      ctxMenu.style.display='block';
-      positionContextMenu(ev.clientX, ev.clientY);
-      ctxMenu.setAttribute('data-paste-only', 'true');
-      ctxMenu.removeAttribute('data-multiselect');
-      return;
-    }
+    // Always offer paste when right-clicking empty space
+    ctxMenu.querySelectorAll('button').forEach(btn => {
+      btn.style.display = btn.dataset.cmd === 'paste' ? 'block' : 'none';
+    });
+    ctxMenu.style.display='block';
+    positionContextMenu(ev.clientX, ev.clientY);
+    ctxMenu.setAttribute('data-paste-only', 'true');
+    ctxMenu.removeAttribute('data-multiselect');
+    return;
   }
 });
 document.addEventListener('click', (e)=>{
@@ -3602,34 +3790,14 @@ document.addEventListener('click', (e)=>{
   }
 });
 
-ctxMenu.addEventListener('click', (e)=>{
+ctxMenu.addEventListener('click', async (e)=>{
   const cmdKey = e.target?.dataset?.cmd;
   if (!cmdKey) return;
 
   // Paste-only mode (right-click on empty space with clipboard content)
   if (ctxMenu.getAttribute('data-paste-only') === 'true') {
     if (cmdKey === 'paste') {
-      if (globalClipboard && globalClipboard.length > 0) {
-        const positionedObjects = positionPastedObjects(globalClipboard, contextMenuPosition);
-        
-        if (positionedObjects.length === 1) {
-          const clone = positionedObjects[0];
-          clone.id = nextObjectId++;
-          addObject(clone);
-          selectedId = clone.id;
-        } else {
-          const clones = positionedObjects.map(obj => {
-            obj.id = nextObjectId++;
-            return {type:"add", object: obj};
-          });
-          executeCommand({ type:"batch", commands: clones });
-          // Select all pasted objects
-          multiSelectedIds = new Set(clones.map(c => c.object.id));
-          selectedId = null;
-          resetUIControls();
-          resetUIControls();
-        }
-      }
+      await handlePasteAtPosition(contextMenuPosition);
     }
     ctxMenu.style.display='none';
     redraw();
@@ -3653,18 +3821,9 @@ ctxMenu.addEventListener('click', (e)=>{
       resetUIControls();
     } else if (cmdKey === 'copy') {
       globalClipboard = selectedObjects.map(o => structuredCloneSafe(o));
+      markInternalClipboardUpdated();
     } else if (cmdKey === 'paste') {
-      if (globalClipboard && globalClipboard.length > 0) {
-        const positionedObjects = positionPastedObjects(globalClipboard, contextMenuPosition);
-        const clones = positionedObjects.map(obj => {
-          obj.id = nextObjectId++;
-          return {type:"add", object: obj};
-        });
-        executeCommand({ type:"batch", commands: clones });
-        multiSelectedIds = new Set(clones.map(c => c.object.id));
-        selectedId = null;
-        resetUIControls();
-      }
+      await handlePasteAtPosition(contextMenuPosition);
     } else if (cmdKey === 'delete') {
       const deletes = selectedObjects.map(o => ({ type:"delete", object: structuredCloneSafe(o) }));
       executeCommand({ type:"batch", commands: deletes });
@@ -3724,29 +3883,9 @@ ctxMenu.addEventListener('click', (e)=>{
     selectedId = clone.id;
   } else if(cmdKey==='copy'){
     globalClipboard = [structuredCloneSafe(o)];
+    markInternalClipboardUpdated();
   } else if(cmdKey==='paste'){
-    if (globalClipboard && globalClipboard.length > 0) {
-      const positionedObjects = positionPastedObjects(globalClipboard, contextMenuPosition);
-      
-      if (positionedObjects.length === 1) {
-        // Single object paste
-        const clone = positionedObjects[0];
-        clone.id = nextObjectId++;
-        addObject(clone);
-        selectedId = clone.id;
-      } else {
-        // Multiple objects paste
-        const clones = positionedObjects.map(obj => {
-          obj.id = nextObjectId++;
-          return {type:"add", object: obj};
-        });
-        executeCommand({ type:"batch", commands: clones });
-        // Select all pasted objects
-        multiSelectedIds = new Set(clones.map(c => c.object.id));
-        selectedId = null;
-        resetUIControls();
-      }
-    }
+    await handlePasteAtPosition(contextMenuPosition);
   } else if(cmdKey==='delete'){
     removeByIdCmd(o);
     selectedId = null;
@@ -3784,6 +3923,33 @@ document.getElementById('tool-select').addEventListener('change',e=>{
   }
 });
 
+function applyColorToSelection(newColor) {
+  const selectionIds = (multiSelectedIds && multiSelectedIds.size > 0)
+    ? Array.from(multiSelectedIds)
+    : (selectedId ? [selectedId] : []);
+
+  const commands = [];
+
+  selectionIds.forEach(id => {
+    const o = findById(id);
+    if (!o || (o.type !== 'stroke' && o.type !== 'text')) return;
+    if (!o.props) o.props = {};
+
+    const prevColor = o.props.color ?? o.color;
+    const prev = { color: prevColor };
+    const next = { color: newColor };
+
+    o.props.color = newColor;
+    commands.push({ type: "updateProps", id: o.id, prev, next });
+  });
+
+  if (commands.length === 1) {
+    commitAppliedChange(commands[0]);
+  } else if (commands.length > 1) {
+    commitAppliedChange({ type: "batch", commands });
+  }
+}
+
 document.getElementById('color-picker').addEventListener('input',e=> {
   const newColor = e.target.value;
   color = newColor;
@@ -3794,15 +3960,7 @@ document.getElementById('color-picker').addEventListener('input',e=> {
     toolColors[currentTool] = newColor;
   }
   
-  if(selectedId) {
-    const o = findById(selectedId);
-    if(o && (o.type === 'stroke' || o.type === 'text')) {
-      const prev = { color: o.props.color };
-      const next = { color: newColor };
-      o.props.color = newColor;
-      commitAppliedChange({ type:"updateProps", id:o.id, prev, next });
-    }
-  }
+  applyColorToSelection(newColor);
 });
 
 document.getElementById('size-range').addEventListener('input',e=> {
@@ -4000,7 +4158,7 @@ document.getElementById('save-btn').addEventListener('click', async ()=>{
   console.log('Payload preview:', payload.substring(0, 500));
   
   // Sync the visible title and description inputs with the hidden form inputs
-  const visibleTitle = document.getElementById('board-title').value || 'Whiteboard';
+  const visibleTitle = document.getElementById('board-title').value || 'Miopage';
   const visibleDescription = document.getElementById('board-description').value || '';
   document.getElementById('title-input').value = visibleTitle;
   document.getElementById('description-input').value = visibleDescription;
@@ -4192,7 +4350,7 @@ async function printToPDF() {
         saveCurrentPageState();
         
         // Get the board title
-        const boardTitle = document.getElementById('board-title').value || 'Whiteboard';
+        const boardTitle = document.getElementById('board-title').value || 'Miopage';
         
         // Get canvas dimensions
         const canvas = document.getElementById('board-canvas');
@@ -4421,102 +4579,6 @@ function addTextAcrossPages(text, fontSize, startX = 50, startY = 160) {
   return chunks.length;
 }
 
-document.getElementById("paste-btn").addEventListener("click", async () => {
-  console.log('=== PASTE BUTTON CLICKED ===');
-  try {
-    // First try to read images from clipboard
-    console.log('Checking for images in clipboard...');
-    const clipboardItems = await navigator.clipboard.read();
-    console.log('Clipboard items:', clipboardItems.length);
-
-    let imageFound = false;
-    for (const item of clipboardItems) {
-      console.log('Item types:', item.types);
-
-      // Check if item contains an image
-      const imageTypes = item.types.filter(type => type.startsWith('image/'));
-      if (imageTypes.length > 0) {
-        console.log('Found image types:', imageTypes);
-        imageFound = true;
-
-        // Get the first image type (usually image/png or image/jpeg)
-        const imageType = imageTypes[0];
-        const blob = await item.getType(imageType);
-        console.log('Image blob size:', blob.size, 'bytes');
-
-        // Process the image using the same compression logic as file upload
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const img = new Image();
-          img.src = ev.target.result;
-          img.onload = () => {
-            // Create canvas for compression (same logic as file upload)
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            // Calculate size for 1.2MP equivalent (approximately 1200x1000 max)
-            const targetPixels = 1.2 * 1000000; // 1.2 megapixels
-            const currentPixels = img.width * img.height;
-
-            let w = img.width;
-            let h = img.height;
-
-            // If image is larger than 1.2MP, scale it down
-            if (currentPixels > targetPixels) {
-              const scale = Math.sqrt(targetPixels / currentPixels);
-              w = Math.round(img.width * scale);
-              h = Math.round(img.height * scale);
-            }
-
-            // Set canvas size
-            canvas.width = w;
-            canvas.height = h;
-
-            // Draw and compress image
-            ctx.drawImage(img, 0, 0, w, h);
-
-            // Convert to JPEG with 70% quality
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-
-            console.log(`[CLIPBOARD IMAGE] Original: ${img.width}x${img.height} (${Math.round(currentPixels/1000000*100)/100}MP), Resized: ${w}x${h} (${Math.round((w*h)/1000000*100)/100}MP)`);
-            console.log(`[CLIPBOARD IMAGE] Size - Original: ${ev.target.result.length} bytes, Compressed: ${compressedDataUrl.length} bytes, Reduction: ${Math.round((1 - compressedDataUrl.length/ev.target.result.length) * 100)}%`);
-
-            // Warn if still too large
-            if(compressedDataUrl.length > 500000) {
-              console.warn('[CLIPBOARD IMAGE] Large image detected (>500KB), may cause save issues');
-            }
-
-            addObject({id:nextObjectId++, type:'image', layer:BASE_OBJECT_LAYER, props:{src:compressedDataUrl, x:50, y:160, w, h}});
-          };
-        };
-        reader.readAsDataURL(blob);
-        break; // Only process the first image found
-      }
-    }
-
-    // If no image was found, try to read text (existing functionality)
-    if (!imageFound) {
-      console.log('No images found, checking for text...');
-      const text = await navigator.clipboard.readText();
-      console.log('Clipboard text length:', text ? text.length : 0);
-      console.log('Clipboard text preview:', text ? text.substring(0, 100) : 'empty');
-
-      if (!text) return alert("Clipboard is empty or contains unsupported content.");
-
-      const fs = parseInt(document.getElementById("text-size").value, 10) || 24;
-      console.log('Font size:', fs);
-
-      console.log('Calling addTextAcrossPages...');
-      // Use line-based splitting across pages (word wrapping is now handled inside addTextAcrossPages)
-      addTextAcrossPages(text, fs);
-    }
-
-  } catch (error) {
-    console.error('Paste error:', error);
-    alert("Failed to paste from clipboard. This may be due to browser security restrictions.");
-  }
-});
-
 /* ======= Settings ======= */
 let userPrefs = {
   maxLinesPerPage: 25,
@@ -4614,17 +4676,7 @@ function selectPaletteColor(colorValue, colorElement) {
     toolColors[currentTool] = colorValue;
   }
   
-  // If a stroke or text is selected, update its color
-  if (selectedId) {
-    const o = findById(selectedId);
-    if (o && (o.type === 'stroke' || o.type === 'text')) {
-      const prev = { color: o.props.color };
-      const next = { color: colorValue };
-      o.props.color = colorValue;
-      commitAppliedChange({ type: "updateProps", id: o.id, prev, next });
-      redraw();
-    }
-  }
+  applyColorToSelection(colorValue);
 }
 
 const settingsBtn = document.getElementById("settings-btn");
@@ -4936,8 +4988,11 @@ document.addEventListener('keydown', (e) => {
 
 /* ======= Mouse Wheel for Page Navigation ======= */
 document.addEventListener('wheel', (e) => {
-  // Only handle wheel when not zooming (Ctrl not pressed) and not in input fields
-  if (!e.ctrlKey && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+  const textModalOpen = textEditorOverlay && textEditorOverlay.style.display === 'flex';
+  if (textModalOpen) return;
+  // Only handle wheel when not zooming (Ctrl not pressed) and not in input fields or toolbar (toolbar should scroll itself)
+  const insideToolbar = e.target.closest && e.target.closest('#board-toolbar');
+  if (!e.ctrlKey && !insideToolbar && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
     if (e.deltaY > 0 && currentPageIndex < pages.length - 1) {
       e.preventDefault();
       switchToPage(currentPageIndex + 1);
@@ -4947,6 +5002,19 @@ document.addEventListener('wheel', (e) => {
     }
   }
 });
+
+// Allow vertical wheel on the toolbar to scroll it horizontally instead of flipping pages
+const toolbar = document.getElementById('board-toolbar');
+if (toolbar) {
+  const toolbarScroller = toolbar.querySelector('.overflow-x-auto');
+  toolbar.addEventListener('wheel', (e) => {
+    if (toolbarScroller && toolbarScroller.scrollWidth > toolbarScroller.clientWidth) {
+      toolbarScroller.scrollLeft += e.deltaY;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { passive: false });
+}
 
 /* ======= Self-tests ======= */
 (function runSelfTests(){
@@ -4980,14 +5048,14 @@ document.getElementById('size-range').value = size;
 
 // Update page title when board title changes
 document.getElementById('board-title').addEventListener('input', function() {
-  const title = this.value || 'Whiteboard';
-  document.title = title + ' - Multi-Page Whiteboard';
+  const title = this.value || 'Miopage';
+  document.title = title + ' - Miopage';
 });
 
 // Set initial page title
 document.addEventListener('DOMContentLoaded', function() {
-  const initialTitle = document.getElementById('board-title').value || 'Whiteboard';
-  document.title = initialTitle + ' - Multi-Page Whiteboard';
+  const initialTitle = document.getElementById('board-title').value || 'Miopage';
+  document.title = initialTitle + ' - Miopage';
 });
 
 // Dropdown menu functionality

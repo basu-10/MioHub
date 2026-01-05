@@ -1,15 +1,14 @@
 <!-- folder_view_preview_panel_partial.html -->
 <!-- Preview Panel - Shows file/folder details and preview on single click -->
-<div id="preview-panel-handle" class="preview-panel-handle" role="button" aria-expanded="false" aria-controls="preview-panel" title="Show preview">
-  <i class="material-icons">chevron_left</i>
-</div>
-
 <div id="preview-panel" class="preview-panel collapsed">
   <div class="preview-header">
     <div class="preview-title-section">
       <i class="material-icons preview-icon" id="preview-icon">description</i>
       <h3 id="preview-title" class="preview-title">Select an item</h3>
     </div>
+    <button class="preview-close-btn" type="button" aria-label="Close preview panel" onclick="closePreviewPanel()">
+      <i class="material-icons">close</i>
+    </button>
   </div>
   
   <div class="preview-content">
@@ -74,31 +73,35 @@
         <i class="material-icons">refresh</i>
         <span>Refresh Preview</span>
       </button>
-      <button class="preview-action-btn" onclick="togglePinPreviewedItem()" id="preview-pin-btn">
-        <i class="material-icons">push_pin</i>
-        <span id="preview-pin-text">Pin</span>
+      <button class="preview-action-btn group-1" onclick="cutPreviewedItem()" id="preview-cut-btn">
+        <i class="material-icons">content_cut</i>
+        Cut
       </button>
-      <button class="preview-action-btn" onclick="togglePublicPreviewedItem()" id="preview-public-btn">
-        <i class="material-icons">public</i>
-        <span id="preview-public-text">Public</span>
-      </button>
-      <button class="preview-action-btn" onclick="renamePreviewedItem()" id="preview-rename-btn">
-        <i class="material-icons">edit</i>
-        Rename
-      </button>
-      <button class="preview-action-btn" onclick="duplicatePreviewedItem()" id="preview-duplicate-btn">
-        <i class="material-icons">content_copy</i>
-        Duplicate
-      </button>
-      <button class="preview-action-btn" onclick="copyPreviewedItem()" id="preview-copy-btn">
+      <button class="preview-action-btn group-1" onclick="copyPreviewedItem()" id="preview-copy-btn">
         <i class="material-icons">file_copy</i>
         Copy
       </button>
-      <button class="preview-action-btn" onclick="downloadPreviewedItem()" id="preview-download-btn">
+      <button class="preview-action-btn group-1" onclick="duplicatePreviewedItem()" id="preview-duplicate-btn">
+        <i class="material-icons">content_copy</i>
+        Duplicate
+      </button>
+      <button class="preview-action-btn group-1" onclick="renamePreviewedItem()" id="preview-rename-btn">
+        <i class="material-icons">edit</i>
+        Rename
+      </button>
+      <button class="preview-action-btn group-2" onclick="togglePinPreviewedItem()" id="preview-pin-btn">
+        <i class="material-icons">push_pin</i>
+        <span id="preview-pin-text">Pin</span>
+      </button>
+      <button class="preview-action-btn group-2" onclick="togglePublicPreviewedItem()" id="preview-public-btn">
+        <i class="material-icons">public</i>
+        <span id="preview-public-text">Public</span>
+      </button>
+      <button class="preview-action-btn group-3" onclick="downloadPreviewedItem()" id="preview-download-btn">
         <i class="material-icons">download</i>
         Download
       </button>
-      <button class="preview-action-btn" onclick="sendPreviewedItem()" id="preview-send-btn">
+      <button class="preview-action-btn group-3" onclick="sendPreviewedItem()" id="preview-send-btn">
         <i class="material-icons">send</i>
         Send
       </button>
@@ -114,18 +117,22 @@
 /* Preview Panel Styles */
   :root {
     --preview-panel-width: 400px;
+    --preview-panel-header-offset: 130px; /* Matches fixed navbar + options bar height */
+    --preview-btn-color1: #14b8a6;
+    --preview-btn-color2: #f59e0b;
+    --preview-btn-color3: #38bdf8;
   }
 
 .preview-panel {
   position: fixed;
-  top: 120px; /* Below fixed header */
+  top: var(--preview-panel-header-offset);
   right: 0;
   width: var(--preview-panel-width);
-  height: calc(100vh - 120px);
+  height: calc(100vh - var(--preview-panel-header-offset));
   background: var(--card, #121516);
   border-left: 1px solid rgba(20, 184, 166, 0.2);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
-  z-index: 900;
+  z-index: 1065; /* Keep above navbar and sticky bars */
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
@@ -142,46 +149,27 @@
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Preview Handle */
-.preview-panel-handle {
-  position: fixed;
-  top: 160px;
-  right: 0;
-  width: 44px;
-  height: 84px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-primary);
-  border-right: none;
-  border-radius: 10px 0 0 10px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
+.preview-close-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 950;
-  transition: right 0.3s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.25);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(20, 184, 166, 0.08);
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  color: var(--white, #ECFFFF);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.preview-panel-handle .material-icons {
-  font-size: 24px;
-  transition: transform 0.2s ease;
+.preview-close-btn .material-icons {
+  font-size: 20px;
 }
 
-.preview-panel-handle:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.preview-panel-handle.panel-open {
-  right: var(--preview-panel-width);
-  background: linear-gradient(90deg, var(--accent, #14b8a6) 0%, var(--accent-strong, #0d9488) 100%);
-  color: var(--white);
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35);
-}
-
-.preview-panel-handle.panel-open .material-icons {
-  transform: translateX(-2px);
+.preview-close-btn:hover {
+  background: rgba(20, 184, 166, 0.16);
+  border-color: var(--accent, #14b8a6);
 }
 
 /* Header */
@@ -485,6 +473,39 @@
   transform: translateY(-1px);
 }
 
+.preview-action-btn.group-1 {
+  background: rgba(20, 184, 166, 0.16);
+  border-color: rgba(20, 184, 166, 0.35);
+  color: var(--preview-btn-color1);
+}
+
+.preview-action-btn.group-1:hover {
+  background: rgba(20, 184, 166, 0.24);
+  border-color: var(--preview-btn-color1);
+}
+
+.preview-action-btn.group-2 {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: var(--preview-btn-color2);
+}
+
+.preview-action-btn.group-2:hover {
+  background: rgba(245, 158, 11, 0.24);
+  border-color: var(--preview-btn-color2);
+}
+
+.preview-action-btn.group-3 {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: var(--preview-btn-color3);
+}
+
+.preview-action-btn.group-3:hover {
+  background: rgba(56, 189, 248, 0.24);
+  border-color: var(--preview-btn-color3);
+}
+
 .preview-action-btn:active {
   transform: translateY(0);
 }
@@ -556,12 +577,6 @@
   .main-content-with-preview {
     margin-right: 0;
   }
-
-  .preview-panel-handle,
-  .preview-panel-handle.panel-open {
-    right: 12px;
-    top: 130px;
-  }
 }
 </style>
 
@@ -570,18 +585,6 @@
 let previewedItem = null;
 const previewMetadataCache = new Map();
 const previewMetadataRequests = new Map();
-
-function syncPreviewHandleState(isOpen) {
-  const handle = document.getElementById('preview-panel-handle');
-  if (!handle) return;
-  handle.classList.toggle('panel-open', isOpen);
-  handle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-  handle.setAttribute('title', isOpen ? 'Hide preview' : 'Show preview');
-  const icon = handle.querySelector('.material-icons');
-  if (icon) {
-    icon.textContent = isOpen ? 'chevron_right' : 'chevron_left';
-  }
-}
 
 function setPreviewPanelState(isOpen) {
   const panel = document.getElementById('preview-panel');
@@ -595,8 +598,6 @@ function setPreviewPanelState(isOpen) {
   if (mainContent) {
     mainContent.classList.toggle('main-content-with-preview', isOpen);
   }
-
-  syncPreviewHandleState(isOpen);
 
   if (!isOpen) {
     document.querySelectorAll('.item-card, .item-row').forEach(card => {
@@ -637,37 +638,18 @@ function closePreviewPanel() {
 // Expose function immediately
 window.closePreviewPanel = closePreviewPanel;
 
-document.addEventListener('DOMContentLoaded', () => {
-  const panel = document.getElementById('preview-panel');
-  const handle = document.getElementById('preview-panel-handle');
-  const initialOpen = panel && !panel.classList.contains('collapsed');
-  syncPreviewHandleState(Boolean(initialOpen));
-
-  if (handle) {
-    handle.addEventListener('click', () => {
-      const isOpen = panel && !panel.classList.contains('collapsed');
-      if (isOpen) {
-        closePreviewPanel();
-      } else {
-        setPreviewPanelState(true);
-      }
-    });
-  }
-});
-
 // Close preview panel on click outside (similar to context menu pattern)
 document.addEventListener('click', function(e) {
   const panel = document.getElementById('preview-panel');
-  const handle = document.getElementById('preview-panel-handle');
   
   // Only check if panel is open
   if (!panel || panel.classList.contains('collapsed')) {
     return;
   }
   
-  // Don't close if clicking inside the preview panel or handle
-  if (e.target.closest('#preview-panel') || e.target.closest('#preview-panel-handle')) {
-    console.log('[PREVIEW PANEL] Click inside panel or handle, not closing');
+  // Don't close if clicking inside the preview panel
+  if (e.target.closest('#preview-panel')) {
+    console.log('[PREVIEW PANEL] Click inside panel, not closing');
     return;
   }
   

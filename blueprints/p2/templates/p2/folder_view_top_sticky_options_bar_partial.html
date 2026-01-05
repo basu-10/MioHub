@@ -162,11 +162,8 @@
     </ol>
   </nav>
   
-  <!-- Right side: Batch operations + Sorting / View / Help buttons (grouped and right-aligned, all horizontally aligned) -->
+  <!-- Right side: Sorting / View / Help buttons (grouped and right-aligned) -->
   <div class="d-flex align-items-center gap-2" style="flex: 0 0 auto;">
-    <!-- Batch operation buttons (hidden when no items selected) -->
-    {% include "p2/folder_view_batch_operations_partial.html" %}
-    
     {% include "/p2/folder_view_sort_by_partial.html" %}
     {% include "/p2/folder_view_view_partial.html" %}
     {% include "p2/folder_view_tutorial_partial.html" %}

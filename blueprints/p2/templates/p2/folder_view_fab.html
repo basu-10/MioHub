@@ -1,14 +1,19 @@
 <!-- Floating Action Button (FAB) - Extracted Partial -->
 {# Hide floating create button on profile, user pages, and public note/board views #}
 {% if not (request.path == '/profile' or request.path.startswith('/users/') or request.path.startswith('/public/') or request.path.startswith('/assets')) %}
-<!-- Floating Paste Button (appears when clipboard has data) -->
-<button id="floatingPasteBtn" class="floating-paste-button hidden fixed text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-300" style="background: var(--accent); z-index: 900; bottom: 5rem; right: 0.75rem;">
-  <i class="material-icons">content_paste</i>
-</button>
+<div class="fab-stack" aria-label="Floating actions">
+  <!-- Floating Paste Button (appears when clipboard has data) -->
+  <div id="floatingPasteWrapper" class="floating-paste-wrapper hidden">
+    <button id="floatingPasteBtn" class="floating-paste-button fab-stack-btn hidden text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-300" style="background: var(--accent);">
+      <i class="material-icons">content_paste</i>
+    </button>
+    <button id="floatingPasteClearBtn" class="floating-paste-clear hidden" aria-label="Clear clipboard" title="Clear clipboard">
+      <i class="material-icons">close</i>
+    </button>
+  </div>
 
-<div class="fixed bottom-0 right-0 p-3" style="z-index: 900;">
-  <div class="relative dropdown">
-    <button id="createBtn" class="fab-button text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-300" style="background: var(--accent);">
+  <div class="fab-dropdown-wrapper dropdown">
+    <button id="createBtn" class="fab-button fab-stack-btn text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-300" style="background: var(--accent);">
       <i class="material-icons">add</i>
     </button>
     <ul id="createDropdown" class="absolute right-0 bottom-full mb-2 w-48 hidden fab-dropdown">
@@ -67,6 +72,31 @@
 {% endif %}
 
 <style>
+/* Floating Action Button (FAB) Container */
+.fab-stack {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.85rem;
+  z-index: 910;
+}
+
+.fab-stack-btn {
+  position: relative;
+}
+
+.floating-paste-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.fab-dropdown-wrapper {
+  position: relative;
+}
+
 /* Floating Action Button (FAB) Styles */
 .fab-button {
   /* Default faded state - unobtrusive */
@@ -120,6 +150,43 @@
 .floating-paste-button:active {
   transform: scale(0.95);
   opacity: 0.9;
+}
+
+.floating-paste-clear {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: var(--ochre);
+  color: var(--white);
+  border: 1px solid var(--ochre-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.floating-paste-clear:hover {
+  background: var(--ochre-strong);
+  color: var(--white);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+}
+
+.floating-paste-clear:active {
+  transform: scale(0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Ensure clear pill hides whenever the paste wrapper or button hides */
+.floating-paste-wrapper.hidden .floating-paste-clear,
+.floating-paste-button.hidden + .floating-paste-clear {
+  display: none !important;
 }
 
 /* Floating Paste Button Styles */
@@ -213,10 +280,10 @@
 /* Mobile responsive adjustments for FAB */
 @media (max-width: 768px) {
   /* Position FAB better on mobile */
-  .fixed.bottom-0.right-0.p-3 {
-    padding: 0.75rem !important;
+  .fab-stack {
     bottom: 0.5rem !important;
     right: 0.5rem !important;
+    gap: 0.65rem;
   }
 
   /* Make FAB slightly smaller on mobile */
@@ -228,8 +295,6 @@
   .floating-paste-button {
     width: 50px !important;
     height: 50px !important;
-    bottom: 4rem !important;
-    right: 0.5rem !important;
   }
 
   .fab-button .material-icons,
@@ -272,7 +337,6 @@
   .floating-paste-button {
     width: 45px !important;
     height: 45px !important;
-    bottom: 3.5rem !important;
   }
 
   .fab-button .material-icons,

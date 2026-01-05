@@ -1543,6 +1543,13 @@ document.addEventListener('DOMContentLoaded', function() {
           pasteBtn.addEventListener('click', window.floatingPasteClick);
           console.log('[FLOATING PASTE] Click listener attached');
         }
+
+        const clearBtn = document.getElementById('floatingPasteClearBtn');
+        if (clearBtn && !clearBtn.dataset.listenerAttached) {
+          clearBtn.addEventListener('click', window.floatingPasteClearClick);
+          clearBtn.dataset.listenerAttached = 'true';
+          console.log('[FLOATING PASTE] Clear listener attached');
+        }
       } else {
         console.log('[FLOATING PASTE] Waiting for ClipboardOperations module...');
         setTimeout(initializeFloatingPasteButton, 100);
@@ -1562,6 +1569,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Update floating paste button visibility
   window.updateFloatingPasteButton = function() {
     const pasteBtn = document.getElementById('floatingPasteBtn');
+    const clearBtn = document.getElementById('floatingPasteClearBtn');
+    const wrapper = document.getElementById('floatingPasteWrapper');
     
     if (!pasteBtn) {
       console.warn('[FLOATING PASTE] Button not found in DOM');
@@ -1585,12 +1594,18 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
+    // Default to hidden
+    pasteBtn.classList.add('hidden');
+    if (clearBtn) clearBtn.classList.add('hidden');
+    if (wrapper) wrapper.classList.add('hidden');
+
     // Show/hide paste button
     if (hasClipboard) {
       pasteBtn.classList.remove('hidden');
+      if (clearBtn) clearBtn.classList.remove('hidden');
+      if (wrapper) wrapper.classList.remove('hidden');
       console.log('[FLOATING PASTE] Button shown');
     } else {
-      pasteBtn.classList.add('hidden');
       console.log('[FLOATING PASTE] Button hidden');
     }
   };
@@ -1604,6 +1619,18 @@ document.addEventListener('DOMContentLoaded', function() {
       window.ClipboardOperations.triggerPaste();
     } else {
       console.error('[FLOATING PASTE] ClipboardOperations not available');
+    }
+  };
+
+  window.floatingPasteClearClick = function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('[FLOATING PASTE] Clear button clicked');
+
+    if (window.ClipboardOperations && typeof window.ClipboardOperations.clearClipboard === 'function') {
+      window.ClipboardOperations.clearClipboard();
+    } else {
+      console.error('[FLOATING PASTE] ClipboardOperations not available for clearing');
     }
   };
 
@@ -1821,143 +1848,14 @@ document.addEventListener('DOMContentLoaded', function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Keyboard shortcuts for navigation and clipboard operations
+  // Keyboard shortcuts for section navigation only
   document.addEventListener('keydown', function(e) {
-    // Only trigger if not typing in an input/textarea
+    // Skip when typing in inputs/content-editable areas
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') {
       return;
     }
 
-    // Ctrl+C to copy selected items (unified batch selection)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-      e.preventDefault();
-      
-      // Use batch selection (single items are now added to batch)
-      if (window.batchSelected && window.batchSelected.length > 0) {
-        const itemCount = window.batchSelected.length; // Capture count BEFORE clicking button
-        const btnBatchCopy = document.getElementById('btn-batch-copy');
-        if (btnBatchCopy && !btnBatchCopy.disabled) {
-          btnBatchCopy.click();
-          // Show notification AFTER button click (which clears selection)
-          if (window.TelemetryPanel) {
-            window.TelemetryPanel.setIdle(`Copied ${itemCount} item${itemCount > 1 ? 's' : ''} to clipboard`);
-          }
-        }
-      }
-      return;
-    }
-
-    // Ctrl+X to cut selected items (unified batch selection)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
-      e.preventDefault();
-      
-      // Use batch selection (single items are now added to batch)
-      if (window.batchSelected && window.batchSelected.length > 0) {
-        const itemCount = window.batchSelected.length; // Capture count BEFORE clicking button
-        const btnBatchCut = document.getElementById('btn-batch-cut');
-        if (btnBatchCut && !btnBatchCut.disabled) {
-          btnBatchCut.click();
-          // Show notification AFTER button click (which clears selection)
-          if (window.TelemetryPanel) {
-            window.TelemetryPanel.setIdle(`Cut ${itemCount} item${itemCount > 1 ? 's' : ''} to clipboard`);
-          }
-        }
-      }
-      return;
-    }
-
-    // Ctrl+V to paste from clipboard (unified batch paste)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-      e.preventDefault();
-      
-      // Read clipboard directly from sessionStorage
-      let clipboard = null;
-      try {
-        const stored = sessionStorage.getItem('p2_clipboard');
-        if (stored) {
-          clipboard = JSON.parse(stored);
-        }
-      } catch (error) {
-        console.error('Failed to read clipboard:', error);
-      }
-      
-      if (clipboard) {
-        // Always use batch paste button (works for both single and multi items)
-        const btnBatchPaste = document.getElementById('btn-batch-paste');
-        if (btnBatchPaste && !btnBatchPaste.disabled) {
-          btnBatchPaste.click();
-        } else {
-          console.warn('Batch paste button not available or disabled');
-        }
-      } else if (window.TelemetryPanel) {
-        window.TelemetryPanel.setIdle('Clipboard is empty');
-      }
-      return;
-    }
-
-    // Ctrl+A to select all items in current folder
-    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-      e.preventDefault();
-      
-      // Get all visible item cards
-      const allCards = document.querySelectorAll('.item-card');
-      if (allCards.length > 0) {
-        // Initialize batch selection if not already
-        if (!window.batchSelected) {
-          window.batchSelected = [];
-        }
-        
-        // Clear current selection
-        window.batchSelected = [];
-        
-        // Select all cards with Ctrl+click simulation
-        allCards.forEach(card => {
-          const cardBody = card.querySelector('.item-body');
-          if (cardBody) {
-            // Create a synthetic event with ctrlKey set
-            const syntheticEvent = new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              ctrlKey: true,
-              metaKey: false
-            });
-            cardBody.dispatchEvent(syntheticEvent);
-          }
-        });
-        
-        if (window.TelemetryPanel) {
-          window.TelemetryPanel.setIdle(`Selected ${allCards.length} items`);
-        }
-      }
-      return;
-    }
-
-    // Delete key to delete selected items (unified batch selection)
-    if (e.key === 'Delete') {
-      e.preventDefault();
-      
-      // Use batch selection (single items are now added to batch)
-      if (window.batchSelected && window.batchSelected.length > 0) {
-        const btnBatchDelete = document.getElementById('btn-batch-delete');
-        if (btnBatchDelete && !btnBatchDelete.disabled) {
-          btnBatchDelete.click();
-        }
-      }
-      return;
-    }
-
-    // Escape key to clear selection
-    switch(e.key) {
-      case 'Escape':
-        e.preventDefault();
-        // Clear batch selection (single items are now added to batch)
-        if (window.batchSelected && window.batchSelected.length > 0) {
-          const btnClearBatch = document.getElementById('btn-clear-batch');
-          if (btnClearBatch) {
-            btnClearBatch.click();
-          }
-        }
-        break;
+    switch (e.key) {
       case '1':
         e.preventDefault();
         scrollToSection('folders');
@@ -1978,6 +1876,8 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'T':
         e.preventDefault();
         scrollToTop();
+        break;
+      default:
         break;
     }
   });
@@ -2159,63 +2059,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Include Folder Operations JavaScript -->
 <script src="{{ url_for('p2_bp.static', filename='js/folder_operations.js') }}"></script>
 
-<!-- Batch Send To Button Handler -->
-<script>
-(function() {
-  'use strict';
-  
-  document.addEventListener('DOMContentLoaded', function() {
-    const btnBatchSend = document.getElementById('btn-batch-send');
-    const sendToModal = document.getElementById('sendToModal');
-    const sendToModalDescription = document.getElementById('sendToModalDescription');
-    
-    if (!btnBatchSend || !sendToModal) {
-      console.warn('[BATCH SEND] Required elements not found');
-      return;
-    }
-    
-    btnBatchSend.addEventListener('click', function(e) {
-      e.preventDefault();
-      console.log('[BATCH SEND] Button clicked');
-      
-      if (!window.batchSelected || window.batchSelected.length === 0) {
-        console.warn('[BATCH SEND] No items selected');
-        return;
-      }
-      
-      console.log('[BATCH SEND] Opening modal with', window.batchSelected.length, 'items');
-      const itemCount = window.batchSelected.length;
-      const modalDescription = `Select a pinned user to send ${itemCount} item${itemCount > 1 ? 's' : ''} to:`;
-      
-      const batchItems = window.batchSelected.map(item => ({
-        type: item.type,
-        id: item.id
-      }));
-
-      if (typeof window.openSendToModalWithItems === 'function') {
-        window.openSendToModalWithItems(batchItems, { mode: 'batch', description: modalDescription });
-        return;
-      }
-
-      // Fallback: configure modal inline if helper is unavailable
-      sendToModal.dataset.batchMode = 'true';
-      sendToModal.dataset.batchItems = JSON.stringify(batchItems);
-      if (sendToModalDescription) {
-        sendToModalDescription.textContent = modalDescription;
-      }
-      if (sendToModal.parentElement !== document.body) {
-        document.body.appendChild(sendToModal);
-      }
-      sendToModal.style.zIndex = '3000';
-      const bs = new bootstrap.Modal(sendToModal);
-      bs.show();
-    });
-    
-    console.log('[BATCH SEND] Handler initialized');
-  });
-})();
-</script>
-
 <!-- Card Click Handlers - Single/Double/Ctrl Click Logic -->
 <script>
 (function() {
@@ -2261,7 +2104,6 @@ document.addEventListener('DOMContentLoaded', function() {
     touchActionMenu.innerHTML = `
       <button type="button" data-action="open">Open</button>
       <button type="button" data-action="preview">Preview</button>
-      <button type="button" data-action="select">Select for batch</button>
     `;
     document.body.appendChild(touchActionMenu);
     return touchActionMenu;
@@ -2287,7 +2129,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     wire('open', () => handleNavigation(card, type, id));
     wire('preview', () => openPreview(card, type, id));
-    wire('select', () => handleBatchSelection(card, type, id));
   }
 
   document.addEventListener('click', function(e) {
@@ -2347,17 +2188,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       e.stopPropagation();
       
-      const isCtrlClick = e.ctrlKey || e.metaKey;
-      const isShiftClick = e.shiftKey;
-      
-      console.log(`[CARD CLICK] Click on ${type} ${id} - ctrl: ${isCtrlClick}, shift: ${isShiftClick}`);
-      
-      // Ctrl+click or Shift+click → batch selection mode
-      if (isCtrlClick || isShiftClick) {
-        console.log('[CARD CLICK] Batch selection mode');
-        handleBatchSelection(card, type, id);
-        return;
-      }
+      console.log(`[CARD CLICK] Click on ${type} ${id}`);
       
       // Check for double-click
       if (clickTimers.has(itemBody)) {
@@ -2470,14 +2301,6 @@ document.addEventListener('DOMContentLoaded', function() {
   function handleDoubleClick(card, type, id) {
     console.log(`[CARD CLICK] Double click: closing modals like Escape`);
     closeAllModals();
-
-    // Also clear batch selection to mirror Escape key behavior
-    if (window.batchSelected && window.batchSelected.length > 0) {
-      const btnClearBatch = document.getElementById('btn-clear-batch');
-      if (btnClearBatch) {
-        btnClearBatch.click();
-      }
-    }
   }
 
   /**
@@ -2521,82 +2344,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Navigate
     window.location.href = url;
-  }
-  
-  /**
-   * Handle Ctrl+click or Shift+click - batch selection
-   */
-  function handleBatchSelection(card, type, id) {
-    console.log(`[CARD CLICK] Batch selection for ${type} ${id}`);
-    
-    // Ensure batch selection array exists
-    if (!window.batchSelected) {
-      window.batchSelected = [];
-    }
-    
-    // CRITICAL: Use fileType if available (for infinite whiteboards, graphs, etc.)
-    const fileType = card.dataset.fileType;
-    const effectiveType = (type === 'file' && fileType) ? fileType : type;
-    console.log(`[CARD CLICK] Effective type for clipboard: ${effectiveType}`);
-    
-    // Check if already in batch
-    const existingIndex = window.batchSelected.findIndex(
-      item => item.type === effectiveType && item.id === parseInt(id)
-    );
-    
-    if (existingIndex >= 0) {
-      // Remove from batch
-      console.log(`[CARD CLICK] Removing from batch: ${effectiveType} ${id}`);
-      window.batchSelected.splice(existingIndex, 1);
-      card.classList.remove('batch-selected-item');
-      
-      // Remove checkbox if present
-      const checkbox = card.querySelector('.batch-checkbox');
-      if (checkbox) checkbox.remove();
-    } else {
-      // Add to batch (use effectiveType so clipboard has specific file type)
-      console.log(`[CARD CLICK] Adding to batch: ${effectiveType} ${id}`);
-      window.batchSelected.push({ type: effectiveType, id: parseInt(id), card });
-      card.classList.add('batch-selected-item');
-      
-      // Add visual checkbox
-      if (!card.querySelector('.batch-checkbox')) {
-        const checkbox = document.createElement('div');
-        checkbox.className = 'batch-checkbox';
-        checkbox.innerHTML = '<i class="material-icons">check_circle</i>';
-        card.insertAdjacentElement('afterbegin', checkbox);
-      }
-    }
-    
-    // Update batch operations bar (use ClipboardOperations module if available)
-    if (window.ClipboardOperations && typeof window.ClipboardOperations.updateBatchUI === 'function') {
-      window.ClipboardOperations.updateBatchUI();
-    } else {
-      updateBatchOperationsBar();
-    }
-  }
-  
-  /**
-   * Update batch operations bar visibility and count (fallback for when ClipboardOperations not loaded)
-   */
-  function updateBatchOperationsBar() {
-    const batchOps = document.getElementById('batch-operations');
-    const batchCountElem = document.getElementById('batch-count');
-    
-    const count = window.batchSelected ? window.batchSelected.length : 0;
-    
-    if (batchOps && batchCountElem) {
-      if (count > 0) {
-        batchOps.style.display = 'flex !important';
-        batchOps.style.removeProperty('display');
-        batchCountElem.textContent = count;
-        console.log(`[CARD CLICK] Batch bar updated: ${count} items`);
-      } else {
-        batchOps.style.display = 'none !important';
-        batchCountElem.textContent = '0';
-        console.log('[CARD CLICK] Batch bar hidden');
-      }
-    }
   }
   
   /**

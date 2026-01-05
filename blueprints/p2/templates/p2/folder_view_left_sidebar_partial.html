@@ -445,6 +445,15 @@
 <!-- Folder Browser Sidebar -->
 <div class="folder-browser-sidebar collapsed" id="folderBrowserSidebar">
 
+  <div class="folder-browser-header">
+    <h6><i class="material-icons">folder</i> Browser</h6>
+    <div class="folder-browser-actions">
+      <button type="button" aria-label="Close sidebar" onclick="closeFolderBrowser()">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+  </div>
+
   <div class="folder-browser-tabs" role="tablist" aria-label="Folder sidebar tabs">
     <button class="folder-browser-tab-btn active" id="foldersTabBtn" onclick="switchFolderBrowserTab('folders')">Folders</button>
     <button class="folder-browser-tab-btn" id="pinnedTabBtn" onclick="switchFolderBrowserTab('pinned')">Social</button>
