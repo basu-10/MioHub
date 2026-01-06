@@ -13,6 +13,7 @@ from datetime import datetime
 import json
 
 from .models import File, Folder, User
+from .folder_ops import delete_file_with_graph_cleanup
 from extensions import db
 from .utils import save_data_uri_images_for_user, cleanup_orphaned_images_for_user, collect_images_from_content
 from .graph_service import ensure_workspace
@@ -449,7 +450,7 @@ def delete_file(file_id):
     content_size = file_obj.get_content_size()
     
     try:
-        db.session.delete(file_obj)
+        delete_file_with_graph_cleanup(file_obj)
         db.session.commit()
         
         # Update storage quota

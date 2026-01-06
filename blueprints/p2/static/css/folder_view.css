@@ -880,9 +880,9 @@ html,body{
 }
 
 .section-nav.hidden {
-  transform: translateY(-50%) translateX(calc(100% - 20px));
-  opacity: 0.3;
-  pointer-events: auto; /* Ensure it's still hoverable when hidden */
+  transform: translateY(-50%) translateX(120%);
+  opacity: 0;
+  pointer-events: none; /* Fully disable interaction while hidden */
 }
 
 .section-nav.scrolling-hidden {

@@ -36,6 +36,7 @@
         const zoomOutBtn = document.getElementById('zoom-out-btn');
         const zoomAllBtn = document.getElementById('zoom-all-btn');
         const zoomWindowBtn = document.getElementById('zoom-window-btn');
+        const zoomResetBtn = document.getElementById('zoom-reset-btn');
 
         if (zoomInBtn) {
             zoomInBtn.onclick = function(e) {
@@ -75,6 +76,16 @@
             console.log('[ZOOM] Zoom Window button bound');
         } else {
             console.warn('[ZOOM] Zoom Window button not found');
+        }
+
+        if (zoomResetBtn) {
+            zoomResetBtn.onclick = function(e) {
+                e.preventDefault();
+                IWB.setZoomPercentage(100, canvas);
+            };
+            console.log('[ZOOM] Zoom 100% button bound');
+        } else {
+            console.warn('[ZOOM] Zoom 100% button not found');
         }
 
         // Initialize keyboard shortcuts

@@ -13,6 +13,7 @@ from blueprints.p2.folder_ops import (
     create_folder,
     rename_folder,
     delete_folder,
+    delete_file_with_graph_cleanup,
     build_folder_breadcrumb, copy_folder_recursive, move_folder,
     get_or_create_folder_path, copy_folder_to_user,
     copy_file_to_user
@@ -461,7 +462,7 @@ def delete_folder_route(folder_id):
     user_id = current_user.id
     if folder and folder.user_id == current_user.id:
         recursive_size(folder)
-    success = delete_folder(folder_id)
+    success, reason = delete_folder(folder_id, acting_user=current_user, with_reason=True)
     # Update user data size
     user = current_user
     if success and user:
@@ -488,7 +489,8 @@ def delete_folder_route(folder_id):
         if success:
             return jsonify({'success': True, 'message': 'Folder deleted successfully'})
         else:
-            return jsonify({'success': False, 'message': 'Could not delete folder'}), 400
+            detail = reason or 'Could not delete folder'
+            return jsonify({'success': False, 'message': detail}), 400
     # Regular form submission - notification already added above
     return redirect(request.referrer or url_for('dashboard'))
 
@@ -2289,8 +2291,15 @@ def batch_paste_route():
         success_count = 0
         failed_items = []
         
+        alias_map = {
+            'note': 'proprietary_note',
+            'board': 'proprietary_whiteboard',
+            'whiteboard': 'proprietary_whiteboard',
+        }
+
         for item in items:
-            item_type = item.get('type')
+            raw_type = item.get('type')
+            item_type = alias_map.get(raw_type, raw_type)
             item_id = item.get('id')
             
             try:
@@ -2606,63 +2615,83 @@ def batch_delete_route():
             try:
                 if item_type == 'folder':
                     folder = Folder.query.get(item_id)
-                    if folder and folder.user_id == current_user.id:
-                        folder_name = folder.name
-                        # Calculate size to subtract
-                        def calculate_folder_size_recursive(f):
-                            size = 0
-                            for note in f.notes:
-                                size += len((note.content or '').encode('utf-8'))
-                            for board in f.boards:
-                                size += len((board.content or '').encode('utf-8'))
-                            for file_obj in f.files:
-                                size += file_obj.get_content_size()
-                            for child in f.children:
-                                size += calculate_folder_size_recursive(child)
-                            return size
-                        
-                        size_to_subtract = calculate_folder_size_recursive(folder)
-                        if delete_folder(item_id):
-                            total_size_freed += size_to_subtract
-                            success_count += 1
-                            deleted_items_info.append(('folder', folder_name, size_to_subtract))
-                        else:
-                            failed_items.append(f"folder {item_id}")
+                    if not folder:
+                        failed_items.append(f"folder {item_id}: not found")
+                        continue
+                    
+                    folder_name = folder.name
+                    # Calculate size to subtract
+                    def calculate_folder_size_recursive(f):
+                        size = 0
+                        for file_obj in f.files:
+                            size += file_obj.get_content_size()
+                        for child in f.children:
+                            size += calculate_folder_size_recursive(child)
+                        return size
+                    
+                    size_to_subtract = calculate_folder_size_recursive(folder)
+                    success, reason = delete_folder(item_id, acting_user=current_user, with_reason=True)
+                    if success:
+                        total_size_freed += size_to_subtract
+                        success_count += 1
+                        deleted_items_info.append(('folder', folder_name, size_to_subtract))
                     else:
-                        failed_items.append(f"folder {item_id}")
+                        failed_items.append(f"folder {item_id}: {reason or 'unknown error'}")
                         
                 elif item_type == 'proprietary_note':
-                    note = File.query.filter_by(id=item_id, type='proprietary_note').first()
-                    if note and note.owner_id == current_user.id:
+                    note = File.query.filter(
+                        File.id == item_id,
+                        File.owner_id == current_user.id,
+                        File.type.in_(['proprietary_note', 'note'])
+                    ).first()
+                    if note:
                         note_title = note.title
                         size = note.get_content_size()
                         db.session.delete(note)
                         db.session.commit()
                         total_size_freed += size
                         success_count += 1
-                        deleted_items_info.append(('note', note_title, size))
+                        deleted_items_info.append((note.type, note_title, size))
                     else:
                         failed_items.append(f"note {item_id}")
                         
                 elif item_type == 'proprietary_whiteboard':
-                    board = File.query.filter_by(id=item_id, type='proprietary_whiteboard').first()
-                    if board and board.owner_id == current_user.id:
+                    board = File.query.filter(
+                        File.id == item_id,
+                        File.owner_id == current_user.id,
+                        File.type.in_(['proprietary_whiteboard', 'board', 'whiteboard'])
+                    ).first()
+                    if board:
                         board_title = board.title
                         size = board.get_content_size()
                         db.session.delete(board)
                         db.session.commit()
                         total_size_freed += size
                         success_count += 1
-                        deleted_items_info.append(('board', board_title, size))
+                        deleted_items_info.append((board.type, board_title, size))
                     else:
                         failed_items.append(f"board {item_id}")
                         
                 elif item_type in ['file', 'book', 'proprietary_blocks', 'proprietary_infinite_whiteboard', 'proprietary_graph', 'timeline', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'pdf']:
                     # Handle all file types (markdown, todo, diagram, table, blocks, code, book, etc.)
-                    file_obj = File.query.get(item_id)
-                    if file_obj and file_obj.owner_id == current_user.id:
+                    file_obj = File.query.filter_by(id=item_id, owner_id=current_user.id).first()
+                    if file_obj:
                         file_title = file_obj.title
                         file_actual_type = file_obj.type  # Get actual type from File model
+                        size = file_obj.get_content_size()
+                        delete_file_with_graph_cleanup(file_obj)
+                        db.session.commit()
+                        total_size_freed += size
+                        success_count += 1
+                        deleted_items_info.append((file_actual_type, file_title, size))
+                    else:
+                        failed_items.append(f"{item_type} {item_id}")
+                else:
+                    # Fallback: attempt deletion for any legacy/unknown file types
+                    file_obj = File.query.filter_by(id=item_id, owner_id=current_user.id).first()
+                    if file_obj:
+                        file_title = file_obj.title
+                        file_actual_type = file_obj.type
                         size = file_obj.get_content_size()
                         db.session.delete(file_obj)
                         db.session.commit()
@@ -2673,7 +2702,7 @@ def batch_delete_route():
                         failed_items.append(f"{item_type} {item_id}")
             except Exception as e:
                 print(f"Error deleting {item_type} {item_id}: {e}")
-                failed_items.append(f"{item_type} {item_id}")
+                failed_items.append(f"{item_type} {item_id}: {e}")
                 continue
         
         # Update user data size
@@ -2716,7 +2745,7 @@ def batch_delete_route():
             message += f". Failed: {', '.join(failed_items)}"
         
         return jsonify({
-            'success': True,
+            'success': len(failed_items) == 0,
             'message': message,
             'success_count': success_count,
             'failed_count': len(failed_items),
@@ -3188,52 +3217,16 @@ def batch_toggle_pin_htmx():
         <div id="htmx-pin-notification" hx-swap-oob="true">
             <script>
             (function() {{
-                console.log('[PIN] HTMX response received, running cleanup...');
-                
-                // Show telemetry notification
                 if (window.TelemetryPanel) {{
                     window.TelemetryPanel.setIdle('{message}');
                 }}
-                
-                // Clear batch selection
-                if (window.batchSelected) {{
-                    window.batchSelected.length = 0;
-                }}
-                
-                // Hide batch operations bar
-                const batchOps = document.getElementById('batch-operations');
-                if (batchOps) {{
-                    batchOps.style.cssText = 'display: none !important;';
-                }}
-                
-                // Update batch count
-                const batchCount = document.getElementById('batch-count');
-                if (batchCount) {{
-                    batchCount.textContent = '0';
-                }}
-                
-                // Remove visual selection from all cards
-                document.querySelectorAll('.item-card.selected').forEach(card => {{
-                    card.classList.remove('selected');
-                }});
-                
-                // Remove all selection checkboxes
-                document.querySelectorAll('.selection-checkbox').forEach(checkbox => {{
-                    checkbox.remove();
-                }});
-                
-                // Force re-attachment of event listeners to all item-body elements
+
+                // Re-attach listeners after swaps to keep single-item actions working
                 setTimeout(() => {{
-                    console.log('[PIN] Re-attaching event listeners...');
                     if (typeof window.attachCardClickListeners === 'function') {{
-                        const itemBodies = document.querySelectorAll('.item-card .item-body');
-                        console.log(`[PIN] Found ${{itemBodies.length}} item bodies to attach listeners to`);
-                        itemBodies.forEach(body => {{
+                        document.querySelectorAll('.item-card .item-body').forEach(body => {{
                             window.attachCardClickListeners(body);
                         }});
-                        console.log('[PIN] Event listeners re-attached successfully');
-                    }} else {{
-                        console.error('[PIN] attachCardClickListeners function not found!');
                     }}
                 }}, 100);
             }})();
@@ -3546,52 +3539,16 @@ def batch_toggle_public_htmx():
         <div id="htmx-public-notification" hx-swap-oob="true">
             <script>
             (function() {{
-                console.log('[PUBLIC] HTMX response received, running cleanup...');
-                
-                // Show telemetry notification
                 if (window.TelemetryPanel) {{
                     window.TelemetryPanel.setIdle('{message}');
                 }}
-                
-                // Clear batch selection
-                if (window.batchSelected) {{
-                    window.batchSelected.length = 0;
-                }}
-                
-                // Hide batch operations bar
-                const batchOps = document.getElementById('batch-operations');
-                if (batchOps) {{
-                    batchOps.style.cssText = 'display: none !important;';
-                }}
-                
-                // Update batch count
-                const batchCount = document.getElementById('batch-count');
-                if (batchCount) {{
-                    batchCount.textContent = '0';
-                }}
-                
-                // Remove visual selection from all cards
-                document.querySelectorAll('.item-card.selected').forEach(card => {{
-                    card.classList.remove('selected');
-                }});
-                
-                // Remove all selection checkboxes
-                document.querySelectorAll('.selection-checkbox').forEach(checkbox => {{
-                    checkbox.remove();
-                }});
-                
-                // Force re-attachment of event listeners to all item-body elements
+
+                // Re-attach listeners after swaps to keep single-item actions working
                 setTimeout(() => {{
-                    console.log('[PUBLIC] Re-attaching event listeners...');
                     if (typeof window.attachCardClickListeners === 'function') {{
-                        const itemBodies = document.querySelectorAll('.item-card .item-body');
-                        console.log(`[PUBLIC] Found ${{itemBodies.length}} item bodies to attach listeners to`);
-                        itemBodies.forEach(body => {{
+                        document.querySelectorAll('.item-card .item-body').forEach(body => {{
                             window.attachCardClickListeners(body);
                         }});
-                        console.log('[PUBLIC] Event listeners re-attached successfully');
-                    }} else {{
-                        console.error('[PUBLIC] attachCardClickListeners function not found!');
                     }}
                 }}, 100);
             }})();
