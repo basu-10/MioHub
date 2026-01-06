@@ -355,153 +355,355 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- Combined Export/Import Modal -->
 <div id="exportImportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center overflow-y-auto p-4" style="z-index: 12000;">
-  <div class="bg-gray rounded-lg shadow-xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto" style="background: linear-gradient(135deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%); backdrop-filter: blur(8px); border: 1px solid var(--border-primary);">
-    
+  <div class="export-import-shell max-w-5xl w-full my-8 max-h-[92vh] overflow-y-auto" style="background: linear-gradient(145deg,var(--bg-secondary) 0%, var(--bg-tertiary) 100%);">
     <!-- Modal Header -->
-    <div class="flex items-center justify-between p-4" style="border-bottom:1px solid var(--border-primary);">
-      <h5 class="text-lg font-semibold flex items-center" style="color:var(--text-primary)">
-        <i class="material-icons mr-2" style="color:var(--accent)">import_export</i> Export/Import Data
-      </h5>
-      <button type="button" style="color:var(--text-secondary)" onclick="closeExportImportModal()">
+    <div class="ei-header">
+      <div class="flex items-start gap-3">
+        <div class="ei-icon">
+          <i class="material-icons">import_export</i>
+        </div>
+        <div>
+          <div class="text-lg font-semibold" style="color:var(--text-primary)">Export/Import Data</div>
+          <p class="text-sm" style="color:var(--text-secondary)">Move everything in or out of the current folder without losing structure or fidelity.</p>
+        </div>
+      </div>
+      <button type="button" class="ei-close" aria-label="Close" onclick="closeExportImportModal()">
         <i class="material-icons">close</i>
       </button>
     </div>
 
     <!-- Modal Body - Scrollable -->
-    <div class="overflow-y-auto" style="max-height: calc(90vh - 120px);">
-      
-      <!-- Export Section -->
-      <div class="p-6 border-b border-gray-700">
-        <h6 class="text-white font-semibold mb-3 flex items-center">
-          <i class="material-icons mr-2 text-green-400">download</i> Export Current Folder
-        </h6>
-        
-        <!-- ZIP Backup Export -->
-        <div class="mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-md">
-          <h7 class="text-gray-200 font-medium mb-2 block">Export as Backup (ZIP)</h7>
-          <p class="text-gray-300 text-sm mb-3">
-            Download all MioNotes, MioPages, and images from the current folder and its subfolders as a ZIP file.
-          </p>
-          
-          <!-- Warning Box -->
-          <div class="bg-yellow-900 bg-opacity-40 border border-yellow-600 rounded-md p-3 mb-3">
-            <div class="flex items-start">
-              <i class="material-icons text-yellow-400 mr-2 text-sm mt-0.5">warning</i>
-              <div>
-                <p class="text-yellow-200 text-xs">
-                  <strong>Note:</strong> These ZIP backups can be re-uploaded to restore MioNotes, MioPages, and MioBooks. However, they are <strong>not viewable by 3rd party software</strong>. For a viewable format, use the PDF export option below.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <a href="{{ url_for('notes.export_notes') }}" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition duration-200">
-            <i class="material-icons mr-2 text-sm">folder_zip</i> Export as ZIP Backup
-          </a>
+    <div class="p-6 space-y-5" style="max-height: calc(92vh - 96px);">
+      <div class="ei-meta-bar">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="ei-chip">Current folder</span>
+          <span class="ei-folder-path" id="currentFolderBadge">
+            {% if session.get('current_breadcrumb') %}
+              {% for crumb_id, crumb_name in session.get('current_breadcrumb') %}
+                {{ crumb_name }}{% if not loop.last %} › {% endif %}
+              {% endfor %}
+            {% else %}
+              Root Folder
+            {% endif %}
+          </span>
         </div>
-
-        <!-- PDF Export -->
-        <div class="p-4 bg-gray-800 bg-opacity-50 rounded-md">
-          <h7 class="text-gray-200 font-medium mb-2 block">Download as Viewable PDF</h7>
-          <p class="text-gray-300 text-sm mb-3">
-            Export all MioNotes, MioDraws, and MioBooks from the current folder as a readable PDF file.
-          </p>
-          <a href="{{ url_for('notes.export_folder_as_pdf') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200">
-            <i class="material-icons mr-2 text-sm">picture_as_pdf</i> Download as PDF
-          </a>
+        <div class="ei-pill">
+          <i class="material-icons text-xs mr-1">lock</i>
+          Private exports stay on your device unless you import them back here.
         </div>
       </div>
 
-      <!-- Import Section -->
-      <div class="p-6">
-        <h6 class="text-white font-semibold mb-3 flex items-center">
-          <i class="material-icons mr-2 text-blue-400">upload</i> Import Data
-        </h6>
-        
-        <!-- Import Any File Subsection -->
-        <div class="mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-md">
-          <h7 class="text-gray-200 font-medium mb-2 block">Import Individual Files</h7>
-          <p class="text-gray-400 text-sm mb-3">
-            Import HTML, TXT, DOCX, XLSX, or <strong>JSONL</strong> (app-exported) files as new items in the current folder.
-          </p>
-          <div class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-md p-3 mb-3">
-            <div class="flex items-start">
-              <i class="material-icons text-blue-400 mr-2 text-sm mt-0.5">info</i>
-              <div>
-                <p class="text-blue-300 text-xs mb-1">
-                  <strong>JSONL Support:</strong> Import individual files exported from this app, including:
-                </p>
-                <ul class="text-blue-200 text-xs ml-4 list-disc">
-                  <li>Graph Workspaces (with nodes, edges, and attachments)</li>
-                  <li>MioNotes, MioDraws, MioBooks</li>
-                  <li>Infinite Whiteboards</li>
-                  <li>Markdown, Code, Todo, Diagram, Table, Blocks</li>
-                </ul>
-              </div>
+      <div class="ei-grid">
+        <!-- Export Column -->
+        <div class="ei-card">
+          <div class="ei-card-header">
+            <div>
+              <div class="ei-label">Export current folder</div>
+              <p class="ei-subtext">Bundle all MioNote, MioPages, MioBlocks, images, and related assets.</p>
             </div>
+            <span class="ei-badge success">Ready</span>
           </div>
-          <form action="{{ url_for('notes.import_files') }}" method="post" enctype="multipart/form-data" class="inline-block">
-            <input type="hidden" name="target_folder_id" value="{{ current_folder_id }}">
-            <input type="file" name="import_files" accept=".html,.txt,.docx,.xlsx,.jsonl" multiple style="display:none;" id="importFilesInput">
-            <button type="button" class="inline-flex items-center px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition duration-200"
-                    onclick="document.getElementById('importFilesInput').click()">
-              <i class="material-icons mr-2 text-sm">attach_file</i>Select Files to Import
-            </button>
-            <button type="submit" id="importFilesSubmit" style="display:none;"></button>
-          </form>
+
+          <div class="ei-subcard">
+            <div class="ei-subcard-head">
+              <div class="flex items-center gap-2">
+                <div class="ei-dot success"></div>
+                <div>
+                  <div class="ei-subtitle">ZIP backup (restore-capable)</div>
+                  <p class="ei-helper">Best for full fidelity restores back into MioSpace.</p>
+                </div>
+              </div>
+              <a href="{{ url_for('notes.export_notes') }}" class="ei-action primary">
+                <i class="material-icons text-sm">folder_zip</i>
+                <span>Export as ZIP</span>
+              </a>
+            </div>
+            <ul class="ei-bullets">
+              <li>Includes MioNote, MioPages, MioBlocks, images, and subfolders.</li>
+              <li>Re-import to restore structure; not viewable in third-party apps.</li>
+            </ul>
+          </div>
+
+          <div class="ei-subcard">
+            <div class="ei-subcard-head">
+              <div class="flex items-center gap-2">
+                <div class="ei-dot info"></div>
+                <div>
+                  <div class="ei-subtitle">PDF export (read-only)</div>
+                  <p class="ei-helper">Shareable, viewable everywhere; preserves layout.</p>
+                </div>
+              </div>
+              <a href="{{ url_for('notes.export_folder_as_pdf') }}" class="ei-action neutral">
+                <i class="material-icons text-sm">picture_as_pdf</i>
+                <span>Download PDF</span>
+              </a>
+            </div>
+            <ul class="ei-bullets">
+              <li>Exports MioNote, MioPages, and MioBlocks as a single PDF.</li>
+              <li>Great for sharing or archiving; not re-importable.</li>
+            </ul>
+          </div>
         </div>
 
-        <!-- Import ZIP Backup Subsection -->
-        <div class="p-4 bg-gray-800 bg-opacity-50 rounded-md">
-          <h7 class="text-gray-200 font-medium mb-2 block">Import ZIP Backup</h7>
-          <p class="text-gray-400 text-sm mb-3">
-            Import a complete backup ZIP file created by this application.
-          </p>
-          
-          <form action="{{ url_for('notes.import_notes') }}" method="post" enctype="multipart/form-data" id="importForm">
-            <input type="hidden" name="target_folder_id" id="target_folder_id" value="{{ current_folder_id }}">
-            
-            <div class="mb-4">
-              <label for="import_zip" class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
-                <i class="material-icons mr-1 text-sm">folder_zip</i> Select Backup File
-              </label>
-              <input type="file" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="import_zip" name="import_zip" accept=".zip" required>
-              <div class="text-xs text-gray-400 mt-1">Choose a ZIP file previously exported from this application</div>
+        <!-- Import Column -->
+        <div class="ei-card">
+          <div class="ei-card-header">
+            <div>
+              <div class="ei-label">Import into this folder</div>
+              <p class="ei-subtext">Add new items or restore a full backup without losing hierarchy.</p>
             </div>
-            
-            <div class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-md p-3 mb-3">
-              <div class="flex items-start">
-                <i class="material-icons text-blue-400 mr-2 text-sm mt-0.5">info</i>
+            <span class="ei-badge info">Guided</span>
+          </div>
+
+          <div class="ei-subcard">
+            <div class="ei-subcard-head">
+              <div class="flex items-center gap-2">
+                <div class="ei-dot info"></div>
                 <div>
-                  <p class="text-blue-300 text-sm mb-2">
-                    <strong>Import Location:</strong> 
-                    <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs ml-1" id="currentFolderBadge">
-                      {% if session.get('current_breadcrumb') %}
-                        {% for crumb_id, crumb_name in session.get('current_breadcrumb') %}
-                          {{ crumb_name }}{% if not loop.last %} › {% endif %}
-                        {% endfor %}
-                      {% else %}
-                        Root Folder
-                      {% endif %}
-                    </span>
-                  </p>
-                  <p class="text-blue-200 text-xs">
-                    Preserves folder hierarchy, optimizes images, imports all content with formatting.
-                  </p>
+                  <div class="ei-subtitle">Import individual files</div>
+                  <p class="ei-helper">Create new items from common formats or JSONL exports.</p>
+                </div>
+              </div>
+              <form action="{{ url_for('notes.import_files') }}" method="post" enctype="multipart/form-data" class="flex items-center gap-2" onsubmit="document.getElementById('importFilesSubmit').click(); return false;">
+                <input type="hidden" name="target_folder_id" value="{{ current_folder_id }}">
+                <input type="file" name="import_files" accept=".html,.txt,.docx,.xlsx,.jsonl" multiple style="display:none;" id="importFilesInput">
+                <button type="button" class="ei-action primary" onclick="document.getElementById('importFilesInput').click()">
+                  <i class="material-icons text-sm">attach_file</i>
+                  <span>Select files</span>
+                </button>
+                <button type="submit" id="importFilesSubmit" style="display:none;"></button>
+              </form>
+            </div>
+            <div class="ei-callout info">
+              <div class="flex items-start gap-2">
+                <i class="material-icons text-sm">info</i>
+                <div>
+                  <p class="text-xs text-blue-100 mb-1"><strong>Supports:</strong> HTML, TXT, DOCX, XLSX, JSONL (exported from MioSpace).</p>
+                  <ul class="ei-bullets compact">
+                    <li>Graph Workspaces (MioThink)</li>
+                    <li>MioNote, MioPages, MioBlocks</li>
+                    <li>MioInfinite, Markdown, Code, MioList, Diagram, Table, Blocks</li>
+                  </ul>
                 </div>
               </div>
             </div>
-            
-            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition duration-200" id="importBtn">
-              <i class="material-icons mr-1 text-sm">upload</i> Import ZIP Backup
-            </button>
-          </form>
+          </div>
+
+          <div class="ei-subcard">
+            <div class="ei-subcard-head">
+              <div class="flex items-center gap-2">
+                <div class="ei-dot warning"></div>
+                <div>
+                  <div class="ei-subtitle">Import ZIP backup</div>
+                  <p class="ei-helper">Restore everything exactly as exported.</p>
+                </div>
+              </div>
+            </div>
+            <form action="{{ url_for('notes.import_notes') }}" method="post" enctype="multipart/form-data" id="importForm" class="space-y-3">
+              <input type="hidden" name="target_folder_id" id="target_folder_id" value="{{ current_folder_id }}">
+
+              <div>
+                <label for="import_zip" class="ei-input-label">
+                  <i class="material-icons text-sm mr-1">folder_zip</i> Select backup file (.zip)
+                </label>
+                <input type="file" class="ei-input" id="import_zip" name="import_zip" accept=".zip" required>
+                <p class="ei-helper">Choose a ZIP created from MioSpace exports.</p>
+              </div>
+
+              <div class="ei-callout muted">
+                <div class="flex items-start gap-2">
+                  <i class="material-icons text-sm">map</i>
+                  <div>
+                    <p class="text-sm text-blue-50 mb-1"><strong>Destination:</strong> This folder path is preserved during restore.</p>
+                    <p class="text-xs text-blue-100">Hierarchy, images, and formatting stay intact; images are optimized automatically.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="ei-action primary w-full justify-center" id="importBtn">
+                <i class="material-icons text-sm">upload</i>
+                <span>Import ZIP Backup</span>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
+
+    <style>
+    .export-import-shell {
+      background: linear-gradient(145deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border: 1px solid var(--border-primary);
+      border-radius: 14px;
+      box-shadow: 0 22px 60px rgba(0,0,0,0.45);
+    }
+    .ei-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-primary);
+    }
+    .ei-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent) 0%, #0ea5e9 100%);
+      display: grid;
+      place-items: center;
+      color: var(--bg);
+      box-shadow: 0 12px 30px rgba(20, 184, 166, 0.35);
+    }
+    .ei-close {
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      padding: 8px;
+      border-radius: 8px;
+    }
+    .ei-close:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+    .ei-meta-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .ei-chip {
+      background: rgba(20, 184, 166, 0.12);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.01em;
+    }
+    .ei-folder-path {
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-primary);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .ei-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-secondary);
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px dashed var(--border-primary);
+      font-size: 12px;
+    }
+    .ei-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 1024px) {
+      .ei-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .ei-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .ei-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 12px;
+    }
+    .ei-label { color: var(--text-primary); font-weight: 700; font-size: 15px; }
+    .ei-subtext { color: var(--text-secondary); font-size: 13px; margin: 4px 0 0; }
+    .ei-badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--border-primary);
+    }
+    .ei-badge.success { background: rgba(34,197,94,0.12); color: #4ade80; }
+    .ei-badge.info { background: rgba(59,130,246,0.12); color: #93c5fd; }
+    .ei-subcard {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .ei-subcard:last-child { margin-bottom: 0; }
+    .ei-subcard-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .ei-dot { width: 10px; height: 10px; border-radius: 999px; }
+    .ei-dot.success { background: #4ade80; box-shadow: 0 0 0 6px rgba(74,222,128,0.15); }
+    .ei-dot.info { background: #38bdf8; box-shadow: 0 0 0 6px rgba(56,189,248,0.15); }
+    .ei-dot.warning { background: #fbbf24; box-shadow: 0 0 0 6px rgba(251,191,36,0.15); }
+    .ei-subtitle { color: var(--text-primary); font-weight: 700; font-size: 14px; }
+    .ei-helper { color: var(--text-secondary); font-size: 12px; margin: 2px 0 0; }
+    .ei-bullets {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .ei-bullets.compact { margin-top: 6px; }
+    .ei-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      border: 1px solid transparent;
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+    .ei-action.primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #0ea5e9 100%);
+      color: var(--bg);
+      box-shadow: 0 12px 30px rgba(14,165,233,0.35);
+    }
+    .ei-action.neutral {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-primary);
+      border-color: var(--border-primary);
+    }
+    .ei-action:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(0,0,0,0.25); }
+    .ei-action:active { transform: translateY(0); }
+    .ei-callout {
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+    }
+    .ei-callout.info { border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); }
+    .ei-callout.muted { border-color: rgba(148,163,184,0.4); background: rgba(148,163,184,0.08); }
+    .ei-input-label { color: var(--text-primary); font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; }
+    .ei-input {
+      width: 100%;
+      margin-top: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-primary);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text-primary);
+    }
+    .ei-input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+    </style>
 
 <style>
 /* Carbon Teal dropdowns for switch/user menus */

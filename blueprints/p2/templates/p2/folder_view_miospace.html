@@ -1383,76 +1383,11 @@ document.addEventListener('DOMContentLoaded', function () {
         menu.style.top = top + 'px';
         menu.style.left = left + 'px';
       }
-    });
+        const TOUCH_LONG_PRESS_MS = 450; // ms to trigger mobile preview
 
     dropdown.addEventListener('hide.bs.dropdown', function () {
       // Destroy popper instance
-      if (popperInstance) { try { popperInstance.destroy(); } catch(e){} popperInstance = null; }
-
-      // Move menu back to original location
-      if (placeholder && placeholder.parentNode) {
-        placeholder.parentNode.insertBefore(menu, placeholder);
-        placeholder.parentNode.removeChild(placeholder);
-        placeholder = null;
-      }
-      // Clear inline styles added
-      menu.style.position = '';
-      menu.style.top = '';
-      menu.style.left = '';
-      menu.style.zIndex = '';
-    });
-    // After shown, update Popper placement (if used)
-    dropdown.addEventListener('shown.bs.dropdown', function () {
-      if (popperInstance && typeof popperInstance.update === 'function') popperInstance.update();
-    });
-  });
-});
-</script>
-
-<!-- Shepherd/tutorial assets moved to partial: p2/folder_view_tutorial_partial.html -->
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const contextMenu = document.getElementById('context-menu');
-  const createFolderModal = new bootstrap.Modal(document.getElementById('createFolderModal'));
   
-
-  // Submenu handlers for context menu
-  window.showSubmenu = function(e) {
-    const li = e.currentTarget;
-    const submenu = li.querySelector('.submenu');
-    if (!submenu) return;
-    
-    // Reset styles to default for measurement
-    submenu.style.display = 'block';
-    submenu.style.visibility = 'hidden';
-    submenu.style.left = '100%';
-    submenu.style.right = 'auto';
-    submenu.style.top = '0';
-    submenu.style.bottom = 'auto';
-    submenu.style.marginLeft = '4px';
-    submenu.style.marginRight = '0';
-    
-    const rect = submenu.getBoundingClientRect();
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    
-    // Check right boundary
-    if (rect.right > windowWidth) {
-      submenu.style.left = 'auto';
-      submenu.style.right = '100%';
-      submenu.style.marginLeft = '0';
-      submenu.style.marginRight = '4px';
-    }
-    
-    // Check bottom boundary
-    if (rect.bottom > windowHeight) {
-      submenu.style.top = 'auto';
-      submenu.style.bottom = '0';
-    }
-    
-    submenu.style.visibility = 'visible';
-  };
   
   window.hideSubmenu = function(e) {
     const submenu = e.currentTarget.querySelector('.submenu');
@@ -2069,75 +2004,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Track click timing for single/double click distinction
   const clickTimers = new WeakMap();
   const DOUBLE_CLICK_DELAY = 300; // ms
-  const TOUCH_LONG_PRESS_MS = 450; // ms to trigger mobile action sheet
+  const TOUCH_LONG_PRESS_MS = 450; // ms to trigger mobile preview
   const TOUCH_MOVE_THRESHOLD = 12; // px movement allowed during long press
   const longPressTimers = new WeakMap();
   const longPressFired = new WeakMap();
-  let touchActionMenu = null;
-  let touchActionMenuStyleInjected = false;
-
-  function injectTouchMenuStyles() {
-    if (touchActionMenuStyleInjected) return;
-    const style = document.createElement('style');
-    style.textContent = `
-      .touch-action-menu { position: fixed; display: none; background: var(--card, #121516); color: var(--white, #ECFFFF); border: 1px solid var(--accent, #14b8a6); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); padding: 8px; z-index: 3200; width: 190px; }
-      .touch-action-menu.visible { display: flex; flex-direction: column; gap: 6px; }
-      .touch-action-menu button { background: var(--accent, #14b8a6); color: var(--white, #ECFFFF); border: none; border-radius: 10px; padding: 10px 12px; font-weight: 600; text-align: left; }
-      .touch-action-menu button[data-action="select"] { background: var(--card, #121516); color: var(--accent, #14b8a6); border: 1px solid var(--accent, #14b8a6); }
-      .touch-action-menu button:active { transform: scale(0.99); }
-    `;
-    document.head.appendChild(style);
-    touchActionMenuStyleInjected = true;
-  }
-
-  function closeTouchActionMenu() {
-    if (touchActionMenu) {
-      touchActionMenu.classList.remove('visible');
-    }
-  }
-
-  function ensureTouchActionMenu() {
-    if (touchActionMenu) return touchActionMenu;
-    injectTouchMenuStyles();
-    touchActionMenu = document.createElement('div');
-    touchActionMenu.className = 'touch-action-menu';
-    touchActionMenu.innerHTML = `
-      <button type="button" data-action="open">Open</button>
-      <button type="button" data-action="preview">Preview</button>
-    `;
-    document.body.appendChild(touchActionMenu);
-    return touchActionMenu;
-  }
-
-  function openTouchActionMenu(card, type, id, coords) {
-    const menu = ensureTouchActionMenu();
-    const maxLeft = window.innerWidth - 210;
-    const maxTop = window.innerHeight - 170;
-    menu.style.left = `${Math.max(8, Math.min(maxLeft, coords.x - 12))}px`;
-    menu.style.top = `${Math.max(8, Math.min(maxTop, coords.y - 12))}px`;
-    menu.classList.add('visible');
-
-    const wire = (action, handler) => {
-      const btn = menu.querySelector(`[data-action="${action}"]`);
-      if (btn) {
-        btn.onclick = () => {
-          handler();
-          closeTouchActionMenu();
-        };
-      }
-    };
-
-    wire('open', () => handleNavigation(card, type, id));
-    wire('preview', () => openPreview(card, type, id));
-  }
-
-  document.addEventListener('click', function(e) {
-    if (touchActionMenu && touchActionMenu.classList.contains('visible') && !touchActionMenu.contains(e.target)) {
-      closeTouchActionMenu();
-    }
-  });
-
-  document.addEventListener('scroll', closeTouchActionMenu, true);
   
   
   /**
@@ -2244,7 +2114,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const timerId = setTimeout(() => {
         longPressFired.set(itemBody, true);
         clickTimers.delete(itemBody);
-        openTouchActionMenu(card, type, id, { x: startX, y: startY });
+        openPreview(card, type, id);
       }, TOUCH_LONG_PRESS_MS);
       longPressTimers.set(itemBody, { timerId, startX, startY });
     });
