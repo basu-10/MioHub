@@ -43,6 +43,15 @@
         {% endfor %}
       </div>
     </div>
+    {% elif note.description_readable %}
+    <div class="mt-4 text-gray-300">
+      <div class="flex items-start gap-2 text-gray-300">
+        <span class="inline-flex items-center justify-center bg-gray-600 rounded-full w-6 h-6 mr-2">
+          <i class="material-icons" style="font-size: 14px;">info</i>
+        </span>
+        <span>{{ note.description_readable }}</span>
+      </div>
+    </div>
     {% elif note.description and note.description_parse_failed %}
     <div class="mt-4 text-yellow-400 text-sm">⚠️ Description exists but is not in the expected JSON format. Check server logs.</div>
     {% endif %}

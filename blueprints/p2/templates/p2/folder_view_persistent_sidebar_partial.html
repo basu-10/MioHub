@@ -1,0 +1,719 @@
+<!-- Persistent Options Sidebar -->
+<div id="persistentOptionsSidebar" class="persistent-options-sidebar">
+  <button id="sidebarExpandToggle" class="sidebar-expand-toggle" type="button" aria-label="Toggle sidebar width">
+    <i class="material-icons">chevron_right</i>
+  </button>
+
+  <div class="sidebar-group" aria-label="Sorting and View Controls">
+    <!-- Sort Option -->
+    <div class="sidebar-option-item" id="sidebarSortOption">
+      <button class="sidebar-option-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Sort">
+        <i class="material-icons">sort</i>
+        <span class="sidebar-option-label">Sort</span>
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="sidebarSortOption">
+        <li><a class="dropdown-item{% if current_sort == 'name' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='name') }}">Name</a></li>
+        <li><a class="dropdown-item{% if current_sort == 'created' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='created') }}">Created</a></li>
+        <li><a class="dropdown-item{% if current_sort == 'modified' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='modified') }}">Last Modified</a></li>
+        <li><a class="dropdown-item{% if current_sort == 'size' %} active{% endif %}" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='size') }}">Size</a></li>
+      </ul>
+    </div>
+
+    <!-- View Option -->
+    <div class="sidebar-option-item" id="sidebarViewOption">
+      <button class="sidebar-option-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="View Settings">
+        <i class="material-icons">view_module</i>
+        <span class="sidebar-option-label">View</span>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end p-3" aria-labelledby="sidebarViewOption" style="min-width: 280px;" onclick="event.stopPropagation();">
+        <h6 class="dropdown-header px-0 mb-2">Display Settings</h6>
+
+        <!-- View Mode -->
+        <div class="mb-3">
+          <label class="form-label small mb-1" style="color: var(--white);">View Mode</label>
+          <div class="btn-group btn-group-sm w-100" role="group">
+            <input type="radio" class="btn-check" name="sidebarViewMode" id="sidebarViewGrid" value="grid" {% if display_prefs.view_mode == 'grid' %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarViewGrid">
+              <i class="material-icons" style="font-size: 14px;">grid_view</i> Grid
+            </label>
+            
+            <input type="radio" class="btn-check" name="sidebarViewMode" id="sidebarViewList" value="list" {% if display_prefs.view_mode == 'list' %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarViewList">
+              <i class="material-icons" style="font-size: 14px;">view_list</i> List
+            </label>
+          </div>
+        </div>
+
+        <!-- Grid-only Options (Columns, Card Size, Previews) -->
+        <div id="sidebarGridOptionsContainer" class="grid-options {% if display_prefs.view_mode != 'grid' %}d-none{% endif %}">
+        <!-- Column Count -->
+        <div class="mb-3">
+          <label class="form-label small mb-1" style="color: var(--white);">Columns</label>
+          <div class="btn-group btn-group-sm w-100" role="group">
+            <input type="radio" class="btn-check" name="sidebarColumnCount" id="sidebarCol1" value="1" {% if display_prefs.columns == 1 %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarCol1">1</label>
+            
+            <input type="radio" class="btn-check" name="sidebarColumnCount" id="sidebarCol2" value="2" {% if display_prefs.columns == 2 %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarCol2">2</label>
+            
+            <input type="radio" class="btn-check" name="sidebarColumnCount" id="sidebarCol3" value="3" {% if display_prefs.columns == 3 %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarCol3">3</label>
+            
+            <input type="radio" class="btn-check" name="sidebarColumnCount" id="sidebarCol4" value="4" {% if display_prefs.columns == 4 %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarCol4">4</label>
+            
+            <input type="radio" class="btn-check" name="sidebarColumnCount" id="sidebarCol5" value="5" {% if display_prefs.columns == 5 %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarCol5">5</label>
+            
+            <input type="radio" class="btn-check" name="sidebarColumnCount" id="sidebarCol6" value="6" {% if display_prefs.columns == 6 %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarCol6">6</label>
+          </div>
+        </div>
+
+        <!-- Card Size -->
+        <div class="mb-3">
+          <label class="form-label small mb-1" style="color: var(--white);">Card Size</label>
+          <div class="btn-group btn-group-sm w-100" role="group">
+            <input type="radio" class="btn-check" name="sidebarCardSize" id="sidebarSizeCompact" value="compact" {% if display_prefs.card_size == 'compact' %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarSizeCompact">Compact</label>
+            
+            <input type="radio" class="btn-check" name="sidebarCardSize" id="sidebarSizeNormal" value="normal" {% if display_prefs.card_size == 'normal' %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarSizeNormal">Normal</label>
+            
+            <input type="radio" class="btn-check" name="sidebarCardSize" id="sidebarSizeLarge" value="large" {% if display_prefs.card_size == 'large' %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="sidebarSizeLarge">Large</label>
+          </div>
+        </div>
+
+        <!-- Show Previews Toggle -->
+        <div class="mb-2">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="sidebarShowPreviews" {% if display_prefs.show_previews %}checked{% endif %}>
+            <label class="form-check-label small" for="sidebarShowPreviews" style="color: var(--white);">
+              Show content previews
+            </label>
+          </div>
+        </div>
+        </div>
+
+        <hr class="my-2">
+        <div class="small" style="color: var(--white);">
+          <i class="material-icons" style="font-size: 12px;">info</i>
+          Settings are saved to your account
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-group" aria-label="Public Links">
+    <!-- Go to Public Page -->
+    <div class="sidebar-option-item">
+      <a href="{{ url_for('p2_bp.view_user', user_id=current_user.id) }}" class="sidebar-option-btn" title="View My Public Profile">
+        <i class="material-icons">public</i>
+        <span class="sidebar-option-label">Public</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="sidebar-group sidebar-social-section" aria-label="User Search and Pins">
+    <div class="sidebar-group-title">Users</div>
+
+    <div class="sidebar-social-search">
+      <label class="visually-hidden" for="sidebarUserSearchCompact">Search users</label>
+      <div class="sidebar-social-input">
+        <input type="search" id="sidebarUserSearchCompact" placeholder="Search users..." aria-label="Search users">
+        <button id="sidebarUserClearBtnCompact" class="cancel" title="Clear search" aria-label="Clear search" type="button" style="display:none;">&times;</button>
+        <button id="sidebarUserSearchBtnCompact" type="button">Search</button>
+      </div>
+      <div id="sidebarSearchResultsCompact" class="sidebar-social-results" style="display:none;"></div>
+    </div>
+
+    <div id="sidebarPinnedUsersContainerCompact" class="sidebar-social-pinned">
+      <h6 class="text-muted pinned-heading" style="font-size:12px; margin:0 0 8px 0;">Pinned users</h6>
+      {% if pinned_users %}
+        <ul id="sidebarPinnedUsersListCompact" class="list-unstyled" style="padding-left:0; margin:0">
+        {% for pu in pinned_users %}
+          {% if pu %}
+            <li data-user-id="{{ pu.id }}" class="p-1 d-flex justify-content-between align-items-center" style="padding:6px 4px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <a href="{{ url_for('p2_bp.view_user', user_id=pu.id) }}" class="text-white">{{ pu.username }}</a>
+              </div>
+              <form action="{{ url_for('p2_bp.toggle_pin_user', user_id=pu.id) }}" method="post" style="display:inline; margin-left: 6px;">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button class="px-2 py-1 text-xs bg-yellow-500 text-black rounded">Unpin</button>
+              </form>
+            </li>
+          {% endif %}
+        {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted small">No pinned users.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar Styles -->
+<style>
+.persistent-options-sidebar {
+  position: fixed;
+  left: 0;
+  top: 130px; /* Below header */
+  width: 60px;
+  height: calc(100vh - 130px);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  border-right: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.6rem 0.4rem;
+  gap: 0.5rem;
+  z-index: 900;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+  transition: width 0.25s ease, padding 0.25s ease;
+}
+
+.persistent-options-sidebar.expanded {
+  width: 220px;
+  align-items: stretch;
+  padding: 0.8rem 0.75rem;
+  gap: 0.75rem;
+}
+
+.sidebar-expand-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  background: rgba(255,255,255,0.03);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  transition: all 0.2s ease;
+}
+
+.persistent-options-sidebar.expanded .sidebar-expand-toggle {
+  margin-left: 0;
+  width: 100%;
+  justify-content: flex-start;
+  padding-left: 0.4rem;
+}
+
+.sidebar-expand-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(20, 184, 166, 0.08);
+}
+
+.sidebar-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar-group:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.sidebar-option-item {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  padding: 0.25rem;
+}
+
+.persistent-options-sidebar.expanded .sidebar-option-btn {
+  flex-direction: row;
+  justify-content: flex-start;
+  width: 100%;
+  height: 48px;
+  padding: 0.55rem 0.6rem;
+  gap: 0.6rem;
+}
+
+.sidebar-option-btn:hover {
+  background: rgba(20, 184, 166, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sidebar-option-btn .material-icons {
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+
+.persistent-options-sidebar.expanded .sidebar-option-btn .material-icons {
+  margin-bottom: 0;
+}
+
+.sidebar-option-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.persistent-options-sidebar.expanded .sidebar-option-label {
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* Adjust main content to account for sidebar */
+#mainContent {
+  margin-left: 60px !important;
+  transition: margin-left 0.25s ease;
+}
+
+#mainContent.persistent-sidebar-expanded {
+  margin-left: 220px !important;
+}
+
+/* Mobile: hide sidebar, restore original layout */
+@media (max-width: 768px) {
+  .persistent-options-sidebar {
+    display: none;
+  }
+  #mainContent {
+    margin-left: 0 !important;
+  }
+}
+
+/* Dropdown positioning for sidebar */
+.sidebar-option-item .dropdown-menu {
+  left: 100% !important;
+  top: 0 !important;
+  margin-left: 0.5rem;
+}
+
+.persistent-options-sidebar.expanded .sidebar-option-item .dropdown-menu {
+  left: calc(100% + 8px) !important;
+}
+
+.sidebar-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.sidebar-social-section {
+  display: none;
+}
+
+.persistent-options-sidebar.expanded .sidebar-social-section {
+  display: block;
+}
+
+.sidebar-social-input {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.sidebar-social-input input[type="search"] {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: rgba(255,255,255,0.04);
+  color: var(--white);
+}
+
+.sidebar-social-input button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: rgba(255,255,255,0.06);
+  color: var(--white);
+  transition: all 0.2s ease;
+}
+
+.sidebar-social-input button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sidebar-social-results, .sidebar-social-pinned {
+  margin-top: 10px;
+}
+
+.sidebar-social-results ul, .sidebar-social-pinned ul {
+  max-height: 260px;
+  overflow-y: auto;
+}
+</style>
+
+<!-- Sidebar Functionality Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebar = document.getElementById('persistentOptionsSidebar');
+  const mainContent = document.getElementById('mainContent');
+  const expandToggle = document.getElementById('sidebarExpandToggle');
+  const socialSection = document.querySelector('.sidebar-social-section');
+
+  function setSidebarExpanded(expanded) {
+    if (!sidebar) return;
+    sidebar.classList.toggle('expanded', expanded);
+    if (mainContent) {
+      mainContent.classList.toggle('persistent-sidebar-expanded', expanded);
+    }
+    if (expandToggle) {
+      const icon = expandToggle.querySelector('.material-icons');
+      if (icon) icon.textContent = expanded ? 'chevron_left' : 'chevron_right';
+    }
+    if (socialSection) {
+      socialSection.style.display = expanded ? '' : 'none';
+    }
+    localStorage.setItem('persistentSidebarExpanded', expanded ? '1' : '0');
+  }
+
+  if (expandToggle) {
+    const stored = localStorage.getItem('persistentSidebarExpanded');
+    setSidebarExpanded(stored === '1');
+    expandToggle.addEventListener('click', function() {
+      const nextState = !sidebar.classList.contains('expanded');
+      setSidebarExpanded(nextState);
+    });
+  }
+
+  // Wire up sidebar view controls to use the same functions as the top bar
+  const sidebarColumnInputs = document.querySelectorAll('input[name="sidebarColumnCount"]');
+  const sidebarViewModeInputs = document.querySelectorAll('input[name="sidebarViewMode"]');
+  const sidebarCardSizeInputs = document.querySelectorAll('input[name="sidebarCardSize"]');
+  const sidebarShowPreviewsInput = document.getElementById('sidebarShowPreviews');
+  const sidebarGridOptionsContainer = document.getElementById('sidebarGridOptionsContainer');
+  
+  // Get reference to the main display functions (defined in folder_view_view_partial.html)
+  const contentGrids = document.querySelectorAll('.content-grid');
+  
+  function getCurrentDisplayPreferences() {
+    const prefs = {};
+    const colChecked = document.querySelector('input[name="sidebarColumnCount"]:checked');
+    if (colChecked) prefs.columns = parseInt(colChecked.value, 10);
+    const viewChecked = document.querySelector('input[name="sidebarViewMode"]:checked');
+    if (viewChecked) prefs.view_mode = viewChecked.value;
+    const sizeChecked = document.querySelector('input[name="sidebarCardSize"]:checked');
+    if (sizeChecked) prefs.card_size = sizeChecked.value;
+    const sp = document.getElementById('sidebarShowPreviews');
+    if (sp) prefs.show_previews = !!sp.checked;
+    return prefs;
+  }
+  
+  function saveDisplayPreferences(preferences) {
+    fetch('{{ url_for("folders.save_display_preferences") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(preferences)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) console.error('Failed to save preferences:', data.message);
+    }).catch(err => console.error('Error saving preferences:', err));
+  }
+  
+  function applyColumnCount(columns) {
+    contentGrids.forEach(grid => {
+      for (let i = 1; i <= 6; i++) grid.classList.remove(`row-cols-lg-${i}`);
+      grid.classList.add(`row-cols-lg-${columns}`);
+    });
+    // Sync with top bar
+    const topBarCol = document.querySelector(`input[name="columnCount"][value="${columns}"]`);
+    if (topBarCol) topBarCol.checked = true;
+    saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+  
+  function applyViewMode(mode, skipSave = false) {
+    contentGrids.forEach(grid => grid.setAttribute('data-view-mode', mode));
+    
+    const tableContainers = document.querySelectorAll('.table-view-container');
+    if (mode === 'list') {
+      contentGrids.forEach(grid => grid.style.display = 'none');
+      tableContainers.forEach(table => table.classList.remove('d-none'));
+    } else {
+      contentGrids.forEach(grid => grid.style.display = '');
+      tableContainers.forEach(table => table.classList.add('d-none'));
+    }
+    
+    if (sidebarGridOptionsContainer) {
+      if (mode === 'grid') sidebarGridOptionsContainer.classList.remove('d-none');
+      else sidebarGridOptionsContainer.classList.add('d-none');
+    }
+    
+    // Sync with top bar
+    const topBarView = document.querySelector(`input[name="viewMode"][value="${mode}"]`);
+    if (topBarView) topBarView.checked = true;
+    
+    if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+  
+  function applyCardSize(size, skipSave = false) {
+    contentGrids.forEach(grid => grid.setAttribute('data-card-size', size));
+    // Sync with top bar
+    const topBarSize = document.querySelector(`input[name="cardSize"][value="${size}"]`);
+    if (topBarSize) topBarSize.checked = true;
+    if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+  
+  function togglePreviews(show, skipSave = false) {
+    document.querySelectorAll('.content-preview').forEach(p => p.style.display = show ? 'block' : 'none');
+    // Sync with top bar
+    const topBarPreviews = document.getElementById('showPreviews');
+    if (topBarPreviews) topBarPreviews.checked = show;
+    if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
+  }
+  
+  // Attach event listeners
+  sidebarColumnInputs.forEach(input => input.addEventListener('change', function(){ applyColumnCount(this.value); }));
+  sidebarViewModeInputs.forEach(input => input.addEventListener('change', function(){ applyViewMode(this.value); }));
+  sidebarCardSizeInputs.forEach(input => input.addEventListener('change', function(){ applyCardSize(this.value); }));
+  if (sidebarShowPreviewsInput) {
+    sidebarShowPreviewsInput.addEventListener('change', function(){ togglePreviews(this.checked); });
+  }
+  
+  // Initialize view mode
+  const currentView = (document.querySelector('input[name="sidebarViewMode"]:checked') || {}).value || '{{ display_prefs.view_mode }}';
+  if (currentView) {
+    applyViewMode(currentView, true);
+  }
+
+  // --- Social search + pinned users (mirrors folder_view_social_tab) ---
+  function initSidebarUserSearch(config) {
+    const searchInput = document.getElementById(config.searchInputId);
+    const searchBtn = document.getElementById(config.searchBtnId);
+    const clearBtn = document.getElementById(config.clearBtnId);
+    const resultsDiv = document.getElementById(config.resultsContainerId);
+    const pinnedContainer = document.getElementById(config.pinnedContainerId);
+    const pinnedList = document.getElementById(config.pinnedListId);
+
+    if (!searchInput || !resultsDiv || !pinnedContainer) return;
+
+    const renderResults = (users) => {
+      let resultsList = document.getElementById(config.resultsListId);
+      if (!resultsList) {
+        resultsList = document.createElement('ul');
+        resultsList.id = config.resultsListId;
+        resultsList.className = 'list-unstyled';
+        resultsList.style.paddingLeft = '0';
+        resultsList.style.margin = '8px 0 0 0';
+        resultsDiv.insertAdjacentElement('afterbegin', resultsList);
+      }
+      resultsList.innerHTML = '';
+
+      let total = 0;
+      (users || []).forEach(u => {
+        const id = u.id;
+        const username = u.username || 'User';
+        const pinned = !!u.pinned;
+        total += 1;
+
+        const newLi = document.createElement('li');
+        newLi.className = 'p-1 sidebar-search-result d-flex justify-content-between align-items-center';
+        newLi.style.padding = '6px 4px';
+        newLi.dataset.userId = id;
+        newLi.dataset.pinned = pinned ? '1' : '0';
+
+        const leftDiv = document.createElement('div');
+        leftDiv.style.display = 'flex';
+        leftDiv.style.alignItems = 'center';
+        leftDiv.style.gap = '8px';
+
+        const link = document.createElement('a');
+        link.href = `/users/${id}`;
+        link.className = 'text-white';
+        link.textContent = username;
+        leftDiv.appendChild(link);
+
+        const rightDiv = document.createElement('div');
+        rightDiv.style.display = 'flex';
+        rightDiv.style.gap = '6px';
+        const pinBtn = document.createElement('button');
+        pinBtn.className = 'px-2 py-1 text-xs rounded';
+        pinBtn.dataset.userId = id;
+        pinBtn.textContent = pinned ? 'Unpin' : 'Pin';
+        if (pinned) {
+          pinBtn.classList.add('bg-yellow-500', 'text-black');
+        } else {
+          pinBtn.classList.add('bg-yellow-600', 'text-white');
+        }
+        pinBtn.addEventListener('click', function(e){
+          e.preventDefault();
+          togglePinFromSidebar(id, newLi, pinBtn, pinnedList);
+        });
+        rightDiv.appendChild(pinBtn);
+
+        newLi.appendChild(leftDiv);
+        newLi.appendChild(rightDiv);
+        resultsList.appendChild(newLi);
+      });
+
+      if (total > 0) {
+        resultsDiv.style.display = '';
+        if (pinnedContainer) pinnedContainer.style.display = 'none';
+      } else {
+        resultsDiv.style.display = 'none';
+        if (pinnedContainer) pinnedContainer.style.display = '';
+        const msg = document.createElement('div');
+        msg.className = 'text-muted small';
+        msg.textContent = 'No users found.';
+        resultsList.appendChild(msg);
+      }
+    };
+
+    const performSearch = async (q) => {
+      if (!q || !q.trim()) {
+        const resultsList = document.getElementById(config.resultsListId);
+        if (resultsList) resultsList.innerHTML = '';
+        resultsDiv.style.display = 'none';
+        if (pinnedContainer) pinnedContainer.style.display = '';
+        return;
+      }
+      const url = `/users/api/search?q=${encodeURIComponent(q)}`;
+      try {
+        const resp = await fetch(url, { credentials: 'same-origin' });
+        const data = await resp.json();
+        renderResults((data && data.success && data.users) ? data.users : []);
+      } catch (e) {
+        console.error('Sidebar user search failed:', e);
+      }
+    };
+
+    if (searchBtn) {
+      searchBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        performSearch(searchInput.value);
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          performSearch(searchInput.value);
+        }
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          e.preventDefault();
+          if (clearBtn) clearBtn.click();
+        }
+      });
+      if (clearBtn) {
+        clearBtn.style.display = (searchInput.value && searchInput.value.trim()) ? '' : 'none';
+        searchInput.addEventListener('input', function(){
+          clearBtn.style.display = (searchInput.value && searchInput.value.trim()) ? '' : 'none';
+        });
+        clearBtn.addEventListener('click', function(e){
+          e.preventDefault();
+          searchInput.value = '';
+          performSearch('');
+          resultsDiv.style.display = 'none';
+          if (pinnedContainer) pinnedContainer.style.display = '';
+          searchInput.focus();
+        });
+      }
+    }
+
+    if (pinnedList) {
+      pinnedList.addEventListener('submit', function(e){
+        try {
+          e.preventDefault();
+          const form = e.target;
+          const match = form.action && form.action.match(/\/users\/(\d+)\/toggle_pin/);
+          if (match) {
+            const userId = parseInt(match[1]);
+            const li = form.closest('li');
+            const btn = form.querySelector('button');
+            togglePinFromSidebar(userId, li, btn, pinnedList);
+          } else {
+            form.submit();
+          }
+        } catch (err) {
+          console.error('Pinned list intercept failed', err);
+        }
+      });
+    }
+  }
+
+  async function togglePinFromSidebar(userId, containerEl, buttonEl, pinnedList) {
+    try {
+      const response = await fetch(`/users/${userId}/toggle_pin_ajax`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const body = await response.json();
+      if (body && body.success) {
+        const pinned = !!body.pinned;
+        if (containerEl) containerEl.dataset.pinned = pinned ? '1' : '0';
+        if (buttonEl) {
+          buttonEl.textContent = pinned ? 'Unpin' : 'Pin';
+          if (pinned) {
+            buttonEl.classList.remove('bg-yellow-600', 'text-white');
+            buttonEl.classList.add('bg-yellow-500', 'text-black');
+          } else {
+            buttonEl.classList.remove('bg-yellow-500', 'text-black');
+            buttonEl.classList.add('bg-yellow-600', 'text-white');
+          }
+        }
+
+        if (pinnedList) {
+          if (pinned) {
+            if (!pinnedList.querySelector(`li[data-user-id='${userId}']`)) {
+              const li = document.createElement('li');
+              li.className = 'p-1 d-flex justify-content-between align-items-center';
+              li.style.padding = '6px 4px';
+              li.dataset.userId = userId;
+              const usernameLabel = (containerEl && containerEl.querySelector('a')) ? containerEl.querySelector('a').textContent : 'User';
+              li.innerHTML = `<div style='display:flex; align-items:center; gap:8px;'><a href='/users/${userId}' class='text-white'>${usernameLabel}</a></div><form action='/users/${userId}/toggle_pin' method='post' style='display:inline; margin-left:6px;'><button class='px-2 py-1 text-xs bg-yellow-500 text-black rounded'>Unpin</button></form>`;
+              pinnedList.appendChild(li);
+            }
+          } else {
+            const existing = pinnedList.querySelector(`li[data-user-id='${userId}']`);
+            if (existing) existing.remove();
+          }
+        }
+      } else {
+        alert(body && body.message ? body.message : 'Failed to toggle pin');
+      }
+    } catch (e) {
+      console.error('togglePinFromSidebar error:', e);
+      alert('Error updating pinned status');
+    }
+  }
+
+  initSidebarUserSearch({
+    searchInputId: 'sidebarUserSearchCompact',
+    searchBtnId: 'sidebarUserSearchBtnCompact',
+    clearBtnId: 'sidebarUserClearBtnCompact',
+    resultsContainerId: 'sidebarSearchResultsCompact',
+    resultsListId: 'sidebarSearchResultsListCompact',
+    pinnedContainerId: 'sidebarPinnedUsersContainerCompact',
+    pinnedListId: 'sidebarPinnedUsersListCompact'
+  });
+});
+</script>

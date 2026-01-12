@@ -1,13 +1,45 @@
 <!-- Description stub partial: moved from file_edit_proprietary_note.html -->
 <div class="mb-3 description-section">
   <label class="form-label">Description stubs</label>
+  
+  <!-- Show extension source info if present (readonly) -->
+  {% if file and file.extension_info %}
+  <div class="alert alert-info mb-2 py-2 px-3" style="background: rgba(20, 184, 166, 0.1); border: 1px solid var(--accent); border-radius: 6px;">
+    <div class="d-flex align-items-start gap-2 small">
+      <i class="fas fa-chrome" style="color: var(--accent); margin-top: 2px;"></i>
+      <div class="flex-grow-1">
+        <strong style="color: var(--accent);">{{ file.extension_info.label }}</strong>
+        <div class="text-muted mt-1">
+          <i class="fas fa-link me-1"></i>
+          <a href="{{ file.source_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none" style="color: var(--accent);">
+            {{ file.source_url }}
+          </a>
+          {% if file.extension_info.clip_count > 1 %}
+          <span class="badge bg-secondary ms-2">{{ file.extension_info.clip_count }} clips saved</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  
   <div class="d-flex align-items-start gap-2" id="descriptionRow">
       <div id="descriptionFields" class="description-grid" style="flex:1"></div>
   </div>
   <small class="form-text text-muted">Add a brief description to help identify this note. You can create multiple description stubs for saving urls, tags, etc.</small>
 </div>
 <!-- Hidden combined description JSON (serialized before submit / autosave) -->
-<input type="hidden" name="description" id="description" value="{{ (file.metadata_json.description if file and file.metadata_json and file.metadata_json.description else '') }}">
+{# Handle dict/list (serialize with tojson) and plain strings (pass through) #}
+{% if file and file.metadata_json and file.metadata_json.get('description') %}
+  {% set desc = file.metadata_json.get('description') %}
+  {% if desc is mapping or (desc is iterable and desc is not string) %}
+    <input type="hidden" name="description" id="description" value='{{ desc|tojson }}'>
+  {% else %}
+    <input type="hidden" name="description" id="description" value="{{ desc }}">
+  {% endif %}
+{% else %}
+  <input type="hidden" name="description" id="description" value="">
+{% endif %}
 
 <script>
 /* Description stub helper functions and initialization. These are executed after the main document ready
@@ -145,6 +177,9 @@ document.addEventListener('DOMContentLoaded', function () {
   (function initializeDescriptionStubs() {
     const descEl = document.getElementById('description');
     const initialRaw = descEl ? descEl.value : null;
+    
+    console.log('[DESC INIT] Raw value from hidden input:', initialRaw);
+    
     try {
       let parsed = null;
       if (initialRaw === null) {
@@ -153,31 +188,58 @@ document.addEventListener('DOMContentLoaded', function () {
         parsed = initialRaw;
       } else if (typeof initialRaw === 'string') {
         const txt = initialRaw.trim();
-        if (txt.startsWith('{') || txt.startsWith('[')) {
+        if (txt === '') {
+          parsed = null;
+        } else if (txt.startsWith('{') || txt.startsWith('[')) {
           try {
             parsed = JSON.parse(initialRaw);
+            console.log('[DESC INIT] Parsed JSON:', parsed);
           } catch (e) {
-            parsed = null;
+            console.warn('[DESC INIT] Failed to parse JSON, treating as single description:', e);
+            // Failed to parse - treat as a single plain-text description
+            parsed = {'1': txt};
           }
         } else {
-          parsed = null;
+          // Plain text that doesn't look like JSON - treat as single description
+          console.log('[DESC INIT] Plain text detected, wrapping as single description');
+          parsed = {'1': txt};
         }
       }
-      if (!parsed) {
+      
+      if (!parsed || typeof parsed !== 'object') {
+        console.log('[DESC INIT] No valid description data, creating empty stub');
         createDescriptionStub('');
       } else {
-        const keys = Object.keys(parsed).sort((a,b) => Number(a) - Number(b));
+        // Sort keys: try numeric first, fall back to alphabetic
+        const keys = Object.keys(parsed).sort((a,b) => {
+          const aNum = Number(a);
+          const bNum = Number(b);
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum;
+          }
+          return a.localeCompare(b);
+        });
+        
+        console.log('[DESC INIT] Creating stubs for keys:', keys);
+        
         if (keys.length === 0) {
           createDescriptionStub('');
         } else {
-          keys.forEach(k => createDescriptionStub(parsed[k] || ''));
+          keys.forEach(k => {
+            const val = parsed[k] || '';
+            console.log(`[DESC INIT] Creating stub ${k}: ${val.substring(0, 50)}...`);
+            createDescriptionStub(val);
+          });
         }
       }
+      
       setCombinedDescriptionHidden();
       // keep lastSavedDescription in sync if present
       if (window.lastSavedDescription === undefined) window.lastSavedDescription = document.getElementById('description').value || '';
+      
+      console.log('[DESC INIT] Initialization complete. Final description value:', document.getElementById('description').value);
     } catch (err) {
-      console.error('Failed to initialize description stubs', err);
+      console.error('[DESC INIT] Failed to initialize description stubs', err);
       createDescriptionStub('');
       setCombinedDescriptionHidden();
     }

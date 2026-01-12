@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Chrome Extension — Features</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+	<style>
+		:root {
+			--bg: #0a0a0b;
+			--card: #121516;
+			--muted: #9aa8ad;
+			--accent: #14b8a6;
+			--accent-strong: #0d9488;
+			--ochre: #b38b2c;
+			--ochre-strong: #8f6d1e;
+			--white: #ECFFFF;
+			--radius: 12px;
+		}
+
+		* { box-sizing: border-box; }
+
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+			color: var(--white);
+			background: var(--bg);
+			background-image:
+				radial-gradient(circle at 14% 20%, rgba(179, 139, 44, 0.10) 0%, rgba(179, 139, 44, 0.04) 22%, transparent 48%),
+				radial-gradient(circle at 86% 82%, rgba(20, 184, 166, 0.08) 0%, transparent 40%),
+				linear-gradient(135deg, var(--bg) 0%, var(--card) 45%, #0a171b 100%);
+			background-attachment: fixed;
+			background-repeat: no-repeat;
+		}
+
+		.topbar {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			z-index: 90;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 14px 32px;
+			background: rgba(10, 10, 11, 0.85);
+			border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+			backdrop-filter: blur(12px);
+		}
+
+		.logo {
+			font-size: 20px;
+			font-weight: 800;
+			letter-spacing: -0.6px;
+			color: var(--white);
+			text-decoration: none;
+		}
+
+		.logo span { color: var(--accent); }
+
+		.nav-links { display: flex; gap: 10px; }
+
+		.btn-ghost {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 9px 14px;
+			border-radius: 10px;
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			background: transparent;
+			color: var(--white);
+			text-decoration: none;
+			font-weight: 600;
+			font-size: 14px;
+			transition: all 0.2s ease;
+		}
+
+		.btn-ghost:hover {
+			background: rgba(20, 184, 166, 0.12);
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		.btn-primary {
+			background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+			color: #0a0a0b;
+			border-color: var(--accent);
+		}
+
+		.btn-primary:hover {
+			background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+			color: #0a0a0b;
+		}
+
+		.btn-ochre {
+			border-color: rgba(179, 139, 44, 0.6);
+			color: var(--white);
+		}
+
+		.btn-ochre:hover {
+			background: rgba(179, 139, 44, 0.14);
+			border-color: var(--ochre-strong);
+			color: var(--ochre);
+		}
+
+		.hero-shell {
+			padding: 120px 30px 70px;
+			background: linear-gradient(135deg, rgba(179, 139, 44, 0.12) 0%, rgba(18, 21, 22, 0.92) 55%, rgba(10, 10, 11, 0.95) 100%);
+			border-bottom-left-radius: 32px;
+			border-bottom-right-radius: 32px;
+			box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+		}
+
+		.hero {
+			max-width: 980px;
+			margin: 0 auto;
+			text-align: center;
+		}
+
+		.hero-badge {
+			display: inline-block;
+			padding: 7px 16px;
+			border-radius: 18px;
+			background: linear-gradient(120deg, rgba(179, 139, 44, 0.25), rgba(20, 184, 166, 0.18));
+			border: 1px solid rgba(179, 139, 44, 0.55);
+			color: var(--white);
+			font-weight: 700;
+			letter-spacing: 0.4px;
+			margin-bottom: 16px;
+		}
+
+		.hero-title {
+			margin: 0;
+			font-size: 52px;
+			font-weight: 800;
+			line-height: 1.1;
+			letter-spacing: -1.1px;
+			background: linear-gradient(135deg, var(--white) 0%, var(--ochre) 100%);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+
+		.hero-text {
+			margin: 14px auto 30px;
+			max-width: 780px;
+			color: var(--muted);
+			font-size: 18px;
+			line-height: 1.7;
+		}
+
+		.cta-row {
+			display: flex;
+			gap: 12px;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		.features-wrapper {
+			max-width: 1320px;
+			margin: 0 auto;
+			padding: 60px 30px 90px;
+		}
+
+		.features-container {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			gap: 60px;
+			align-items: start;
+		}
+
+		.feature-item {
+			padding: 32px 0 32px 16px;
+			border-left: 3px solid transparent;
+			opacity: 0.4;
+			transition: opacity 0.4s ease, border-color 0.3s ease;
+		}
+
+		.feature-item.active {
+			opacity: 1;
+			border-left-color: var(--ochre);
+		}
+
+		.feature-item h2 {
+			margin: 0 0 10px;
+			font-size: 32px;
+			font-weight: 760;
+			letter-spacing: -0.7px;
+			color: var(--white);
+		}
+
+		.feature-item.active h2 { color: var(--ochre); }
+
+		.feature-item p {
+			margin: 0;
+			color: var(--muted);
+			font-size: 17px;
+			line-height: 1.7;
+		}
+
+		.images-column {
+			position: sticky;
+			top: 120px;
+			min-height: 540px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.feature-visual {
+			position: absolute;
+			width: 100%;
+			max-width: 560px;
+			padding: 24px;
+			border-radius: 18px;
+			background: linear-gradient(145deg, rgba(18, 21, 22, 0.92), rgba(10, 10, 11, 0.7));
+			border: 1px solid rgba(255, 255, 255, 0.06);
+			box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+			opacity: 0;
+			transform: translateY(18px) scale(0.97);
+			transition: opacity 0.6s ease, transform 0.6s ease;
+			overflow: hidden;
+		}
+
+		.feature-visual.active {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+
+		.visual-header {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			margin-bottom: 12px;
+		}
+
+		.visual-icon {
+			width: 52px;
+			height: 52px;
+			border-radius: 14px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			color: #0a0a0b;
+			font-weight: 800;
+			box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+		}
+
+		.visual-body {
+			background: linear-gradient(135deg, rgba(179, 139, 44, 0.12), rgba(20, 184, 166, 0.08));
+			border: 1px solid rgba(255, 255, 255, 0.06);
+			border-radius: 14px;
+			padding: 16px;
+			color: var(--muted);
+			font-size: 14px;
+			line-height: 1.6;
+		}
+
+		.bullet-row {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+			gap: 8px;
+			margin-top: 10px;
+		}
+
+		.bullet {
+			padding: 8px 10px;
+			border-radius: 10px;
+			background: rgba(179, 139, 44, 0.15);
+			color: var(--ochre);
+			border: 1px solid rgba(179, 139, 44, 0.3);
+			font-weight: 700;
+			font-size: 12px;
+			text-align: center;
+			letter-spacing: 0.2px;
+		}
+
+		.cta-section {
+			padding: 70px 30px;
+			text-align: center;
+			background: rgba(18, 21, 22, 0.75);
+			border-top: 1px solid rgba(255, 255, 255, 0.06);
+		}
+
+		.cta-title {
+			margin: 0 0 12px;
+			font-size: 34px;
+			font-weight: 760;
+			letter-spacing: -0.8px;
+			color: var(--white);
+		}
+
+		.cta-text {
+			margin: 0 0 24px;
+			color: var(--muted);
+			font-size: 17px;
+		}
+
+		.footer {
+			text-align: center;
+			padding: 18px;
+			color: var(--muted);
+			font-size: 13px;
+			border-top: 1px solid rgba(255, 255, 255, 0.05);
+			background: rgba(10, 10, 11, 0.85);
+		}
+
+		@media (max-width: 1100px) {
+			.features-container {
+				grid-template-columns: 1fr;
+				gap: 40px;
+			}
+
+			.images-column {
+				position: relative;
+				top: 0;
+				min-height: 420px;
+			}
+
+			.feature-item {
+				opacity: 1;
+				border-left-color: rgba(179, 139, 44, 0.3);
+			}
+
+			.feature-item.active {
+				border-left-color: var(--ochre);
+			}
+
+			.feature-visual {
+				position: relative;
+				margin-bottom: 24px;
+				opacity: 1;
+				transform: none;
+			}
+
+			.feature-visual.active {
+				opacity: 1;
+				transform: none;
+			}
+		}
+
+		@media (max-width: 900px) {
+			.hero-title { font-size: 42px; }
+			.hero-text { font-size: 17px; }
+			.topbar { padding: 12px 18px; }
+			.feature-item h2 { font-size: 28px; }
+		}
+
+		@media (max-width: 640px) {
+			.hero-shell { padding: 110px 18px 60px; }
+			.hero-title { font-size: 34px; letter-spacing: -0.6px; }
+			.hero-text { font-size: 16px; }
+			.cta-row { flex-direction: column; }
+			.btn-ghost, .btn-primary { width: 100%; justify-content: center; }
+		}
+	</style>
+</head>
+<body>
+	<div class="topbar">
+		<a class="logo" href="{{ url_for('core_blueprint.landing') }}">Mio<span>Hub</span></a>
+		<div class="nav-links">
+			<a class="btn-ghost" href="{{ url_for('core_blueprint.landing') }}">← Back</a>
+			<a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.extension_settings') }}">Get Started</a>
+		</div>
+	</div>
+
+	<div class="hero-shell">
+		<div class="hero">
+			<div class="hero-badge">Chrome Extension</div>
+			<h1 class="hero-title">Clip the web into MioSpace</h1>
+			<p class="hero-text">Save text snippets, images, and URLs from any webpage directly into your MioSpace folders. Smart grouping keeps everything organized automatically.</p>
+			<div class="cta-row">
+				<a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.extension_settings') }}">Install Extension</a>
+				<a class="btn-ghost" href="{{ url_for('core_blueprint.landing') }}">← Back to Home</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="features-wrapper">
+		<div class="features-container">
+			<div>
+				<div class="feature-item active" data-feature="clip">
+					<h2>One-Click Web Clipping</h2>
+					<p>Right-click any text, image, or link to instantly save it to MioSpace. The extension captures content with context, including source URLs and timestamps for easy reference.</p>
+				</div>
+
+				<div class="feature-item" data-feature="organize">
+					<h2>Smart URL Grouping</h2>
+					<p>Content from the same website automatically groups together in the same file. Research multiple pages from one site? All snippets stay organized in a single, chronological document.</p>
+				</div>
+
+				<div class="feature-item" data-feature="folders">
+					<h2>Folder Integration</h2>
+					<p>Choose which MioSpace folder receives your clippings. Create dedicated research folders, reading lists, or project collections — all accessible from the extension popup.</p>
+				</div>
+
+				<div class="feature-item" data-feature="context">
+					<h2>Context Menu Actions</h2>
+					<p>Access clipping tools from anywhere: right-click selected text, images, links, or the page itself. Multiple ways to capture means faster workflow and less context switching.</p>
+				</div>
+
+				<div class="feature-item" data-feature="security">
+					<h2>Secure Token Authentication</h2>
+					<p>API tokens keep your account safe. Generate tokens from settings, set expiration dates, and revoke access anytime. No passwords stored in the extension.</p>
+				</div>
+
+				<div class="feature-item" data-feature="future">
+					<h2>Chat with Pages (Coming Soon)</h2>
+					<p>Future updates will let you chat with webpage content directly from the extension, bringing MioChat's AI capabilities to any site you visit.</p>
+				</div>
+			</div>
+
+			<div class="images-column">
+				<div class="feature-visual active" data-visual="clip">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--ochre), var(--ochre-strong));">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+								<rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+							</svg>
+						</div>
+						<h3 style="margin: 0; font-size: 18px;">Quick Capture</h3>
+					</div>
+					<div class="visual-body">
+						Highlight any text on a webpage, right-click, and select "Save Text to MioHub". It's saved instantly with the source URL attached.
+						<div class="bullet-row">
+							<div class="bullet">Text</div>
+							<div class="bullet">Images</div>
+							<div class="bullet">Links</div>
+							<div class="bullet">Full Pages</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="organize">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--ochre), var(--ochre-strong));">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M3 3h7v7H3z"></path>
+								<path d="M14 3h7v7h-7z"></path>
+								<path d="M14 14h7v7h-7z"></path>
+								<path d="M3 14h7v7H3z"></path>
+							</svg>
+						</div>
+						<h3 style="margin: 0; font-size: 18px;">Auto-Organization</h3>
+					</div>
+					<div class="visual-body">
+						Clips from <code style="color: var(--ochre);">example.com/article-1</code> and <code style="color: var(--ochre);">example.com/article-2</code> automatically merge into one file, preserving order.
+						<div class="bullet-row">
+							<div class="bullet">URL Detection</div>
+							<div class="bullet">Chronological</div>
+							<div class="bullet">No Duplicates</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="folders">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--ochre), var(--ochre-strong));">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+							</svg>
+						</div>
+						<h3 style="margin: 0; font-size: 18px;">Choose Destination</h3>
+					</div>
+					<div class="visual-body">
+						Select from all your MioSpace folders in the extension popup. Set a default folder for quick saves, or change destinations per clipping.
+						<div class="bullet-row">
+							<div class="bullet">Dropdown Select</div>
+							<div class="bullet">Default Folder</div>
+							<div class="bullet">Hierarchical</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="context">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--ochre), var(--ochre-strong));">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<circle cx="12" cy="12" r="1"></circle>
+								<circle cx="19" cy="12" r="1"></circle>
+								<circle cx="5" cy="12" r="1"></circle>
+							</svg>
+						</div>
+						<h3 style="margin: 0; font-size: 18px;">Context Menus</h3>
+					</div>
+					<div class="visual-body">
+						Right-click anywhere to access extension features. Separate menu options for images, links, text selections, and pages.
+						<div class="bullet-row">
+							<div class="bullet">Right-Click</div>
+							<div class="bullet">Type-Aware</div>
+							<div class="bullet">Fast Access</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="security">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--ochre), var(--ochre-strong));">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+								<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+							</svg>
+						</div>
+						<h3 style="margin: 0; font-size: 18px;">API Tokens</h3>
+					</div>
+					<div class="visual-body">
+						Generate secure tokens from MioSpace settings. Tokens expire automatically and can be revoked instantly if compromised.
+						<div class="bullet-row">
+							<div class="bullet">No Passwords</div>
+							<div class="bullet">Expiration Dates</div>
+							<div class="bullet">Revocable</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="feature-visual" data-visual="future">
+					<div class="visual-header">
+						<div class="visual-icon" style="background: linear-gradient(135deg, var(--ochre-strong), #6d4c3d);">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+							</svg>
+						</div>
+						<h3 style="margin: 0; font-size: 18px;">Future: Page Chat</h3>
+					</div>
+					<div class="visual-body">
+						Planned feature: Click a button to chat with any webpage using MioChat's AI. Ask questions, summarize articles, or extract key points without leaving the page.
+						<div class="bullet-row">
+							<div class="bullet">Coming Soon</div>
+							<div class="bullet">AI-Powered</div>
+							<div class="bullet">In-Page</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="cta-section">
+		<h2 class="cta-title">Ready to start clipping?</h2>
+		<p class="cta-text">Install the extension in 2 minutes and bring the web into your workspace.</p>
+		<div class="cta-row">
+			<a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.extension_settings') }}">Install Extension</a>
+			<a class="btn-ghost" href="{{ url_for('p2_bp.dashboard') }}">Open MioSpace</a>
+		</div>
+	</div>
+
+	<div class="footer">
+		Built with Love by Asesh Basu — MioHub
+	</div>
+
+	<script>
+		// Intersection Observer for scroll-based feature activation
+		const observerOptions = {
+			root: null,
+			rootMargin: '-40% 0px -40% 0px',
+			threshold: 0
+		};
+
+		const observer = new IntersectionObserver((entries) => {
+			entries.forEach(entry => {
+				if (entry.isIntersecting) {
+					const featureId = entry.target.dataset.feature;
+					
+					// Remove active class from all items and visuals
+					document.querySelectorAll('.feature-item').forEach(item => item.classList.remove('active'));
+					document.querySelectorAll('.feature-visual').forEach(visual => visual.classList.remove('active'));
+					
+					// Add active class to current item and matching visual
+					entry.target.classList.add('active');
+					const visual = document.querySelector(`[data-visual="${featureId}"]`);
+					if (visual) visual.classList.add('active');
+				}
+			});
+		}, observerOptions);
+
+		// Observe all feature items
+		document.querySelectorAll('.feature-item').forEach(item => observer.observe(item));
+	</script>
+</body>
+</html>

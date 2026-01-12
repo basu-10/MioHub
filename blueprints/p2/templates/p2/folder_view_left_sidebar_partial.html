@@ -432,13 +432,10 @@
 }
 </style>
 
-<!-- Toggle Buttons - Dual Arrow System -->
+<!-- Toggle Button - Folder Sidebar -->
 <div class="sidebar-toggles-container" id="sidebarTogglesContainer">
-  <div class="folder-browser-toggle" id="foldersToggleBtn" onclick="openFolderBrowserTab('folders')" title="Folders">
+  <div class="folder-browser-toggle" id="foldersToggleBtn" onclick="toggleFolderBrowser()" title="Folders">
     <i class="material-icons">folder</i>
-  </div>
-  <div class="folder-browser-toggle" id="socialToggleBtn" onclick="openFolderBrowserTab('pinned')" title="Social">
-    <i class="material-icons">people</i>
   </div>
 </div>
 
@@ -454,18 +451,8 @@
     </div>
   </div>
 
-  <div class="folder-browser-tabs" role="tablist" aria-label="Folder sidebar tabs">
-    <button class="folder-browser-tab-btn active" id="foldersTabBtn" onclick="switchFolderBrowserTab('folders')">Folders</button>
-    <button class="folder-browser-tab-btn" id="pinnedTabBtn" onclick="switchFolderBrowserTab('pinned')">Social</button>
-  </div>
-  <div class="tab-content">
-    <div class="folder-tree-container" id="foldersTabContent">
-      {% include 'p2/folder_view_folders_tab.html' %}
-    </div>
-    
-    <div class="folder-tree-container" id="pinnedTabContent" style="display:none;">
-      {% include 'p2/folder_view_social_tab.html' %}
-    </div>
+  <div class="folder-tree-container" id="foldersTabContent">
+    {% include 'p2/folder_view_folders_tab.html' %}
   </div>
 </div>
 
@@ -504,17 +491,15 @@ let contextMenuFolder = null;
 document.addEventListener('DOMContentLoaded', function() {
   // Load sidebar state from localStorage (default: collapsed)
   const sidebarState = localStorage.getItem('folderBrowserState');
-  const activeTab = localStorage.getItem('folderBrowserActiveTab') || 'folders';
-  
   if (sidebarState === 'open') {
-    openFolderBrowser(activeTab, false);
+    openFolderBrowser(false);
   } else {
     // Ensure collapsed state on load
     const sidebar = document.getElementById('folderBrowserSidebar');
     const togglesContainer = document.getElementById('sidebarTogglesContainer');
     sidebar.classList.add('collapsed');
     togglesContainer.classList.remove('sidebar-open');
-    updateToggleButtonStates(null);
+    updateToggleButtonStates(false);
   }
   
   // Close context menu on click outside
@@ -562,22 +547,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Update toggle button states based on active tab
-function updateToggleButtonStates(activeTab) {
+function updateToggleButtonStates(isOpen) {
   const foldersBtn = document.getElementById('foldersToggleBtn');
-  const socialBtn = document.getElementById('socialToggleBtn');
-  
-  if (!foldersBtn || !socialBtn) return;
-  
-  // Reset all buttons
-  foldersBtn.classList.remove('active');
-  socialBtn.classList.remove('active');
-  
-  // Highlight the active tab button
-  if (activeTab === 'folders') {
-    foldersBtn.classList.add('active');
-  } else if (activeTab === 'pinned') {
-    socialBtn.classList.add('active');
-  }
+  if (!foldersBtn) return;
+  foldersBtn.classList.toggle('active', !!isOpen);
 }
 
 // Close the folder browser sidebar
@@ -587,72 +560,38 @@ function closeFolderBrowser() {
   sidebar.classList.add('collapsed');
   togglesContainer.classList.remove('sidebar-open');
   localStorage.setItem('folderBrowserState', 'closed');
-  updateToggleButtonStates(null);
+  updateToggleButtonStates(false);
 }
 
-// Open folder browser to a specific tab (replaces toggleFolderBrowser)
-function openFolderBrowserTab(tabName) {
+// Open folder browser (single view)
+function openFolderBrowserTab() {
   const sidebar = document.getElementById('folderBrowserSidebar');
   const togglesContainer = document.getElementById('sidebarTogglesContainer');
   const isCurrentlyOpen = !sidebar.classList.contains('collapsed');
-  const currentTab = localStorage.getItem('folderBrowserActiveTab');
-  
-  // If clicking the same tab that's already open, close the sidebar
-  if (isCurrentlyOpen && currentTab === tabName) {
-    sidebar.classList.add('collapsed');
-    togglesContainer.classList.remove('sidebar-open');
-    localStorage.setItem('folderBrowserState', 'closed');
-    updateToggleButtonStates(null);
-  } else {
-    // Open sidebar and switch to the requested tab
-    sidebar.classList.remove('collapsed');
-    togglesContainer.classList.add('sidebar-open');
-    localStorage.setItem('folderBrowserState', 'open');
-    localStorage.setItem('folderBrowserActiveTab', tabName);
-    switchFolderBrowserTab(tabName);
-    updateToggleButtonStates(tabName);
+  if (isCurrentlyOpen) {
+    closeFolderBrowser();
+    return;
   }
+  sidebar.classList.remove('collapsed');
+  togglesContainer.classList.add('sidebar-open');
+  localStorage.setItem('folderBrowserState', 'open');
+  updateToggleButtonStates(true);
 }
 
 // Legacy function for compatibility - opens to folders tab
 function toggleFolderBrowser() {
-  openFolderBrowserTab('folders');
+  openFolderBrowserTab();
 }
 
-function openFolderBrowser(tabName = 'folders', saveState = true) {
+function openFolderBrowser(saveState = true) {
   const sidebar = document.getElementById('folderBrowserSidebar');
   const togglesContainer = document.getElementById('sidebarTogglesContainer');
   sidebar.classList.remove('collapsed');
   togglesContainer.classList.add('sidebar-open');
   if (saveState) {
     localStorage.setItem('folderBrowserState', 'open');
-    localStorage.setItem('folderBrowserActiveTab', tabName);
   }
-  switchFolderBrowserTab(tabName);
-  updateToggleButtonStates(tabName);
-}
-
-// Switch between the 'Folders' and 'Pinned' tabs in the sidebar
-function switchFolderBrowserTab(tabName) {
-  const tabs = ['folders', 'pinned'];
-  tabs.forEach(t => {
-    const btn = document.getElementById(t + 'TabBtn');
-    const content = document.getElementById(t + 'TabContent');
-    if (!btn || !content) return;
-    if (t === tabName) {
-      btn.classList.add('active');
-      content.style.display = 'block';
-    } else {
-      btn.classList.remove('active');
-      content.style.display = 'none';
-    }
-  });
-  
-  // Update toggle button states
-  updateToggleButtonStates(tabName);
-  
-  // Save active tab preference
-  localStorage.setItem('folderBrowserActiveTab', tabName);
+  updateToggleButtonStates(true);
 }
 
 // Context Menu Actions

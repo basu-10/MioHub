@@ -36,3 +36,8 @@ def features_p3():
 @core_blueprint.route('/features/p4')
 def features_p4():
     return render_template('core/features_p4.html')
+
+
+@core_blueprint.route('/features/extension')
+def features_extension():
+    return render_template('core/features_extension.html')

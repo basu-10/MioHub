@@ -2121,8 +2121,6 @@ document.addEventListener('DOMContentLoaded', function() {
 (function() {
   'use strict';
   
-  console.log('[CARD CLICK] Initializing card click handlers');
-  
   // Track click timing for single/double click distinction
   const clickTimers = new WeakMap();
   const DOUBLE_CLICK_DELAY = 300; // ms
@@ -2228,15 +2226,12 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    console.log(`[CARD CLICK] Attaching listeners to ${type} ${id}`);
-
     setupTouchLongPress(itemBody, card, type, id);
     
     // Main click handler
     itemBody.addEventListener('click', function(e) {
       // Ignore clicks on buttons, links, and interactive elements
       if (e.target.closest('button, a, input, select, textarea, .prevent-card-click')) {
-        console.log('[CARD CLICK] Ignoring click on interactive element');
         return;
       }
 
@@ -2250,11 +2245,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const isCtrlClick = e.ctrlKey || e.metaKey;
       const isShiftClick = e.shiftKey;
       
-      console.log(`[CARD CLICK] Click on ${type} ${id} - ctrl: ${isCtrlClick}, shift: ${isShiftClick}`);
-      
       // Ctrl+click or Shift+click → batch selection mode
       if (isCtrlClick || isShiftClick) {
-        console.log('[CARD CLICK] Batch selection mode');
         handleBatchSelection(card, type, id);
         return;
       }
@@ -2262,7 +2254,6 @@ document.addEventListener('DOMContentLoaded', function() {
       // Check for double-click
       if (clickTimers.has(itemBody)) {
         // Double-click detected
-        console.log('[CARD CLICK] Double-click detected');
         clearTimeout(clickTimers.get(itemBody));
         clickTimers.delete(itemBody);
         handleDoubleClick(card, type, id);
@@ -2272,7 +2263,6 @@ document.addEventListener('DOMContentLoaded', function() {
       // Single click - set timer to distinguish from double-click
       const timer = setTimeout(() => {
         clickTimers.delete(itemBody);
-        console.log('[CARD CLICK] Single-click confirmed');
         handleSingleClick(card, type, id);
       }, DOUBLE_CLICK_DELAY);
       
@@ -2286,7 +2276,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       e.preventDefault();
       e.stopPropagation();
-      console.log(`[CARD CLICK] Right-click: opening preview for ${type} ${id}`);
       openPreview(card, type, id);
     });
     
@@ -2338,7 +2327,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle single click - open preview panel
    */
   function openPreview(card, type, id) {
-    console.log(`[CARD CLICK] Preview request for ${type} ${id}`);
     if (typeof window.openPreviewPanel === 'function') {
       const item = { type: type, id: parseInt(id), card: card };
       window.openPreviewPanel(item);
@@ -2360,7 +2348,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle single click - navigate to edit/view page
    */
   function handleSingleClick(card, type, id) {
-    console.log(`[CARD CLICK] Single click: navigating to ${type} ${id}`);
     handleNavigation(card, type, id);
   }
   
@@ -2368,7 +2355,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle double click - navigate to edit/view page
    */
   function handleDoubleClick(card, type, id) {
-    console.log(`[CARD CLICK] Double click: closing modals like Escape`);
     closeAllModals();
 
     // Also clear batch selection to mirror Escape key behavior
@@ -2384,8 +2370,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Navigate to edit/view page (formerly double-click behavior)
    */
   function handleNavigation(card, type, id) {
-    console.log(`[CARD CLICK] Navigating to ${type} ${id}`);
-
     // Build URL based on type
     let url = '';
     const fileType = card.dataset.fileType;
@@ -2411,8 +2395,6 @@ document.addEventListener('DOMContentLoaded', function() {
       url = `/p2/files/${id}/edit`;
     }
     
-    console.log(`[CARD CLICK] Navigating to: ${url}`);
-    
     // Save scroll position
     const section = card.closest('.section-container');
     if (section && section.id) {
@@ -2427,8 +2409,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle Ctrl+click or Shift+click - batch selection
    */
   function handleBatchSelection(card, type, id) {
-    console.log(`[CARD CLICK] Batch selection for ${type} ${id}`);
-    
     // Ensure batch selection array exists
     if (!window.batchSelected) {
       window.batchSelected = [];
@@ -2437,7 +2417,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // CRITICAL: Use fileType if available (for infinite whiteboards, graphs, etc.)
     const fileType = card.dataset.fileType;
     const effectiveType = (type === 'file' && fileType) ? fileType : type;
-    console.log(`[CARD CLICK] Effective type for clipboard: ${effectiveType}`);
     
     // Check if already in batch
     const existingIndex = window.batchSelected.findIndex(
@@ -2446,7 +2425,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (existingIndex >= 0) {
       // Remove from batch
-      console.log(`[CARD CLICK] Removing from batch: ${effectiveType} ${id}`);
       window.batchSelected.splice(existingIndex, 1);
       card.classList.remove('batch-selected-item');
       
@@ -2455,7 +2433,6 @@ document.addEventListener('DOMContentLoaded', function() {
       if (checkbox) checkbox.remove();
     } else {
       // Add to batch (use effectiveType so clipboard has specific file type)
-      console.log(`[CARD CLICK] Adding to batch: ${effectiveType} ${id}`);
       window.batchSelected.push({ type: effectiveType, id: parseInt(id), card });
       card.classList.add('batch-selected-item');
       
@@ -2490,11 +2467,9 @@ document.addEventListener('DOMContentLoaded', function() {
         batchOps.style.display = 'flex !important';
         batchOps.style.removeProperty('display');
         batchCountElem.textContent = count;
-        console.log(`[CARD CLICK] Batch bar updated: ${count} items`);
       } else {
         batchOps.style.display = 'none !important';
         batchCountElem.textContent = '0';
-        console.log('[CARD CLICK] Batch bar hidden');
       }
     }
   }
@@ -2504,7 +2479,6 @@ document.addEventListener('DOMContentLoaded', function() {
    */
   function attachToAllCards() {
     const itemBodies = document.querySelectorAll('.item-card .item-body, .item-row .item-body');
-    console.log(`[CARD CLICK] Auto-attaching to ${itemBodies.length} cards`);
     itemBodies.forEach(itemBody => {
       window.attachCardClickListeners(itemBody);
     });
@@ -2517,7 +2491,6 @@ document.addEventListener('DOMContentLoaded', function() {
     attachToAllCards();
   }
   
-  console.log('[CARD CLICK] Card click handler system initialized');
 })();
 
 // Listen for public status changes from preview panel

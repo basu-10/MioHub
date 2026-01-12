@@ -18,7 +18,13 @@ from blueprints.p2.folder_ops import (
     get_or_create_folder_path, copy_folder_to_user,
     copy_file_to_user
 )
-from blueprints.p2.utils import collect_images_from_content, get_image_hash, get_existing_image_by_hash, format_bytes
+from blueprints.p2.utils import (
+    collect_images_from_content,
+    get_image_hash,
+    get_existing_image_by_hash,
+    format_bytes,
+    parse_description_field,
+)
 from utilities_main import update_user_data_size
 from values_main import UPLOAD_FOLDER
 import os
@@ -265,50 +271,13 @@ def view_folder(folder_id):
     # print(f"DEBUG: Combined doc IDs being sent: {[n.id for n in combined_docs]}")
     # print(f"{'='*80}\n")
 
-    # Parse description JSON for notes: supply note.descriptions as a list, or None if invalid
-    import json as _json
+    # Parse description metadata for notes: supports multi-description JSON and plain text
     for note in regular_notes:
-        note.descriptions = None
-        note.description_parse_failed = False
-        # Description is now in metadata_json['description']
-        description = (note.metadata_json or {}).get('description', '') if note.metadata_json else ''
-        if description:
-            try:
-                parsed = _json.loads(description)
-                # Accept dict or list; convert dict to ordered list by numeric keys
-                if isinstance(parsed, dict):
-                    try:
-                        # Try sorting keys as integers when they are number-like strings
-                        keys = sorted(parsed.keys(), key=lambda k: int(k))
-                    except Exception:
-                        keys = sorted(parsed.keys())
-                    # Build key/value pairs preserving original keys in order
-                    kv_pairs = [(k, parsed[k].strip()) for k in keys if isinstance(parsed[k], str) and parsed[k].strip()]
-                    if kv_pairs:
-                        note.descriptions = kv_pairs
-                        note.description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
-                        # print(f"DEBUG: Note {note.id} descriptions parsed (dict): count={len(kv_pairs)}")
-                    else:
-                        note.descriptions = None
-                elif isinstance(parsed, list):
-                    # Convert list into (index, value) pairs and filter empty ones
-                    kv_pairs = [(str(i + 1), v.strip()) for i, v in enumerate(parsed) if isinstance(v, str) and v.strip()]
-                    if kv_pairs:
-                        note.descriptions = kv_pairs
-                        note.description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
-                        # print(f"DEBUG: Note {note.id} descriptions parsed (list): count={len(kv_pairs)}")
-                    else:
-                        note.descriptions = None
-                else:
-                    # Not a dict/list; treat as invalid for our new format
-                    # print(f"DEBUG: Note {note.id} description is not a JSON object/list; ignoring for display.")
-                    note.descriptions = None
-                    note.description_parse_failed = True
-            except Exception:
-                preview = (description or '')[:200]
-                # print(f"DEBUG: Failed to parse JSON description for Note {note.id}; preview={preview!r}; ignoring description.")
-                note.descriptions = None
-                note.description_parse_failed = True
+        description_value = (note.metadata_json or {}).get('description', '') if isinstance(note.metadata_json, dict) else ''
+        descriptions, description_readable, parse_failed = parse_description_field(description_value)
+        note.descriptions = descriptions
+        note.description_readable = description_readable
+        note.description_parse_failed = parse_failed
 
     # Also provide pinned users (pull from current_user.user_prefs 'pinned_users' list)
     pinned_users = []

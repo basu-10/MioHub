@@ -1,7 +1,7 @@
 from . import p2_blueprint
 from flask import render_template, redirect, url_for
 from flask_login import LoginManager, login_user, login_required, logout_user, UserMixin, current_user
-from flask import Flask, json, render_template, request, jsonify, session, redirect, url_for, request, flash, Response, send_file, abort
+from flask import Flask, json, render_template, request, jsonify, session, redirect, url_for, request, flash, Response, send_file, abort, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlparse
 
@@ -14,9 +14,17 @@ import bleach
 from bs4 import BeautifulSoup
 import traceback
 import os
+import io
+import zipfile
 from values_main import UPLOAD_FOLDER, MAX_IMAGE_SIZE, ALLOWED_EXTENSIONS
 from utilities_main import update_user_data_size, check_guest_limit
-from .utils import get_existing_image_by_hash, get_image_hash, allowed_file, convert_to_webp
+from .utils import (
+    get_existing_image_by_hash,
+    get_image_hash,
+    allowed_file,
+    convert_to_webp,
+    parse_description_field,
+)
 
 import config
 
@@ -49,6 +57,72 @@ def db_retry(func, max_retries=3, delay=1):
 @p2_blueprint.route('/p2_index')
 def p2_index():
     return render_template('p2/index.html')
+
+
+@p2_blueprint.route('/extension-settings')
+@login_required
+def extension_settings():
+    """Chrome Extension settings page for API token management."""
+    from datetime import datetime
+    response = make_response(render_template('p2/extension_settings.html', now=datetime.utcnow()))
+    # Prevent cached HTML from leaking a previous user's token after account switches
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
+@p2_blueprint.route('/download-chrome-extension')
+@login_required
+def download_chrome_extension():
+    """Generate and download Chrome extension as ZIP file."""
+    try:
+        # Create in-memory ZIP file
+        zip_buffer = io.BytesIO()
+        
+        # Path to chrome_extension folder
+        extension_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'chrome_extension')
+        
+        # Create ZIP with all extension files
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Add manifest.json
+            manifest_path = os.path.join(extension_dir, 'manifest.json')
+            if os.path.exists(manifest_path):
+                zipf.write(manifest_path, 'manifest.json')
+            
+            # Add popup files
+            for popup_file in ['popup.html', 'popup.css', 'popup.js']:
+                file_path = os.path.join(extension_dir, popup_file)
+                if os.path.exists(file_path):
+                    zipf.write(file_path, popup_file)
+            
+            # Add background.js
+            background_path = os.path.join(extension_dir, 'background.js')
+            if os.path.exists(background_path):
+                zipf.write(background_path, 'background.js')
+            
+            # Add icons folder
+            icons_dir = os.path.join(extension_dir, 'icons')
+            if os.path.exists(icons_dir):
+                for icon_file in os.listdir(icons_dir):
+                    icon_path = os.path.join(icons_dir, icon_file)
+                    if os.path.isfile(icon_path):
+                        zipf.write(icon_path, os.path.join('icons', icon_file))
+        
+        # Prepare ZIP for download
+        zip_buffer.seek(0)
+        
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name='miohub-chrome-extension.zip'
+        )
+        
+    except Exception as e:
+        print(f"Error generating extension ZIP: {e}")
+        flash('Failed to download extension. Please try again.', 'error')
+        return redirect(url_for('p2_bp.extension_settings'))
 
 
 
@@ -1677,37 +1751,15 @@ def public_view_note(note_id):
     except Exception:
         sanitized_content = ''
 
-    # Parse description JSON: supply note.descriptions as list when valid, else None and log debug
+    # Parse description metadata for public rendering (supports JSON or plain text)
     try:
-        import json as _json
-        note.descriptions = None
-        note.description_parse_failed = False
-        if note.description:
-            parsed = _json.loads(note.description)
-            if isinstance(parsed, dict):
-                try:
-                    keys = sorted(parsed.keys(), key=lambda k: int(k))
-                except Exception:
-                    keys = sorted(parsed.keys())
-                kv_pairs = [(k, parsed[k].strip()) for k in keys if isinstance(parsed[k], str) and parsed[k].strip()]
-                if kv_pairs:
-                    note.descriptions = kv_pairs
-                    note.description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
-                else:
-                    note.descriptions = None
-            elif isinstance(parsed, list):
-                kv_pairs = [(str(i + 1), v.strip()) for i, v in enumerate(parsed) if isinstance(v, str) and v.strip()]
-                if kv_pairs:
-                    note.descriptions = kv_pairs
-                    note.description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
-                else:
-                    note.descriptions = None
-            else:
-                print(f"DEBUG: Public Note {note.id} description is not JSON list/dict; ignoring for display.")
-                note.descriptions = None
-                note.description_parse_failed = True
+        description_value = (note.metadata_json or {}).get('description', '') if isinstance(note.metadata_json, dict) else note.description
+        descriptions, description_readable, parse_failed = parse_description_field(description_value)
+        note.descriptions = descriptions
+        note.description_readable = description_readable
+        note.description_parse_failed = parse_failed
     except Exception:
-        print(f"DEBUG: Failed to parse JSON description for public Note {note.id}; ignoring description.")
+        print(f"DEBUG: Failed to parse description for public Note {note.id}; ignoring description.")
         note.description_parse_failed = True
 
     return render_template('p2/public_note.html', note=note, sanitized_content=sanitized_content)

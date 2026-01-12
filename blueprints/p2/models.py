@@ -175,6 +175,10 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, default=datetime.utcnow)
     profile_pic_url = db.Column(db.String(256))
+    
+    # Chrome Extension API authentication
+    api_token = db.Column(db.String(255), nullable=True, index=True)
+    api_token_expires = db.Column(db.DateTime, nullable=True)
 
     # Relations
     folders = db.relationship('Folder', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -265,6 +269,9 @@ class File(db.Model):
     last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
     is_public = db.Column(db.Boolean, default=False, nullable=False)
     
+    # Chrome extension source URL tracking (for grouping saves from same page)
+    source_url = db.Column(db.String(2048), nullable=True, index=True)
+    
     # Cached thumbnail for visual content types (whiteboards, diagrams, etc.)
     thumbnail_path = db.Column(db.String(500), nullable=True)
     
@@ -304,6 +311,19 @@ class File(db.Model):
         if self.metadata_json and isinstance(self.metadata_json, dict):
             return self.metadata_json.get('description', '')
         return ''
+    
+    @property
+    def extension_info(self):
+        """Format Chrome extension source info for display."""
+        if not self.source_url:
+            return None
+        
+        # Return dict with formatted info
+        return {
+            'label': 'Saved from Chrome extension',
+            'url': self.source_url,
+            'clip_count': self.metadata_json.get('clip_count', 1) if self.metadata_json else 1
+        }
     
     @property
     def is_pinned(self):

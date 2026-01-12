@@ -2978,7 +2978,18 @@ document.addEventListener('keydown', async (e) => {
   }
   
   // Ctrl+V to paste at current mouse position
+  // BUT allow default paste behavior when text editor modal is active
   if (e.ctrlKey && e.key === 'v') {
+    const textEditorOverlay = document.getElementById('text-editor-overlay');
+    const isTextEditorOpen = textEditorOverlay && textEditorOverlay.style.display !== 'none';
+    
+    // If text editor is open and textarea is focused, allow default paste
+    if (isTextEditorOpen && document.activeElement === textEditorTextarea) {
+      // Let the browser handle the paste in the textarea
+      return;
+    }
+    
+    // Otherwise, handle as canvas paste
     e.preventDefault();
     const pastePosition = currentMousePosition || { x: 100, y: 100 };
     await handlePasteAtPosition(pastePosition);

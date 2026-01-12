@@ -12,3 +12,4 @@ start_project.bat
 static/uploads/
 config.py
 static/ui inspiration/
+generate_extension_icons.py

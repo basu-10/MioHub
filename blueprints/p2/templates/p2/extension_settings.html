@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chrome Extension Settings - MioHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0a0b 0%, #1a1a1c 100%);
+      color: var(--white);
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    }
+    
+    .professional-card {
+      background: linear-gradient(145deg, rgba(18, 21, 22, 0.95) 0%, rgba(18, 21, 22, 0.85) 100%);
+      border: 1px solid rgba(42, 42, 43, 0.5);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(20, 184, 166, 0.05);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    
+    .professional-card:hover {
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(20, 184, 166, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    .hero-section {
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(13, 148, 136, 0.05) 100%);
+      border: 1px solid rgba(20, 184, 166, 0.2);
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(20, 184, 166, 0.1) 0%, transparent 70%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 0.3; }
+    }
+    
+    .hero-section h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent) 0%, #0d9488 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .hero-section .subtitle {
+      font-size: 1.125rem;
+      color: rgba(236, 255, 255, 0.7);
+      max-width: 600px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .token-card {
+      background: linear-gradient(145deg, #0d0d0e 0%, #121516 100%);
+      border: 2px solid rgba(20, 184, 166, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 24px rgba(20, 184, 166, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    
+    .token-display {
+      background: rgba(10, 10, 11, 0.8);
+      border: 1px solid rgba(42, 42, 43, 0.6);
+      border-radius: 12px;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+    }
+    
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .feature-box {
+      background: linear-gradient(145deg, rgba(18, 21, 22, 0.6) 0%, rgba(10, 10, 11, 0.6) 100%);
+      border: 1px solid rgba(42, 42, 43, 0.4);
+      border-radius: 14px;
+      padding: 1.75rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .feature-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent) 0%, #0d9488 100%);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+    
+    .feature-box:hover {
+      border-color: rgba(20, 184, 166, 0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .feature-box:hover::before {
+      transform: scaleX(1);
+    }
+    
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(13, 148, 136, 0.1) 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 28px;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid rgba(42, 42, 43, 0.5);
+    }
+    
+    .section-header h5 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--white);
+      margin: 0;
+    }
+    
+    .section-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent) 0%, #0d9488 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #0a0a0b;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 24px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .status-badge.active {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+    
+    .status-badge.inactive {
+      background: rgba(251, 191, 36, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+    
+    .btn-professional {
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn-primary-pro {
+      background: linear-gradient(135deg, var(--accent) 0%, #0d9488 100%);
+      color: #0a0a0b;
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+    }
+    
+    .btn-primary-pro:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4);
+    }
+    
+    .btn-secondary-pro {
+      background: rgba(42, 42, 43, 0.6);
+      color: var(--muted);
+      border: 1px solid rgba(42, 42, 43, 0.8);
+    }
+    
+    .btn-secondary-pro:hover {
+      background: rgba(42, 42, 43, 0.8);
+      color: var(--white);
+    }
+    
+    .btn-warning-pro {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    
+    .btn-warning-pro:hover {
+      background: rgba(251, 191, 36, 0.25);
+      border-color: rgba(251, 191, 36, 0.5);
+    }
+    
+    .btn-danger-pro {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .btn-danger-pro:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+    
+    .setup-step {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      align-items: flex-start;
+    }
+    
+    .step-number {
+      min-width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent) 0%, #0d9488 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #0a0a0b;
+      font-size: 0.875rem;
+    }
+    
+    .step-content {
+      flex: 1;
+      padding-top: 0.25rem;
+    }
+    
+    .code-block {
+      background: rgba(10, 10, 11, 0.6);
+      border: 1px solid rgba(42, 42, 43, 0.6);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      color: var(--accent);
+      margin-top: 0.5rem;
+    }
+    
+    .back-btn {
+      background: rgba(18, 21, 22, 0.6);
+      border: 1px solid rgba(42, 42, 43, 0.5);
+      border-radius: 10px;
+      padding: 0.5rem 1rem;
+      color: var(--muted);
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .back-btn:hover {
+      background: rgba(18, 21, 22, 0.9);
+      border-color: rgba(20, 184, 166, 0.3);
+      color: var(--white);
+      transform: translateX(-4px);
+    }
+  </style>
+</head>
+<body>
+<div class="container-fluid py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+      <!-- Back Navigation -->
+      <div class="mb-4">
+        <a href="javascript:history.back()" class="back-btn">
+          <i class="material-icons" style="font-size: 18px;">arrow_back</i>
+          <span>Back</span>
+        </a>
+      </div>
+      
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <h1>
+          <i class="material-icons" style="vertical-align: middle; font-size: 2.5rem;">extension</i>
+          Chrome Extension
+        </h1>
+        <p class="subtitle">
+          Connect the MioHub Chrome Extension to seamlessly capture images, text, and URLs from any webpage directly into your workspace.
+        </p>
+      </div>
+
+      <!-- Setup Instructions -->
+      <div class="professional-card mb-4">
+        <div class="card-body p-4">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="material-icons">play_circle_outline</i>
+            </div>
+            <h5>Quick Setup Guide</h5>
+          </div>
+          
+          <div class="setup-step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong style="color: var(--white); font-size: 1.05rem;">Generate API Token</strong>
+              <p style="color: var(--muted); margin: 0.5rem 0 0 0;">Create your secure authentication token below (or use your existing one)</p>
+            </div>
+          </div>
+          
+          <div class="setup-step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong style="color: var(--white); font-size: 1.05rem;">Install Extension</strong>
+              <p style="color: var(--muted); margin: 0.5rem 0;">
+                <a href="{{ url_for('p2_bp.download_chrome_extension') }}" 
+                   style="color: var(--accent); text-decoration: none; font-weight: 600;">
+                  Download the MioHub Chrome Extension →
+                </a>
+              </p>
+            </div>
+          </div>
+          
+          <div class="setup-step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong style="color: var(--white); font-size: 1.05rem;">Configure Connection</strong>
+              <p style="color: var(--muted); margin: 0.5rem 0;">Open the extension popup and enter:</p>
+              <div class="code-block">
+                <div style="margin-bottom: 0.5rem;">
+                  <span style="color: var(--muted);">Server URL:</span>
+                  <span style="margin-left: 1rem;">{{ server_url }}</span>
+                </div>
+                <div>
+                  <span style="color: var(--muted);">API Token:</span>
+                  <span style="margin-left: 1rem;">Copy from token section below</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="setup-step" style="margin-bottom: 0;">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <strong style="color: var(--white); font-size: 1.05rem;">Start Capturing</strong>
+              <p style="color: var(--muted); margin: 0.5rem 0 0 0;">Click "Connect to MioHub" and you're ready to save content from any webpage!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token Management -->
+      <div class="token-card mb-4">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="material-icons">vpn_key</i>
+          </div>
+          <h5>API Authentication</h5>
+        </div>
+        
+        {% if current_user.api_token and current_user.api_token_expires > now %}
+          <!-- Existing Token -->
+          <div class="status-badge active mb-4">
+            <i class="material-icons" style="font-size: 18px;">check_circle</i>
+            <span>Token Active</span>
+            <span style="margin-left: 0.5rem; opacity: 0.7;">• Expires {{ current_user.api_token_expires.strftime('%b %d, %Y at %H:%M') }}</span>
+          </div>
+          
+          <div class="mb-4">
+            <label style="color: var(--muted); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; display: block;">
+              YOUR SECURE TOKEN
+            </label>
+            <div class="token-display" style="display: flex; gap: 1rem; align-items: center;">
+              <input type="password" id="api-token-display" 
+                     value="{{ current_user.api_token }}" 
+                     readonly
+                     style="flex: 1; background: transparent; border: none; color: var(--white); outline: none; font-family: 'Courier New', monospace;">
+              <button class="btn btn-secondary-pro btn-sm" type="button" id="toggle-token-visibility">
+                <i class="material-icons" style="font-size: 18px;">visibility</i>
+              </button>
+              <button class="btn btn-primary-pro btn-sm" type="button" id="copy-token">
+                <i class="material-icons" style="font-size: 18px;">content_copy</i>
+                <span>Copy</span>
+              </button>
+            </div>
+            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px;">
+              <small style="color: rgba(239, 68, 68, 0.9); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="material-icons" style="font-size: 16px;">security</i>
+                <span>Keep this token secure. Anyone with access can authenticate as you.</span>
+              </small>
+            </div>
+          </div>
+          
+          <div class="d-flex gap-3 flex-wrap">
+            <button id="regenerate-token-btn" class="btn-professional btn-warning-pro">
+              <i class="material-icons" style="font-size: 20px;">refresh</i>
+              <span>Regenerate Token</span>
+            </button>
+            <button id="revoke-token-btn" class="btn-professional btn-danger-pro">
+              <i class="material-icons" style="font-size: 20px;">block</i>
+              <span>Revoke Access</span>
+            </button>
+          </div>
+        {% else %}
+          <!-- No Token -->
+          <div class="status-badge inactive mb-4">
+            <i class="material-icons" style="font-size: 18px;">warning</i>
+            <span>No Active Token</span>
+          </div>
+          
+          <p style="color: var(--muted); margin-bottom: 2rem; font-size: 1.05rem;">
+            Generate an API token to enable the Chrome extension to securely connect to your MioHub account.
+          </p>
+          
+          <button id="generate-token-btn" class="btn-professional btn-primary-pro">
+            <i class="material-icons" style="font-size: 20px;">vpn_key</i>
+            <span>Generate API Token</span>
+          </button>
+        {% endif %}
+      </div>
+
+      <!-- Security Info -->
+      <div class="professional-card">
+        <div class="card-body p-4">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="material-icons">shield</i>
+            </div>
+            <h5>Security & Privacy</h5>
+          </div>
+          
+          <div style="display: grid; gap: 1rem;">
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="min-width: 32px; height: 32px; background: rgba(20, 184, 166, 0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <i class="material-icons" style="font-size: 20px; color: var(--accent);">verified</i>
+              </div>
+              <div style="flex: 1;">
+                <strong style="color: var(--white); display: block; margin-bottom: 0.25rem;">One-Year Validity</strong>
+                <p style="color: var(--muted); margin: 0; line-height: 1.6;">Your API token remains valid for 365 days from generation, providing long-term secure access.</p>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="min-width: 32px; height: 32px; background: rgba(20, 184, 166, 0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <i class="material-icons" style="font-size: 20px; color: var(--accent);">storage</i>
+              </div>
+              <div style="flex: 1;">
+                <strong style="color: var(--white); display: block; margin-bottom: 0.25rem;">Local Storage</strong>
+                <p style="color: var(--muted); margin: 0; line-height: 1.6;">Token is stored securely in your browser's local storage, never transmitted to third parties.</p>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="min-width: 32px; height: 32px; background: rgba(20, 184, 166, 0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <i class="material-icons" style="font-size: 20px; color: var(--accent);">autorenew</i>
+              </div>
+              <div style="flex: 1;">
+                <strong style="color: var(--white); display: block; margin-bottom: 0.25rem;">Flexible Management</strong>
+                <p style="color: var(--muted); margin: 0; line-height: 1.6;">Revoke or regenerate your token instantly if compromised, maintaining complete control over access.</p>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="min-width: 32px; height: 32px; background: rgba(239, 68, 68, 0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <i class="material-icons" style="font-size: 20px; color: #ef4444;">lock</i>
+              </div>
+              <div style="flex: 1;">
+                <strong style="color: var(--white); display: block; margin-bottom: 0.25rem;">Never Share Your Token</strong>
+                <p style="color: var(--muted); margin: 0; line-height: 1.6;">Treat your API token like a password. Anyone with access can authenticate as you.</p>
+              </div>
+            </div>
+          </div</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Message Toast -->
+<div id="message-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11; display: none;">
+  <div class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true"
+       style="background: var(--accent);">
+    <div class="d-flex">
+      <div class="toast-body" id="toast-message">
+        Message
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+const serverUrl = '{{ request.host_url.rstrip("/") }}';
+
+// Toggle token visibility
+document.getElementById('toggle-token-visibility')?.addEventListener('click', function() {
+  const input = document.getElementById('api-token-display');
+  const icon = this.querySelector('i');
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.textContent = 'visibility_off';
+  } else {
+    input.type = 'password';
+    icon.textContent = 'visibility';
+  }
+});
+
+// Copy token to clipboard
+document.getElementById('copy-token')?.addEventListener('click', async function() {
+  const input = document.getElementById('api-token-display');
+  
+  try {
+    await navigator.clipboard.writeText(input.value);
+    showToast('Token copied to clipboard!', 'success');
+  } catch (err) {
+    // Fallback for older browsers
+    input.type = 'text';
+    input.select();
+    document.execCommand('copy');
+    input.type = 'password';
+    showToast('Token copied to clipboard!', 'success');
+  }
+});
+
+// Generate token
+document.getElementById('generate-token-btn')?.addEventListener('click', async function() {
+  if (!confirm('Generate a new API token? This will allow the Chrome extension to access your account.')) {
+    return;
+  }
+  
+  const btn = this;
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+  
+  try {
+    const response = await fetch('/api/extension/generate-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      showToast('API token generated successfully!', 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast(data.error || 'Failed to generate token', 'error');
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  } catch (error) {
+    console.error('Token generation failed:', error);
+    showToast('Failed to generate token', 'error');
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+});
+
+// Regenerate token
+document.getElementById('regenerate-token-btn')?.addEventListener('click', async function() {
+  if (!confirm('Regenerate API token? Your current token will stop working and you\'ll need to update the extension.')) {
+    return;
+  }
+  
+  const btn = this;
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Regenerating...';
+  
+  try {
+    const response = await fetch('/api/extension/generate-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      showToast('API token regenerated! Update your extension.', 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast(data.error || 'Failed to regenerate token', 'error');
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  } catch (error) {
+    console.error('Token regeneration failed:', error);
+    showToast('Failed to regenerate token', 'error');
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+});
+
+// Revoke token
+document.getElementById('revoke-token-btn')?.addEventListener('click', async function() {
+  if (!confirm('Revoke API token? The Chrome extension will stop working until you generate a new token.')) {
+    return;
+  }
+  
+  const btn = this;
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Revoking...';
+  
+  try {
+    const response = await fetch('/api/extension/revoke-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      showToast('API token revoked successfully', 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast(data.error || 'Failed to revoke token', 'error');
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  } catch (error) {
+    console.error('Token revocation failed:', error);
+    showToast('Failed to revoke token', 'error');
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+});
+
+// Show toast message
+function showToast(message, type = 'info') {
+  const toastContainer = document.getElementById('message-toast');
+  const toast = toastContainer.querySelector('.toast');
+  const toastBody = document.getElementById('toast-message');
+  
+  // Set message
+  toastBody.textContent = message;
+  
+  // Set color based on type
+  if (type === 'success') {
+    toast.style.background = 'var(--accent)';
+  } else if (type === 'error') {
+    toast.style.background = '#ef4444';
+  } else {
+    toast.style.background = '#3b82f6';
+  }
+  
+  // Show toast
+  toastContainer.style.display = 'block';
+  const bsToast = new bootstrap.Toast(toast);
+  bsToast.show();
+  
+  // Hide after 5 seconds
+  setTimeout(() => {
+    toastContainer.style.display = 'none';
+  }, 5000);
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

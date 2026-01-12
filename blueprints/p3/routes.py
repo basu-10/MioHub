@@ -17,9 +17,11 @@ from blueprints.p3.chat_attachment_service import (
 import config
 import logging
 
-# Set up SQL query logging for debugging
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+# Keep SQLAlchemy engine logging quiet by default; allow opt-in via env variable
+SQL_ENGINE_LOG_LEVEL = os.getenv("SQL_ENGINE_LOG_LEVEL", "WARNING").upper()
+logging.getLogger('sqlalchemy.engine').setLevel(
+    getattr(logging, SQL_ENGINE_LOG_LEVEL, logging.WARNING)
+)
 
 # Initialize LLM client (supports Groq, OpenRouter, Fireworks, Together)
 llm_client = LLMClient()

@@ -14,6 +14,85 @@ from extensions import db
 
 from values_main import UPLOAD_FOLDER, ALLOWED_EXTENSIONS
 
+
+def parse_description_field(raw_value):
+    """Normalize description metadata into display-friendly structures.
+
+    Supports multi-description JSON (dict/list), JSON strings, and plain text.
+    Returns a tuple: (descriptions, description_readable, parse_failed).
+
+    - descriptions: list of (key, value) pairs when multi-description is present
+    - description_readable: human readable text for plain string inputs or joined pairs
+    - parse_failed: True only when a non-empty value cannot be understood
+    """
+    descriptions = None
+    description_readable = ''
+    parse_failed = False
+
+    if raw_value is None:
+        return descriptions, description_readable, parse_failed
+
+    # Accept dict/list directly
+    parsed_obj = None
+    if isinstance(raw_value, (dict, list)):
+        parsed_obj = raw_value
+    elif isinstance(raw_value, str):
+        stripped = raw_value.strip()
+        if not stripped:
+            return descriptions, description_readable, parse_failed
+
+        # Try JSON only when it plausibly looks like JSON; otherwise treat as plain text
+        looks_like_json = stripped.startswith('{') or stripped.startswith('[') or stripped.startswith('"')
+        if looks_like_json:
+            try:
+                parsed_obj = json.loads(stripped)
+            except Exception:
+                # Fall back to plain text when JSON parsing fails
+                parsed_obj = None
+
+        if parsed_obj is None:
+            description_readable = stripped
+            return descriptions, description_readable, parse_failed
+    else:
+        # Unsupported type
+        parse_failed = True
+        return descriptions, description_readable, parse_failed
+
+    # Handle parsed objects (dict/list/str)
+    if isinstance(parsed_obj, dict):
+        try:
+            keys = sorted(parsed_obj.keys(), key=lambda k: int(k))
+        except Exception:
+            keys = sorted(parsed_obj.keys())
+        kv_pairs = [
+            (k, parsed_obj[k].strip())
+            for k in keys
+            if isinstance(parsed_obj[k], str) and parsed_obj[k].strip()
+        ]
+        if kv_pairs:
+            descriptions = kv_pairs
+            description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
+        return descriptions, description_readable, parse_failed
+
+    if isinstance(parsed_obj, list):
+        kv_pairs = [
+            (str(i + 1), v.strip())
+            for i, v in enumerate(parsed_obj)
+            if isinstance(v, str) and v.strip()
+        ]
+        if kv_pairs:
+            descriptions = kv_pairs
+            description_readable = '\n'.join([f"{k}: {v}" for k, v in kv_pairs])
+        return descriptions, description_readable, parse_failed
+
+    if isinstance(parsed_obj, str):
+        if parsed_obj.strip():
+            description_readable = parsed_obj.strip()
+        return descriptions, description_readable, parse_failed
+
+    parse_failed = True
+    return descriptions, description_readable, parse_failed
+
 def format_bytes(bytes_size):
     """Format byte size into human-readable string.
     

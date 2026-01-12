@@ -28,8 +28,7 @@
   </div>
 </div>
 
-<!-- Include Folder Browser Sidebar -->
-{% include "/p2/folder_view_left_sidebar_partial.html" %}
+{% include "p2/folder_view_persistent_sidebar_partial.html" %}
 
 <script>
 // Store current folder ID in localStorage for clipboard operations
@@ -49,16 +48,15 @@ function updateMainContentSidebarState() {
 }
 // Listen for sidebar toggle
 document.addEventListener('DOMContentLoaded', function() {
-  const sidebar = document.getElementById('folderBrowserSidebar');
   const togglesContainer = document.getElementById('sidebarTogglesContainer');
-  
+
   // Listen for clicks on both toggle buttons
   if (togglesContainer) {
     togglesContainer.addEventListener('click', function() {
       setTimeout(updateMainContentSidebarState, 10);
     });
   }
-  
+
   // Also update on load
   updateMainContentSidebarState();
 });
@@ -124,12 +122,6 @@ document.addEventListener('DOMContentLoaded', function() {
     top: 0;
     left: 0;
     right: 0;
-  }
-
-  /* Hide sidebar toggles on mobile or make them smaller */
-  #sidebarTogglesContainer {
-    transform: scale(0.85);
-    transform-origin: left center;
   }
 
   /* Make batch operations bar mobile-friendly */
@@ -406,6 +398,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <hr>
 
+<!-- System Folder Banner - Displayed for system-generated folders (except root) -->
+{% if folder.name in ['Social', 'MioChat', 'Web Clippings', 'received'] or folder.name.startswith('from_') or folder.name.startswith('session') %}
+<div class="alert d-flex align-items-start gap-3 mb-4" 
+     style="background: linear-gradient(135deg, rgba(20, 184, 166, 0.08), rgba(20, 184, 166, 0.04)); 
+            border-left: 4px solid var(--accent); 
+            border-radius: 8px; 
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+  <i class="material-icons" style="color: var(--accent); font-size: 24px; margin-top: 2px;">info</i>
+  <div style="flex: 1;">
+    <div style="font-weight: 600; color: var(--white); margin-bottom: 0.5rem; font-size: 0.95rem;">
+      {% if folder.name == 'Social' %}
+        Social Folder (System Generated)
+      {% elif folder.name == 'received' %}
+        Received Items (System Managed)
+      {% elif folder.name.startswith('from_') %}
+        Sender Folder (System Managed)
+      {% elif folder.name == 'MioChat' %}
+        MioChat Sessions (System Generated)
+      {% elif folder.name.startswith('session') %}
+        Chat Session Folder (System Managed)
+      {% elif folder.name == 'Web Clippings' %}
+        Web Clippings (Chrome Extension)
+      {% endif %}
+    </div>
+    <div style="color: var(--muted); font-size: 0.85rem; line-height: 1.6;">
+      {% if folder.name == 'Social' %}
+        <strong>⚠️ Do not delete this folder.</strong> This is a system-managed location for receiving shared files and folders from other users. Items sent to you will appear in subfolders organized by sender.
+      {% elif folder.name == 'received' %}
+        <strong>⚠️ Do not delete this folder.</strong> Contains items shared with you by other users. Each sender has their own subfolder to keep things organized.
+      {% elif folder.name.startswith('from_') %}
+        <strong>⚠️ System-managed folder.</strong> This folder contains items sent to you by a specific user. The system automatically creates and organizes these folders when you receive shared content.
+      {% elif folder.name == 'MioChat' %}
+        <strong>⚠️ Do not delete this folder.</strong> This folder stores chat session attachments, summaries, and exported conversations from MioChat. Each session has its own subfolder for organization.
+      {% elif folder.name.startswith('session') %}
+        <strong>⚠️ System-managed folder.</strong> Contains attachments, exports, and summaries for a specific chat session. Files here are automatically organized and referenced by MioChat.
+      {% elif folder.name == 'Web Clippings' %}
+        <strong>⚠️ Do not delete this folder.</strong> Content saved from web pages via the Chrome extension is automatically stored here. Items are organized by source URL for easy reference.
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
     <!-- HTMX Target for Pasted Items -->
     <div id="htmx-paste-target" hx-swap-oob="true"></div>
 
@@ -549,6 +585,17 @@ document.addEventListener('DOMContentLoaded', function() {
                       <div class="note-description content-preview mb-2">
                         <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
                         <div class="d-flex flex-column">
+                          {% if note.extension_info %}
+                          <div class="d-flex align-items-start gap-2 small mb-1" style="background: rgba(20, 184, 166, 0.1); padding: 4px 8px; border-radius: 4px;">
+                            <span class="badge rounded-pill" style="background: var(--accent);">🌐 Extension</span>
+                            <span class="text-muted">
+                              <a href="{{ note.source_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none" style="color: var(--accent);">{{ note.source_url[:60] }}{{ '...' if note.source_url|length > 60 else '' }}</a>
+                              {% if note.extension_info.clip_count > 1 %}
+                              <span class="badge bg-secondary ms-2">{{ note.extension_info.clip_count }} clips</span>
+                              {% endif %}
+                            </span>
+                          </div>
+                          {% endif %}
                           {% for key, val in note.descriptions %}
                             <div class="d-flex align-items-start gap-2 small">
                               <span class="badge rounded-pill bg-secondary">{{ key }}</span>
@@ -556,6 +603,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                           {% endfor %}
                         </div>
+                      </div>
+                      {% elif note.extension_info and display_prefs.show_previews %}
+                      <div class="note-description content-preview mb-2">
+                        <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+                        <div class="d-flex flex-column">
+                          <div class="d-flex align-items-start gap-2 small" style="background: rgba(20, 184, 166, 0.1); padding: 4px 8px; border-radius: 4px;">
+                            <span class="badge rounded-pill" style="background: var(--accent);">🌐 Extension</span>
+                            <span class="text-muted">
+                              <a href="{{ note.source_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none" style="color: var(--accent);">{{ note.source_url[:60] }}{{ '...' if note.source_url|length > 60 else '' }}</a>
+                              {% if note.extension_info.clip_count > 1 %}
+                              <span class="badge bg-secondary ms-2">{{ note.extension_info.clip_count }} clips</span>
+                              {% endif %}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {% elif note.description_readable and display_prefs.show_previews %}
+                      <div class="note-description content-preview mb-2 d-flex align-items-start gap-2">
+                        <i class="fas fa-info-circle" style="color: var(--accent-green); font-size: 0.875rem;"></i>
+                        <span class="text-muted small">{{ note.description_readable }}</span>
                       </div>
                       {% elif note.description and display_prefs.show_previews and note.description_parse_failed %}
                       <div class="note-description content-preview mb-2 text-warning small">
@@ -1482,7 +1549,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Only show if not on other elements or when right-clicking inside the folder browser sidebar
     // (the sidebar has its own context menu and handlers in `folder_view_left_sidebar_partial.html`)
-    if (e.target.closest('.dropdown') || e.target.closest('form') || e.target.closest('input') || e.target.closest('button') || e.target.closest('#folderBrowserSidebar') || e.target.closest('.folder-browser-sidebar')) {
+    if (e.target.closest('.dropdown') || e.target.closest('form') || e.target.closest('input') || e.target.closest('button')) {
       return;
     }
     
@@ -1886,35 +1953,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Tutorial initialization moved to partial: p2/folder_view_tutorial_partial.html -->
 
-<!-- Folder Browser Sidebar Integration Script -->
-<script>
-  // Sync main content margin with sidebar state
-  function syncMainContentMargin() {
-    const sidebar = document.getElementById('folderBrowserSidebar');
-    const mainContent = document.getElementById('mainContent');
-    
-    if (sidebar && mainContent) {
-      if (sidebar.classList.contains('collapsed')) {
-        mainContent.classList.add('sidebar-collapsed');
-      } else {
-        mainContent.classList.remove('sidebar-collapsed');
-      }
-    }
-  }
-  
-  // Override toggleFolderBrowser to sync main content
-  const originalToggle = window.toggleFolderBrowser;
-  window.toggleFolderBrowser = function() {
-    if (originalToggle) originalToggle();
-    setTimeout(syncMainContentMargin, 50);
-  };
-  
-  // Sync on page load
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(syncMainContentMargin, 100);
-  });
-</script>
-
 <!-- Calculate Folder Size JavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -2064,8 +2102,6 @@ document.addEventListener('DOMContentLoaded', function() {
 (function() {
   'use strict';
   
-  console.log('[CARD CLICK] Initializing card click handlers');
-  
   // Track click timing for single/double click distinction
   const clickTimers = new WeakMap();
   const DOUBLE_CLICK_DELAY = 300; // ms
@@ -2169,15 +2205,12 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    console.log(`[CARD CLICK] Attaching listeners to ${type} ${id}`);
-
     setupTouchLongPress(itemBody, card, type, id);
     
     // Main click handler
     itemBody.addEventListener('click', function(e) {
       // Ignore clicks on buttons, links, and interactive elements
       if (e.target.closest('button, a, input, select, textarea, .prevent-card-click')) {
-        console.log('[CARD CLICK] Ignoring click on interactive element');
         return;
       }
 
@@ -2188,12 +2221,9 @@ document.addEventListener('DOMContentLoaded', function() {
       
       e.stopPropagation();
       
-      console.log(`[CARD CLICK] Click on ${type} ${id}`);
-      
       // Check for double-click
       if (clickTimers.has(itemBody)) {
         // Double-click detected
-        console.log('[CARD CLICK] Double-click detected');
         clearTimeout(clickTimers.get(itemBody));
         clickTimers.delete(itemBody);
         handleDoubleClick(card, type, id);
@@ -2203,7 +2233,6 @@ document.addEventListener('DOMContentLoaded', function() {
       // Single click - set timer to distinguish from double-click
       const timer = setTimeout(() => {
         clickTimers.delete(itemBody);
-        console.log('[CARD CLICK] Single-click confirmed');
         handleSingleClick(card, type, id);
       }, DOUBLE_CLICK_DELAY);
       
@@ -2217,7 +2246,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       e.preventDefault();
       e.stopPropagation();
-      console.log(`[CARD CLICK] Right-click: opening preview for ${type} ${id}`);
       openPreview(card, type, id);
     });
     
@@ -2270,7 +2298,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle single click - open preview panel
    */
   function openPreview(card, type, id) {
-    console.log(`[CARD CLICK] Preview request for ${type} ${id}`);
     if (typeof window.openPreviewPanel === 'function') {
       const item = { type: type, id: parseInt(id), card: card };
       window.openPreviewPanel(item);
@@ -2292,7 +2319,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle single click - navigate to edit/view page
    */
   function handleSingleClick(card, type, id) {
-    console.log(`[CARD CLICK] Single click: navigating to ${type} ${id}`);
     handleNavigation(card, type, id);
   }
   
@@ -2300,7 +2326,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle double click - navigate to edit/view page
    */
   function handleDoubleClick(card, type, id) {
-    console.log(`[CARD CLICK] Double click: closing modals like Escape`);
     closeAllModals();
   }
 
@@ -2308,8 +2333,6 @@ document.addEventListener('DOMContentLoaded', function() {
    * Navigate to edit/view page (formerly double-click behavior)
    */
   function handleNavigation(card, type, id) {
-    console.log(`[CARD CLICK] Navigating to ${type} ${id}`);
-
     // Build URL based on type
     let url = '';
     const fileType = card.dataset.fileType;
@@ -2335,8 +2358,6 @@ document.addEventListener('DOMContentLoaded', function() {
       url = `/p2/files/${id}/edit`;
     }
     
-    console.log(`[CARD CLICK] Navigating to: ${url}`);
-    
     // Save scroll position
     const section = card.closest('.section-container');
     if (section && section.id) {
@@ -2352,7 +2373,6 @@ document.addEventListener('DOMContentLoaded', function() {
    */
   function attachToAllCards() {
     const itemBodies = document.querySelectorAll('.item-card .item-body, .item-row .item-body');
-    console.log(`[CARD CLICK] Auto-attaching to ${itemBodies.length} cards`);
     itemBodies.forEach(itemBody => {
       window.attachCardClickListeners(itemBody);
     });
@@ -2365,7 +2385,6 @@ document.addEventListener('DOMContentLoaded', function() {
     attachToAllCards();
   }
   
-  console.log('[CARD CLICK] Card click handler system initialized');
 })();
 
 // Listen for public status changes from preview panel
