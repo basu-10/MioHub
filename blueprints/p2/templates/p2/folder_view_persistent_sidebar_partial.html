@@ -172,7 +172,7 @@
           <i class="material-icons">expand_more</i>
           <span class="sidebar-option-label">Account</span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sidebarAccountDropdown">
+        <ul class="dropdown-menu dropdown-menu-end sidebar-account-dropdown-menu" aria-labelledby="sidebarAccountDropdown">
           <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); if (typeof openSettingsModal === 'function') openSettingsModal();">Settings</a></li>
           <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); if (typeof openExportImportModal === 'function') openExportImportModal();">Export/Import</a></li>
           <li><a class="dropdown-item" href="{{ url_for('p2_bp.logout') }}">Logout</a></li>
@@ -445,11 +445,6 @@
   background: var(--hover-overlay) !important;
   color: var(--accent) !important;
 }
-
-.persistent-options-sidebar:not(.expanded) .sidebar-account-row .dropdown-menu {
-  left: 100% !important;
-  right: auto !important;
-}
 </style>
 
 <!-- Sidebar Functionality Script -->
@@ -459,6 +454,93 @@ document.addEventListener('DOMContentLoaded', function() {
   const mainContent = document.getElementById('mainContent');
   const expandToggle = document.getElementById('sidebarExpandToggle');
   const socialSection = document.querySelector('.sidebar-social-section');
+
+  // Keep the account dropdown visible even near viewport edges.
+  (function initSidebarAccountDropdownAutoPositioning() {
+    const toggle = document.getElementById('sidebarAccountDropdown');
+    if (!toggle) return;
+
+    const dropdown = toggle.closest('.dropdown');
+    const menu = dropdown ? dropdown.querySelector('.sidebar-account-dropdown-menu') : null;
+    if (!dropdown || !menu) return;
+
+    let placeholder = null;
+
+    const setImportantStyle = (el, prop, value) => {
+      try { el.style.setProperty(prop, value, 'important'); } catch (e) { el.style[prop] = value; }
+    };
+
+    const clearInlineStyle = (el) => {
+      ['position','left','top','right','bottom','margin','marginLeft','marginTop','inset','transform','zIndex','width','maxHeight','overflowY'].forEach(k => {
+        try { el.style.removeProperty(k); } catch (e) { el.style[k] = ''; }
+      });
+    };
+
+    const positionMenu = () => {
+      if (!menu.classList.contains('show')) return;
+
+      const margin = 8;
+      const toggleRect = toggle.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const menuWidth = menuRect.width || menu.offsetWidth || 220;
+      const menuHeight = menuRect.height || menu.offsetHeight || 120;
+
+      // Prefer opening to the right of the toggle.
+      let left = toggleRect.right + margin;
+      if (left + menuWidth > window.innerWidth - margin) {
+        left = toggleRect.left - menuWidth - margin;
+      }
+      left = Math.max(margin, Math.min(left, window.innerWidth - menuWidth - margin));
+
+      // Prefer opening below; if it doesn't fit, open above.
+      let top = toggleRect.bottom + margin;
+      if (top + menuHeight > window.innerHeight - margin) {
+        top = toggleRect.top - menuHeight - margin;
+      }
+      top = Math.max(margin, Math.min(top, window.innerHeight - menuHeight - margin));
+
+      setImportantStyle(menu, 'position', 'fixed');
+      setImportantStyle(menu, 'left', `${Math.round(left)}px`);
+      setImportantStyle(menu, 'top', `${Math.round(top)}px`);
+      setImportantStyle(menu, 'right', 'auto');
+      setImportantStyle(menu, 'bottom', 'auto');
+      setImportantStyle(menu, 'margin-left', '0');
+      setImportantStyle(menu, 'transform', 'none');
+      setImportantStyle(menu, 'z-index', '10000');
+    };
+
+    dropdown.addEventListener('show.bs.dropdown', function () {
+      // Move the menu to body so it cannot be clipped by any container.
+      placeholder = document.createElement('div');
+      placeholder.className = 'dropdown-placeholder d-none';
+      dropdown.insertBefore(placeholder, menu);
+      document.body.appendChild(menu);
+
+      // Ensure our positioning isn't overridden.
+      setImportantStyle(menu, 'inset', 'auto');
+      setImportantStyle(menu, 'transform', 'none');
+      setImportantStyle(menu, 'margin-left', '0');
+    });
+
+    dropdown.addEventListener('shown.bs.dropdown', function () {
+      requestAnimationFrame(positionMenu);
+      window.addEventListener('resize', positionMenu);
+      window.addEventListener('scroll', positionMenu, true);
+    });
+
+    dropdown.addEventListener('hide.bs.dropdown', function () {
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
+
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.insertBefore(menu, placeholder);
+        placeholder.parentNode.removeChild(placeholder);
+        placeholder = null;
+      }
+
+      clearInlineStyle(menu);
+    });
+  })();
 
   function setSidebarExpanded(expanded) {
     if (!sidebar) return;
