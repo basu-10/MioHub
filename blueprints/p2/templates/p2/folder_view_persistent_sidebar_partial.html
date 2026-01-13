@@ -187,9 +187,9 @@
 .persistent-options-sidebar {
   position: fixed;
   left: 0;
-  top: 130px; /* Below header */
+  top: 70px; /* flush under navbar */
   width: 60px;
-  height: calc(100vh - 130px);
+  height: calc(100vh - 70px);
   background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
   border-right: 1px solid var(--border-primary);
   display: flex;
@@ -314,11 +314,16 @@
 /* Adjust main content to account for sidebar */
 #mainContent {
   margin-left: 60px !important;
+  width: calc(100% - 60px);
+  max-width: calc(100% - 60px);
+  box-sizing: border-box;
   transition: margin-left 0.25s ease;
 }
 
 #mainContent.persistent-sidebar-expanded {
   margin-left: 220px !important;
+  width: calc(100% - 220px);
+  max-width: calc(100% - 220px);
 }
 
 /* Mobile: hide sidebar, restore original layout */
@@ -328,6 +333,181 @@
   }
   #mainContent {
     margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-bottom: 90px !important; /* leave room for bottom nav */
+  }
+}
+
+/* Mobile Bottom Nav + Sheets */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-primary);
+  display: none;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 6px;
+  z-index: 1100;
+  box-shadow: 0 -6px 18px rgba(0,0,0,0.35);
+}
+
+.mobile-bottom-nav button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 52px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.mobile-bottom-nav button.active,
+.mobile-bottom-nav button:focus-visible,
+.mobile-bottom-nav button:hover {
+  background: rgba(20,184,166,0.12);
+  color: var(--accent);
+}
+
+.mobile-bottom-nav .material-icons {
+  font-size: 22px;
+}
+
+.mobile-bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1099;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.mobile-bottom-sheet-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: -320px;
+  background: var(--bg-secondary);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 -8px 28px rgba(0,0,0,0.45);
+  z-index: 1101;
+  padding: 14px 16px 18px 16px;
+  max-height: 320px;
+  overflow-y: auto;
+  transition: transform 0.22s ease, bottom 0.22s ease;
+  transform: translateY(0);
+}
+
+.mobile-bottom-sheet.show {
+  bottom: 0;
+}
+
+.mobile-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mobile-sheet-header h6 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.mobile-sheet-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.mobile-sheet-close:hover {
+  background: var(--hover-overlay);
+  color: var(--accent);
+}
+
+.mobile-sheet-section {
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--bg-tertiary);
+}
+
+.mobile-sheet-section h5 {
+  font-size: 13px;
+  margin: 0 0 8px 0;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.mobile-sheet-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.mobile-sheet-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.mobile-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mobile-pill {
+  border: 1px solid var(--border-primary);
+  background: var(--bg-quaternary);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav { display: flex; }
+  .mobile-bottom-sheet { display: block; }
+  .mobile-bottom-sheet-backdrop { display: block; }
+}
+
+@media (min-width: 769px) {
+  .mobile-bottom-nav,
+  .mobile-bottom-sheet,
+  .mobile-bottom-sheet-backdrop {
+    display: none !important;
   }
 }
 
@@ -446,6 +626,94 @@
   color: var(--accent) !important;
 }
 </style>
+
+<!-- Mobile Bottom Navigation + Sheets -->
+<div class="mobile-bottom-sheet-backdrop" id="mobileSheetBackdrop" aria-hidden="true"></div>
+
+<div class="mobile-bottom-sheet" id="mobileSortSheet" role="dialog" aria-modal="true" aria-label="Sort options">
+  <div class="mobile-sheet-header">
+    <h6>Sort</h6>
+    <button class="mobile-sheet-close" type="button" data-sheet-close aria-label="Close sort sheet"><i class="material-icons">close</i></button>
+  </div>
+  <div class="mobile-sheet-section">
+    <div class="mobile-sheet-actions">
+      <a class="btn btn-outline-primary" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='name') }}">Name</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='created') }}">Created</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='modified') }}">Last Modified</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('folders.view_folder', folder_id=folder.id, sort='size') }}">Size</a>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-bottom-sheet" id="mobileViewSheet" role="dialog" aria-modal="true" aria-label="View settings">
+  <div class="mobile-sheet-header">
+    <h6>View</h6>
+    <button class="mobile-sheet-close" type="button" data-sheet-close aria-label="Close view sheet"><i class="material-icons">close</i></button>
+  </div>
+  <div class="mobile-sheet-section">
+    <h5>Mode</h5>
+    <div class="mobile-pill-list" id="mobileViewModePills">
+      <button class="mobile-pill" type="button" data-view-mode="grid"><i class="material-icons">grid_view</i>Grid</button>
+      <button class="mobile-pill" type="button" data-view-mode="list"><i class="material-icons">view_list</i>List</button>
+    </div>
+  </div>
+  <div class="mobile-sheet-section" id="mobileGridOptions">
+    <h5>Grid Columns</h5>
+    <div class="mobile-pill-list" id="mobileColumnPills">
+      {% for col in range(1,7) %}
+      <button class="mobile-pill" type="button" data-column-count="{{ col }}">{{ col }}</button>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="mobile-sheet-section">
+    <h5>Card Size</h5>
+    <div class="mobile-pill-list" id="mobileCardSizePills">
+      <button class="mobile-pill" type="button" data-card-size="compact">Compact</button>
+      <button class="mobile-pill" type="button" data-card-size="normal">Normal</button>
+      <button class="mobile-pill" type="button" data-card-size="large">Large</button>
+    </div>
+  </div>
+  <div class="mobile-sheet-section">
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="mobileShowPreviews">
+      <label class="form-check-label" for="mobileShowPreviews">Show content previews</label>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-bottom-sheet" id="mobileMoreSheet" role="dialog" aria-modal="true" aria-label="More actions">
+  <div class="mobile-sheet-header">
+    <h6>More</h6>
+    <button class="mobile-sheet-close" type="button" data-sheet-close aria-label="Close more sheet"><i class="material-icons">close</i></button>
+  </div>
+  <div class="mobile-sheet-section mobile-sheet-actions">
+    <a class="btn btn-outline-primary" href="{{ url_for('p2_bp.view_user', user_id=current_user.id) }}"><i class="material-icons me-1">public</i>Public</a>
+    <button class="btn btn-outline-primary" type="button" onclick="if (typeof window.startTutorial === 'function') window.startTutorial();"><i class="material-icons me-1">help_outline</i>Tutorial</button>
+    <a class="btn btn-outline-primary" href="{{ url_for('p2_bp.profile') }}"><i class="material-icons me-1">person</i>Profile</a>
+    <button class="btn btn-outline-primary" type="button" onclick="if (typeof openSettingsModal === 'function') openSettingsModal();"><i class="material-icons me-1">settings</i>Settings</button>
+    <button class="btn btn-outline-primary" type="button" onclick="if (typeof openExportImportModal === 'function') openExportImportModal();"><i class="material-icons me-1">folder_shared</i>Export/Import</button>
+    <a class="btn btn-outline-danger" href="{{ url_for('p2_bp.logout') }}"><i class="material-icons me-1">logout</i>Logout</a>
+  </div>
+</div>
+
+<nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+  <button type="button" class="mobile-nav-btn" data-sheet-target="mobileSortSheet">
+    <i class="material-icons" aria-hidden="true">sort</i>
+    <span>Sort</span>
+  </button>
+  <button type="button" class="mobile-nav-btn" data-sheet-target="mobileViewSheet">
+    <i class="material-icons" aria-hidden="true">view_module</i>
+    <span>View</span>
+  </button>
+  <button type="button" class="mobile-nav-btn" onclick="if (typeof window.scrollTo === 'function') window.scrollTo({top:0,behavior:'smooth'});">
+    <i class="material-icons" aria-hidden="true">home</i>
+    <span>Top</span>
+  </button>
+  <button type="button" class="mobile-nav-btn" data-sheet-target="mobileMoreSheet">
+    <i class="material-icons" aria-hidden="true">more_horiz</i>
+    <span>More</span>
+  </button>
+</nav>
 
 <!-- Sidebar Functionality Script -->
 <script>
@@ -610,6 +878,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sync with top bar
     const topBarCol = document.querySelector(`input[name="columnCount"][value="${columns}"]`);
     if (topBarCol) topBarCol.checked = true;
+    // Sync mobile pills
+    document.querySelectorAll('[data-column-count]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.columnCount === String(columns));
+    });
     saveDisplayPreferences(getCurrentDisplayPreferences());
   }
   
@@ -633,6 +905,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sync with top bar
     const topBarView = document.querySelector(`input[name="viewMode"][value="${mode}"]`);
     if (topBarView) topBarView.checked = true;
+    // Sync mobile pills
+    document.querySelectorAll('[data-view-mode]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.viewMode === mode);
+    });
+    const mobileGridOptions = document.getElementById('mobileGridOptions');
+    if (mobileGridOptions) {
+      mobileGridOptions.style.display = mode === 'grid' ? '' : 'none';
+    }
     
     if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
   }
@@ -642,6 +922,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sync with top bar
     const topBarSize = document.querySelector(`input[name="cardSize"][value="${size}"]`);
     if (topBarSize) topBarSize.checked = true;
+    // Sync mobile pills
+    document.querySelectorAll('[data-card-size]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.cardSize === size);
+    });
     if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
   }
   
@@ -650,6 +934,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sync with top bar
     const topBarPreviews = document.getElementById('showPreviews');
     if (topBarPreviews) topBarPreviews.checked = show;
+    // Sync mobile
+    const mobilePreviews = document.getElementById('mobileShowPreviews');
+    if (mobilePreviews) mobilePreviews.checked = show;
     if (!skipSave) saveDisplayPreferences(getCurrentDisplayPreferences());
   }
   
@@ -660,6 +947,66 @@ document.addEventListener('DOMContentLoaded', function() {
   if (sidebarShowPreviewsInput) {
     sidebarShowPreviewsInput.addEventListener('change', function(){ togglePreviews(this.checked); });
   }
+
+  // --- Mobile bottom nav + sheets ---
+  (function initMobileBottomNav() {
+    const backdrop = document.getElementById('mobileSheetBackdrop');
+    const sheetButtons = document.querySelectorAll('.mobile-nav-btn[data-sheet-target]');
+    const closeButtons = document.querySelectorAll('[data-sheet-close]');
+    const sheets = document.querySelectorAll('.mobile-bottom-sheet');
+
+    let openSheet = null;
+
+    function closeSheet() {
+      sheets.forEach(s => s.classList.remove('show'));
+      sheetButtons.forEach(b => b.classList.remove('active'));
+      openSheet = null;
+      if (backdrop) backdrop.classList.remove('show');
+    }
+
+    function openSheetById(id, trigger) {
+      const target = document.getElementById(id);
+      if (!target) return;
+      closeSheet();
+      target.classList.add('show');
+      if (backdrop) backdrop.classList.add('show');
+      if (trigger) trigger.classList.add('active');
+      openSheet = target;
+    }
+
+    sheetButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.sheetTarget;
+        if (openSheet && openSheet.id === targetId) {
+          closeSheet();
+        } else {
+          openSheetById(targetId, btn);
+        }
+      });
+    });
+
+    closeButtons.forEach(btn => btn.addEventListener('click', closeSheet));
+    if (backdrop) backdrop.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSheet();
+    });
+
+    // Hook mobile pills to existing apply* helpers
+    document.querySelectorAll('[data-view-mode]').forEach(btn => {
+      btn.addEventListener('click', () => applyViewMode(btn.dataset.viewMode));
+    });
+    document.querySelectorAll('[data-column-count]').forEach(btn => {
+      btn.addEventListener('click', () => applyColumnCount(btn.dataset.columnCount));
+    });
+    document.querySelectorAll('[data-card-size]').forEach(btn => {
+      btn.addEventListener('click', () => applyCardSize(btn.dataset.cardSize));
+    });
+    const mobilePreviews = document.getElementById('mobileShowPreviews');
+    if (mobilePreviews) {
+      mobilePreviews.checked = !!(document.getElementById('sidebarShowPreviews')?.checked);
+      mobilePreviews.addEventListener('change', () => togglePreviews(mobilePreviews.checked));
+    }
+  })();
   
   // Initialize view mode
   const currentView = (document.querySelector('input[name="sidebarViewMode"]:checked') || {}).value || '{{ display_prefs.view_mode }}';

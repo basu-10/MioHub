@@ -17,15 +17,9 @@
 </head>
 
 <body>
-<!-- Fixed header container to prevent navbar and options bar from overlapping -->
+<!-- Fixed header container for navbar -->
 <div id="header-container" style="position: fixed; top: 0; left: 0; right: 0; z-index: 950;">
-  <!-- Include Navbar -->
   {% include "/p2/folder_view_navbar_partial.html" %}
-  
-  <!-- Options bar positioned directly below navbar within the fixed container -->
-  <div style="position: relative; z-index: 1045;">
-    {% include "p2/folder_view_top_sticky_options_bar_partial.html" %}
-  </div>
 </div>
 
 {% include "p2/folder_view_persistent_sidebar_partial.html" %}
@@ -62,14 +56,62 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<div class="container-fluid mt-0 main-content-with-sidebar sidebar-collapsed" id="mainContent" style="margin-top: 130px !important; padding-left: 2rem; padding-right: 2rem; /* Account for fixed header container (navbar 64px + options bar ~56px) */">
+<div class="container-fluid mt-0 main-content-with-sidebar sidebar-collapsed" id="mainContent" style="margin-top: 88px !important; padding-left: 2rem; padding-right: 2rem; /* Account for fixed navbar height */">
 
-<!-- Mobile Responsive Styles -->
+<!-- Responsive styles including breadcrumb trail -->
 <style>
+.breadcrumb-section {
+  background: var(--card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+}
+
+.breadcrumb-section .breadcrumb {
+  margin-bottom: 0;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-section .breadcrumb-link {
+  color: var(--accent) !important;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+  text-shadow: 0 0 8px rgba(20, 184, 166, 0.3);
+}
+
+.breadcrumb-section .breadcrumb-link:hover {
+  color: var(--accent-strong) !important;
+  text-shadow: 0 0 12px rgba(13, 148, 136, 0.5);
+}
+
+.breadcrumb-section .breadcrumb-current {
+  color: var(--white) !important;
+}
+
+.breadcrumb-section .breadcrumb-item + .breadcrumb-item::before {
+  color: var(--muted) !important;
+}
+
+.breadcrumb-title {
+  font-weight: 600;
+  color: var(--white);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.breadcrumb-title .material-icons {
+  font-size: 18px;
+  color: var(--accent);
+}
+
+/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   /* Main content adjustments for mobile */
   #mainContent {
-    margin-top: 110px !important;
+    margin-top: 76px !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
   }
@@ -122,21 +164,6 @@ document.addEventListener('DOMContentLoaded', function() {
     top: 0;
     left: 0;
     right: 0;
-  }
-
-  /* Make batch operations bar mobile-friendly */
-  .folder-sticky-bar {
-    padding: 0.5rem !important;
-    font-size: 0.85rem !important;
-  }
-
-  .folder-sticky-bar .btn {
-    padding: 0.25rem 0.5rem !important;
-    font-size: 0.8rem !important;
-  }
-
-  .folder-sticky-bar .material-icons {
-    font-size: 18px !important;
   }
 
   /* Context menu mobile optimization */
@@ -200,10 +227,22 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 0.75rem !important;
   }
 
-  /* Folder breadcrumb mobile */
-  .breadcrumb {
-    font-size: 0.85rem !important;
-    padding: 0.5rem !important;
+  /* Breadcrumb section mobile */
+  .breadcrumb-section {
+    padding: 0.75rem 0.9rem;
+  }
+
+  .breadcrumb-section .breadcrumb {
+    font-size: 0.9rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .breadcrumb-section .material-icons {
+    font-size: 16px !important;
+  }
+
+  .breadcrumb-text {
+    display: none;
   }
 
   /* Telemetry panel mobile - make it smaller */
@@ -236,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Small mobile phones (< 576px) */
 @media (max-width: 575px) {
   #mainContent {
-    margin-top: 100px !important;
+    margin-top: 68px !important;
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
   }
@@ -249,14 +288,12 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.9rem !important;
   }
 
-  .folder-sticky-bar .btn {
-    padding: 0.2rem 0.4rem !important;
-    font-size: 0.75rem !important;
+  .breadcrumb-section {
+    padding: 0.65rem 0.75rem;
   }
 
-  /* Hide less critical buttons on very small screens */
-  .folder-sticky-bar .btn-outline-secondary:not(.batch-select-all):not(.batch-deselect) {
-    display: none !important;
+  .breadcrumb-section .breadcrumb {
+    font-size: 0.85rem !important;
   }
 
   .fab-button {
@@ -268,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Landscape mobile orientation */
 @media (max-width: 768px) and (orientation: landscape) {
   #mainContent {
-    margin-top: 90px !important;
+    margin-top: 72px !important;
   }
 
   #header-container {
@@ -295,9 +332,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     {% block content %}
 
+<!-- Breadcrumb Trail (non-sticky) -->
+<div class="breadcrumb-section" id="breadcrumb-trail">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <span class="breadcrumb-title">
+      <i class="material-icons" aria-hidden="true">navigation</i>
+      <span>Path</span>
+    </span>
+  </div>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-custom align-items-center mb-0">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('p2_bp.dashboard') }}" class="breadcrumb-link d-inline-flex align-items-center gap-1">
+          <i class="material-icons" style="font-size: 18px; vertical-align: middle;">home</i>
+          <span class="breadcrumb-text">Home</span>
+        </a>
+      </li>
+      {% for crumb in folder_breadcrumb %}
+      {% if crumb.parent_id is not none %}
+      <li class="breadcrumb-item{% if loop.last %} active{% endif %}">
+        {% if not loop.last %}
+        <a href="{{ url_for('folders.view_folder', folder_id=crumb.id) }}" class="breadcrumb-link d-inline-flex align-items-center gap-1">
+          <i class="material-icons" style="font-size: 16px; vertical-align: middle;">folder</i>
+          <span class="breadcrumb-text">{{ crumb.name }}</span>
+        </a>
+        {% else %}
+        <span class="breadcrumb-current d-inline-flex align-items-center gap-1">
+          <i class="material-icons" style="font-size: 16px; vertical-align: middle;">folder_open</i>
+          <span class="breadcrumb-text">{{ crumb.name }}</span>
+        </span>
+        {% endif %}
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ol>
+  </nav>
+</div>
 
-
-    
 <!-- Quick Navigation Sidebar -->
 <div class="section-nav">
   {% if is_root_folder and recent_items|length > 0 %}
@@ -1401,80 +1472,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% include "p2/folder_view_settings_partial.html" %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Ensure dropdown menus inside the sticky folder bar render above other elements by moving them to document.body when opened -->
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const stickyBar = document.querySelector('.folder-sticky-bar');
-  if (!stickyBar) return;
-
-  // Helper: try to use Popper if available, else fallback to absolute fixed positioning
-  const hasPopper = !!(window.Popper && typeof window.Popper.createPopper === 'function');
-
-  stickyBar.querySelectorAll('.dropdown').forEach(dropdown => {
-    const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
-    const menu = dropdown.querySelector('.dropdown-menu');
-    if (!toggle || !menu) return;
-
-    // Keep a placeholder so we can put the menu back when the dropdown closes
-    let placeholder = null;
-    let popperInstance = null;
-
-    dropdown.addEventListener('show.bs.dropdown', function (e) {
-      // Create a placeholder to retain DOM position
-      placeholder = document.createElement('div');
-      placeholder.className = 'dropdown-placeholder d-none';
-      dropdown.insertBefore(placeholder, menu);
-
-      // Move menu to body so it can overlay other elements
-      document.body.appendChild(menu);
-      menu.style.zIndex = '1060';
-      menu.style.position = 'absolute';
-      menu.style.minWidth = menu.style.minWidth || (toggle.offsetWidth + 'px');
-
-      if (hasPopper) {
-        // Create a Popper instance to position the menu
-        popperInstance = Popper.createPopper(toggle, menu, {
-          placement: (menu.classList.contains('dropdown-menu-end') ? 'bottom-end' : 'bottom-start'),
-          modifiers: [
-            { name: 'offset', options: { offset: [0, 6] } },
-            { name: 'preventOverflow', options: { boundary: document.body } },
-            { name: 'computeStyles', options: { adaptive: false } }
-          ]
-        });
-      } else {
-        // Fallback: compute position manually using bounding rect
-        const rect = toggle.getBoundingClientRect();
-        const top = rect.bottom + window.scrollY + 6; // small offset
-        const left = rect.left + window.scrollX;
-        menu.style.top = top + 'px';
-        menu.style.left = left + 'px';
-      }
-    });
-
-    dropdown.addEventListener('hide.bs.dropdown', function () {
-      // Destroy popper instance
-      if (popperInstance) { try { popperInstance.destroy(); } catch(e){} popperInstance = null; }
-
-      // Move menu back to original location
-      if (placeholder && placeholder.parentNode) {
-        placeholder.parentNode.insertBefore(menu, placeholder);
-        placeholder.parentNode.removeChild(placeholder);
-        placeholder = null;
-      }
-      // Clear inline styles added
-      menu.style.position = '';
-      menu.style.top = '';
-      menu.style.left = '';
-      menu.style.zIndex = '';
-    });
-    // After shown, update Popper placement (if used)
-    dropdown.addEventListener('shown.bs.dropdown', function () {
-      if (popperInstance && typeof popperInstance.update === 'function') popperInstance.update();
-    });
-  });
-});
-</script>
 
 <!-- Shepherd/tutorial assets moved to partial: p2/folder_view_tutorial_partial.html -->
 

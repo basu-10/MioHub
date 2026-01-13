@@ -140,6 +140,9 @@
           <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p3_bp.chatbot') }}">
             <i class="material-icons mr-2 text-sm">chat</i>MioChat
           </a></li>
+          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.extension_settings') }}">
+            <i class="material-icons mr-2 text-sm">extension</i>Chrome Extension
+          </a></li>
 
           <!-- Divider -->
           <li class="my-2" style="border-top: 1px solid var(--border-primary);"></li>
@@ -157,24 +160,6 @@
             {% else %}
               <span id="storageText">{{ "%.1f"|format(used_mb) }} MB</span>
             {% endif %}
-          </a></li>
-          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.assets') }}">
-            <i class="material-icons mr-2 text-sm">photo</i>Picture Assets
-          </a></li>
-          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.profile') }}">
-            <i class="material-icons mr-2 text-sm">person</i>Profile
-          </a></li>
-          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openExportImportModal()">
-            <i class="material-icons mr-2 text-sm">import_export</i>Export/Import Data
-          </a></li>
-          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.extension_settings') }}">
-            <i class="material-icons mr-2 text-sm">extension</i>Chrome Extension
-          </a></li>
-          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="#" onclick="openSettingsModal()">
-            <i class="material-icons mr-2 text-sm">settings</i>Settings
-          </a></li>
-          <li><a class="block px-4 py-2 text-sm hover:bg-gray-100 no-underline flex items-center" href="{{ url_for('p2_bp.logout') }}">
-            <i class="material-icons mr-2 text-sm">logout</i>Logout
           </a></li>
         </ul>
       </div>
