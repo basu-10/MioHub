@@ -19,7 +19,11 @@ class LLMClient:
         """Set endpoint URL and headers for the selected provider."""
         if provider == "groq":
             self.url = "https://api.groq.com/openai/v1/chat/completions"
-            self.headers = {"Authorization": f"Bearer {config.GROQ_API_KEY}"}
+            api_key = config.GROQ_API_KEY
+            # Log API key status for debugging (masked for security)
+            key_preview = f"{api_key[:8]}...{api_key[-4:]}" if api_key and len(api_key) > 12 else "[MISSING OR INVALID]"
+            print(f"[LLM CONFIG] provider=groq api_key={key_preview}", flush=True)
+            self.headers = {"Authorization": f"Bearer {api_key}"}
         elif provider == "openrouter":
             self.url = "https://openrouter.ai/api/v1/chat/completions"
             openrouter_key = getattr(config, "OPENROUTER_API_KEY", "")

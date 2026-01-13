@@ -55,15 +55,22 @@ def _generate_ai_reply(user_message: str, memory_items: list[str], model: str) -
         )
     except requests.exceptions.RequestException as exc:
         logger.error("LLM API error: %s", exc)
+        # Show masked API key for debugging (first 8 + last 4 chars)
+        api_key = getattr(config, 'GROQ_API_KEY', '')
+        key_preview = f"{api_key[:8]}...{api_key[-4:]}" if api_key and len(api_key) > 12 else "[MISSING]"
         print(
-            f"[LLM API ERROR] provider={config.PROVIDER} model={model} error={exc}",
+            f"[LLM API ERROR] provider={config.PROVIDER} model={model} "
+            f"api_key={key_preview} error={exc}",
             flush=True,
         )
         ai_response = "Connection error. Please check your API configuration."
     except Exception as exc:  # noqa: BLE001
         logger.error("LLM error: %s", exc)
+        api_key = getattr(config, 'GROQ_API_KEY', '')
+        key_preview = f"{api_key[:8]}...{api_key[-4:]}" if api_key and len(api_key) > 12 else "[MISSING]"
         print(
-            f"[LLM ERROR] provider={config.PROVIDER} model={model} error={exc}",
+            f"[LLM ERROR] provider={config.PROVIDER} model={model} "
+            f"api_key={key_preview} error={exc}",
             flush=True,
         )
         ai_response = f"Error: {str(exc)}"
