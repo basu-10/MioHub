@@ -158,6 +158,16 @@ def chatbot():
 @p3_blueprint.route('/chat', methods=['POST'])
 @login_required
 def chat():
+    # === DIAGNOSTIC LOGGING START ===
+    api_key = getattr(config, 'GROQ_API_KEY', '[MISSING]')
+    key_preview = f"{api_key[:8]}...{api_key[-4:]}" if api_key and len(api_key) > 12 and api_key != '[MISSING]' else api_key
+    print("\n" + "="*60, flush=True)
+    print(f"[CHAT REQUEST] New message received", flush=True)
+    print(f"[CHAT REQUEST] Provider: {config.PROVIDER}", flush=True)
+    print(f"[CHAT REQUEST] GROQ_API_KEY: {key_preview}", flush=True)
+    print("="*60 + "\n", flush=True)
+    # === DIAGNOSTIC LOGGING END ===
+    
     data = request.get_json()
     user_message = data.get('message', '').strip()
     memory_items = data.get('memory', [])  # Get memory items from frontend
@@ -200,9 +210,12 @@ def chat():
 
     llm_messages = _build_llm_messages(user_message, combined_memory)
 
-    print(f"Sending to LLM: {llm_messages}")
-    print(f"Using model: {current_model}")
-    print(f"Using provider: {config.PROVIDER}")
+    print(f"[CHAT] Sending to LLM: {llm_messages}", flush=True)
+    print(f"[CHAT] Using model: {current_model}", flush=True)
+    print(f"[CHAT] Using provider: {config.PROVIDER}", flush=True)
+    api_key_check = getattr(config, 'GROQ_API_KEY', '[MISSING]')
+    key_status = f"{api_key_check[:8]}...{api_key_check[-4:]}" if api_key_check and len(api_key_check) > 12 and api_key_check != '[MISSING]' else api_key_check
+    print(f"[CHAT] API Key status: {key_status}", flush=True)
 
     ai_response = _generate_ai_reply(user_message, combined_memory, current_model)
 

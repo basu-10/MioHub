@@ -44,6 +44,17 @@ for bp in bps:
     print(f"registering: {bp}")
     app.register_blueprint(bp)
 
+# Diagnostic logging for API configuration (startup check)
+import sys
+api_key = config.GROQ_API_KEY if hasattr(config, 'GROQ_API_KEY') else '[NOT FOUND]'
+key_preview = f"{api_key[:8]}...{api_key[-4:]}" if api_key and len(api_key) > 12 and api_key != '[NOT FOUND]' else api_key
+print("="*60, flush=True)
+print(f"[STARTUP] Flask app initialized", flush=True)
+print(f"[STARTUP] Provider: {getattr(config, 'PROVIDER', '[NOT SET]')}", flush=True)
+print(f"[STARTUP] GROQ_API_KEY: {key_preview}", flush=True)
+print(f"[STARTUP] Python: {sys.version}", flush=True)
+print("="*60, flush=True)
+
 # code starts
 @app.context_processor
 def inject_current_folder():
