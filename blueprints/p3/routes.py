@@ -55,9 +55,17 @@ def _generate_ai_reply(user_message: str, memory_items: list[str], model: str) -
         )
     except requests.exceptions.RequestException as exc:
         logger.error("LLM API error: %s", exc)
+        print(
+            f"[LLM API ERROR] provider={config.PROVIDER} model={model} error={exc}",
+            flush=True,
+        )
         ai_response = "Connection error. Please check your API configuration."
     except Exception as exc:  # noqa: BLE001
         logger.error("LLM error: %s", exc)
+        print(
+            f"[LLM ERROR] provider={config.PROVIDER} model={model} error={exc}",
+            flush=True,
+        )
         ai_response = f"Error: {str(exc)}"
 
     return ai_response
