@@ -14,9 +14,65 @@
   <!-- Shepherd.js Tutorial CSS moved to partial: folder_view_tutorial_partial.html -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
   <link rel="stylesheet" href="{{ url_for('p2_bp.static', filename='css/folder_view.css') }}">
+
+  <style>
+    .miospace-glow-body {
+      background: var(--bg);
+      color: var(--white);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    #mainContent {
+      position: relative;
+      z-index: 1;
+    }
+
+    .miospace-bg-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .miospace-bg-glow .glow {
+      position: absolute;
+      border-radius: 9999px;
+    }
+
+    .miospace-bg-glow .glow-1 {
+      width: 520px;
+      height: 520px;
+      left: -120px;
+      top: -140px;
+      background: radial-gradient(circle at 30% 30%, rgba(20, 184, 166, 0.28), transparent 55%);
+    }
+
+    .miospace-bg-glow .glow-2 {
+      width: 500px;
+      height: 500px;
+      right: -140px;
+      top: 80px;
+      background: radial-gradient(circle at 70% 30%, rgba(59, 130, 246, 0.2), transparent 55%);
+    }
+
+    .miospace-bg-glow .glow-3 {
+      width: 520px;
+      height: 520px;
+      left: 18%;
+      bottom: -260px;
+      background: radial-gradient(circle at 40% 40%, rgba(13, 148, 136, 0.16), transparent 60%);
+    }
+  </style>
 </head>
 
-<body>
+<body class="miospace-glow-body">
+<div class="miospace-bg-glow" aria-hidden="true">
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+  <div class="glow glow-3"></div>
+</div>
 <!-- Fixed header container for navbar -->
 <div id="header-container" style="position: fixed; top: 0; left: 0; right: 0; z-index: 950;">
   {% include "/p2/folder_view_navbar_partial.html" %}
