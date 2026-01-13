@@ -8,6 +8,10 @@ Adds columns:
 Run this once to enable extension API functionality.
 """
 
+import env_loader
+
+env_loader.load_env_from_wsgi()
+
 from flask import Flask
 from extensions import db
 from sqlalchemy import text

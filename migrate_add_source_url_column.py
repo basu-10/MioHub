@@ -4,6 +4,10 @@ Migration: Add source_url column to files table for Chrome extension URL groupin
 This enables smart grouping of extension saves by source URL, reducing file proliferation.
 """
 
+import env_loader
+
+env_loader.load_env_from_wsgi()
+
 from flask import Flask
 from extensions import db
 from sqlalchemy import text, inspect

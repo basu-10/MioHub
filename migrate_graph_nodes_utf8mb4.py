@@ -5,6 +5,10 @@ The title and summary columns need to use utf8mb4 charset to properly store 4-by
 like emoji (e.g., 🦞) that may be copied from web content.
 """
 
+import env_loader
+
+env_loader.load_env_from_wsgi()
+
 from flask import Flask
 from extensions import db
 from sqlalchemy import text
