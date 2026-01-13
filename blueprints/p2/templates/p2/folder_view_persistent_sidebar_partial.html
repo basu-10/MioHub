@@ -151,6 +151,35 @@
       {% endif %}
     </div>
   </div>
+
+  <div class="sidebar-bottom" aria-label="Tutorial and account controls">
+    <div class="sidebar-option-item">
+      <button id="sidebarTutorialBtn" class="sidebar-option-btn" type="button" title="Tutorial" onclick="if (typeof window.startTutorial === 'function') window.startTutorial();">
+        <i class="material-icons">help_outline</i>
+        <span class="sidebar-option-label">Tutorial</span>
+      </button>
+    </div>
+
+    <div class="sidebar-account-row">
+      <div class="sidebar-option-item">
+        <a href="{{ url_for('p2_bp.profile') }}" class="sidebar-option-btn" title="Profile">
+          <i class="material-icons">person</i>
+          <span class="sidebar-option-label">Profile</span>
+        </a>
+      </div>
+      <div class="sidebar-option-item dropup">
+        <button class="sidebar-option-btn sidebar-account-caret" type="button" id="sidebarAccountDropdown" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false" title="Account menu">
+          <i class="material-icons">expand_less</i>
+          <span class="sidebar-option-label">Account</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sidebarAccountDropdown">
+          <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); if (typeof openSettingsModal === 'function') openSettingsModal();">Settings</a></li>
+          <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); if (typeof openExportImportModal === 'function') openExportImportModal();">Export/Import</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('p2_bp.logout') }}">Logout</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Sidebar Styles -->
@@ -367,6 +396,63 @@
 .sidebar-social-results ul, .sidebar-social-pinned ul {
   max-height: 260px;
   overflow-y: auto;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.4rem 0 0.2rem 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar-account-row {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.persistent-options-sidebar:not(.expanded) .sidebar-account-row {
+  flex-direction: column;
+  align-items: center;
+}
+
+.persistent-options-sidebar.expanded .sidebar-account-row .sidebar-option-btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.sidebar-account-row .dropdown-menu {
+  min-width: 220px;
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+  opacity: 1;
+  z-index: 10000;
+  padding: 0.5rem 0;
+  bottom: 100% !important;
+  top: auto !important;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-account-row .dropdown-item {
+  color: var(--text-primary) !important;
+  padding: 0.5rem 1rem;
+  transition: background 0.2s ease;
+}
+
+.sidebar-account-row .dropdown-item:hover {
+  background: var(--hover-overlay) !important;
+  color: var(--accent) !important;
+}
+
+.persistent-options-sidebar:not(.expanded) .sidebar-account-row .dropdown-menu {
+  left: 100% !important;
+  right: auto !important;
+  bottom: 0 !important;
 }
 </style>
 

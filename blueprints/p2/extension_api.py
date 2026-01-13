@@ -18,6 +18,7 @@ import secrets
 import base64
 import os
 import hashlib
+import json
 
 from .models import File, Folder, User
 from extensions import db
@@ -168,6 +169,64 @@ def build_extension_description(source_url: str, page_title: str, page_descripti
     }
     # Drop empty values while preserving keys order semantics (dict preserves insertion)
     return {k: v for k, v in fields.items() if v}
+
+
+def normalize_description_entries(raw_value):
+    """Normalize saved descriptions (string/dict/list) into an ordered list of strings."""
+    if not raw_value:
+        return []
+
+    parsed = raw_value
+    if isinstance(raw_value, str):
+        stripped = raw_value.strip()
+        if not stripped:
+            return []
+        try:
+            parsed = json.loads(stripped)
+        except Exception:
+            return [stripped]
+
+    if isinstance(parsed, dict):
+        def _sort_key(key):
+            try:
+                return (0, int(key))
+            except Exception:
+                return (1, str(key))
+
+        ordered = []
+        for _, value in sorted(parsed.items(), key=lambda item: _sort_key(item[0])):
+            if value is None:
+                continue
+            text = str(value).strip()
+            if text:
+                ordered.append(text)
+        return ordered
+
+    if isinstance(parsed, list):
+        return [str(v).strip() for v in parsed if str(v).strip()]
+
+    return [str(parsed).strip()]
+
+
+def build_extension_description_entries(source_url: str) -> list:
+    """Return the default description entries for Chrome extension saves."""
+    entries = ['Saved from Chrome extension']
+    url_text = (source_url or '').strip()
+    if url_text:
+        entries.append(url_text)
+    return entries
+
+
+def merge_description_entries(existing_entries, extension_entries):
+    """Merge extension descriptions ahead of existing ones without duplicates."""
+    merged = []
+    for entry in extension_entries + existing_entries:
+        cleaned = (entry or '').strip()
+        if not cleaned:
+            continue
+        if cleaned not in merged:
+            merged.append(cleaned)
+    return {str(idx + 1): val for idx, val in enumerate(merged)}
 
 
 def find_or_create_extension_file(user, folder, normalized_url, page_title):
@@ -623,6 +682,13 @@ def save_content():
             clip_count = target_file.metadata_json.get('clip_count', 0) + 1
             target_file.metadata_json['clip_count'] = clip_count
             target_file.metadata_json['last_clip_at'] = datetime.utcnow().isoformat()
+
+        if not target_file.metadata_json:
+            target_file.metadata_json = {}
+
+        existing_entries = normalize_description_entries(target_file.metadata_json.get('description'))
+        extension_entries = build_extension_description_entries(normalized_url)
+        target_file.metadata_json['description'] = merge_description_entries(existing_entries, extension_entries)
         
         # CRITICAL: Flag modified for LONGTEXT column (content_html)
         flag_modified(target_file, 'content_html')

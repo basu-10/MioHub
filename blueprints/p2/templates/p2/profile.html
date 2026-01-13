@@ -1,0 +1,185 @@
+<!-- profile.html - Current user profile overview -->
+{% include '/p2/folder_view_navbar_partial.html' %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - MioSpace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('p2_bp.static', filename='css/p2-cards.css') }}">
+  <style>
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.9rem 1.6rem;
+      border-radius: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+      color: #ecfeff;
+      min-width: 180px;
+    }
+
+    .cta-primary {
+      background: linear-gradient(135deg, #0f766e, #14b8a6);
+      box-shadow: 0 10px 30px rgba(20, 184, 166, 0.28);
+    }
+
+    .cta-secondary {
+      background: rgba(34, 197, 235, 0.12);
+      border-color: rgba(125, 211, 252, 0.35);
+      color: #e0f2fe;
+    }
+
+    .cta-quiet {
+      background: rgba(79, 70, 229, 0.12);
+      border-color: rgba(129, 140, 248, 0.4);
+      color: #e0e7ff;
+    }
+
+    .cta-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .cta-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.7rem 1.3rem;
+      border-radius: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #e2e8f0;
+      background: rgba(255,255,255,0.04);
+      transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .cta-ghost:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.24);
+      border-color: rgba(20,184,166,0.35);
+      background: rgba(20,184,166,0.08);
+      color: #ecfeff;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 relative overflow-x-hidden">
+  <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+    <div style="position:absolute; width:520px; height:520px; left:-120px; top:-140px; background: radial-gradient(circle at 30% 30%, rgba(20,184,166,0.28), transparent 55%);"></div>
+    <div style="position:absolute; width:480px; height:480px; right:-120px; top:80px; background: radial-gradient(circle at 70% 30%, rgba(59,130,246,0.22), transparent 55%);"></div>
+    <div style="position:absolute; width:520px; height:520px; left:20%; bottom:-240px; background: radial-gradient(circle at 40% 40%, rgba(15,118,110,0.18), transparent 60%);"></div>
+  </div>
+
+  <div class="min-h-screen pt-28 pb-12 relative">
+    <div class="max-w-6xl mx-auto px-4 space-y-10">
+      {% set default_folder_id = root_folder_id %}
+
+      <!-- Hero -->
+      <section class="rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900/90 via-gray-900/80 to-gray-800/70 shadow-2xl p-6 md:p-8 backdrop-blur">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div class="space-y-3">
+            <div class="inline-flex items-center px-3 py-1 rounded-full border border-teal-500/60 text-teal-200 text-xs uppercase tracking-wide">Workspace suite</div>
+            <div>
+              <p class="text-sm text-gray-400">Welcome back,</p>
+              <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-4xl md:text-5xl font-semibold text-white">{{ user.username }}</h1>
+                {% if user.user_type %}
+                  <span class="px-2.5 py-1 rounded-md border border-teal-500/70 text-teal-200 text-xs uppercase">{{ user.user_type|capitalize }}</span>
+                {% endif %}
+              </div>
+            </div>
+            <p class="text-gray-300 text-base leading-relaxed max-w-2xl">Pick up where you left off with your files, boards, and chats — everything stays synced, organized, and ready to open.</p>
+            {% if user.created_at %}
+              <div class="text-xs text-gray-500">Member since {{ user.created_at.strftime('%b %d, %Y') }}</div>
+            {% endif %}
+          </div>
+          <div class="cta-row">
+            <a href="{{ url_for('p2_bp.assets') }}" class="cta-btn cta-primary">Manage Picture Assets</a>
+            <a href="{{ url_for('p2_bp.view_user', user_id=user.id) }}" class="cta-btn cta-secondary">View Public Profile</a>
+            {% if default_folder_id %}
+              <a href="{{ url_for('p2_bp.export_item_jsonl', type='folder', id=default_folder_id) }}" class="cta-btn cta-quiet">Full Backup (JSONL)</a>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <!-- Storage + Insights -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="lg:col-span-2 rounded-2xl border border-gray-800 bg-gray-900/70 backdrop-blur p-6 shadow-xl">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-sm text-gray-400">Storage</div>
+            <span class="material-icons text-teal-300">storage</span>
+          </div>
+          <div class="text-2xl font-semibold text-white">{{ '%.1f'|format(used_mb) }} MB{% if total_mb %} / {{ '%.0f'|format(total_mb) }} MB{% else %} (Unlimited){% endif %}</div>
+          {% if total_mb %}
+            <div class="w-full bg-gray-800 rounded-full h-3 mt-4 overflow-hidden border border-gray-700">
+              <div class="h-3 rounded-full" style="width: {{ percent or 0 }}%; background: linear-gradient(90deg, #34d399, #14b8a6);"></div>
+            </div>
+            <div class="text-xs text-gray-400 mt-2">{{ percent|round(1) if percent is not none else 0 }}% used</div>
+          {% else %}
+            <div class="text-xs text-gray-400 mt-2">Unlimited storage</div>
+          {% endif %}
+          {% if default_folder_id %}
+            <div class="mt-4 flex flex-wrap gap-3">
+              <a href="{{ url_for('folders.view_folder', folder_id=default_folder_id) }}" class="cta-ghost">Open MioSpace</a>
+              <a href="{{ url_for('p2_bp.export_item_jsonl', type='folder', id=default_folder_id) }}" class="cta-btn cta-quiet" style="min-width: 0; padding: 0.8rem 1.4rem;">Export everything</a>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="rounded-2xl border border-gray-800 bg-gray-900/70 backdrop-blur p-6 shadow-xl space-y-4">
+          <div class="text-sm text-gray-400 flex items-center gap-2"><span class="material-icons text-teal-300">tune</span> Display preferences</div>
+          <div class="space-y-2 text-sm text-gray-200">
+            <div class="flex items-center justify-between"><span class="text-gray-400">View mode</span><span class="text-white font-medium">{{ display_prefs.view_mode|default('grid')|capitalize }}</span></div>
+            <div class="flex items-center justify-between"><span class="text-gray-400">Columns</span><span class="text-white font-medium">{{ display_prefs.columns|default(3) }}</span></div>
+            <div class="flex items-center justify-between"><span class="text-gray-400">Card size</span><span class="text-white font-medium">{{ display_prefs.card_size|default('normal')|capitalize }}</span></div>
+            <div class="flex items-center justify-between"><span class="text-gray-400">Show previews</span><span class="text-white font-medium">{{ 'Yes' if display_prefs.show_previews else 'No' }}</span></div>
+          </div>
+          <div class="text-xs text-gray-500">Update these in folder view → View settings.</div>
+        </div>
+      </section>
+
+      <!-- Pinned users -->
+      <section class="rounded-2xl border border-gray-800 bg-gray-900/70 backdrop-blur p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2 text-white text-xl font-semibold"><span class="material-icons text-teal-300">push_pin</span> Pinned users</div>
+          {% if pinned_users %}
+            <span class="text-xs px-2 py-1 rounded-full bg-teal-600/20 text-teal-200 border border-teal-500/40">{{ pinned_users|length }} pinned</span>
+          {% endif %}
+        </div>
+        {% if pinned_users %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {% for pu in pinned_users %}
+              <a class="block bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 hover:border-teal-500 hover:-translate-y-0.5 transition" href="{{ url_for('p2_bp.view_user', user_id=pu.id) }}">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-white font-semibold">{{ pu.username }}</span>
+                  <span class="text-xs text-gray-500">{{ pu.user_type|capitalize if pu.user_type else '' }}</span>
+                </div>
+                <div class="text-xs text-gray-400">Open profile</div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-gray-400 text-sm">No pinned users.</div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+</body>
+</html>

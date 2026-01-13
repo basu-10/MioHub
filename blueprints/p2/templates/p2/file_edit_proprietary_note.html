@@ -56,13 +56,20 @@
   /* Subtle Hover States */
   --hover-overlay: rgba(255, 255, 255, 0.05);
   --hover-border: rgba(255, 255, 255, 0.1);
-  /* Description stub sizing tokens (mobile-first) */
-  --desc-min: 220px; /* base min for stub textarea */
-  --desc-max: 420px; /* base max for stub textarea */
-  --desc-card-min: 240px; /* base minimum width for grid cards */
-  --desc-badge-size: 26px; /* badge diameter */
-  --add-btn-size: 42px; /* add button size */
-  --add-btn-size-sm: 36px; /* small header add button */
+  /* Description stub tokens */
+  --desc-surface: #0f1624;
+  --desc-surface-strong: #0b1220;
+  --desc-stroke: #1f2a3b;
+  --desc-muted: #9fb3c8;
+  --desc-accent: #14b8a6;
+  --desc-accent-2: #22d3ee;
+  --desc-glow: 0 18px 60px rgba(20, 184, 166, 0.15);
+  --desc-min: clamp(220px, 28vw, 360px);
+  --desc-max: clamp(280px, 48vw, 640px);
+  --desc-card-min: clamp(240px, 32vw, 420px);
+  --desc-badge-size: 28px;
+  --add-btn-size: 44px;
+  --add-btn-size-sm: 38px;
 }
 
 body {
@@ -123,54 +130,47 @@ body {
 }
 
   /* Multi description stub styling */
-  .description-stub {
+  .description-row {
     display: flex;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .description-section {
+    position: relative;
+    padding: 12px 14px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border-primary);
+    background: linear-gradient(145deg, rgba(20, 184, 166, 0.06), rgba(34, 211, 238, 0.04));
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  }
+
+  .description-section > .form-label {
+    padding-right: calc(var(--add-btn-size-sm) + 18px);
+    color: var(--text-primary);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
     gap: 8px;
   }
-  /* Description stub textarea sizing controlled by CSS variables */
-  .description-stub textarea {
-    min-width: var(--desc-min);
-    max-width: var(--desc-max);
-  }
-  
-    /* Scope the description-section to host the header button */
-    .description-section { position: relative; }
-    /* Ensure the label doesn't overlap the small header add button */
-    .description-section > .form-label { padding-right: calc(var(--add-btn-size-sm) + 16px); }
 
-  /* Grid layout for description stubs */
   .description-grid {
     display: grid;
-    /* Card width controlled by CSS variable; breakpoints can adjust this */
-    grid-template-columns: repeat(auto-fill, minmax(var(--desc-card-min), 1fr));
-    grid-auto-rows: auto;
-    gap: 10px;
-    align-items: start;
+    grid-template-columns: repeat(auto-fit, minmax(var(--desc-card-min), 1fr));
+    grid-auto-rows: 1fr;
+    gap: 12px;
+    align-items: stretch;
     width: 100%;
-    max-height: 250px; /* limit height to keep layout tidy; users can scroll */
-    overflow-y: auto;
-    padding-right: 8px; /* allow space for scrollbar */
+    max-width: 100%;
+    overflow: visible;
   }
 
-  .add-description-card {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px dashed var(--border-primary);
-    background: var(--bg-tertiary);
-    min-height: 60px;
-    min-width: var(--desc-card-min);
-    padding: 8px;
-    border-radius: 6px;
-  }
-
-  /* Hide the large grid-based add card; we provide a small sticky add button in the section header */
   .add-description-card { display: none; }
 
-  /* Small add button that will be appended to the description section heading */
   .small-add-description-btn {
-    position: sticky; /* remain visible while scrolling; anchored to top of parent */
+    position: sticky;
     top: 8px;
     z-index: 110;
     min-width: var(--add-btn-size-sm);
@@ -179,116 +179,143 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0 8px;
+    padding: 0 10px;
     float: right;
-    border-radius: 8px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--desc-accent), var(--desc-accent-2));
+    color: #041016;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 12px 30px rgba(20, 184, 166, 0.35);
+    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
   }
-    /* For very small screens, scale the small header add button down a bit and avoid overlap */
-    @media (max-width: 480px) {
-      .small-add-description-btn { right: 6px; top: 6px; min-width: 30px; min-height: 30px; font-size: 14px; }
-    }
 
-  /* Sticky add card that remains visible when the grid scrolls */
+  .small-add-description-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 36px rgba(34, 211, 238, 0.35);
+    filter: brightness(1.05);
+  }
+
+  .small-add-description-btn:focus-visible {
+    outline: 2px solid rgba(20, 184, 166, 0.6);
+    outline-offset: 2px;
+  }
+
   .add-description-card.sticky {
     position: sticky;
-    bottom: 8px; /* Keep 8px above bottom of scroll container */
-    justify-self: end; /* Align to the right within grid cell */
+    bottom: 8px;
+    justify-self: end;
     z-index: 25;
-    align-self: end; /* Align to bottom row */
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    align-self: end;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
   }
 
   .description-stub {
-    position: relative; /* for delete button */
-    background: var(--bg-quaternary);
-    padding: 6px 32px 6px calc(var(--desc-badge-size) + 12px); /* leave room for remove button and badge */
-    border-radius: 6px;
-    border: 1px solid var(--border-primary);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: linear-gradient(145deg, rgba(20, 184, 166, 0.08), rgba(34, 211, 238, 0.05)), var(--desc-surface);
+    border-radius: 14px;
+    border: 1px solid var(--desc-stroke);
+    padding: 14px 52px 14px calc(var(--desc-badge-size) + 16px);
+    box-shadow: var(--desc-glow);
+    min-width: 0;
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  }
+
+  .description-stub:hover {
+    transform: translateY(-2px);
+    border-color: var(--desc-accent);
+    box-shadow: 0 22px 60px rgba(20, 184, 166, 0.22);
   }
 
   .description-stub .description-number-badge {
     position: absolute;
-    left: 6px;
-    top: 8px;
+    left: 12px;
+    top: 12px;
     width: var(--desc-badge-size);
     height: var(--desc-badge-size);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
+    background: linear-gradient(135deg, var(--desc-accent), var(--desc-accent-2));
+    color: #04221f;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(20, 184, 166, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .description-stub textarea {
-    margin-left: calc(var(--desc-badge-size) + 10px); /* ensure text doesn't underlap the badge */
-    width: calc(100% - (var(--desc-badge-size) + 10px) - (var(--add-btn-size) + 8px)); /* badge + spacing + remove button */
+    width: 100%;
+    min-width: 0;
+    min-height: 88px;
+    background: var(--desc-surface-strong);
+    border: 1px solid var(--desc-stroke);
+    color: var(--text-primary);
+    border-radius: 10px;
+    padding: 10px 12px;
+    resize: vertical;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
   }
 
-  /* Responsive breakpoints - adjust card sizes by viewport width */
-  @media (max-width: 767px) {
-    :root {
-      --desc-min: 220px;
-      --desc-max: 420px;
-      --desc-card-min: 240px;
-      --desc-badge-size: 22px;
-      --add-btn-size: 42px;
-    }
-    .description-grid { grid-template-columns: repeat(auto-fill, minmax(var(--desc-card-min), 1fr)); }
+  .description-stub textarea::placeholder {
+    color: var(--desc-muted);
   }
 
-  @media (min-width: 768px) and (max-width: 991px) {
-    :root {
-      --desc-min: 360px;
-      --desc-max: 720px;
-      --desc-card-min: 360px;
-      --desc-badge-size: 24px;
-      --add-btn-size: 48px;
-    }
-    .description-grid { grid-template-columns: repeat(auto-fill, minmax(var(--desc-card-min), 1fr)); }
-  }
-
-  @media (min-width: 992px) and (max-width: 1439px) {
-    :root {
-      --desc-min: 660px;
-      --desc-max: 1260px;
-      --desc-card-min: 720px;
-      --desc-badge-size: 26px;
-      --add-btn-size: 64px;
-    }
-    .description-grid { grid-template-columns: repeat(auto-fit, minmax(var(--desc-card-min), 1fr)); }
-  }
-
-  @media (min-width: 1440px) {
-    :root {
-      /* Keep same as large, allow more columns when space allows */
-      --desc-min: 660px;
-      --desc-max: 1260px;
-      --desc-card-min: 720px;
-      --desc-badge-size: 26px;
-      --add-btn-size: 64px;
-    }
-    .description-grid { grid-template-columns: repeat(auto-fit, minmax(var(--desc-card-min), 1fr)); }
+  .description-stub textarea:focus {
+    border-color: var(--desc-accent);
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.25), var(--desc-glow);
+    background: #111a2a;
   }
 
   .remove-description-btn {
     position: absolute;
-    right: 6px;
-    top: 6px;
+    right: 12px;
+    top: 12px;
     z-index: 5;
-    width: calc(var(--add-btn-size) * 0.45);
-    height: calc(var(--add-btn-size) * 0.45);
+    width: 34px;
+    height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.16), rgba(34, 211, 238, 0.16));
+    border: 1px solid var(--desc-stroke);
+    color: var(--text-primary);
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
   }
 
-  /* Keep add button consistent size with stub cards */
+  .remove-description-btn:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.24), rgba(34, 211, 238, 0.22));
+    border-color: var(--desc-accent);
+    box-shadow: 0 14px 36px rgba(20, 184, 166, 0.28);
+    color: #ffffff;
+  }
+
   .add-description-card button#addDescriptionBtn {
-    /* Scales with the add btn size token */
     min-width: var(--add-btn-size);
     min-height: var(--add-btn-size);
     font-size: calc(var(--add-btn-size) / 3);
-    border-radius: 8px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--desc-accent), var(--desc-accent-2));
+    color: #041016;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 34px rgba(20, 184, 166, 0.32);
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --desc-card-min: clamp(210px, 80vw, 320px);
+      --desc-badge-size: 24px;
+      --add-btn-size-sm: 34px;
+    }
+    .description-section { padding: 10px 10px 12px; }
+    .description-stub { padding: 12px 46px 12px calc(var(--desc-badge-size) + 14px); }
+    .description-stub textarea { min-height: 74px; }
   }
     
     .btn:hover {
@@ -364,39 +391,79 @@ body {
     border-bottom: 1px solid var(--border-primary);
   }
 
-  .note-editor .note-toolbar .btn-group .btn {
-    background: var(--bg-tertiary);
+  .note-editor .note-toolbar .btn-group {
+    gap: 6px;
+  }
+
+  .note-editor .note-toolbar .btn-group .btn,
+  .note-editor .note-toolbar .note-btn,
+  .note-editor .note-toolbar .btn-light {
+    background: linear-gradient(140deg, rgba(20, 184, 166, 0.12), rgba(34, 211, 238, 0.08)), var(--bg-tertiary);
     border: 1px solid var(--border-primary);
     color: var(--text-primary);
+    border-radius: 10px;
+    min-height: 38px;
+    padding: 8px 10px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background 120ms ease;
   }
 
-  .note-editor .note-toolbar .btn-group .btn:hover {
-    background: var(--bg-quaternary);
-    border-color: var(--border-hover);
+  .note-editor .note-toolbar .btn-group .btn svg,
+  .note-editor .note-toolbar .btn-group .btn i,
+  .note-editor .note-toolbar .note-btn i {
     color: var(--text-primary);
   }
 
-  .note-editor .note-toolbar .btn-group .btn.active {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    color: white;
+  .note-editor .note-toolbar .btn-group .btn:hover,
+  .note-editor .note-toolbar .note-btn:hover,
+  .note-editor .note-toolbar .btn-light:hover {
+    background: linear-gradient(140deg, rgba(20, 184, 166, 0.2), rgba(34, 211, 238, 0.14)), var(--bg-quaternary);
+    border-color: var(--desc-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 34px rgba(20, 184, 166, 0.22);
+  }
+
+  .note-editor .note-toolbar .btn-group .btn:focus-visible,
+  .note-editor .note-toolbar .note-btn:focus-visible,
+  .note-editor .note-toolbar .btn-light:focus-visible {
+    outline: 2px solid rgba(20, 184, 166, 0.6);
+    outline-offset: 2px;
+  }
+
+  .note-editor .note-toolbar .btn-group .btn.active,
+  .note-editor .note-toolbar .note-btn.active,
+  .note-editor .note-toolbar .btn-light.active,
+  .note-editor .note-toolbar .btn-group.show .btn,
+  .note-editor .note-toolbar .btn-group.show .btn-light {
+    background: linear-gradient(140deg, var(--desc-accent), var(--desc-accent-2));
+    border-color: var(--desc-accent);
+    color: #041016;
+    box-shadow: 0 14px 36px rgba(20, 184, 166, 0.28);
+  }
+
+  /* Compact height for the toolbar rows */
+  .note-editor .note-toolbar .btn-group .btn:not(.dropdown-toggle) {
+    line-height: 1.2;
   }
 
   /* Summernote dropdown styling */
   .note-editor .note-toolbar .dropdown-menu {
     background: var(--bg-quaternary);
     border: 1px solid var(--border-primary);
-    border-radius: 8px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+    padding: 6px;
   }
 
   .note-editor .note-toolbar .dropdown-item {
     color: var(--text-primary);
     background: transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
   }
 
   .note-editor .note-toolbar .dropdown-item:hover {
-    background: var(--hover-overlay);
+    background: rgba(20, 184, 166, 0.12);
     color: var(--text-primary);
   }
 

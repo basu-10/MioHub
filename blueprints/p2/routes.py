@@ -539,6 +539,12 @@ def profile():
     except Exception:
         pinned_users = []
 
+    try:
+        root_folder = Folder.query.filter_by(user_id=user.id, parent_id=None).first()
+        root_folder_id = root_folder.id if root_folder else (user.folders[0].id if user.folders else None)
+    except Exception:
+        root_folder_id = user.folders[0].id if getattr(user, 'folders', None) else None
+
     return render_template('p2/profile.html',
                            user=user,
                            notes_count=notes_count,
@@ -549,7 +555,8 @@ def profile():
                            percent=percent,
                            recent_files=recent_files,
                            display_prefs=display_prefs,
-                           pinned_users=pinned_users)
+                           pinned_users=pinned_users,
+                           root_folder_id=root_folder_id)
 
 
 @p2_blueprint.route('/storage_status')
