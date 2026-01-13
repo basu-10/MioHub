@@ -167,9 +167,9 @@
           <span class="sidebar-option-label">Profile</span>
         </a>
       </div>
-      <div class="sidebar-option-item dropup">
-        <button class="sidebar-option-btn sidebar-account-caret" type="button" id="sidebarAccountDropdown" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false" title="Account menu">
-          <i class="material-icons">expand_less</i>
+      <div class="sidebar-option-item dropdown">
+        <button class="sidebar-option-btn sidebar-account-caret" type="button" id="sidebarAccountDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Account menu">
+          <i class="material-icons">expand_more</i>
           <span class="sidebar-option-label">Account</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sidebarAccountDropdown">
@@ -433,9 +433,6 @@
   opacity: 1;
   z-index: 10000;
   padding: 0.5rem 0;
-  bottom: 100% !important;
-  top: auto !important;
-  margin-bottom: 0.5rem;
 }
 
 .sidebar-account-row .dropdown-item {
@@ -452,7 +449,6 @@
 .persistent-options-sidebar:not(.expanded) .sidebar-account-row .dropdown-menu {
   left: 100% !important;
   right: auto !important;
-  bottom: 0 !important;
 }
 </style>
 
