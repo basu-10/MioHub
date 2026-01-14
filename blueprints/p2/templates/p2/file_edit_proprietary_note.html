@@ -580,16 +580,17 @@ body {
 </head>
 <body>
 
-{% include "/p2/note_toolbar_partial.html" %}
-
-
-
-
-
-
 <main class="d-flex flex-column h-100">
   <div class="ql-container container-fluid d-flex flex-column h-100 py-3">
     <div class="w-100 d-flex flex-column h-100 p-2">
+      
+      <!-- Back Button -->
+      <div class="mb-3">
+        <button type="button" onclick="history.back()" class="btn btn-sm" style="background: var(--bg-tertiary); border: 1px solid var(--border-primary); color: var(--text-primary);">
+          <i class="material-icons" style="font-size: 18px; vertical-align: middle;">arrow_back</i>
+          <span class="ms-1">Back</span>
+        </button>
+      </div>
 
       <!-- 📝 FORM WRAPS EVERYTHING -->
       <form method="POST" enctype="multipart/form-data" id="form" class="d-flex flex-column h-100">

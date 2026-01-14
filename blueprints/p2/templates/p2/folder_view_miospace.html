@@ -659,12 +659,9 @@ document.addEventListener('DOMContentLoaded', function() {
                           {% if note.extension_info %}
                           <div class="d-flex align-items-start gap-2 small mb-1" style="background: rgba(20, 184, 166, 0.1); padding: 4px 8px; border-radius: 4px;">
                             <span class="badge rounded-pill" style="background: var(--accent);">🌐 Extension</span>
-                            <span class="text-muted">
-                              <a href="{{ note.source_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none" style="color: var(--accent);">{{ note.source_url[:60] }}{{ '...' if note.source_url|length > 60 else '' }}</a>
-                              {% if note.extension_info.clip_count > 1 %}
-                              <span class="badge bg-secondary ms-2">{{ note.extension_info.clip_count }} clips</span>
-                              {% endif %}
-                            </span>
+                            {% if note.extension_info.clip_count > 1 %}
+                            <span class="badge bg-secondary ms-2">{{ note.extension_info.clip_count }} clips</span>
+                            {% endif %}
                           </div>
                           {% endif %}
                           {% for key, val in note.descriptions %}
@@ -681,12 +678,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="d-flex flex-column">
                           <div class="d-flex align-items-start gap-2 small" style="background: rgba(20, 184, 166, 0.1); padding: 4px 8px; border-radius: 4px;">
                             <span class="badge rounded-pill" style="background: var(--accent);">🌐 Extension</span>
-                            <span class="text-muted">
-                              <a href="{{ note.source_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none" style="color: var(--accent);">{{ note.source_url[:60] }}{{ '...' if note.source_url|length > 60 else '' }}</a>
-                              {% if note.extension_info.clip_count > 1 %}
-                              <span class="badge bg-secondary ms-2">{{ note.extension_info.clip_count }} clips</span>
-                              {% endif %}
-                            </span>
+                            {% if note.extension_info.clip_count > 1 %}
+                            <span class="badge bg-secondary ms-2">{{ note.extension_info.clip_count }} clips</span>
+                            {% endif %}
                           </div>
                         </div>
                       </div>

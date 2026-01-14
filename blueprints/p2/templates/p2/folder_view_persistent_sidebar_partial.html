@@ -373,6 +373,11 @@
   font-size: 12px;
 }
 
+.mobile-bottom-nav .mobile-nav-btn.wide,
+.mobile-bottom-nav .mobile-nav-btn.wide-people {
+  flex: 1.1;
+}
+
 .mobile-bottom-nav button.active,
 .mobile-bottom-nav button:focus-visible,
 .mobile-bottom-nav button:hover {
@@ -382,6 +387,50 @@
 
 .mobile-bottom-nav .material-icons {
   font-size: 22px;
+}
+
+.mobile-nav-combo {
+  position: relative;
+}
+
+.mobile-nav-flyout {
+  position: absolute;
+  left: 50%;
+  bottom: 62px;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  box-shadow: 0 -6px 18px rgba(0,0,0,0.35);
+  padding: 8px;
+  display: none;
+  gap: 8px;
+  min-width: 200px;
+  z-index: 1102;
+}
+
+.mobile-nav-flyout.show {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-flyout-btn {
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.mobile-flyout-btn:hover,
+.mobile-flyout-btn:focus-visible {
+  background: rgba(20,184,166,0.12);
+  color: var(--accent);
 }
 
 .mobile-bottom-sheet-backdrop {
@@ -681,6 +730,76 @@
   </div>
 </div>
 
+<div class="mobile-bottom-sheet" id="mobileCreateSheet" role="dialog" aria-modal="true" aria-label="Create new content">
+  <div class="mobile-sheet-header">
+    <h6>Create</h6>
+    <button class="mobile-sheet-close" type="button" data-sheet-close aria-label="Close create sheet"><i class="material-icons">close</i></button>
+  </div>
+  <div class="mobile-sheet-section">
+    <h5>Quick create</h5>
+    <div class="mobile-sheet-actions">
+      <button class="btn btn-outline-primary" type="button" onclick="openCreateFolderModal()"><i class="material-icons me-1">folder</i>Folder</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewNote()"><i class="material-icons me-1">description</i>MioNote</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewBoard()"><i class="material-icons me-1">dashboard</i>MioPages</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewCombined()"><i class="material-icons me-1">article</i>MioBooks</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('proprietary_graph')"><i class="material-icons me-1">device_hub</i>MioThink</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewInfiniteBoard()"><i class="material-icons me-1">explore</i>MioInfinite</button>
+    </div>
+  </div>
+  <div class="mobile-sheet-section">
+    <h5>Other types</h5>
+    <div class="mobile-sheet-actions">
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('markdown')"><i class="material-icons me-1">text_fields</i>Markdown</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('code')"><i class="material-icons me-1">code</i>Code</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('table')"><i class="material-icons me-1">table_chart</i>Table</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('blocks')"><i class="material-icons me-1">view_week</i>Blocks</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('diagram')"><i class="material-icons me-1">account_tree</i>Diagram</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('timeline')"><i class="material-icons me-1">timeline</i>MioEvents</button>
+      <button class="btn btn-outline-primary" type="button" onclick="createNewFile('todo')"><i class="material-icons me-1">checklist</i>MioList</button>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-bottom-sheet" id="mobilePeopleSheet" role="dialog" aria-modal="true" aria-label="Search and pinned users">
+  <div class="mobile-sheet-header">
+    <h6>People</h6>
+    <button class="mobile-sheet-close" type="button" data-sheet-close aria-label="Close people sheet"><i class="material-icons">close</i></button>
+  </div>
+  <div class="mobile-sheet-section">
+    <h5>Search</h5>
+    <div class="mobile-pill-list" style="flex-direction: column; gap: 8px;">
+      <div class="sidebar-social-input">
+        <input type="search" id="mobileUserSearch" placeholder="Search users..." aria-label="Search users">
+        <button id="mobileUserClearBtn" class="cancel" title="Clear search" aria-label="Clear search" type="button" style="display:none;">&times;</button>
+        <button id="mobileUserSearchBtn" type="button">Search</button>
+      </div>
+      <div id="mobileSearchResults" class="sidebar-social-results" style="display:none;"></div>
+    </div>
+  </div>
+  <div class="mobile-sheet-section" id="mobilePinnedUsersContainer">
+    <h5>Pinned</h5>
+    {% if pinned_users %}
+      <ul id="mobilePinnedUsersList" class="list-unstyled" style="padding-left:0; margin:0;">
+      {% for pu in pinned_users %}
+        {% if pu %}
+        <li data-user-id="{{ pu.id }}" class="p-1 d-flex justify-content-between align-items-center" style="padding:6px 4px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <a href="{{ url_for('p2_bp.view_user', user_id=pu.id) }}" class="text-white">{{ pu.username }}</a>
+          </div>
+          <form action="{{ url_for('p2_bp.toggle_pin_user', user_id=pu.id) }}" method="post" style="display:inline; margin-left: 6px;">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button class="px-2 py-1 text-xs bg-yellow-500 text-black rounded">Unpin</button>
+          </form>
+        </li>
+        {% endif %}
+      {% endfor %}
+      </ul>
+    {% else %}
+      <div class="text-muted small">No pinned users.</div>
+    {% endif %}
+  </div>
+</div>
+
 <div class="mobile-bottom-sheet" id="mobileMoreSheet" role="dialog" aria-modal="true" aria-label="More actions">
   <div class="mobile-sheet-header">
     <h6>More</h6>
@@ -688,6 +807,7 @@
   </div>
   <div class="mobile-sheet-section mobile-sheet-actions">
     <a class="btn btn-outline-primary" href="{{ url_for('p2_bp.view_user', user_id=current_user.id) }}"><i class="material-icons me-1">public</i>Public</a>
+    <button class="btn btn-outline-primary" type="button" onclick="if (typeof window.scrollTo === 'function') window.scrollTo({top:0,behavior:'smooth'});"><i class="material-icons me-1">vertical_align_top</i>Top</button>
     <button class="btn btn-outline-primary" type="button" onclick="if (typeof window.startTutorial === 'function') window.startTutorial();"><i class="material-icons me-1">help_outline</i>Tutorial</button>
     <a class="btn btn-outline-primary" href="{{ url_for('p2_bp.profile') }}"><i class="material-icons me-1">person</i>Profile</a>
     <button class="btn btn-outline-primary" type="button" onclick="if (typeof openSettingsModal === 'function') openSettingsModal();"><i class="material-icons me-1">settings</i>Settings</button>
@@ -697,17 +817,29 @@
 </div>
 
 <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
-  <button type="button" class="mobile-nav-btn" data-sheet-target="mobileSortSheet">
-    <i class="material-icons" aria-hidden="true">sort</i>
-    <span>Sort</span>
+  <div class="mobile-nav-combo">
+    <button type="button" class="mobile-nav-btn" id="mobileLayoutToggle">
+      <i class="material-icons" aria-hidden="true">tune</i>
+      <span>Layout</span>
+    </button>
+    <div class="mobile-nav-flyout" id="mobileLayoutFlyout">
+      <button type="button" class="mobile-flyout-btn" data-sheet-target="mobileSortSheet">
+        <i class="material-icons" aria-hidden="true">sort</i>
+        <span>Sort</span>
+      </button>
+      <button type="button" class="mobile-flyout-btn" data-sheet-target="mobileViewSheet">
+        <i class="material-icons" aria-hidden="true">view_module</i>
+        <span>View</span>
+      </button>
+    </div>
+  </div>
+  <button type="button" class="mobile-nav-btn wide-people" data-sheet-target="mobilePeopleSheet">
+    <i class="material-icons" aria-hidden="true">group</i>
+    <span>People</span>
   </button>
-  <button type="button" class="mobile-nav-btn" data-sheet-target="mobileViewSheet">
-    <i class="material-icons" aria-hidden="true">view_module</i>
-    <span>View</span>
-  </button>
-  <button type="button" class="mobile-nav-btn" onclick="if (typeof window.scrollTo === 'function') window.scrollTo({top:0,behavior:'smooth'});">
-    <i class="material-icons" aria-hidden="true">home</i>
-    <span>Top</span>
+  <button type="button" class="mobile-nav-btn wide" data-sheet-target="mobileCreateSheet">
+    <i class="material-icons" aria-hidden="true">add_circle</i>
+    <span>Create</span>
   </button>
   <button type="button" class="mobile-nav-btn" data-sheet-target="mobileMoreSheet">
     <i class="material-icons" aria-hidden="true">more_horiz</i>
@@ -954,14 +1086,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const sheetButtons = document.querySelectorAll('.mobile-nav-btn[data-sheet-target]');
     const closeButtons = document.querySelectorAll('[data-sheet-close]');
     const sheets = document.querySelectorAll('.mobile-bottom-sheet');
+    const layoutToggle = document.getElementById('mobileLayoutToggle');
+    const layoutFlyout = document.getElementById('mobileLayoutFlyout');
+    const flyoutButtons = layoutFlyout ? layoutFlyout.querySelectorAll('[data-sheet-target]') : [];
+
+    function positionFlyout() {
+      if (!layoutFlyout || !layoutToggle || !layoutFlyout.classList.contains('show')) return;
+      const margin = 12;
+      layoutFlyout.style.transform = 'translateX(0)';
+      const toggleRect = layoutToggle.getBoundingClientRect();
+      const flyoutWidth = layoutFlyout.offsetWidth;
+      let left = toggleRect.left + (toggleRect.width / 2) - (flyoutWidth / 2);
+      left = Math.max(margin, Math.min(left, window.innerWidth - margin - flyoutWidth));
+      layoutFlyout.style.left = `${left}px`;
+      layoutFlyout.style.right = 'auto';
+      layoutFlyout.style.transform = 'translateX(0)';
+    }
 
     let openSheet = null;
 
-    function closeSheet() {
+    function closeSheet(keepFlyout = false) {
       sheets.forEach(s => s.classList.remove('show'));
       sheetButtons.forEach(b => b.classList.remove('active'));
       openSheet = null;
       if (backdrop) backdrop.classList.remove('show');
+      if (!keepFlyout) hideFlyout();
     }
 
     function openSheetById(id, trigger) {
@@ -974,6 +1123,11 @@ document.addEventListener('DOMContentLoaded', function() {
       openSheet = target;
     }
 
+    function hideFlyout() {
+      if (layoutFlyout) layoutFlyout.classList.remove('show');
+      if (layoutToggle) layoutToggle.classList.remove('active');
+    }
+
     sheetButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const targetId = btn.dataset.sheetTarget;
@@ -984,6 +1138,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
     });
+
+    if (layoutToggle && layoutFlyout) {
+      layoutToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const showing = layoutFlyout.classList.toggle('show');
+        layoutToggle.classList.toggle('active', showing);
+        if (showing) {
+          // Close any open sheet but keep the flyout visible
+          closeSheet(true);
+          positionFlyout();
+        }
+      });
+
+      flyoutButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetId = btn.dataset.sheetTarget;
+          hideFlyout();
+          openSheetById(targetId, btn);
+        });
+      });
+
+      document.addEventListener('click', hideFlyout);
+      if (backdrop) backdrop.addEventListener('click', hideFlyout);
+      window.addEventListener('resize', positionFlyout);
+    }
 
     closeButtons.forEach(btn => btn.addEventListener('click', closeSheet));
     if (backdrop) backdrop.addEventListener('click', closeSheet);
@@ -1225,6 +1405,16 @@ document.addEventListener('DOMContentLoaded', function() {
     resultsListId: 'sidebarSearchResultsListCompact',
     pinnedContainerId: 'sidebarPinnedUsersContainerCompact',
     pinnedListId: 'sidebarPinnedUsersListCompact'
+  });
+
+  initSidebarUserSearch({
+    searchInputId: 'mobileUserSearch',
+    searchBtnId: 'mobileUserSearchBtn',
+    clearBtnId: 'mobileUserClearBtn',
+    resultsContainerId: 'mobileSearchResults',
+    resultsListId: 'mobileSearchResultsList',
+    pinnedContainerId: 'mobilePinnedUsersContainer',
+    pinnedListId: 'mobilePinnedUsersList'
   });
 });
 </script>
