@@ -61,7 +61,7 @@
   {% if files_by_type.get('proprietary_blocks') %}
   <div class="nav-pill" onclick="scrollToSection('proprietary-blocks')">
     <i class="material-icons">article</i>
-    <span>MioBooks ({{ files_by_type['proprietary_blocks']|length }})</span>
+    <span>MioBlocks ({{ files_by_type['proprietary_blocks']|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('proprietary_infinite_whiteboard') %}
@@ -249,7 +249,7 @@
   <div class="section-header files-header">
     <h3 class="section-title">
       <i class="material-icons">article</i>
-      MioBooks
+      MioBlocks
       <span class="count-badge">{{ files_by_type['proprietary_blocks']|length }}</span>
     </h3>
   </div>
@@ -258,7 +258,7 @@
   <div class="col d-flex">
     <div class="card flex-fill h-100 shadow-sm item-card" data-type="file" data-id="{{ file.id }}" data-file-type="proprietary_blocks" data-is-public="{{ '1' if file.is_public else '0' }}">
       <div class="badge-container">
-        <span class="type-badge">MioBooks</span>
+        <span class="type-badge">MioBlocks</span>
       </div>
       <div class="card-body d-flex flex-column item-body" tabindex="0">
         <h5 class="card-title mb-2">

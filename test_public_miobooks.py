@@ -24,7 +24,7 @@ with app.app_context():
     print()
     
     if public_miobooks:
-        print("Public MioBooks:")
+        print("Public MioBlocks:")
         for f in public_miobooks:
             print(f"  - ID {f.id}: {f.title}")
             print(f"    Type: {f.type}")
@@ -33,6 +33,6 @@ with app.app_context():
     else:
         print("No public MioBook files found")
         if all_miobooks:
-            print("\nAll MioBooks (not public):")
+            print("\nAll MioBlocks (not public):")
             for f in all_miobooks:
                 print(f"  - ID {f.id}: {f.title} (public={f.is_public})")

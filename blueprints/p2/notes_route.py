@@ -2162,7 +2162,7 @@ def autosave_draft():
 @login_required
 def export_folder_as_pdf():
     """
-    Export all MioNotes, MioDraws, and MioBooks from the current folder as individual PDFs in a ZIP file.
+    Export all MioNotes, MioDraws, and MioBlocks from the current folder as individual PDFs in a ZIP file.
     Maintains folder structure and converts each item to a separate PDF.
     """
     current_folder_id = session.get("current_folder_id")

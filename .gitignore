@@ -14,3 +14,4 @@ config.py
 static/ui inspiration/
 generate_extension_icons.py
 *.zip
+wsgi_*.py

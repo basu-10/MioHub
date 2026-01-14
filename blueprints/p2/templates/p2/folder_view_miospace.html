@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
   {% if combined_docs|length > 0 %}
   <div class="nav-pill" onclick="scrollToSection('combined')">
     <i class="material-icons">article</i>
-    <span>MioBooks ({{ combined_docs|length }})</span>
+    <span>MioBlocks ({{ combined_docs|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('proprietary_infinite_whiteboard') %}
@@ -869,13 +869,13 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 
-<!-- MioBooks Section -->
+<!-- MioBlock Section -->
 {% if combined_docs|length > 0 %}
 <div class="section-container combined-section" id="combined">
   <div class="section-header combined-header">
     <h3 class="section-title">
       <i class="material-icons">article</i>
-      MioBooks
+      MioBlocks
       <span class="count-badge">{{ combined_docs|length }}</span>
     </h3>
   </div>
@@ -895,8 +895,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <h5 class="card-title">
             <a href="{{ url_for('combined.edit_combined', document_id=doc.id) }}" class="item-link">{{ doc.title }}</a>
           </h5>
-          <div class="card-text text-muted small flex-grow-1 mb-3 combined-label">📄 MioBooks</div>
-          <!-- 3-dot dropdown menu removed; use single click for context menu -->
+          <div class="card-text text-muted small flex-grow-1 mb-3 combined-label">📄 MioBlocks</div>
         </div>
       </div>
     </div>
@@ -1431,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li class="list-group-item context-menu-item" onclick="(typeof openCreateFolderDescModal === 'function' ? openCreateFolderDescModal(window.targetFolderId) : createNewFolder(window.targetFolderId))"><i class="material-icons">folder</i>Create Folder</li>
     <li class="list-group-item context-menu-item" onclick="createNewNote()"><i class="material-icons">description</i>New MioNote</li>
     <li class="list-group-item context-menu-item" onclick="createNewBoard()"><i class="material-icons">dashboard</i>New MioPages</li>
-    <li class="list-group-item context-menu-item" onclick="createNewCombined()"><i class="material-icons">article</i>New MioBooks</li>
+    <li class="list-group-item context-menu-item" onclick="createNewCombined()"><i class="material-icons">article</i>New MioBlocks</li>
     <li class="list-group-item context-menu-item" onclick="createNewFile('proprietary_graph')"><i class="material-icons">device_hub</i>New MioThink</li>
     <li class="list-group-item context-menu-item" onclick="createNewInfiniteBoard()"><i class="material-icons">explore</i>New MioInfinite</li>
     <li class="list-group-item context-menu-item" onclick="createNewFile('timeline')"><i class="material-icons">timeline</i>New MioEvents</li>

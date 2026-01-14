@@ -66,7 +66,7 @@ def view_folder(folder_id):
     # Get MioBook documents (Files with type='book')
     books = File.query.filter_by(folder_id=folder.id, owner_id=current_user.id, type='book').all()
     
-    # Get regular files (exclude MioBooks which are shown in dedicated section)
+    # Get regular files (exclude  which are shown in dedicated section)
     files = File.query.filter(
         File.folder_id == folder.id,
         File.owner_id == current_user.id,

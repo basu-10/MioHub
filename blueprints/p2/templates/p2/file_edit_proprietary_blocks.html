@@ -1045,10 +1045,53 @@
             .block-row {
                 flex-direction: column;
                 gap: 12px;
+                min-height: auto;
+                max-height: none;
+                padding: 10px;
             }
             
+            .page-shell {
+                width: 100%;
+                padding: 0 12px 32px;
+            }
+
+            .main-block-column,
+            .block-row .main-block-column,
+            .block-row .annotation-column,
             .annotation-column {
                 width: 100% !important;
+                min-width: 0;
+            }
+
+            .block-item,
+            .annotation-block {
+                height: auto;
+                min-height: 0;
+            }
+
+            /* Keep editors from collapsing when parent height is auto */
+            .block-content {
+                min-height: 260px;
+            }
+
+            .toastui-editor-defaultUI,
+            .markdown-editor,
+            .editorjs-editor,
+            .code-editor-wrapper,
+            .markdown-editor-wrapper {
+                min-height: 260px;
+            }
+
+            .annotation-scroll-wrapper {
+                flex-direction: column;
+                overflow-x: hidden;
+                overflow-y: auto;
+            }
+
+            .annotation-card {
+                flex: 1 1 auto;
+                width: 100%;
+                max-width: 100%;
             }
             
             .annotation-column.mobile-hidden {

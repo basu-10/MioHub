@@ -140,7 +140,7 @@ def view_folder(folder_id):
     # Get MioBook documents (Files with type='proprietary_blocks')
     books = File.query.filter_by(folder_id=folder.id, owner_id=current_user.id, type='proprietary_blocks').all()
     
-    # Get regular files (exclude MioBooks which are shown in dedicated section)
+    # Get regular files (exclude MioBoMioBlocksoks which are shown in dedicated section)
     files = File.query.filter(
         File.folder_id == folder.id,
         File.owner_id == current_user.id,
@@ -174,7 +174,7 @@ def view_folder(folder_id):
     #     print(f"  - Book ID: {book.id}, Title: '{book.title}', Blocks: {len(book.content_json or [])}")
     # print(f"{'='*80}\n")
     
-    # Combined docs are now only MioBooks (File with type='proprietary_blocks')
+    # Combined docs are now only  (File with type='proprietary_blocks')
     combined_docs = books
     
     # Regular notes are all File objects with type='proprietary_note'
@@ -2296,7 +2296,7 @@ def batch_paste_route():
                         else:
                             failed_items.append(f"board {item_id}")
                     elif item_type in ['file', 'proprietary_blocks', 'proprietary_infinite_whiteboard', 'proprietary_graph', 'timeline', 'markdown', 'todo', 'diagram', 'table', 'blocks', 'code', 'pdf']:
-                        # Handle both generic 'file' type and specific 'book' type (MioBooks are Files with type='proprietary_blocks')
+                        # Handle both generic 'file' type and specific 'book' type ( are Files with type='proprietary_blocks')
                         file_obj = File.query.get(item_id)
                         if file_obj and file_obj.owner_id == current_user.id:
                             file_obj.folder_id = target_folder_id

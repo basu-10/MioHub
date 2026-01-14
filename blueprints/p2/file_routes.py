@@ -505,7 +505,7 @@ def view_file(file_id):
         add_notification(current_user.id, "You don't have permission to view this file", 'error')
         return redirect(url_for('folders.view_folder'))
     
-    # MioBooks use the combined print view template
+    #  use the combined print view template
     if file_obj.type == 'proprietary_blocks':
         return redirect(url_for('combined.print_view', document_id=file_obj.id))
     
@@ -525,7 +525,7 @@ def public_file(file_id):
         # No notification for anonymous users viewing public files
         return redirect(url_for('core.index'))
     
-    # MioBooks (type='proprietary_blocks') need special handling for public view
+    #  (type='proprietary_blocks') need special handling for public view
     if file_obj.type == 'proprietary_blocks':
         # Render combined print view with public context
         content_blocks = file_obj.content_json if file_obj.content_json else []
