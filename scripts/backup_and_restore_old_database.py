@@ -9,6 +9,10 @@ import mysql.connector
 import json
 import csv
 import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 import config
 from datetime import datetime
 from pathlib import Path

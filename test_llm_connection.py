@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Test LLM connection with current provider configuration."""
 
+import os
 import sys
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from providers import LLMClient
 import config
 

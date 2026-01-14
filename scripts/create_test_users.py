@@ -7,6 +7,9 @@ import os
 # Add parent directory to path so we can import from blueprints
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from blueprints.p2.models import db, User, File, Folder  
 from werkzeug.security import generate_password_hash

@@ -1,6 +1,11 @@
 """
 Force regenerate thumbnail for board 23
 """
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 from blueprints.p2.models import File

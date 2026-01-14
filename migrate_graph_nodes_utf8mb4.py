@@ -5,6 +5,11 @@ The title and summary columns need to use utf8mb4 charset to properly store 4-by
 like emoji (e.g., 🦞) that may be copied from web content.
 """
 
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 from sqlalchemy import text

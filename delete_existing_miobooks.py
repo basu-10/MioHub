@@ -3,6 +3,11 @@ Delete all existing MioBook documents (proprietary_blocks type files)
 since we're moving to v2.0 with annotation support and no backward compatibility needed
 """
 
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 from blueprints.p2.models import File

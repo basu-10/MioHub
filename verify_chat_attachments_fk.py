@@ -1,4 +1,9 @@
 """Quick verification of foreign key constraints"""
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 import config

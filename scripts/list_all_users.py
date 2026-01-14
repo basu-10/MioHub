@@ -2,6 +2,11 @@
 Script to list all users in the database with their details.
 """
 
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 from blueprints.p2.models import User

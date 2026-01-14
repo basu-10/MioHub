@@ -1,6 +1,11 @@
 """
 Regenerate thumbnail for board 14 (has path but file might not exist)
 """
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 from blueprints.p2.models import File

@@ -4,6 +4,11 @@ Migration: Add source_url column to files table for Chrome extension URL groupin
 This enables smart grouping of extension saves by source URL, reducing file proliferation.
 """
 
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 from sqlalchemy import text, inspect

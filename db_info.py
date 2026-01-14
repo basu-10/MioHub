@@ -1,5 +1,9 @@
 import mysql.connector
 import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 import config
 
 DB_HOST = config.DB_HOST

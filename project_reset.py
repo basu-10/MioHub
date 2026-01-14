@@ -10,12 +10,16 @@ Notes:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence
 
 from flask import Flask
 from sqlalchemy import inspect, text
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
 
 import config
 

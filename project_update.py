@@ -15,6 +15,11 @@ Invariants enforced:
 This script does NOT drop tables/columns.
 """
 
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 import config
 import logging
 from sqlalchemy import inspect, text

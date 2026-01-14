@@ -3,6 +3,11 @@ Migration: Add chat_attachments table and session_folder_id to chat_sessions
 Run: python migrate_add_chat_attachments.py
 Created: December 30, 2024
 """
+import os
+
+# Set environment file to prod.env before importing config
+os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+
 from flask import Flask
 from extensions import db
 from sqlalchemy import text

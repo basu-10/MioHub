@@ -5,7 +5,7 @@ Flask web application with modular architecture featuring three main products:
 - Product2: MioWord document system (MioWord, MioBoard, and MioWork)
 - Product3: AI chatbot system with Groq integration
 
-Originally deployed on PythonAnywhere, now migrated to Windows local development.
+Originally deployed on PythonAnywhere, now migrated to MX LINUX local development.
 
 ## Quick Start
 
