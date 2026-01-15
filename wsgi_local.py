@@ -20,3 +20,7 @@ config.load_env_file(overwrite=True)
 
 # Import the Flask application
 from flask_app import app as application
+
+#debugging \\
+if __name__ == "__main__":
+    application.run(debug=True)

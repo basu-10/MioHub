@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LaterGram</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --card-bg: linear-gradient(145deg, rgba(18, 21, 22, 0.94), rgba(12, 14, 15, 0.94));
+      --muted-strong: rgba(236, 255, 255, 0.76);
+    }
+
+    body {
+      background: radial-gradient(circle at 10% 20%, rgba(20, 184, 166, 0.08), transparent 25%),
+                  radial-gradient(circle at 90% 10%, rgba(20, 184, 166, 0.05), transparent 20%),
+                  linear-gradient(135deg, #0a0a0b 0%, #111112 100%);
+      color: var(--white);
+      min-height: 100vh;
+      font-family: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.18), rgba(12, 12, 12, 0.9));
+      border: 1px solid rgba(20, 184, 166, 0.25);
+      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45);
+      border-radius: 18px;
+      padding: 2.25rem;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .hero-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 15% 20%, rgba(20, 184, 166, 0.22), transparent 35%),
+                  radial-gradient(circle at 85% 30%, rgba(13, 148, 136, 0.18), transparent 40%);
+      z-index: -1;
+      opacity: 0.7;
+    }
+
+    .stat-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .filter-bar {
+      background: rgba(14, 15, 17, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .clip-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      box-shadow: 0 14px 50px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      cursor: pointer;
+    }
+
+    .clip-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(20, 184, 166, 0.45);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .clip-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: #0f1113;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .clip-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    .badge-soft {
+      background: rgba(20, 184, 166, 0.14);
+      color: var(--accent);
+      border: 1px solid rgba(20, 184, 166, 0.2);
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .preview-text {
+      color: var(--muted-strong);
+      line-height: 1.6;
+      font-size: 0.95rem;
+      overflow: hidden;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.85rem;
+    }
+
+    .action-btn {
+      border-radius: 10px;
+      border: none;
+      padding: 0.65rem 0.95rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: transform 0.12s ease, box-shadow 0.15s ease;
+    }
+
+    .action-btn:hover { transform: translateY(-1px); }
+
+    .btn-accent {
+      background: linear-gradient(135deg, var(--accent), #0d9488);
+      color: #0a0a0b;
+      box-shadow: 0 10px 30px rgba(20, 184, 166, 0.35);
+    }
+
+    .card-menu {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--muted-strong);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dropdown-menu.dropdown-dark {
+      background: #0f1114;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      min-width: 180px;
+      padding: 0.4rem 0;
+    }
+
+    .dropdown-menu.dropdown-dark .dropdown-item {
+      color: var(--muted-strong);
+      font-weight: 600;
+      padding: 0.55rem 0.9rem;
+    }
+
+    .dropdown-menu.dropdown-dark .dropdown-item:hover {
+      background: rgba(20, 184, 166, 0.14);
+      color: var(--white);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted-strong);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .empty-state {
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 2.5rem;
+      background: rgba(12, 14, 15, 0.8);
+      text-align: center;
+      color: var(--muted-strong);
+    }
+
+    /* Mobile-first LaterGram shell */
+    @media (min-width: 769px) {
+      .mobile-shell { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      body { padding-bottom: 90px; }
+      .desktop-shell { display: none !important; }
+      .mobile-shell { display: block; padding: 1.25rem 1.25rem 6.5rem; }
+
+      .mobile-hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        background: rgba(17, 24, 39, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        padding: 1.1rem 1.2rem;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      }
+
+      .mobile-eyebrow { color: var(--accent); letter-spacing: 0.05em; font-weight: 700; font-size: 0.78rem; text-transform: uppercase; }
+      .mobile-title { font-size: 1.55rem; font-weight: 800; margin: 0.1rem 0 0.15rem; letter-spacing: -0.01em; }
+      .mobile-sub { color: var(--muted-strong); margin: 0; font-size: 0.98rem; line-height: 1.4; }
+
+      .mobile-stat {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 12px;
+        background: rgba(20, 184, 166, 0.12);
+        color: var(--accent);
+        font-weight: 700;
+        border: 1px solid rgba(20, 184, 166, 0.25);
+      }
+
+      .mobile-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+        margin: 1rem 0 0.6rem;
+      }
+
+      .tab-btn {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(23, 24, 27, 0.9);
+        color: var(--muted-strong);
+        padding: 0.75rem 0.95rem;
+        border-radius: 12px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .tab-btn.active {
+        background: linear-gradient(135deg, rgba(20, 184, 166, 0.35), rgba(20, 184, 166, 0.18));
+        color: var(--white);
+        border-color: rgba(20, 184, 166, 0.6);
+        box-shadow: 0 14px 30px rgba(20, 184, 166, 0.25);
+      }
+
+      .mobile-section { display: none; }
+      .mobile-section.is-active { display: flex; flex-direction: column; gap: 0.85rem; }
+
+      .mobile-card {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        background: rgba(18, 21, 24, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 0.9rem 0.95rem;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+        position: relative;
+        cursor: pointer;
+      }
+
+      .mobile-card .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.28rem; }
+      .mobile-card .eyebrow { color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.75rem; font-weight: 700; }
+      .mobile-card .title { color: var(--white); font-weight: 800; font-size: 1rem; letter-spacing: -0.01em; line-height: 1.35; }
+      .mobile-card .preview { color: var(--muted-strong); font-size: 0.9rem; line-height: 1.45; }
+      .mobile-card .meta { color: var(--muted); font-size: 0.85rem; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+
+      .mobile-card .thumb {
+        width: 96px;
+        height: 72px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: grid;
+        place-items: center;
+      }
+
+      .mobile-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+      .thumb-fallback { color: var(--muted-strong); font-weight: 800; font-size: 1.25rem; }
+      .mobile-card .card-menu { top: 8px; right: 8px; }
+
+      .pill-inline { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 999px; padding: 0.25rem 0.65rem; font-size: 0.8rem; }
+
+      .mobile-empty {
+        border: 1px dashed rgba(255, 255, 255, 0.15);
+        border-radius: 14px;
+        padding: 1.6rem 1.2rem;
+        background: rgba(16, 17, 19, 0.9);
+        color: var(--muted-strong);
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .mobile-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(11, 12, 13, 0.95);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 0.45rem 0.6rem;
+        z-index: 30;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      .mobile-nav button {
+        background: transparent;
+        color: var(--muted-strong);
+        border: none;
+        padding: 0.45rem 0.4rem;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+
+      .mobile-nav button.active { color: var(--accent); background: rgba(20, 184, 166, 0.12); border: 1px solid rgba(20, 184, 166, 0.35); }
+
+      .mobile-more-sheet {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: rgba(14, 15, 17, 0.98);
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 1.1rem 1rem 1.6rem;
+        transform: translateY(100%);
+        transition: transform 0.2s ease;
+        z-index: 40;
+      }
+
+      .mobile-more-sheet.is-open { transform: translateY(0); }
+      .sheet-handle { width: 46px; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, 0.2); margin: 0 auto 0.9rem; }
+
+      .more-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.9rem 0.6rem;
+        color: var(--muted-strong);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .more-link:last-child { border-bottom: none; }
+      .more-link .label { display: flex; align-items: center; gap: 0.65rem; }
+
+      .mobile-more-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 35;
+      }
+
+      .mobile-more-backdrop.is-open { opacity: 1; pointer-events: all; }
+    }
+  </style>
+</head>
+<body>
+<div class="container py-5 desktop-shell d-none d-md-block">
+
+
+  <div class="hero-card mb-4">
+    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
+      <div>
+
+        <h1 class="mt-3 mb-2" style="font-weight: 700; font-size: 2.4rem; letter-spacing: -0.02em;">
+          LaterGram — Read Later
+        </h1>
+        <p class="mb-0" style="max-width: 720px; color: var(--muted-strong); font-size: 1.05rem;">
+          A focused, read-later view of everything you've saved through the MioHub Chrome extension. Scan highlights, jump back to sources, or open the clip in MioHub with one tap.
+        </p>
+      </div>
+      <div class="d-flex flex-column gap-2">
+<a href="{{ url_for('p5_bp.extension_settings') }}" class="action-btn btn-ghost text-decoration-none justify-content-center">
+          <span class="material-icons" style="font-size: 20px;">settings</span>
+          Extension Management
+        </a>
+
+    <a href="{{ url_for('folders.view_folder', folder_id=folder.id) }}" class="action-btn btn-ghost text-decoration-none justify-content-center">
+          <span class="material-icons" style="font-size: 20px;">settings</span>
+          Open LaterGram Folder
+        </a>
+
+        
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-md-4">
+        <div class="stat-chip d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-uppercase small text-muted">Articles</div>
+            <div class="fw-bold" style="font-size: 1.6rem;">{{ stats.total_articles }}</div>
+          </div>
+          <span class="badge-soft">Saved</span>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="stat-chip d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-uppercase small text-muted">Total Clips</div>
+            <div class="fw-bold" style="font-size: 1.6rem;">{{ stats.total_clips }}</div>
+          </div>
+          <span class="badge-soft">Merged by URL</span>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="stat-chip d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-uppercase small text-muted">Last Updated</div>
+            <div class="fw-bold" style="font-size: 1.1rem;">
+              {% if stats.last_updated %}
+                {{ stats.last_updated.strftime('%b %d, %Y · %H:%M') }}
+              {% else %}
+                Awaiting first save
+              {% endif %}
+            </div>
+          </div>
+          <span class="badge-soft">Fresh</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar mb-4">
+    <div class="row g-3 align-items-center">
+      <div class="col-12 col-md-6">
+        <div class="input-group">
+          <span class="input-group-text bg-transparent border-secondary text-muted">
+            <span class="material-icons" style="font-size: 20px;">search</span>
+          </span>
+          <input type="search" id="searchInput" class="form-control bg-transparent text-white border-secondary" placeholder="Search titles and snippets">
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <select id="domainFilter" class="form-select bg-transparent text-white border-secondary">
+          <option value="all">All sources</option>
+          {% for domain in domains %}
+          <option value="{{ domain|lower }}">{{ domain }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <select id="sortOrder" class="form-select bg-transparent text-white border-secondary">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="clips">Most clips</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  {% if clippings %}
+  <div class="row g-4" id="clippingGrid">
+    {% for clip in clippings %}
+    {% set ts = (clip.last_modified or clip.created_at).timestamp() if clip.last_modified or clip.created_at else 0 %}
+    <div class="col-12 col-md-6 col-lg-4 clip-wrapper"
+         data-domain="{{ clip.domain|lower }}"
+         data-title="{{ clip.title|lower }}"
+         data-text="{{ clip.preview_text|lower }}"
+         data-date="{{ ts }}"
+         data-clips="{{ clip.clip_count }}">
+      <article class="clip-card h-100">
+        {% if clip.preview_image %}
+        <img src="{{ clip.preview_image }}" alt="Preview image" class="clip-image">
+        {% endif %}
+        <div class="clip-body">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="badge-soft">{{ clip.domain }}</span>
+            <span class="pill">{{ clip.clip_count }} clip{{ 's' if clip.clip_count != 1 else '' }}</span>
+            {% if clip.is_public %}<span class="pill" style="color: var(--accent);">Public</span>{% endif %}
+          </div>
+
+          <div>
+            <a href="{{ url_for('notes.edit_note', note_id=clip.id) }}" class="text-decoration-none" style="color: var(--white);">
+              <h4 class="mb-1" style="font-weight: 700; font-size: 1.1rem; line-height: 1.35;">{{ clip.title }}</h4>
+            </a>
+            <div class="meta-row">
+              <span class="pill">⏱️ {{ clip.reading_minutes }} min read</span>
+              {% if clip.last_modified %}
+              <span class="pill">Updated {{ clip.last_modified.strftime('%b %d, %Y') }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if clip.description_entries %}
+          <div class="d-flex flex-wrap gap-2">
+            {% for entry in clip.description_entries %}
+            <span class="pill">{{ entry }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if clip.preview_text %}
+          <div class="preview-text">{{ clip.preview_text }}</div>
+          {% endif %}
+
+          <div class="d-flex flex-wrap gap-2 mt-auto">
+            <a class="action-btn btn-accent text-decoration-none" href="{{ url_for('notes.edit_note', note_id=clip.id) }}">
+              <span class="material-icons" style="font-size: 18px;">launch</span>
+              Open Clip
+            </a>
+            {% if clip.source_url %}
+            <a class="action-btn btn-ghost text-decoration-none" href="{{ clip.source_url }}" target="_blank" rel="noopener">
+              <span class="material-icons" style="font-size: 18px;">open_in_new</span>
+              Source
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <h3 class="fw-bold mb-2">No clippings yet</h3>
+    <p class="mb-3">Save from any webpage using the Chrome extension and your clips will appear here automatically.</p>
+    <div class="d-flex justify-content-center gap-2 flex-wrap">
+      <a href="{{ url_for('p5_bp.download_chrome_extension') }}" class="action-btn btn-accent text-decoration-none">
+        <span class="material-icons" style="font-size: 18px;">download</span>
+        Get the extension
+      </a>
+      <a href="{{ url_for('p5_bp.extension_settings') }}" class="action-btn btn-ghost text-decoration-none">
+        <span class="material-icons" style="font-size: 18px;">settings</span>
+        Configure access
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Mobile: LaterGram layout -->
+<div class="mobile-shell d-md-none">
+  <div class="mobile-hero">
+    <div>
+      <div class="mobile-eyebrow">LaterGram</div>
+      <div class="mobile-title">Home</div>
+      <p class="mobile-sub">Your saved reads plus what the community shares.</p>
+    </div>
+    <div class="mobile-stat">
+      <span class="material-icons" style="font-size: 18px;">bookmark</span>
+      {{ stats.total_articles }} saves
+    </div>
+  </div>
+
+  <div class="mobile-tabs">
+    <button class="tab-btn active" data-tab="saves">Saves</button>
+    <button class="tab-btn" data-tab="explore">Explore</button>
+  </div>
+
+  <div class="mobile-section is-active" id="mobileSaves">
+    {% if clippings %}
+      {% for clip in clippings %}
+      <article class="mobile-card">
+        <div class="text">
+          <div class="eyebrow">{{ clip.domain }}</div>
+          <div class="title">{{ clip.title }}</div>
+          <div class="meta">
+            <span>{{ clip.reading_minutes }} min read</span>
+            {% if clip.last_modified %}<span>{{ clip.last_modified.strftime('%b %d') }}</span>{% endif %}
+            {% if clip.is_public %}<span class="pill-inline" style="color: var(--accent);">Public</span>{% endif %}
+          </div>
+          {% if clip.preview_text %}<div class="preview">{{ clip.preview_text }}</div>{% endif %}
+        </div>
+        <div class="thumb">
+          {% if clip.preview_image %}
+          <img src="{{ clip.preview_image }}" alt="Preview image">
+          {% else %}
+          <span class="thumb-fallback">{{ (clip.domain or 'M')[:1]|upper }}</span>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    {% else %}
+    <div class="mobile-empty">No saves yet. Capture anything from Chrome and it shows up here.</div>
+    {% endif %}
+  </div>
+
+  <div class="mobile-section" id="mobileExplore">
+    {% if explore_clippings %}
+      {% for clip in explore_clippings %}
+      <article class="mobile-card">
+        <div class="text">
+          <div class="eyebrow">{{ clip.domain }}</div>
+          <div class="title">{{ clip.title }}</div>
+          <div class="meta">
+            <span>{{ clip.reading_minutes }} min read</span>
+            {% if clip.owner_id == current_user.id %}<span class="pill-inline">Yours</span>{% else %}<span class="pill-inline">Community</span>{% endif %}
+          </div>
+          {% if clip.preview_text %}<div class="preview">{{ clip.preview_text }}</div>{% endif %}
+        </div>
+        <div class="thumb">
+          {% if clip.preview_image %}
+          <img src="{{ clip.preview_image }}" alt="Preview image">
+          {% else %}
+          <span class="thumb-fallback">{{ (clip.domain or 'M')[:1]|upper }}</span>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    {% else %}
+    <div class="mobile-empty">Explore feed will appear once users share public clips.</div>
+    {% endif %}
+  </div>
+
+  <div class="mobile-more-backdrop" id="mobileMoreBackdrop"></div>
+  <div class="mobile-more-sheet" id="mobileMoreSheet">
+    <div class="sheet-handle"></div>
+    <a class="more-link" href="{{ url_for('p5_bp.extension_settings') }}">
+      <span class="label"><span class="material-icons">tune</span> Extension Management</span>
+      <span class="material-icons" style="font-size: 18px;">chevron_right</span>
+    </a>
+    <a class="more-link" href="{{ url_for('folders.view_folder', folder_id=folder.id) }}">
+      <span class="label"><span class="material-icons">folder_open</span> Open LaterGram Folder</span>
+      <span class="material-icons" style="font-size: 18px;">chevron_right</span>
+    </a>
+  </div>
+
+  <nav class="mobile-nav">
+    <button class="active" data-nav="saves">
+      <span class="material-icons">home</span>
+      Saves
+    </button>
+    <button data-nav="explore">
+      <span class="material-icons">travel_explore</span>
+      Explore
+    </button>
+    <button data-nav="more">
+      <span class="material-icons">more_horiz</span>
+      More
+    </button>
+  </nav>
+</div>
+
+<script>
+(function() {
+  const searchInput = document.getElementById('searchInput');
+  const domainFilter = document.getElementById('domainFilter');
+  const sortOrder = document.getElementById('sortOrder');
+  const wrappers = Array.from(document.querySelectorAll('.clip-wrapper'));
+
+  function applyFilters() {
+    const term = (searchInput.value || '').toLowerCase();
+    const domain = domainFilter.value;
+
+    wrappers.forEach(card => {
+      const matchesDomain = domain === 'all' || card.dataset.domain === domain;
+      const textHaystack = `${card.dataset.title} ${card.dataset.text}`;
+      const matchesSearch = term === '' || textHaystack.includes(term);
+      card.style.display = matchesDomain && matchesSearch ? '' : 'none';
+    });
+
+    applySort();
+  }
+
+  function applySort() {
+    const order = sortOrder.value;
+    const grid = document.getElementById('clippingGrid');
+    if (!grid) return;
+
+    const visible = wrappers.filter(card => card.style.display !== 'none');
+
+    visible.sort((a, b) => {
+      if (order === 'clips') {
+        return Number(b.dataset.clips) - Number(a.dataset.clips);
+      }
+      if (order === 'oldest') {
+        return Number(a.dataset.date) - Number(b.dataset.date);
+      }
+      // default: newest first
+      return Number(b.dataset.date) - Number(a.dataset.date);
+    });
+
+    visible.forEach(card => grid.appendChild(card));
+  }
+
+  [searchInput, domainFilter, sortOrder].forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', applyFilters);
+    el.addEventListener('change', applyFilters);
+  });
+})();
+
+(function() {
+  const tabs = Array.from(document.querySelectorAll('.tab-btn'));
+  const sections = {
+    saves: document.getElementById('mobileSaves'),
+    explore: document.getElementById('mobileExplore'),
+  };
+  const navButtons = Array.from(document.querySelectorAll('.mobile-nav [data-nav]'));
+  const moreSheet = document.getElementById('mobileMoreSheet');
+  const moreBackdrop = document.getElementById('mobileMoreBackdrop');
+
+  function setActive(tab) {
+    Object.entries(sections).forEach(([key, el]) => {
+      if (!el) return;
+      el.classList.toggle('is-active', key === tab);
+    });
+    tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+    navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.nav === tab));
+    closeMore();
+  }
+
+  function closeMore() {
+    if (moreSheet) moreSheet.classList.remove('is-open');
+    if (moreBackdrop) moreBackdrop.classList.remove('is-open');
+  }
+
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => setActive(btn.dataset.tab));
+  });
+
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dest = btn.dataset.nav;
+      if (dest === 'more') {
+        if (moreSheet) moreSheet.classList.add('is-open');
+        if (moreBackdrop) moreBackdrop.classList.add('is-open');
+        navButtons.forEach(nav => nav.classList.toggle('active', nav.dataset.nav === 'more'));
+        return;
+      }
+      setActive(dest);
+    });
+  });
+
+  if (moreBackdrop) {
+    moreBackdrop.addEventListener('click', closeMore);
+  }
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

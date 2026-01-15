@@ -505,7 +505,7 @@ def view_file(file_id):
         add_notification(current_user.id, "You don't have permission to view this file", 'error')
         return redirect(url_for('folders.view_folder'))
     
-    #  use the combined print view template
+    #   use the combined print view template
     if file_obj.type == 'proprietary_blocks':
         return redirect(url_for('combined.print_view', document_id=file_obj.id))
     

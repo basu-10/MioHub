@@ -328,6 +328,16 @@
         <p class="subtitle">
           Connect the MioHub Chrome Extension to seamlessly capture images, text, and URLs from any webpage directly into your workspace.
         </p>
+        <div class="d-flex flex-wrap gap-3 mt-3">
+          <a href="{{ url_for('p5_bp.extension_home') }}" class="btn-professional btn-primary-pro">
+            <i class="material-icons" style="font-size: 20px;">library_books</i>
+            <span>Open Web Clippings</span>
+          </a>
+          <a href="{{ url_for('p5_bp.download_chrome_extension') }}" class="btn-professional btn-secondary-pro">
+            <i class="material-icons" style="font-size: 20px;">download</i>
+            <span>Download Extension</span>
+          </a>
+        </div>
       </div>
 
       <!-- Setup Instructions -->
@@ -353,7 +363,7 @@
             <div class="step-content">
               <strong style="color: var(--white); font-size: 1.05rem;">Install Extension</strong>
               <p style="color: var(--muted); margin: 0.5rem 0;">
-                <a href="{{ url_for('p2_bp.download_chrome_extension') }}" 
+                <a href="{{ url_for('p5_bp.download_chrome_extension') }}" 
                    style="color: var(--accent); text-decoration: none; font-weight: 600;">
                   Download the MioHub Chrome Extension →
                 </a>

@@ -7,7 +7,7 @@ Tests:
 3. Quota delta calculation
 """
 
-from blueprints.p2.extension_api import normalize_url, append_to_html_content
+from blueprints.p5.extension_api import normalize_url, append_to_html_content
 
 def test_url_normalization():
     """Test that URL normalization works correctly."""

@@ -18,9 +18,6 @@ graph_bp = Blueprint('graph', __name__, url_prefix='/graph')
 # Import infinite whiteboard routes to get the blueprint
 from .infinite_whiteboard_routes import infinite_whiteboard_bp
 
-# Import extension API blueprint
-from .extension_api import extension_api_bp
-
 # import all route modules to register their endpoints
 from . import whiteboard_routes
 from . import infinite_whiteboard_routes

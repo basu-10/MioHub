@@ -14,8 +14,7 @@ import bleach
 from bs4 import BeautifulSoup
 import traceback
 import os
-import io
-import zipfile
+
 from values_main import UPLOAD_FOLDER, MAX_IMAGE_SIZE, ALLOWED_EXTENSIONS
 from utilities_main import update_user_data_size, check_guest_limit
 from .utils import (
@@ -25,7 +24,6 @@ from .utils import (
     convert_to_webp,
     parse_description_field,
 )
-
 import config
 
 # Central list of user types supported by the application. Keep in sync with templates.
@@ -57,73 +55,6 @@ def db_retry(func, max_retries=3, delay=1):
 @p2_blueprint.route('/p2_index')
 def p2_index():
     return render_template('p2/index.html')
-
-
-@p2_blueprint.route('/extension-settings')
-@login_required
-def extension_settings():
-    """Chrome Extension settings page for API token management."""
-    from datetime import datetime
-    response = make_response(render_template('p2/extension_settings.html', now=datetime.utcnow()))
-    # Prevent cached HTML from leaking a previous user's token after account switches
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
-
-
-@p2_blueprint.route('/download-chrome-extension')
-@login_required
-def download_chrome_extension():
-    """Generate and download Chrome extension as ZIP file."""
-    try:
-        # Create in-memory ZIP file
-        zip_buffer = io.BytesIO()
-        
-        # Path to chrome_extension folder
-        extension_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'chrome_extension')
-        
-        # Create ZIP with all extension files
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Add manifest.json
-            manifest_path = os.path.join(extension_dir, 'manifest.json')
-            if os.path.exists(manifest_path):
-                zipf.write(manifest_path, 'manifest.json')
-            
-            # Add popup files
-            for popup_file in ['popup.html', 'popup.css', 'popup.js']:
-                file_path = os.path.join(extension_dir, popup_file)
-                if os.path.exists(file_path):
-                    zipf.write(file_path, popup_file)
-            
-            # Add background.js
-            background_path = os.path.join(extension_dir, 'background.js')
-            if os.path.exists(background_path):
-                zipf.write(background_path, 'background.js')
-            
-            # Add icons folder
-            icons_dir = os.path.join(extension_dir, 'icons')
-            if os.path.exists(icons_dir):
-                for icon_file in os.listdir(icons_dir):
-                    icon_path = os.path.join(icons_dir, icon_file)
-                    if os.path.isfile(icon_path):
-                        zipf.write(icon_path, os.path.join('icons', icon_file))
-        
-        # Prepare ZIP for download
-        zip_buffer.seek(0)
-        
-        return send_file(
-            zip_buffer,
-            mimetype='application/zip',
-            as_attachment=True,
-            download_name='miohub-chrome-extension.zip'
-        )
-        
-    except Exception as e:
-        print(f"Error generating extension ZIP: {e}")
-        flash('Failed to download extension. Please try again.', 'error')
-        return redirect(url_for('p2_bp.extension_settings'))
-
 
 
 @p2_blueprint.route('/dashboard')

@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
   {% if combined_docs|length > 0 %}
   <div class="nav-pill" onclick="scrollToSection('combined')">
     <i class="material-icons">article</i>
-    <span>MioBooks ({{ combined_docs|length }})</span>
+    <span>MioBlocks ({{ combined_docs|length }})</span>
   </div>
   {% endif %}
   {% if files_by_type.get('proprietary_infinite_whiteboard') %}
@@ -518,13 +518,13 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 
-<!-- MioBooks Section -->
+<!-- MioBlocks Section -->
 {% if combined_docs|length > 0 %}
 <div class="section-container combined-section" id="combined">
   <div class="section-header combined-header">
     <h3 class="section-title">
       <i class="material-icons">article</i>
-      MioBooks
+      MioBlocks
       <span class="count-badge">{{ combined_docs|length }}</span>
     </h3>
   </div>
