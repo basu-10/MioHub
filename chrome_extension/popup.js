@@ -70,6 +70,24 @@ function setupEventListeners() {
   document.getElementById('save-page-btn').addEventListener('click', () => saveContent('url'));
   document.getElementById('save-selection-btn').addEventListener('click', () => saveContent('text'));
   document.getElementById('save-clean-page-btn').addEventListener('click', () => saveContent('clean-page'));
+  
+  // Save server URL and API token as user types
+  document.getElementById('server-url').addEventListener('input', handleServerUrlInput);
+  document.getElementById('api-token').addEventListener('input', handleApiTokenInput);
+}
+
+// Save server URL when user types
+async function handleServerUrlInput(event) {
+  const value = event.target.value.trim();
+  await chrome.storage.local.set({ serverUrl: value });
+  serverUrl = value;
+}
+
+// Save API token when user types
+async function handleApiTokenInput(event) {
+  const value = event.target.value.trim();
+  await chrome.storage.local.set({ apiToken: value });
+  apiToken = value;
 }
 
 // Handle connect
