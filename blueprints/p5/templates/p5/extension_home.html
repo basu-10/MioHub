@@ -558,7 +558,10 @@
     <div class="col-12 col-md-6 col-lg-4 clip-wrapper"
          data-domain="{{ clip.domain|lower }}"
          data-title="{{ clip.title|lower }}"
+          data-title-raw="{{ clip.title|default('')|e }}"
          data-text="{{ clip.preview_text|lower }}"
+          data-text-raw="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
+          data-tts-text="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
          data-date="{{ ts }}"
          data-clips="{{ clip.clip_count }}">
       <article class="clip-card h-100"
@@ -683,7 +686,10 @@
                data-source-url="{{ clip.source_url }}"
                data-domain="{{ clip.domain|lower }}"
                data-title="{{ clip.title|lower }}"
+               data-title-raw="{{ clip.title|default('')|e }}"
                data-text="{{ clip.preview_text|lower }}"
+               data-text-raw="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
+               data-tts-text="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
                data-date="{{ ts }}"
                data-clips="{{ clip.clip_count }}">
         <div class="card-menu dropdown">
@@ -726,7 +732,12 @@
       {% for clip in explore_clippings %}
       <article class="mobile-card"
                data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
-               data-source-url="{{ clip.source_url }}">
+               data-source-url="{{ clip.source_url }}"
+               data-title="{{ clip.title|lower }}"
+               data-title-raw="{{ clip.title|default('')|e }}"
+               data-text="{{ (clip.preview_text or '')|lower }}"
+               data-text-raw="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
+               data-tts-text="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}">
         <div class="card-menu dropdown">
           <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="material-icons" style="font-size: 20px;">more_vert</span>
@@ -953,6 +964,146 @@
 
 // Handle dropdown actions (delete, TTS, make-public, move)
 (function() {
+  const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
+  let activeUtterance = null;
+  let activeNoteId = null;
+  let activeBtn = null;
+  let voices = [];
+
+  // Load voices once and cache; helps Safari/iOS which fires voiceschanged late
+  function loadVoices() {
+    if (!synth) return;
+    const loaded = synth.getVoices();
+    if (loaded && loaded.length) {
+      voices = loaded;
+    }
+  }
+
+  loadVoices();
+  if (synth) {
+    synth.addEventListener('voiceschanged', loadVoices, { once: true });
+  }
+
+  function pickVoice(lang = 'en-US') {
+    if (!voices.length) return null;
+    const exact = voices.find(v => v.lang === lang);
+    if (exact) return exact;
+    const prefix = voices.find(v => v.lang && v.lang.startsWith(lang.split('-')[0]));
+    return prefix || voices[0];
+  }
+
+  function restoreButton() {
+    if (!activeBtn) return;
+    const original = activeBtn.dataset.originalLabel;
+    if (original) activeBtn.textContent = original;
+    activeBtn = null;
+  }
+
+  function resetTtsState() {
+    restoreButton();
+    activeUtterance = null;
+    activeNoteId = null;
+  }
+
+  function setButtonPlaying(btn) {
+    restoreButton();
+    btn.dataset.originalLabel = btn.textContent.trim();
+    btn.textContent = 'Stop TTS';
+    activeBtn = btn;
+  }
+
+  function decodeHtmlEntities(text) {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+
+  function buildTtsText(card) {
+    if (!card) return '';
+    
+    // Try multiple sources, decode HTML entities
+    const titleFromDom = card.querySelector('h4, .title')?.textContent?.trim() || '';
+    let title = card.dataset.titleRaw || titleFromDom || card.dataset.title || '';
+    title = decodeHtmlEntities(title);
+    
+    let preview = card.dataset.ttsText || card.dataset.textRaw || card.dataset.text || '';
+    preview = decodeHtmlEntities(preview);
+    
+    // Combine and sanitize
+    let combined = `${title}. ${preview}`
+      .replace(/\s+/g, ' ')  // collapse whitespace
+      .replace(/&[a-z]+;/gi, ' ')  // remove HTML entities
+      .replace(/[<>{}[\]]/g, '')  // remove problematic chars
+      .trim();
+    
+    // TTS engines often fail on very long text; limit to ~3000 chars
+    const MAX_LENGTH = 3000;
+    if (combined.length > MAX_LENGTH) {
+      combined = combined.substring(0, MAX_LENGTH) + '...';
+    }
+    
+    console.log('TTS text prepared:', combined.substring(0, 100) + '...');
+    return combined;
+  }
+
+  function handleTts(btn, noteId) {
+    if (!synth) {
+      alert('Text-to-speech is not supported in this browser.');
+      return;
+    }
+
+    const card = btn.closest('.clip-card, .mobile-card');
+    const text = buildTtsText(card);
+    
+    if (!text || text.length < 3) {
+      alert('No text available to read for this article.');
+      return;
+    }
+
+    if (activeNoteId === noteId && synth.speaking) {
+      synth.cancel();
+      resetTtsState();
+      return;
+    }
+
+    // Cancel any existing speech
+    synth.cancel();
+    
+    // Simplified approach: just speak the text without voice selection
+    // Wait a bit after cancel to avoid synthesis-failed
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      // Don't set lang, voice, or other properties - use all defaults
+      
+      utterance.onstart = () => {
+        console.log('TTS started successfully');
+        setButtonPlaying(btn);
+      };
+      
+      utterance.onend = () => {
+        console.log('TTS ended normally');
+        resetTtsState();
+      };
+      
+      utterance.onerror = (evt) => {
+        console.error('TTS error:', evt);
+        resetTtsState();
+        alert('Text-to-speech is not available in your browser. This may be due to:\n\n1. Browser restrictions (try Chrome or Edge)\n2. Missing system voices\n3. Browser privacy/security settings\n\nPlease try a different browser or device.');
+      };
+
+      activeUtterance = utterance;
+      activeNoteId = noteId;
+      
+      try {
+        synth.speak(utterance);
+      } catch (err) {
+        console.error('Exception during speak():', err);
+        resetTtsState();
+        alert('Text-to-speech is not available: ' + err.message);
+      }
+    }, 150);
+  }
+
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
@@ -987,7 +1138,8 @@
         alert('Failed to delete article. Please try again.');
       }
     } else if (action === 'tts') {
-      alert('TTS feature coming soon');
+      e.preventDefault();
+      handleTts(btn, noteId);
     } else if (action === 'make-public') {
       alert('Make public feature coming soon');
     } else if (action === 'move') {
