@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <style>
     :root {
       --card-bg: linear-gradient(145deg, rgba(18, 21, 22, 0.94), rgba(12, 14, 15, 0.94));
@@ -61,6 +62,11 @@
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
     }
 
+    .filter-bar select option {
+      background: #0f1114;
+      color: var(--white);
+    }
+
     .clip-card {
       background: var(--card-bg);
       border: 1px solid rgba(255, 255, 255, 0.06);
@@ -87,6 +93,46 @@
       object-fit: cover;
       background: #0f1113;
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .clip-image-fallback {
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      flex-direction: column;
+      gap: 0.4rem;
+      height: 180px;
+      padding: 1rem 1.15rem;
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.24), rgba(12, 12, 12, 0.9));
+      color: var(--muted-strong);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      box-sizing: border-box;
+      border-radius: 14px 14px 0 0;
+    }
+
+    .url-chip-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.65rem;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      color: var(--accent);
+    }
+
+    .url-chip {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-all;
+      font-weight: 700;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      color: var(--muted-strong);
     }
 
     .clip-body {
@@ -202,6 +248,28 @@
       color: var(--muted-strong);
     }
 
+    /* Keep modal above mobile nav/backdrops and ensure it receives clicks */
+    .modal { z-index: 2000; pointer-events: auto; }
+    .modal-backdrop { z-index: 1990; pointer-events: auto; }
+    .modal-dialog { pointer-events: auto; }
+
+    .floating-add {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.4), rgba(20, 184, 166, 0.22));
+      color: #0b0c0d;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+      z-index: 50;
+    }
+
     /* Mobile-first LaterGram shell */
     @media (min-width: 769px) {
       .mobile-shell { display: none; }
@@ -298,6 +366,7 @@
       }
 
       .mobile-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+      .thumb-url { width: 100%; height: 100%; display: grid; place-items: center; padding: 0.35rem; text-align: center; color: var(--muted-strong); font-weight: 700; font-size: 0.85rem; line-height: 1.35; background: rgba(20, 184, 166, 0.12); border-radius: 10px; word-break: break-all; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; display: -webkit-box; }
       .thumb-fallback { color: var(--muted-strong); font-weight: 800; font-size: 1.25rem; }
       .mobile-card .card-menu { top: 8px; right: 8px; }
 
@@ -492,9 +561,27 @@
          data-text="{{ clip.preview_text|lower }}"
          data-date="{{ ts }}"
          data-clips="{{ clip.clip_count }}">
-      <article class="clip-card h-100">
+      <article class="clip-card h-100"
+               data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
+               data-source-url="{{ clip.source_url }}">
+        <div class="card-menu dropdown">
+          <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="material-icons" style="font-size: 20px;">more_vert</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
+            <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+            <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
+            <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
+            <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
+            <li><button class="dropdown-item text-danger" type="button" data-action="delete" data-note-id="{{ clip.id }}">Delete</button></li>
+          </ul>
+        </div>
         {% if clip.preview_image %}
         <img src="{{ clip.preview_image }}" alt="Preview image" class="clip-image">
+        {% else %}
+        <div class="clip-image clip-image-fallback">
+          <span class="url-chip">{{ clip.source_url or 'No source URL available' }}</span>
+        </div>
         {% endif %}
         <div class="clip-body">
           <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -522,23 +609,6 @@
             {% endfor %}
           </div>
           {% endif %}
-
-          {% if clip.preview_text %}
-          <div class="preview-text">{{ clip.preview_text }}</div>
-          {% endif %}
-
-          <div class="d-flex flex-wrap gap-2 mt-auto">
-            <a class="action-btn btn-accent text-decoration-none" href="{{ url_for('notes.edit_note', note_id=clip.id) }}">
-              <span class="material-icons" style="font-size: 18px;">launch</span>
-              Open Clip
-            </a>
-            {% if clip.source_url %}
-            <a class="action-btn btn-ghost text-decoration-none" href="{{ clip.source_url }}" target="_blank" rel="noopener">
-              <span class="material-icons" style="font-size: 18px;">open_in_new</span>
-              Source
-            </a>
-            {% endif %}
-          </div>
         </div>
       </article>
     </div>
@@ -577,14 +647,27 @@
   </div>
 
   <div class="mobile-tabs">
-    <button class="tab-btn active" data-tab="saves">Saves</button>
-    <button class="tab-btn" data-tab="explore">Explore</button>
+
   </div>
 
   <div class="mobile-section is-active" id="mobileSaves">
     {% if clippings %}
       {% for clip in clippings %}
-      <article class="mobile-card">
+      <article class="mobile-card"
+               data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
+               data-source-url="{{ clip.source_url }}">
+        <div class="card-menu dropdown">
+          <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="material-icons" style="font-size: 20px;">more_vert</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
+            <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+            <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
+            <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
+            <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
+            <li><button class="dropdown-item text-danger" type="button" data-action="delete" data-note-id="{{ clip.id }}">Delete</button></li>
+          </ul>
+        </div>
         <div class="text">
           <div class="eyebrow">{{ clip.domain }}</div>
           <div class="title">{{ clip.title }}</div>
@@ -593,13 +676,12 @@
             {% if clip.last_modified %}<span>{{ clip.last_modified.strftime('%b %d') }}</span>{% endif %}
             {% if clip.is_public %}<span class="pill-inline" style="color: var(--accent);">Public</span>{% endif %}
           </div>
-          {% if clip.preview_text %}<div class="preview">{{ clip.preview_text }}</div>{% endif %}
         </div>
         <div class="thumb">
           {% if clip.preview_image %}
           <img src="{{ clip.preview_image }}" alt="Preview image">
           {% else %}
-          <span class="thumb-fallback">{{ (clip.domain or 'M')[:1]|upper }}</span>
+          <div class="thumb-url">{{ clip.source_url or (clip.domain or 'No source URL') }}</div>
           {% endif %}
         </div>
       </article>
@@ -612,7 +694,21 @@
   <div class="mobile-section" id="mobileExplore">
     {% if explore_clippings %}
       {% for clip in explore_clippings %}
-      <article class="mobile-card">
+      <article class="mobile-card"
+               data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
+               data-source-url="{{ clip.source_url }}">
+        <div class="card-menu dropdown">
+          <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="material-icons" style="font-size: 20px;">more_vert</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
+            <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+            <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
+            <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
+            <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
+            <li><button class="dropdown-item text-danger" type="button" data-action="delete" data-note-id="{{ clip.id }}">Delete</button></li>
+          </ul>
+        </div>
         <div class="text">
           <div class="eyebrow">{{ clip.domain }}</div>
           <div class="title">{{ clip.title }}</div>
@@ -620,13 +716,12 @@
             <span>{{ clip.reading_minutes }} min read</span>
             {% if clip.owner_id == current_user.id %}<span class="pill-inline">Yours</span>{% else %}<span class="pill-inline">Community</span>{% endif %}
           </div>
-          {% if clip.preview_text %}<div class="preview">{{ clip.preview_text }}</div>{% endif %}
         </div>
         <div class="thumb">
           {% if clip.preview_image %}
           <img src="{{ clip.preview_image }}" alt="Preview image">
           {% else %}
-          <span class="thumb-fallback">{{ (clip.domain or 'M')[:1]|upper }}</span>
+          <div class="thumb-url">{{ clip.source_url or (clip.domain or 'No source URL') }}</div>
           {% endif %}
         </div>
       </article>
@@ -639,6 +734,10 @@
   <div class="mobile-more-backdrop" id="mobileMoreBackdrop"></div>
   <div class="mobile-more-sheet" id="mobileMoreSheet">
     <div class="sheet-handle"></div>
+    <a class="more-link" href="#" id="mobileAddTrigger">
+      <span class="label"><span class="material-icons">add_circle</span> Save clean page</span>
+      <span class="material-icons" style="font-size: 18px;">chevron_right</span>
+    </a>
     <a class="more-link" href="{{ url_for('p5_bp.extension_settings') }}">
       <span class="label"><span class="material-icons">tune</span> Extension Management</span>
       <span class="material-icons" style="font-size: 18px;">chevron_right</span>
@@ -665,6 +764,50 @@
   </nav>
 </div>
 
+<button class="floating-add d-none d-md-inline-flex" id="desktopAddTrigger" aria-label="Save clean page" type="button">
+  <span class="material-icons" style="font-size: 26px;">add</span>
+</button>
+
+<div class="modal fade" id="cleanSaveModal" tabindex="-1" aria-labelledby="cleanSaveLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: #0f1114; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+      <div class="modal-header" style="border-bottom-color: rgba(255,255,255,0.08);">
+        <h5 class="modal-title" id="cleanSaveLabel">Save clean page</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+          <form id="cleanSaveForm"
+            class="d-flex flex-column gap-3"
+            hx-post="{{ url_for('p5_bp.save_clean_page_from_modal') }}"
+            hx-target="#clippingGrid"
+            hx-swap="afterbegin"
+            hx-trigger="submit"
+            hx-on="submit: bootstrap.Modal.getInstance(document.getElementById('cleanSaveModal'))?.hide(); htmx.find('#cleanSaveStatus').textContent='Saving…';">
+          <div>
+            <label for="cleanUrl" class="form-label">Page URL</label>
+            <input type="url" class="form-control" id="cleanUrl" name="url" placeholder="https://example.com/article" required>
+          </div>
+          <div>
+            <label for="cleanTitle" class="form-label">Optional title</label>
+            <input type="text" class="form-control" id="cleanTitle" name="title" placeholder="Use page title if left blank">
+          </div>
+          <div class="text-muted" style="font-size: 0.9rem;">
+            <strong>Note:</strong> This uses r.jina.ai to fetch clean content, which may fail for some sites (451/403 errors).
+            For better reliability, use the Chrome extension's "Save Clean Page" which fetches content directly from your browser.
+          </div>
+          <div id="cleanSaveStatus" class="small text-muted"></div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="cleanSaveSubmit">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 (function() {
   const searchInput = document.getElementById('searchInput');
@@ -673,8 +816,8 @@
   const wrappers = Array.from(document.querySelectorAll('.clip-wrapper'));
 
   function applyFilters() {
-    const term = (searchInput.value || '').toLowerCase();
-    const domain = domainFilter.value;
+    const term = (searchInput?.value || '').toLowerCase();
+    const domain = domainFilter?.value || 'all';
 
     wrappers.forEach(card => {
       const matchesDomain = domain === 'all' || card.dataset.domain === domain;
@@ -687,7 +830,7 @@
   }
 
   function applySort() {
-    const order = sortOrder.value;
+    const order = sortOrder?.value || 'newest';
     const grid = document.getElementById('clippingGrid');
     if (!grid) return;
 
@@ -712,6 +855,67 @@
     el.addEventListener('input', applyFilters);
     el.addEventListener('change', applyFilters);
   });
+
+  // Whole-card click opens the clip
+  function wireCardClicks(selector) {
+    document.querySelectorAll(selector).forEach(card => {
+      const openUrl = card.dataset.openUrl;
+      if (!openUrl) return;
+      card.addEventListener('click', (e) => {
+        // Ignore clicks on dropdown buttons/menus
+        if (e.target.closest('.card-menu')) return;
+        window.location.href = openUrl;
+      });
+    });
+  }
+
+  wireCardClicks('.clip-card');
+  wireCardClicks('.mobile-card');
+})();
+
+// Handle dropdown actions (delete, TTS, make-public, move)
+(function() {
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const noteId = btn.dataset.noteId;
+
+    if (action === 'delete') {
+      if (!confirm('Delete this article? This cannot be undone.')) return;
+      
+      try {
+        const response = await fetch(`/delete_note/${noteId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          // Remove the card from DOM
+          const card = btn.closest('.clip-wrapper, .mobile-card');
+          if (card) {
+            card.style.transition = 'opacity 0.3s ease';
+            card.style.opacity = '0';
+            setTimeout(() => card.remove(), 300);
+          }
+        } else {
+          alert('Failed to delete article. Please try again.');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete article. Please try again.');
+      }
+    } else if (action === 'tts') {
+      alert('TTS feature coming soon');
+    } else if (action === 'make-public') {
+      alert('Make public feature coming soon');
+    } else if (action === 'move') {
+      alert('Move to folder feature coming soon');
+    }
+  });
 })();
 
 (function() {
@@ -723,6 +927,7 @@
   const navButtons = Array.from(document.querySelectorAll('.mobile-nav [data-nav]'));
   const moreSheet = document.getElementById('mobileMoreSheet');
   const moreBackdrop = document.getElementById('mobileMoreBackdrop');
+  const cleanSaveEndpoint = "{{ url_for('p5_bp.save_clean_page_from_modal') }}";
 
   function setActive(tab) {
     Object.entries(sections).forEach(([key, el]) => {
@@ -759,8 +964,43 @@
   if (moreBackdrop) {
     moreBackdrop.addEventListener('click', closeMore);
   }
+
+  const cleanSaveModalEl = document.getElementById('cleanSaveModal');
+  const cleanSaveForm = document.getElementById('cleanSaveForm');
+  const cleanSaveStatus = document.getElementById('cleanSaveStatus');
+  const cleanSaveSubmit = document.getElementById('cleanSaveSubmit');
+  const cleanModal = cleanSaveModalEl ? new bootstrap.Modal(cleanSaveModalEl) : null;
+  const desktopAddTrigger = document.getElementById('desktopAddTrigger');
+  const mobileAddTrigger = document.getElementById('mobileAddTrigger');
+
+  function openCleanModal() {
+    if (cleanSaveStatus) cleanSaveStatus.textContent = '';
+    cleanSaveForm?.reset();
+    if (cleanModal) cleanModal.show();
+  }
+
+  [desktopAddTrigger, mobileAddTrigger].forEach(btn => {
+    if (!btn) return;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeMore();
+      openCleanModal();
+    });
+  });
+
+  // htmx hooks handle submission; on error show message
+  if (cleanSaveForm) {
+    cleanSaveForm.addEventListener('htmx:responseError', (e) => {
+      if (cleanSaveStatus) {
+        cleanSaveStatus.textContent = e.detail.xhr?.responseText || 'Failed to save page';
+      }
+    });
+
+    cleanSaveForm.addEventListener('htmx:afterOnLoad', () => {
+      if (cleanSaveStatus) cleanSaveStatus.textContent = '';
+    });
+  }
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

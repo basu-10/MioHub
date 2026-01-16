@@ -208,9 +208,12 @@ def normalize_description_entries(raw_value):
     return [str(parsed).strip()]
 
 
-def build_extension_description_entries(source_url: str) -> list:
+def build_extension_description_entries(source_url: str, save_source: str = 'extension') -> list:
     """Return the default description entries for Chrome extension saves."""
-    entries = ['Saved from Chrome extension']
+    if save_source == 'web':
+        entries = ['Saved from web']
+    else:
+        entries = ['Saved from Chrome extension']
     url_text = (source_url or '').strip()
     if url_text:
         entries.append(url_text)

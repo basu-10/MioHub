@@ -1,0 +1,95 @@
+{% set ts = (clip.last_modified or clip.created_at).timestamp() if clip.last_modified or clip.created_at else 0 %}
+
+<div class="col-12 col-md-6 col-lg-4 clip-wrapper"
+     data-domain="{{ clip.domain|lower }}"
+     data-title="{{ clip.title|lower }}"
+     data-text="{{ clip.preview_text|lower }}"
+     data-date="{{ ts }}"
+     data-clips="{{ clip.clip_count }}">
+  <article class="clip-card h-100"
+           data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
+           data-source-url="{{ clip.source_url }}">
+    <div class="card-menu dropdown">
+      <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="material-icons" style="font-size: 20px;">more_vert</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
+        <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+        <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
+        <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
+        <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
+        <li><button class="dropdown-item text-danger" type="button" data-action="delete" data-note-id="{{ clip.id }}">Delete</button></li>
+      </ul>
+    </div>
+    {% if clip.preview_image %}
+    <img src="{{ clip.preview_image }}" alt="Preview image" class="clip-image">
+    {% endif %}
+    <div class="clip-body">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="badge-soft">{{ clip.domain }}</span>
+        <span class="pill">{{ clip.clip_count }} clip{{ 's' if clip.clip_count != 1 else '' }}</span>
+        {% if clip.is_public %}<span class="pill" style="color: var(--accent);">Public</span>{% endif %}
+      </div>
+
+      <div>
+        <a href="{{ url_for('notes.edit_note', note_id=clip.id) }}" class="text-decoration-none" style="color: var(--white);">
+          <h4 class="mb-1" style="font-weight: 700; font-size: 1.1rem; line-height: 1.35;">{{ clip.title }}</h4>
+        </a>
+        <div class="meta-row">
+          <span class="pill">⏱️ {{ clip.reading_minutes }} min read</span>
+          {% if clip.last_modified %}
+          <span class="pill">Updated {{ clip.last_modified.strftime('%b %d, %Y') }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if clip.description_entries %}
+      <div class="d-flex flex-wrap gap-2">
+        {% for entry in clip.description_entries %}
+        <span class="pill">{{ entry }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if clip.preview_text %}
+      <div class="preview-text">{{ clip.preview_text }}</div>
+      {% endif %}
+    </div>
+  </article>
+</div>
+
+<div hx-swap-oob="afterbegin" id="mobileSaves">
+  <article class="mobile-card"
+           data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
+           data-source-url="{{ clip.source_url }}">
+    <div class="card-menu dropdown">
+      <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="material-icons" style="font-size: 20px;">more_vert</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
+        <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+        <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
+        <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
+        <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
+        <li><button class="dropdown-item text-danger" type="button" data-action="delete" data-note-id="{{ clip.id }}">Delete</button></li>
+      </ul>
+    </div>
+    <div class="text">
+      <div class="eyebrow">{{ clip.domain }}</div>
+      <div class="title">{{ clip.title }}</div>
+      <div class="meta">
+        <span>{{ clip.reading_minutes }} min read</span>
+        {% if clip.last_modified %}<span>{{ clip.last_modified.strftime('%b %d') }}</span>{% endif %}
+        {% if clip.is_public %}<span class="pill-inline" style="color: var(--accent);">Public</span>{% endif %}
+      </div>
+      {% if clip.preview_text %}<div class="preview">{{ clip.preview_text }}</div>{% endif %}
+    </div>
+    <div class="thumb">
+      {% if clip.preview_image %}
+      <img src="{{ clip.preview_image }}" alt="Preview image">
+      {% else %}
+      <span class="thumb-fallback">{{ (clip.domain or 'M')[:1]|upper }}</span>
+      {% endif %}
+    </div>
+  </article>
+</div>
