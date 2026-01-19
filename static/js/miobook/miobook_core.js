@@ -170,13 +170,15 @@ class MioBookCore {
             mainBlock.order = i;
             mainBlock.splitRatio = parseInt(blockRow.dataset.splitRatio, 10) || 50;
             mainBlock.heightMode = blockRow.dataset.heightMode || 'fixed';
+            mainBlock.collapsed = blockEl.dataset.collapsed === 'true';
 
             const annotations = [];
             const annotationItems = blockRow.querySelectorAll('.annotation-column .block-item');
             annotationItems.forEach((annotationEl, idx) => {
                 annotations.push({
                     ...this.extractBlockShell(annotationEl),
-                    order: idx
+                    order: idx,
+                    collapsed: annotationEl.dataset.collapsed === 'true'
                 });
             });
 
@@ -386,6 +388,9 @@ class MioBookCore {
         const title = blockData.title || '';
         const contentAttr = this.serializeContent(blockData.content);
         const language = blockData.metadata?.language || 'python';
+        const isCollapsed = blockData.collapsed === true;
+        const collapsedClass = isCollapsed ? ' collapsed' : '';
+        const collapsedAttr = isCollapsed ? ' data-collapsed="true"' : ' data-collapsed="false"';
 
         const renderControls = () => {
             if (containerType === 'main') {
@@ -488,11 +493,14 @@ class MioBookCore {
         }
 
         return `
-            <div class="block-item" data-type="${blockData.type}" data-block-id="${blockId}" data-container="${containerType}"${parentId ? ` data-parent-id="${parentId}"` : ''}>
+            <div class="block-item${collapsedClass}" data-type="${blockData.type}" data-block-id="${blockId}" data-container="${containerType}"${collapsedAttr}${parentId ? ` data-parent-id="${parentId}"` : ''}>
                 <div class="block-header">
                     <div class="drag-handle" title="Drag to reorder">
                         <i class="fas fa-grip-vertical"></i>
                     </div>
+                    <button type="button" class="control-btn collapse-btn" onclick="toggleBlockCollapse(this)" title="${isCollapsed ? 'Expand block' : 'Collapse block'}">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="flex items-center gap-2">
                         <i class="fas ${icon} ${color}"></i>
                         <span class="block-type-label">${label}</span>
@@ -1141,6 +1149,17 @@ class MioBookCore {
             blockRow.classList.add('dynamic-height');
         } else {
             blockRow.classList.remove('dynamic-height');
+        }
+
+        // Resize code editor when toggling height mode
+        const mainBlock = blockRow.querySelector('.block-item[data-container="main"]');
+        const blockType = mainBlock?.dataset?.type;
+        if (blockType === 'code') {
+            if (newMode === 'dynamic') {
+                window.CodeHandler?.resizeEditorToContent?.(mainBlock);
+            } else {
+                window.CodeHandler?.resetEditorHeight?.(mainBlock);
+            }
         }
 
         // Update button icon and title

@@ -399,6 +399,12 @@
             box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
         }
         
+        /* Allow block-item to expand in dynamic height mode */
+        .block-row.dynamic-height .block-item {
+            height: auto;
+            min-height: 200px;
+        }
+        
         .block-item .block-header {
             border-bottom: 1px solid #1f2a35;
         }
@@ -501,6 +507,37 @@
         .block-item:focus-within .hover-reveal {
             opacity: 1;
             pointer-events: auto;
+        }
+        
+        /* Collapsed Block Styles */
+        .block-item.collapsed .block-content,
+        .block-item.collapsed .block-header .language-selector,
+        .annotation-block.collapsed .annotation-content {
+            display: none;
+        }
+        
+        .block-item.collapsed,
+        .annotation-block.collapsed {
+            min-height: auto;
+            height: auto;
+        }
+        
+        .block-row.collapsed {
+            min-height: auto;
+            max-height: none;
+        }
+        
+        .block-item.collapsed .block-header {
+            border-bottom: none;
+        }
+        
+        .collapse-btn {
+            transition: transform 0.2s ease;
+        }
+        
+        .block-item.collapsed .collapse-btn i,
+        .annotation-block.collapsed .collapse-btn i {
+            transform: rotate(-90deg);
         }
         
         /* Overflow Menu */
@@ -640,6 +677,12 @@
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
+        }
+        
+        /* Allow block-content to expand fully in dynamic height mode */
+        .block-row.dynamic-height .block-content {
+            overflow-y: visible;
+            flex: 1 1 auto;
         }
 
         /* Konva toolbar buttons */
@@ -892,6 +935,54 @@
             height: 100%;
             flex: 1;
         }
+
+        /* Dynamic height mode for markdown/code blocks */
+        .block-row.dynamic-height .markdown-editor-wrapper,
+        .block-row.dynamic-height .code-editor-wrapper {
+            height: auto !important;
+            min-height: 400px !important;
+            max-height: none !important;
+            flex: 1 1 auto;
+            overflow: visible !important;
+        }
+
+        /* Toast UI Editor - make all container elements expand properly */
+        .block-row.dynamic-height .markdown-editor-wrapper .toastui-editor-defaultUI {
+            height: auto !important;
+            min-height: 400px !important;
+            max-height: none !important;
+        }
+
+        .block-row.dynamic-height .markdown-editor-wrapper .toastui-editor-defaultUI .toastui-editor-main-container {
+            height: auto !important;
+            min-height: 400px !important;
+            max-height: none !important;
+        }
+
+        .block-row.dynamic-height .markdown-editor-wrapper .toastui-editor-defaultUI .toastui-editor-ww-container,
+        .block-row.dynamic-height .markdown-editor-wrapper .toastui-editor-defaultUI .toastui-editor-md-container {
+            height: auto !important;
+            min-height: 400px !important;
+            max-height: none !important;
+        }
+
+        /* Toast UI Editor content areas - ensure they expand with content */
+        .block-row.dynamic-height .markdown-editor-wrapper .toastui-editor-defaultUI .ProseMirror,
+        .block-row.dynamic-height .markdown-editor-wrapper .toastui-editor-defaultUI .toastui-editor-md-preview,
+        .block-row.dynamic-height .markdown-editor-wrapper .toastui-editor-defaultUI .toastui-editor-contents {
+            height: auto !important;
+            min-height: 200px !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+        }
+
+        /* Monaco Editor - needs explicit height in dynamic mode */
+        .block-row.dynamic-height .code-editor-wrapper .monaco-editor,
+        .block-row.dynamic-height .code-editor-wrapper .monaco-editor .overflow-guard {
+            height: auto !important;
+            min-height: 400px !important;
+            max-height: none !important;
+        }
         
         /* Toast UI Editor Dark Theme Override */
         .toastui-editor-defaultUI {
@@ -995,6 +1086,133 @@
         .block-type-option i {
             width: 20px;
             text-align: center;
+        }
+        
+        .block-type-option .shortcut-hint {
+            margin-left: auto;
+            font-size: 10px;
+            color: #5f646f;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 3px;
+        }
+        
+        .block-type-option.highlighted {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+        }
+        
+        /* Slash Command Menu */
+        .slash-command-menu {
+            position: fixed;
+            background: #1a1b1f;
+            border: 1px solid #14b8a6;
+            border-radius: 10px;
+            padding: 6px;
+            min-width: 280px;
+            max-width: 320px;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(20, 184, 166, 0.2);
+            z-index: 3000;
+            display: none;
+            overflow: hidden;
+        }
+        
+        .slash-command-menu.active {
+            display: block;
+            animation: slideInUp 0.15s ease-out;
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .slash-command-search {
+            width: 100%;
+            background: #0d0e10;
+            border: 1px solid #2a2c31;
+            color: #e1e3e5;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        
+        .slash-command-search:focus {
+            outline: none;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+        }
+        
+        .slash-command-search::placeholder {
+            color: #5f646f;
+        }
+        
+        .slash-command-options {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        
+        .slash-command-options::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .slash-command-options::-webkit-scrollbar-thumb {
+            background: #14b8a6;
+            border-radius: 999px;
+        }
+        
+        .slash-command-header {
+            font-size: 11px;
+            color: #7a7f8a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px 4px;
+            font-weight: 600;
+        }
+        
+        .slash-position-toggle {
+            display: flex;
+            gap: 4px;
+            padding: 6px;
+            background: #0d0e10;
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+        
+        .slash-position-btn {
+            flex: 1;
+            background: transparent;
+            border: 1px solid #2a2c31;
+            color: #7a7f8a;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .slash-position-btn:hover {
+            background: rgba(20, 184, 166, 0.1);
+            border-color: #14b8a6;
+            color: #14b8a6;
+        }
+        
+        .slash-position-btn.active {
+            background: rgba(20, 184, 166, 0.15);
+            border-color: #14b8a6;
+            color: #14b8a6;
+            font-weight: 600;
         }
         
         /* Sortable Ghost */
@@ -1204,6 +1422,61 @@
         body.reading-mode .block-content,
         body.reading-mode .annotation-content {
             padding: 12px 0;
+        }
+        
+        /* Hide markdown editor toolbar and make background transparent */
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-toolbar,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-mode-switch,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-tabs {
+            display: none !important;
+        }
+        
+        body.reading-mode .toastui-editor-defaultUI,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-main-container,
+        body.reading-mode .toastui-editor-defaultUI .ProseMirror,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-ww-container,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-md-container {
+            background: transparent !important;
+            border: none !important;
+        }
+        
+        body.reading-mode .toastui-editor-defaultUI .ProseMirror {
+            pointer-events: none;
+        }
+        
+        /* Expand markdown editor to full content height in reading mode */
+        body.reading-mode .markdown-editor-wrapper,
+        body.reading-mode .toastui-editor-defaultUI,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-main-container,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-ww-container,
+        body.reading-mode .toastui-editor-defaultUI .toastui-editor-md-container,
+        body.reading-mode .toastui-editor-defaultUI .ProseMirror {
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        
+        body.reading-mode .markdown-editor {
+            height: auto !important;
+            min-height: auto !important;
+        }
+        
+        /* Make Monaco/Code editor transparent and hide chrome */
+        body.reading-mode .monaco-editor,
+        body.reading-mode .monaco-editor .margin,
+        body.reading-mode .monaco-editor-background,
+        body.reading-mode .monaco-editor .inputarea.ime-input {
+            background: transparent !important;
+        }
+        
+        body.reading-mode .language-selector {
+            display: none !important;
+        }
+        
+        body.reading-mode .monaco-editor .view-lines,
+        body.reading-mode .monaco-editor .view-line {
+            pointer-events: none;
         }
         
         /* Reading mode overlay hint */
@@ -1485,6 +1758,33 @@
             isReadingMode = !isReadingMode;
             document.body.classList.toggle('reading-mode', isReadingMode);
             
+            // Handle block height modes
+            const blockRows = document.querySelectorAll('.block-row');
+            blockRows.forEach(blockRow => {
+                if (isReadingMode) {
+                    // Save original height mode before changing
+                    const currentMode = blockRow.dataset.heightMode || 'fixed';
+                    blockRow.dataset.originalHeightMode = currentMode;
+                    
+                    // Switch to dynamic height for reading
+                    blockRow.dataset.heightMode = 'dynamic';
+                    blockRow.classList.add('dynamic-height');
+                } else {
+                    // Restore original height mode
+                    const originalMode = blockRow.dataset.originalHeightMode || 'fixed';
+                    blockRow.dataset.heightMode = originalMode;
+                    
+                    if (originalMode === 'dynamic') {
+                        blockRow.classList.add('dynamic-height');
+                    } else {
+                        blockRow.classList.remove('dynamic-height');
+                    }
+                    
+                    // Clean up temporary attribute
+                    delete blockRow.dataset.originalHeightMode;
+                }
+            });
+            
             // Update button text
             const toggleBtn = document.querySelector('.reading-mode-toggle span:not(.shortcut-hint)');
             const toggleIcon = document.querySelector('.reading-mode-toggle i');
@@ -1568,6 +1868,9 @@
             
             // Set up MutationObserver to auto-initialize newly added blocks
             setupBlockObserver();
+            
+            // Setup slash command detection for Notion-style quick insert
+            setupSlashCommandDetection();
         });
         
         async function initializeExistingBlocks() {
@@ -1715,6 +2018,19 @@
             const type = blockEl.dataset.type;
             blockEl.dataset.mbInit = 'in-progress';
             
+            // Restore collapsed state if it was saved
+            if (blockEl.dataset.collapsed === 'true') {
+                blockEl.classList.add('collapsed');
+                const blockRow = blockEl.closest('.block-row');
+                if (blockRow && blockEl.dataset.container === 'main') {
+                    const annotationColumn = blockRow.querySelector('.annotation-column');
+                    const hasVisibleAnnotations = annotationColumn && !annotationColumn.classList.contains('hidden');
+                    if (!hasVisibleAnnotations) {
+                        blockRow.classList.add('collapsed');
+                    }
+                }
+            }
+            
             console.log(`[MioBook] Initializing new ${type} block`, blockEl.dataset.blockId);
             
             try {
@@ -1847,6 +2163,52 @@
             }
         }
         
+        // Toggle block collapse
+        function toggleBlockCollapse(button) {
+            const blockItem = button.closest('.block-item, .annotation-block');
+            if (!blockItem) return;
+            
+            const isCollapsed = blockItem.classList.toggle('collapsed');
+            
+            // Update icon
+            const icon = button.querySelector('i');
+            if (icon) {
+                // Icon rotation handled by CSS
+                button.title = isCollapsed ? 'Expand block' : 'Collapse block';
+            }
+            
+            // If this is a main block, also collapse the annotation column and the entire row
+            const blockRow = blockItem.closest('.block-row');
+            if (blockRow && blockItem.dataset.container === 'main') {
+                const annotationColumn = blockRow.querySelector('.annotation-column');
+                
+                // Collapse the entire row
+                if (isCollapsed) {
+                    blockRow.classList.add('collapsed');
+                    // Also hide the annotation column when main block is collapsed
+                    if (annotationColumn) {
+                        annotationColumn.style.display = 'none';
+                    }
+                } else {
+                    blockRow.classList.remove('collapsed');
+                    // Restore annotation column visibility based on its hidden state
+                    if (annotationColumn) {
+                        annotationColumn.style.display = annotationColumn.classList.contains('hidden') ? 'none' : '';
+                    }
+                }
+            }
+            
+            // Save collapsed state to block data
+            const blockId = blockItem.dataset.blockId;
+            if (blockId && window.MioBook) {
+                // Store in block's data attribute for persistence
+                blockItem.dataset.collapsed = isCollapsed ? 'true' : 'false';
+                window.MioBook.markDirty();
+            }
+            
+            console.log(`[MioBook] Block ${blockId} ${isCollapsed ? 'collapsed' : 'expanded'}`);
+        }
+        
         // Toggle block height mode
         function toggleBlockHeight(button) {
             const blockRow = button.closest('.block-row');
@@ -1855,6 +2217,8 @@
             const currentMode = blockRow.dataset.heightMode || 'fixed';
             const newMode = currentMode === 'fixed' ? 'dynamic' : 'fixed';
             
+            console.log(`[ToggleHeight] Switching from ${currentMode} to ${newMode}`);
+            
             // Update data attribute and CSS class
             blockRow.dataset.heightMode = newMode;
             
@@ -1862,6 +2226,157 @@
                 blockRow.classList.add('dynamic-height');
             } else {
                 blockRow.classList.remove('dynamic-height');
+            }
+
+            // Handle editor-specific resizing based on block type
+            const mainBlock = blockRow.querySelector('.block-item[data-container="main"]');
+            const blockType = mainBlock?.dataset?.type;
+            
+            console.log(`[ToggleHeight] Block type: ${blockType}`);
+            
+            if (blockType === 'code') {
+                // Monaco editor needs explicit resize
+                const codeWrapper = mainBlock.querySelector('.code-editor-wrapper');
+                console.log(`[ToggleHeight] Code wrapper found:`, !!codeWrapper, 'Editor instance:', !!codeWrapper?._monacoEditor);
+                
+                if (codeWrapper) {
+                    setTimeout(() => {
+                        if (newMode === 'dynamic') {
+                            // Set wrapper to auto height
+                            codeWrapper.style.height = 'auto';
+                            codeWrapper.style.minHeight = '400px';
+                            codeWrapper.style.maxHeight = 'none';
+                            
+                            if (codeWrapper._monacoEditor) {
+                                const editor = codeWrapper._monacoEditor;
+                                const model = editor.getModel();
+                                if (model) {
+                                    const lineCount = model.getLineCount();
+                                    const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+                                    const contentHeight = Math.max(400, (lineCount * lineHeight) + 80);
+                                    console.log(`[ToggleHeight] Code - Lines: ${lineCount}, Height: ${contentHeight}px`);
+                                    codeWrapper.style.height = contentHeight + 'px';
+                                }
+                                editor.layout();
+                            }
+                        } else {
+                            // Reset to default fixed height
+                            codeWrapper.style.height = '';
+                            codeWrapper.style.minHeight = '';
+                            codeWrapper.style.maxHeight = '';
+                            
+                            if (codeWrapper._monacoEditor) {
+                                codeWrapper._monacoEditor.layout();
+                            }
+                        }
+                    }, 50);
+                } else if (window.CodeHandler?.resizeEditorToContent) {
+                    // Fallback to CodeHandler if available
+                    if (newMode === 'dynamic') {
+                        window.CodeHandler.resizeEditorToContent(mainBlock);
+                    } else {
+                        window.CodeHandler.resetEditorHeight?.(mainBlock);
+                    }
+                }
+            } else if (blockType === 'markdown') {
+                // Toast UI editor needs refresh to expand properly
+                const markdownWrapper = mainBlock.querySelector('.markdown-editor-wrapper');
+                console.log(`[ToggleHeight] Markdown wrapper found:`, !!markdownWrapper, 'Editor instance:', !!markdownWrapper?._toastEditor);
+                
+                if (markdownWrapper) {
+                    setTimeout(() => {
+                        if (newMode === 'dynamic') {
+                            // Set wrapper to auto height
+                            markdownWrapper.style.height = 'auto';
+                            markdownWrapper.style.minHeight = '400px';
+                            markdownWrapper.style.maxHeight = 'none';
+                            
+                            // Force all Toast UI containers to expand
+                            const editorUI = markdownWrapper.querySelector('.toastui-editor-defaultUI');
+                            if (editorUI) {
+                                editorUI.style.height = 'auto';
+                                editorUI.style.minHeight = '400px';
+                                editorUI.style.maxHeight = 'none';
+                                
+                                const mainContainer = editorUI.querySelector('.toastui-editor-main-container');
+                                if (mainContainer) {
+                                    mainContainer.style.height = 'auto';
+                                    mainContainer.style.minHeight = '400px';
+                                    mainContainer.style.maxHeight = 'none';
+                                }
+                                
+                                const wwContainer = editorUI.querySelector('.toastui-editor-ww-container');
+                                if (wwContainer) {
+                                    wwContainer.style.height = 'auto';
+                                    wwContainer.style.minHeight = '400px';
+                                    wwContainer.style.maxHeight = 'none';
+                                }
+                                
+                                const proseMirror = editorUI.querySelector('.ProseMirror');
+                                if (proseMirror) {
+                                    proseMirror.style.height = 'auto';
+                                    proseMirror.style.minHeight = '200px';
+                                    proseMirror.style.maxHeight = 'none';
+                                    proseMirror.style.overflowY = 'visible';
+                                }
+                            }
+                            
+                            // Trigger a refresh if editor exists
+                            if (markdownWrapper._toastEditor) {
+                                const editor = markdownWrapper._toastEditor;
+                                const currentMarkdown = editor.getMarkdown();
+                                editor.setMarkdown(currentMarkdown);
+                                console.log(`[ToggleHeight] Markdown refreshed, content length: ${currentMarkdown.length}`);
+                            }
+                        } else {
+                            // Reset to fixed height
+                            markdownWrapper.style.height = '';
+                            markdownWrapper.style.minHeight = '';
+                            markdownWrapper.style.maxHeight = '';
+                            
+                            const editorUI = markdownWrapper.querySelector('.toastui-editor-defaultUI');
+                            if (editorUI) {
+                                editorUI.style.height = '';
+                                editorUI.style.minHeight = '';
+                                editorUI.style.maxHeight = '';
+                                
+                                const mainContainer = editorUI.querySelector('.toastui-editor-main-container');
+                                if (mainContainer) {
+                                    mainContainer.style.height = '';
+                                    mainContainer.style.minHeight = '';
+                                    mainContainer.style.maxHeight = '';
+                                }
+                                
+                                const wwContainer = editorUI.querySelector('.toastui-editor-ww-container');
+                                if (wwContainer) {
+                                    wwContainer.style.height = '';
+                                    wwContainer.style.minHeight = '';
+                                    wwContainer.style.maxHeight = '';
+                                }
+                                
+                                const proseMirror = editorUI.querySelector('.ProseMirror');
+                                if (proseMirror) {
+                                    proseMirror.style.height = '';
+                                    proseMirror.style.minHeight = '';
+                                    proseMirror.style.maxHeight = '';
+                                    proseMirror.style.overflowY = '';
+                                }
+                            }
+                        }
+                    }, 50);
+                }
+            } else if (blockType === 'editorjs') {
+                // Editor.js should expand naturally with CSS
+                const editorjsWrapper = mainBlock.querySelector('.editorjs-wrapper');
+                if (editorjsWrapper) {
+                    if (newMode === 'dynamic') {
+                        editorjsWrapper.style.height = 'auto';
+                        editorjsWrapper.style.minHeight = '400px';
+                    } else {
+                        editorjsWrapper.style.height = '';
+                        editorjsWrapper.style.minHeight = '';
+                    }
+                }
             }
             
             // Update button icon and title
@@ -1881,7 +2396,7 @@
                 window.MioBook.markDirty();
             }
             
-            console.log(`[MioBook] Block height mode changed to: ${newMode}`);
+            console.log(`[MioBook] Block ${blockType} height mode changed to: ${newMode}`);
         }
         
         // Insert Main Block menu handling
@@ -2005,6 +2520,331 @@
                 dropdown.classList.remove('active');
             }
         }
+        
+        // ============================================================================
+        // SLASH COMMAND MENU - Notion-style quick insert
+        // ============================================================================
+        
+        let slashCommandMenu = null;
+        let slashCommandContext = {
+            blockElement: null,
+            blockIndex: null,
+            insertPosition: 'below', // 'above' or 'below'
+            cursorPosition: null,
+            searchQuery: ''
+        };
+        
+        const blockTypeDefinitions = [
+            { type: 'markdown', name: 'Markdown', shortcut: 'md', icon: 'fas fa-markdown', color: 'text-teal-400', description: 'Rich text with markdown' },
+            { type: 'todo', name: 'Todo List', shortcut: 'td', icon: 'fas fa-tasks', color: 'text-dirty-yellow-400', description: 'Checkable task list' },
+            { type: 'code', name: 'Code', shortcut: 'c', icon: 'fas fa-code', color: 'text-teal-400', description: 'Syntax highlighted code' },
+            { type: 'blocks', name: 'Rich Blocks', shortcut: 'rb', icon: 'fas fa-th-large', color: 'text-dirty-yellow-400', description: 'Editor.js block editor' },
+            { type: 'whiteboard', name: 'Whiteboard', shortcut: 'wb', icon: 'fas fa-draw-polygon', color: 'text-teal-400', description: 'Freehand drawing canvas' }
+        ];
+        
+        function createSlashCommandMenu() {
+            if (slashCommandMenu) {
+                return slashCommandMenu;
+            }
+            
+            const menu = document.createElement('div');
+            menu.id = 'slashCommandMenu';
+            menu.className = 'slash-command-menu';
+            
+            menu.innerHTML = `
+                <input type="text" 
+                       class="slash-command-search" 
+                       placeholder="Search blocks or type shortcut..."
+                       autocomplete="off">
+                <div class="slash-position-toggle">
+                    <button class="slash-position-btn active" data-position="below">
+                        <i class="fas fa-arrow-down"></i> Insert Below
+                    </button>
+                    <button class="slash-position-btn" data-position="above">
+                        <i class="fas fa-arrow-up"></i> Insert Above
+                    </button>
+                </div>
+                <div class="slash-command-header">Available Blocks</div>
+                <div class="slash-command-options"></div>
+            `;
+            
+            document.body.appendChild(menu);
+            slashCommandMenu = menu;
+            
+            // Setup position toggle buttons
+            const positionBtns = menu.querySelectorAll('.slash-position-btn');
+            positionBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    positionBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    slashCommandContext.insertPosition = btn.dataset.position;
+                });
+            });
+            
+            // Setup search input
+            const searchInput = menu.querySelector('.slash-command-search');
+            searchInput.addEventListener('input', (e) => {
+                slashCommandContext.searchQuery = e.target.value.toLowerCase();
+                renderSlashCommandOptions();
+            });
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectNextOption();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectPrevOption();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    executeHighlightedOption();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeSlashCommandMenu();
+                }
+            });
+            
+            return menu;
+        }
+        
+        function renderSlashCommandOptions() {
+            if (!slashCommandMenu) return;
+            
+            const optionsContainer = slashCommandMenu.querySelector('.slash-command-options');
+            const query = slashCommandContext.searchQuery;
+            
+            // Filter block types based on search
+            const filteredBlocks = blockTypeDefinitions.filter(block => {
+                if (!query) return true;
+                return block.name.toLowerCase().includes(query) || 
+                       block.shortcut.toLowerCase().includes(query) ||
+                       block.type.toLowerCase().includes(query);
+            });
+            
+            // Render options
+            optionsContainer.innerHTML = filteredBlocks.map((block, index) => `
+                <div class="block-type-option ${index === 0 ? 'highlighted' : ''}" 
+                     data-block-type="${block.type}"
+                     data-option-index="${index}">
+                    <i class="${block.icon} ${block.color}"></i>
+                    <div>
+                        <div class="font-medium">${block.name}</div>
+                        <div class="text-xs text-graphite-400">${block.description}</div>
+                    </div>
+                    <span class="shortcut-hint">${block.shortcut}</span>
+                </div>
+            `).join('');
+            
+            // Add click handlers to options
+            optionsContainer.querySelectorAll('.block-type-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const blockType = option.dataset.blockType;
+                    insertBlockViaSlashCommand(blockType);
+                });
+                
+                option.addEventListener('mouseenter', () => {
+                    optionsContainer.querySelectorAll('.block-type-option').forEach(opt => 
+                        opt.classList.remove('highlighted'));
+                    option.classList.add('highlighted');
+                });
+            });
+        }
+        
+        function selectNextOption() {
+            if (!slashCommandMenu) return;
+            
+            const options = Array.from(slashCommandMenu.querySelectorAll('.block-type-option'));
+            const currentIndex = options.findIndex(opt => opt.classList.contains('highlighted'));
+            
+            if (currentIndex < options.length - 1) {
+                options.forEach(opt => opt.classList.remove('highlighted'));
+                options[currentIndex + 1].classList.add('highlighted');
+                options[currentIndex + 1].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+        
+        function selectPrevOption() {
+            if (!slashCommandMenu) return;
+            
+            const options = Array.from(slashCommandMenu.querySelectorAll('.block-type-option'));
+            const currentIndex = options.findIndex(opt => opt.classList.contains('highlighted'));
+            
+            if (currentIndex > 0) {
+                options.forEach(opt => opt.classList.remove('highlighted'));
+                options[currentIndex - 1].classList.add('highlighted');
+                options[currentIndex - 1].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+        
+        function executeHighlightedOption() {
+            if (!slashCommandMenu) return;
+            
+            const highlightedOption = slashCommandMenu.querySelector('.block-type-option.highlighted');
+            if (highlightedOption) {
+                const blockType = highlightedOption.dataset.blockType;
+                insertBlockViaSlashCommand(blockType);
+            }
+        }
+        
+        function insertBlockViaSlashCommand(blockType) {
+            if (!slashCommandContext.blockElement || slashCommandContext.blockIndex === null) {
+                console.error('[SlashCommand] Missing context for insertion');
+                closeSlashCommandMenu();
+                return;
+            }
+            
+            // Calculate the target index based on position preference
+            let targetIndex;
+            if (slashCommandContext.insertPosition === 'above') {
+                targetIndex = slashCommandContext.blockIndex;
+            } else {
+                targetIndex = slashCommandContext.blockIndex + 1;
+            }
+            
+            console.log(`[SlashCommand] Inserting ${blockType} at index ${targetIndex} (${slashCommandContext.insertPosition})`);
+            
+            // Insert the block
+            window.MioBook.addBlockAtIndex(blockType, targetIndex);
+            
+            // Close the menu
+            closeSlashCommandMenu();
+        }
+        
+        function showSlashCommandMenu(blockElement, blockIndex, event) {
+            // Create menu if it doesn't exist
+            if (!slashCommandMenu) {
+                createSlashCommandMenu();
+            }
+            
+            // Update context
+            slashCommandContext.blockElement = blockElement;
+            slashCommandContext.blockIndex = blockIndex;
+            slashCommandContext.searchQuery = '';
+            
+            // Reset search input
+            const searchInput = slashCommandMenu.querySelector('.slash-command-search');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // Render options
+            renderSlashCommandOptions();
+            
+            // Position the menu
+            let posX, posY;
+            
+            if (event && event.clientX && event.clientY) {
+                // Use cursor position if available
+                posX = event.clientX;
+                posY = event.clientY;
+            } else {
+                // Fallback to block position
+                const rect = blockElement.getBoundingClientRect();
+                posX = rect.left + 20;
+                posY = rect.bottom + 5;
+            }
+            
+            // Show the menu first to get its dimensions
+            slashCommandMenu.classList.add('active');
+            slashCommandMenu.style.left = `${posX}px`;
+            slashCommandMenu.style.top = `${posY}px`;
+            
+            // Check viewport boundaries and adjust position
+            setTimeout(() => {
+                const menuRect = slashCommandMenu.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                let adjustedX = posX;
+                let adjustedY = posY;
+                
+                // Check right boundary
+                if (menuRect.right > viewportWidth - 10) {
+                    adjustedX = viewportWidth - menuRect.width - 10;
+                }
+                
+                // Check left boundary
+                if (adjustedX < 10) {
+                    adjustedX = 10;
+                }
+                
+                // Check bottom boundary
+                if (menuRect.bottom > viewportHeight - 10) {
+                    // Position above the cursor/block instead
+                    adjustedY = posY - menuRect.height - 10;
+                }
+                
+                // Check top boundary (if repositioning above pushed it too high)
+                if (adjustedY < 10) {
+                    adjustedY = 10;
+                }
+                
+                slashCommandMenu.style.left = `${adjustedX}px`;
+                slashCommandMenu.style.top = `${adjustedY}px`;
+                
+                // Focus the search input
+                searchInput?.focus();
+            }, 10);
+        }
+        
+        function closeSlashCommandMenu() {
+            if (slashCommandMenu) {
+                slashCommandMenu.classList.remove('active');
+                slashCommandContext = {
+                    blockElement: null,
+                    blockIndex: null,
+                    insertPosition: 'below',
+                    cursorPosition: null,
+                    searchQuery: ''
+                };
+            }
+        }
+        
+        // Detect Ctrl+/ or Ctrl+\ to trigger slash command menu
+        function setupSlashCommandDetection() {
+            const contentBlocks = document.getElementById('contentBlocks');
+            if (!contentBlocks) return;
+            
+            // Global keydown listener for keyboard shortcuts
+            // User can press Ctrl+/ or Ctrl+\ or Cmd+/ or Cmd+\ from anywhere in a block to open slash menu
+            document.addEventListener('keydown', (e) => {
+                if ((e.key === '/' || e.key === '\\') && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    
+                    // Find the currently focused or hovered block
+                    let blockElement = document.activeElement?.closest('.block-item');
+                    if (!blockElement) {
+                        blockElement = document.querySelector('.block-item:hover');
+                    }
+                    if (!blockElement) {
+                        // Default to first main block
+                        blockElement = contentBlocks?.querySelector('.block-item[data-container="main"]');
+                    }
+                    
+                    if (blockElement) {
+                        const allBlocks = Array.from(contentBlocks.querySelectorAll('.block-item[data-container="main"]'));
+                        const blockIndex = allBlocks.indexOf(blockElement);
+                        if (blockIndex !== -1) {
+                            showSlashCommandMenu(blockElement, blockIndex, e);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Close slash command menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (slashCommandMenu && 
+                !slashCommandMenu.contains(e.target) && 
+                !e.target.closest('.block-item')) {
+                closeSlashCommandMenu();
+            }
+        });
+        
+        // ============================================================================
+        // END SLASH COMMAND MENU
+        // ============================================================================
         
         // Close insert menu when clicking outside
         document.addEventListener('click', function(e) {

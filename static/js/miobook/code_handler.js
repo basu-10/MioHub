@@ -94,10 +94,55 @@ class CodeHandler {
             if (window.MioBook) {
                 window.MioBook.markDirty();
             }
+
+            const blockRow = blockEl.closest('.block-row');
+            if (blockRow && blockRow.classList.contains('dynamic-height')) {
+                this.resizeEditorToContent(blockEl);
+            }
         });
         
         this.editors.set(blockId, editor);
         console.log('[Code] Block initialized successfully:', blockId, 'Editor stored in Map');
+
+        const blockRow = blockEl.closest('.block-row');
+        if (blockRow && blockRow.classList.contains('dynamic-height')) {
+            this.resizeEditorToContent(blockEl);
+        }
+    }
+
+    resizeEditorToContent(blockEl) {
+        const blockId = blockEl?.dataset?.blockId;
+        const editor = this.editors.get(blockId);
+
+        if (!editor || !window.monaco) return;
+
+        const model = editor.getModel();
+        if (!model) return;
+
+        const lineCount = model.getLineCount();
+        const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight) || 18;
+        const padding = editor.getOption(monaco.editor.EditorOption.padding) || { top: 8, bottom: 8 };
+
+        const height = Math.max(200, (lineCount * lineHeight) + (padding.top || 0) + (padding.bottom || 0) + 20);
+
+        const domNode = editor.getDomNode();
+        if (domNode) {
+            domNode.style.height = `${height}px`;
+        }
+        editor.layout();
+    }
+
+    resetEditorHeight(blockEl) {
+        const blockId = blockEl?.dataset?.blockId;
+        const editor = this.editors.get(blockId);
+
+        if (!editor) return;
+
+        const domNode = editor.getDomNode();
+        if (domNode) {
+            domNode.style.height = '';
+        }
+        editor.layout();
     }
     
     changeLanguage(selectEl) {
