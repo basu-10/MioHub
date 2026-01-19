@@ -94,9 +94,6 @@
             max-height: 500px;
             align-items: stretch;
             background: linear-gradient(145deg, rgba(18, 27, 36, 0.82), rgba(10, 16, 24, 0.94));
-            border: 1px solid rgba(20, 184, 166, 0.08);
-            border-radius: 14px;
-            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.02);
             padding: 12px;
         }
         
@@ -1111,10 +1108,12 @@
             padding: 6px;
             min-width: 280px;
             max-width: 320px;
+            max-height: calc(100vh - 20px);
             box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(20, 184, 166, 0.2);
             z-index: 3000;
             display: none;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         
         .slash-command-menu.active {
@@ -2541,6 +2540,15 @@
             { type: 'blocks', name: 'Rich Blocks', shortcut: 'rb', icon: 'fas fa-th-large', color: 'text-dirty-yellow-400', description: 'Editor.js block editor' },
             { type: 'whiteboard', name: 'Whiteboard', shortcut: 'wb', icon: 'fas fa-draw-polygon', color: 'text-teal-400', description: 'Freehand drawing canvas' }
         ];
+
+        function setInsertPosition(position) {
+            if (!slashCommandMenu) return;
+            const buttons = slashCommandMenu.querySelectorAll('.slash-position-btn');
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.position === position);
+            });
+            slashCommandContext.insertPosition = position;
+        }
         
         function createSlashCommandMenu() {
             if (slashCommandMenu) {
@@ -2576,9 +2584,7 @@
             positionBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    positionBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    slashCommandContext.insertPosition = btn.dataset.position;
+                    setInsertPosition(btn.dataset.position);
                 });
             });
             
@@ -2596,6 +2602,12 @@
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     selectPrevOption();
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    setInsertPosition('above');
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    setInsertPosition('below');
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
                     executeHighlightedOption();
@@ -2739,10 +2751,10 @@
                 posX = event.clientX;
                 posY = event.clientY;
             } else {
-                // Fallback to block position
+                // Fallback to block position (near the top-left of the block)
                 const rect = blockElement.getBoundingClientRect();
                 posX = rect.left + 20;
-                posY = rect.bottom + 5;
+                posY = rect.top + 24;
             }
             
             // Show the menu first to get its dimensions
@@ -2755,31 +2767,40 @@
                 const menuRect = slashCommandMenu.getBoundingClientRect();
                 const viewportWidth = window.innerWidth;
                 const viewportHeight = window.innerHeight;
-                
+                const margin = 10;
+                const flipGap = 8;
+
                 let adjustedX = posX;
                 let adjustedY = posY;
-                
-                // Check right boundary
-                if (menuRect.right > viewportWidth - 10) {
-                    adjustedX = viewportWidth - menuRect.width - 10;
+
+                // Decide above/below based on available space
+                const spaceBelow = viewportHeight - posY;
+                const spaceAbove = posY;
+
+                if (spaceBelow < menuRect.height + margin && spaceAbove > menuRect.height + margin) {
+                    // Put above if more room above
+                    adjustedY = posY - menuRect.height - flipGap;
+                } else if (spaceBelow < menuRect.height + margin && spaceAbove <= menuRect.height + margin) {
+                    // Constrain within viewport if neither side fits fully
+                    adjustedY = Math.max(margin, Math.min(posY, viewportHeight - menuRect.height - margin));
                 }
-                
-                // Check left boundary
-                if (adjustedX < 10) {
-                    adjustedX = 10;
+
+                // Clamp horizontally
+                if (menuRect.right > viewportWidth - margin) {
+                    adjustedX = viewportWidth - menuRect.width - margin;
                 }
-                
-                // Check bottom boundary
-                if (menuRect.bottom > viewportHeight - 10) {
-                    // Position above the cursor/block instead
-                    adjustedY = posY - menuRect.height - 10;
+                if (adjustedX < margin) {
+                    adjustedX = margin;
                 }
-                
-                // Check top boundary (if repositioning above pushed it too high)
-                if (adjustedY < 10) {
-                    adjustedY = 10;
+
+                // Clamp vertically in case flip pushed it off the top
+                if (adjustedY < margin) {
+                    adjustedY = margin;
                 }
-                
+                if (adjustedY + menuRect.height > viewportHeight - margin) {
+                    adjustedY = viewportHeight - menuRect.height - margin;
+                }
+
                 slashCommandMenu.style.left = `${adjustedX}px`;
                 slashCommandMenu.style.top = `${adjustedY}px`;
                 
@@ -2800,6 +2821,23 @@
                 };
             }
         }
+
+        // Global key handler while menu is open: Escape closes; Left/Right switch position
+        document.addEventListener('keydown', (e) => {
+            if (!slashCommandMenu || !slashCommandMenu.classList.contains('active')) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeSlashCommandMenu();
+                return;
+            }
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setInsertPosition('above');
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setInsertPosition('below');
+            }
+        });
         
         // Detect Ctrl+/ or Ctrl+\ to trigger slash command menu
         function setupSlashCommandDetection() {
