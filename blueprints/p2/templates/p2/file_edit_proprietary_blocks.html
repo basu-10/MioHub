@@ -1149,9 +1149,137 @@
         .sortable-ghost .drag-handle {
             visibility: visible;
         }
+        
+        /* Reading Mode Styles */
+        body.reading-mode .sticky-header {
+            padding: 12px 24px;
+            margin-bottom: 16px;
+        }
+        
+        body.reading-mode .block-header,
+        body.reading-mode .annotation-header,
+        body.reading-mode .insert-separator,
+        body.reading-mode .mobile-annotations-toggle,
+        body.reading-mode .save-document-btn,
+        body.reading-mode .back-btn {
+            display: none !important;
+        }
+        
+        body.reading-mode .document-title-input {
+            pointer-events: none;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            font-size: 24px;
+            padding: 0;
+            text-align: center;
+        }
+        
+        body.reading-mode .block-row {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            margin-bottom: 24px;
+        }
+        
+        body.reading-mode .block-item,
+        body.reading-mode .annotation-block {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        
+        body.reading-mode .annotation-column {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        
+        body.reading-mode .annotation-toolbar {
+            display: none;
+        }
+        
+        body.reading-mode .block-content,
+        body.reading-mode .annotation-content {
+            padding: 12px 0;
+        }
+        
+        /* Reading mode overlay hint */
+        .reading-mode-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: transparent;
+            z-index: 999;
+            cursor: pointer;
+        }
+        
+        body.reading-mode .reading-mode-overlay {
+            display: block;
+        }
+        
+        .reading-mode-hint {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 27, 31, 0.95);
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            color: #14b8a6;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 13px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeInOut 3s ease-in-out;
+            pointer-events: none;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+        
+        .reading-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            color: #14b8a6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+        
+        .reading-mode-toggle:hover {
+            background: rgba(20, 184, 166, 0.1);
+            border-color: #14b8a6;
+        }
+        
+        .reading-mode-toggle i {
+            font-size: 16px;
+        }
+        
+        .reading-mode-toggle .shortcut-hint {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-left: 4px;
+        }
     </style>
 </head>
 <body>
+    <!-- Reading Mode Overlay -->
+    <div class="reading-mode-overlay" onclick="toggleReadingMode()" title="Click anywhere to exit reading mode"></div>
+    
     <div class="page-shell mx-auto px-4 py-6">
         <!-- Sticky Header -->
         <div class="sticky-header">
@@ -1162,6 +1290,14 @@
                        placeholder="Untitled Document" 
                       value="{{ file.title if file else default_title }}">
                 
+                <button onclick="toggleReadingMode()" 
+                        class="reading-mode-toggle" 
+                        title="Toggle Reading Mode (Ctrl+R)">
+                    <i class="fas fa-book-reader"></i>
+                    <span>Reading Mode</span>
+                    <span class="shortcut-hint">Ctrl+R</span>
+                </button>
+                
                 <button onclick="window.MioBook.saveDocument()" 
                         class="save-document-btn px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-all flex items-center gap-2">
                     <i class="fas fa-save"></i>
@@ -1169,7 +1305,7 @@
                 </button>
                 
                 <button onclick="history.back()" 
-                        class="px-4 py-3 bg-graphite-800 hover:bg-graphite-700 text-graphite-200 rounded-lg transition-all">
+                        class="back-btn px-4 py-3 bg-graphite-800 hover:bg-graphite-700 text-graphite-200 rounded-lg transition-all">
                     <i class="fas fa-arrow-left"></i>
                 </button>
             </div>
@@ -1340,6 +1476,60 @@
         // Global variables
         const currentDocumentId = {{ file.id if file else 'null' }};
         const currentFolderId = {{ folder_id if folder_id else 'null' }};
+        
+        // Reading Mode State
+        let isReadingMode = false;
+        
+        // Toggle Reading Mode
+        function toggleReadingMode() {
+            isReadingMode = !isReadingMode;
+            document.body.classList.toggle('reading-mode', isReadingMode);
+            
+            // Update button text
+            const toggleBtn = document.querySelector('.reading-mode-toggle span:not(.shortcut-hint)');
+            const toggleIcon = document.querySelector('.reading-mode-toggle i');
+            if (toggleBtn && toggleIcon) {
+                if (isReadingMode) {
+                    toggleBtn.textContent = 'Edit Mode';
+                    toggleIcon.className = 'fas fa-edit';
+                    
+                    // Show hint
+                    showReadingModeHint();
+                } else {
+                    toggleBtn.textContent = 'Reading Mode';
+                    toggleIcon.className = 'fas fa-book-reader';
+                }
+            }
+            
+            console.log('[MioBook] Reading mode:', isReadingMode ? 'ON' : 'OFF');
+        }
+        
+        // Show reading mode hint
+        function showReadingModeHint() {
+            // Remove existing hint if any
+            const existingHint = document.querySelector('.reading-mode-hint');
+            if (existingHint) {
+                existingHint.remove();
+            }
+            
+            // Create new hint
+            const hint = document.createElement('div');
+            hint.className = 'reading-mode-hint';
+            hint.innerHTML = '<i class="fas fa-info-circle"></i> Click anywhere to exit reading mode';
+            document.body.appendChild(hint);
+            
+            // Remove after animation
+            setTimeout(() => hint.remove(), 3000);
+        }
+        
+        // Keyboard shortcut handler
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+R or Cmd+R
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                toggleReadingMode();
+            }
+        });
         
         // Initialize MioBlocks
         let MioBook;
