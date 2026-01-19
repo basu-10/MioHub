@@ -88,7 +88,7 @@
         .block-row {
             display: flex;
             gap: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
             position: relative;
             min-height: 500px;
             max-height: 500px;
@@ -107,6 +107,18 @@
         .block-row.dragging .annotation-block {
             border: 2px dashed #14b8a6;
             background: rgba(20, 184, 166, 0.05);
+        }
+        
+        /* Dynamic height mode - remove height constraints */
+        .block-row.dynamic-height {
+            min-height: auto;
+            max-height: none;
+        }
+        
+        /* Dynamic height mode - remove height constraints */
+        .block-row.dynamic-height {
+            min-height: auto;
+            max-height: none;
         }
         
         /* Main Block Column */
@@ -561,8 +573,8 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            margin: 16px 0;
-            padding: 10px 12px;
+            margin: 2px 0;
+            padding: 2px 12px;
             cursor: pointer;
             transition: all 0.2s ease;
         }
@@ -571,12 +583,12 @@
             flex: 1;
             height: 1px;
             background: linear-gradient(90deg, #3d4047, transparent);
-            opacity: 0.5;
+            opacity: 0.08;
             transition: all 0.2s ease;
         }
         
         .insert-separator:hover .insert-separator-line {
-            opacity: 1;
+            opacity: 0.4;
             height: 2px;
             background: linear-gradient(90deg, #14b8a6, transparent);
         }
@@ -585,10 +597,10 @@
             background: #1a1b1f;
             border: 1px solid #3d4047;
             color: #7a7f8a;
-            padding: 6px 16px;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 12px;
-            opacity: 0.7;
+            font-size: 11px;
+            opacity: 0;
             transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
@@ -697,6 +709,14 @@
             transition: all 0.2s ease;
             min-width: 100px;
             max-width: 300px;
+        }
+        
+        @media (min-width: 1025px) {
+            .block-title-input {
+                text-align: right;
+                margin-left: auto;
+                flex: 0 1 auto;
+            }
         }
         
         .block-title-input:hover {
@@ -983,11 +1003,8 @@
             background: #14b8a6;
         }
         
-        /* Sticky Header */
+        /* Header */
         .sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
             background:
                 radial-gradient(120% 140% at 12% 0%, rgba(20, 184, 166, 0.12), transparent 42%),
                 radial-gradient(120% 140% at 88% -10%, rgba(234, 179, 8, 0.10), transparent 38%),
@@ -1052,6 +1069,7 @@
                 min-height: auto;
                 max-height: none;
                 padding: 10px;
+                margin-bottom: 8px;
             }
             
             .page-shell {
@@ -1197,13 +1215,15 @@
                         {% set main_width = has_annotations and (split_ratio ~ '%') or '' %}
                         {% set annotation_width = has_annotations and ((100 - split_ratio) ~ '%') or '' %}
                         {% set show_annotations = block.annotationShow if block.annotationShow is defined else has_annotations %}
+                        {% set height_mode = block.heightMode if block.heightMode is defined else 'fixed' %}
 
                         <!-- Block Row -->
-                        <div class="block-row" data-block-id="{{ block.id }}" data-split-ratio="{{ split_ratio }}"{% if has_annotations %} data-annotation-show="{{ 'false' if show_annotations == false else 'true' }}"{% endif %}>
+                        <div class="block-row{% if height_mode == 'dynamic' %} dynamic-height{% endif %}" data-block-id="{{ block.id }}" data-split-ratio="{{ split_ratio }}" data-height-mode="{{ height_mode }}"{% if has_annotations %} data-annotation-show="{{ 'false' if show_annotations == false else 'true' }}"{% endif %}>
                             <div class="main-block-column" style="{{ 'width: ' ~ main_width if has_annotations else '' }}">
                                 {% set container_type = 'main' %}
                                 {% set has_annotations = has_annotations %}
                                 {% set annotation_show = show_annotations %}
+                                {% set height_mode = height_mode %}
                                 {% include 'p2/blocks/block_row_content.html' %}
                             </div>
 
@@ -1635,6 +1655,43 @@
             if (window.MioBook) {
                 window.MioBook.deleteBlock(button);
             }
+        }
+        
+        // Toggle block height mode
+        function toggleBlockHeight(button) {
+            const blockRow = button.closest('.block-row');
+            if (!blockRow) return;
+            
+            const currentMode = blockRow.dataset.heightMode || 'fixed';
+            const newMode = currentMode === 'fixed' ? 'dynamic' : 'fixed';
+            
+            // Update data attribute and CSS class
+            blockRow.dataset.heightMode = newMode;
+            
+            if (newMode === 'dynamic') {
+                blockRow.classList.add('dynamic-height');
+            } else {
+                blockRow.classList.remove('dynamic-height');
+            }
+            
+            // Update button icon and title
+            const icon = button.querySelector('i');
+            if (icon) {
+                if (newMode === 'dynamic') {
+                    icon.className = 'fas fa-arrows-alt-v';
+                    button.title = 'Toggle height mode: dynamic';
+                } else {
+                    icon.className = 'fas fa-lock';
+                    button.title = 'Toggle height mode: fixed';
+                }
+            }
+            
+            // Mark document as dirty
+            if (window.MioBook) {
+                window.MioBook.markDirty();
+            }
+            
+            console.log(`[MioBook] Block height mode changed to: ${newMode}`);
         }
         
         // Insert Main Block menu handling

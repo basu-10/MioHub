@@ -169,6 +169,7 @@ class MioBookCore {
 
             mainBlock.order = i;
             mainBlock.splitRatio = parseInt(blockRow.dataset.splitRatio, 10) || 50;
+            mainBlock.heightMode = blockRow.dataset.heightMode || 'fixed';
 
             const annotations = [];
             const annotationItems = blockRow.querySelectorAll('.annotation-column .block-item');
@@ -362,7 +363,8 @@ class MioBookCore {
             metadata,
             annotations: [],
             splitRatio: 50,
-            annotationShow: true
+            annotationShow: true,
+            heightMode: 'fixed'
         };
     }
 
@@ -530,13 +532,15 @@ class MioBookCore {
         const splitRatioRaw = blockData.splitRatio || 50;
         const splitRatio = Math.min(70, Math.max(30, splitRatioRaw));
         const annotationVisible = blockData.annotationShow !== false;
+        const heightMode = blockData.heightMode || 'fixed';
         const mainWidth = hasAnnotations ? ` style="width: ${splitRatio}%"` : '';
         const annotationWidth = hasAnnotations ? ` style="width: ${100 - splitRatio}%"` : '';
+        const dynamicHeightClass = heightMode === 'dynamic' ? ' dynamic-height' : '';
 
         const annotationsHTML = hasAnnotations ? blockData.annotations.map((ann) => this.renderAnnotationCard(ann, blockData.id)).join('') : '';
 
         return `
-            <div class="block-row" data-block-id="${blockData.id}" data-split-ratio="${splitRatio}"${hasAnnotations ? ` data-annotation-show="${annotationVisible ? 'true' : 'false'}"` : ''}>
+            <div class="block-row${dynamicHeightClass}" data-block-id="${blockData.id}" data-split-ratio="${splitRatio}" data-height-mode="${heightMode}"${hasAnnotations ? ` data-annotation-show="${annotationVisible ? 'true' : 'false'}"` : ''}>
                 <div class="main-block-column"${mainWidth}>
                     ${this.renderBlock(blockData, { containerType: 'main', hasAnnotations, parentId: null })}
                 </div>
@@ -1121,6 +1125,38 @@ class MioBookCore {
         button.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
 
         this.markDirty();
+    }
+
+    toggleBlockHeight(button) {
+        const blockRow = button.closest('.block-row');
+        if (!blockRow) return;
+
+        const currentMode = blockRow.dataset.heightMode || 'fixed';
+        const newMode = currentMode === 'fixed' ? 'dynamic' : 'fixed';
+
+        // Update data attribute and CSS class
+        blockRow.dataset.heightMode = newMode;
+
+        if (newMode === 'dynamic') {
+            blockRow.classList.add('dynamic-height');
+        } else {
+            blockRow.classList.remove('dynamic-height');
+        }
+
+        // Update button icon and title
+        const icon = button.querySelector('i');
+        if (icon) {
+            if (newMode === 'dynamic') {
+                icon.className = 'fas fa-arrows-alt-v';
+                button.title = 'Toggle height: dynamic';
+            } else {
+                icon.className = 'fas fa-lock';
+                button.title = 'Toggle height: fixed';
+            }
+        }
+
+        this.markDirty();
+        console.log(`[MioBook] Block height mode changed to: ${newMode}`);
     }
 
     deleteAnnotationBlock(button) {

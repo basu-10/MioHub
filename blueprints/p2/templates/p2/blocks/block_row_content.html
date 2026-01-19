@@ -53,6 +53,9 @@
         <input type="text" class="block-title-input" placeholder="Block Title" value="{{ block.title if block.title else '' }}">
         <div class="block-controls">
             {% if container_type == 'main' %}
+                <button type="button" class="control-btn hover-reveal height-toggle-btn" onclick="window.MioBook.toggleBlockHeight(this)" title="Toggle height: {{ height_mode if height_mode is defined else 'fixed' }}">
+                    <i class="fas {% if height_mode is defined and height_mode == 'dynamic' %}fa-arrows-alt-v{% else %}fa-lock{% endif %}"></i>
+                </button>
                 {% if has_annotations %}
                     {% if annotation_show == false %}
                         <button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="Show Annotations">
