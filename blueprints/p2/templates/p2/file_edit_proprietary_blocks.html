@@ -387,6 +387,10 @@
             box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
         }
         
+        .block-item .block-header {
+            border-bottom: 1px solid #1f2a35;
+        }
+        
         /* Annotation Block */
         .annotation-block {
             background: linear-gradient(165deg, #111924, #0c141c 55%, #0b1219 100%);
@@ -402,17 +406,17 @@
         
         .annotation-block .annotation-header {
             background: #2a2c31;
-            border-bottom: 1px solid #3d4047;
+            border-bottom: 1px solid #1f2a35;
             padding: 8px 12px;
             display: flex;
             gap: 8px;
             align-items: center;
-            border-radius: 8px 8px 0 0;
+            border-radius: 9px 9px 0 0;
             flex-shrink: 0;
         }
         
         .annotation-block .annotation-content {
-            padding: 16px;
+            padding: 0;
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
@@ -429,12 +433,12 @@
         
         .block-header {
             background: #2a2c31;
-            border-bottom: 1px solid #3d4047;
+            border-bottom: 1px solid #1f2a35;
             padding: 8px 12px;
             display: flex;
             gap: 12px;
             align-items: center;
-            border-radius: 8px 8px 0 0;
+            border-radius: 9px 9px 0 0;
             flex-wrap: nowrap;
             overflow: visible;
             position: relative;
@@ -620,7 +624,7 @@
         }
         
         .block-content {
-            padding: 20px;
+            padding: 0;
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
@@ -673,9 +677,9 @@
         .block-item[data-init-state="pending"] .block-content::before {
             content: "Loading editor…";
             position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
+            top: 12px;
+            left: 12px;
+            right: 12px;
             color: #7a7f8a;
             font-size: 13px;
             pointer-events: none;
@@ -837,8 +841,8 @@
         /* Editor Wrappers */
         .markdown-editor-wrapper,
         .code-editor-wrapper {
-            border: 1px solid #2a2c31;
-            border-radius: 6px;
+            border: none;
+            border-radius: 0;
             overflow: hidden;
             height: 100%;
             display: flex;
@@ -846,8 +850,8 @@
         }
         
         .editorjs-wrapper {
-            border: 1px solid #2a2c31;
-            border-radius: 6px;
+            border: none;
+            border-radius: 0;
             overflow-y: auto;
             overflow-x: hidden;
             height: 100%;

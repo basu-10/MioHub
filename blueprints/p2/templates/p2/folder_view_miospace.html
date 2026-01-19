@@ -605,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   {{ sub.created_at.strftime('%Y-%m-%d %H:%M') if sub.created_at else 'N/A' }}
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('folders.view_folder', folder_id=sub.id) }}'">
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('folders.view_folder', folder_id=sub.id) }}';">
                     <i class="material-icons" style="font-size: 14px;">open_in_new</i>
                   </button>
                 </td>
@@ -758,7 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   {{ note.last_modified.strftime('%Y-%m-%d %H:%M') if note.last_modified else 'N/A' }}
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('notes.edit_note', note_id=note.id) }}'">
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('notes.edit_note', note_id=note.id) }}';">
                     <i class="material-icons" style="font-size: 14px;">edit</i>
                   </button>
                 </td>
@@ -855,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   {{ board.last_modified.strftime('%Y-%m-%d %H:%M') if board.last_modified else 'N/A' }}
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('boards.edit_board', board_id=board.id) }}'">
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('boards.edit_board', board_id=board.id) }}';">
                     <i class="material-icons" style="font-size: 14px;">edit</i>
                   </button>
                 </td>
@@ -940,7 +940,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   {{ doc.last_modified.strftime('%Y-%m-%d %H:%M') if doc.last_modified else 'N/A' }}
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('combined.edit_combined', document_id=doc.id) }}'">
+                  <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); window.location.href='{{ url_for('combined.edit_combined', document_id=doc.id) }}';">
                     <i class="material-icons" style="font-size: 14px;">edit</i>
                   </button>
                 </td>
