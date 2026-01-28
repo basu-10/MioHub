@@ -4,7 +4,7 @@ This file is for running the application on local machine (MX Linux).
 
 run only with gunicorn from terminal, e.g.:
 gunicorn wsgi_local:application --bind 0.0.0.0:5555 --workers 4 --reload
-$ .venv/bin/gunicorn wsgi_local:application --bind 0.0.0.0:5555 --workers 4
+$ .venv/bin/gunicorn wsgi_local:application --bind 0.0.0.0:5555 --workers 1 --reload
 
 """
 
@@ -12,7 +12,7 @@ import os
 import sys
 
 # Use the prod.env file for local testing (same as production)
-os.environ.setdefault("MIOHUB_ENV_FILE", "prod.env")
+os.environ.setdefault("MIOHUB_ENV_FILE", "local.env")
 
 # Load environment variables before importing the app
 import config

@@ -391,14 +391,16 @@ class MioBookCore {
         const isCollapsed = blockData.collapsed === true;
         const collapsedClass = isCollapsed ? ' collapsed' : '';
         const collapsedAttr = isCollapsed ? ' data-collapsed="true"' : ' data-collapsed="false"';
+        const annotationCount = Array.isArray(blockData.annotations) ? blockData.annotations.length : 0;
 
         const renderControls = () => {
             if (containerType === 'main') {
-                const annotationButton = hasAnnotations
-                    ? `<button type="button" class="control-btn" onclick="window.MioBook.toggleAnnotation(this)" title="${blockData.annotationShow === false ? 'Show Annotations' : 'Hide Annotations'}">
+                const visibilityChip = `<button type="button" class="annotation-visibility-chip${hasAnnotations ? '' : ' hidden'}" onclick="window.MioBook.toggleAnnotation(this)" title="${blockData.annotationShow === false ? 'Show Annotations' : 'Hide Annotations'}">
                             <i class="fas ${blockData.annotationShow === false ? 'fa-eye-slash' : 'fa-eye'}"></i>
-                       </button>`
-                    : `<button type="button" class="control-btn" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                            <span class="annotation-count" aria-label="Annotation count" data-annotation-count="${annotationCount}">${annotationCount}</span>
+                        </button>`;
+
+                const addAnnotationBtn = `<button type="button" class="control-btn add-annotation-btn${hasAnnotations ? ' hidden' : ''}" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
                             <i class="fas fa-comment-alt"></i>
                        </button>`;
 
@@ -408,7 +410,7 @@ class MioBookCore {
                        </button>`
                     : '';
 
-                return `${annotationButton}${whiteboardEdit}
+                return `${visibilityChip}${addAnnotationBtn}${whiteboardEdit}
                         <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
                             <i class="fas fa-chevron-up"></i>
                         </button>
@@ -1129,7 +1131,10 @@ class MioBookCore {
         const isHidden = annotationColumn.classList.toggle('hidden');
         blockRow.dataset.annotationShow = isHidden ? 'false' : 'true';
 
-        button.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        const icon = button.querySelector('i');
+        if (icon) {
+            icon.className = `fas ${isHidden ? 'fa-eye-slash' : 'fa-eye'}`;
+        }
         button.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
 
         this.markDirty();
@@ -1301,7 +1306,6 @@ class MioBookCore {
                         <div class="annotation-toolbar-title">
                             <i class="fas fa-comment-alt text-teal-400"></i>
                             <span>Annotations</span>
-                            <span class="annotation-count" aria-label="Annotation count" data-annotation-count="0">0</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div class="annotation-nav-controls">
@@ -1356,18 +1360,31 @@ class MioBookCore {
     }
 
     updateMainAnnotationButton(blockRow, hasAnnotations) {
-        const addBtn = blockRow.querySelector('.block-controls .control-btn[onclick*="Annotation"]');
-        if (!addBtn) return;
+        const addBtn = blockRow.querySelector('.add-annotation-btn');
+        const chip = blockRow.querySelector('.annotation-visibility-chip');
+        const icon = chip?.querySelector('i');
 
         if (hasAnnotations) {
+            chip?.classList.remove('hidden');
+            addBtn?.classList.add('hidden');
+
             const isHidden = blockRow.dataset.annotationShow === 'false';
-            addBtn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-            addBtn.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
-            addBtn.setAttribute('onclick', 'window.MioBook.toggleAnnotation(this)');
+            if (icon) {
+                icon.className = `fas ${isHidden ? 'fa-eye-slash' : 'fa-eye'}`;
+            }
+            if (chip) {
+                chip.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
+            }
         } else {
-            addBtn.innerHTML = '<i class="fas fa-comment-alt"></i>';
-            addBtn.setAttribute('title', 'Add Annotation');
-            addBtn.setAttribute('onclick', 'window.MioBook.addAnnotation(this)');
+            chip?.classList.add('hidden');
+            addBtn?.classList.remove('hidden');
+
+            if (icon) {
+                icon.className = 'fas fa-eye';
+            }
+            if (chip) {
+                chip.setAttribute('title', 'Show Annotations');
+            }
         }
     }
 
