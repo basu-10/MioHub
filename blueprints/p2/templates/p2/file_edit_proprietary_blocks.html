@@ -806,14 +806,13 @@
             font-weight: 500;
             transition: all 0.2s ease;
             min-width: 100px;
-            max-width: 300px;
         }
         
         @media (min-width: 1025px) {
             .block-title-input {
-                text-align: right;
-                margin-left: auto;
-                flex: 0 1 auto;
+                text-align: left;
+                flex: 1;
+                max-width: none;
             }
         }
         
@@ -1436,6 +1435,45 @@
             
             .resize-handle {
                 display: none;
+            }
+            
+            /* Multi-line header: Row 1 = icons & controls, Row 2 = title */
+            .block-header {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            /* Row 1 left side: drag handle, collapse, block type */
+            .drag-handle {
+                order: 1;
+            }
+            
+            .collapse-btn {
+                order: 2;
+            }
+            
+            .block-type-label {
+                order: 3;
+            }
+            
+            .language-selector {
+                order: 4;
+                flex-shrink: 0;
+            }
+            
+            /* Row 1 right side: controls pushed to the right */
+            .block-controls {
+                order: 5;
+                margin-left: auto;
+                flex-shrink: 0;
+            }
+            
+            /* Row 2: title takes full width */
+            .block-title-input {
+                order: 6;
+                flex: 1 1 100%;
+                width: 100%;
+                min-width: 100%;
             }
             
             /* On mobile, hide all controls except annotation-related buttons and overflow menu */
