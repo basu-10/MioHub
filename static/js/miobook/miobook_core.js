@@ -539,7 +539,7 @@ class MioBookCore {
                                 <option value="bash" ${language === 'bash' ? 'selected' : ''}>Bash</option>
                             </select>` : ''}
                     </div>
-                    <input type="text" class="block-title-input" placeholder="Block Title" value="${this.escapeAttribute(title)}">
+                    <input type="text" class="block-title-input" placeholder="Block Title" value="${this.escapeAttribute(title)}" oninput="updateAnnotationTitle(this)">
                     <div class="block-controls">
                         ${renderControls()}
                     </div>
@@ -576,16 +576,16 @@ class MioBookCore {
         const heightDataAttrs = ` data-height-mode="${heightMode}" data-height-multiplier="${heightMultiplier}" data-height-index="${heightIndex}" data-base-height="${baseHeight}"`;
 
         // Generate tabs and annotation cards HTML
-        const annotationTabsHTML = hasAnnotations ? blockData.annotations.map((ann, idx) => `
+        const annotationTabsHTML = hasAnnotations ? blockData.annotations.map((ann, idx) => {
+            const tabTitle = ann.title && ann.title.trim() ? ann.title : 'annotation';
+            const emptyClass = (!ann.title || !ann.title.trim()) ? ' empty-title' : '';
+            return `
             <div class="annotation-tab${idx === 0 ? ' active' : ''}" data-annotation-id="${ann.id}" onclick="switchAnnotationTab(this)">
-                <span>${ann.title || 'Annotation ' + (idx + 1)}</span>
+                <span class="${emptyClass}">${tabTitle}</span>
                 <i class="fas fa-times annotation-tab-close" onclick="event.stopPropagation(); removeAnnotationFromTab(this)" title="Remove"></i>
             </div>
-        `).join('') + `
-            <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
-                <i class="fas fa-plus"></i>
-            </button>
-        ` : '';
+        `;
+        }).join('') : '';
         
         const annotationCardsHTML = hasAnnotations ? blockData.annotations.map((ann, idx) => `
             <div class="annotation-card${idx === 0 ? ' active' : ''}" data-annotation-id="${ann.id}" data-parent-id="${blockData.id}">
@@ -599,9 +599,14 @@ class MioBookCore {
                     ${this.renderBlock(blockData, { containerType: 'main', hasAnnotations, parentId: null })}
                 </div>
                 ${hasAnnotations ? `
-                    <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
+                    <div class="resize-zone" onmousedown="window.MioBook.startResize(event, this)"></div>
                     <div class="annotation-column${annotationVisible ? '' : ' hidden'}"${annotationWidth} data-parent-id="${blockData.id}">
                         <div class="annotation-scroll-wrapper" data-parent-id="${blockData.id}">
+                            <div class="annotation-tabs-header">
+                                <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                             <div class="annotation-tabs">
                                 ${annotationTabsHTML}
                             </div>
@@ -667,6 +672,11 @@ class MioBookCore {
             await this.initializeBlock(newBlock, type);
             this.initializeAnnotationSortable(newRow);
             this.updateSeparatorIndices();
+            
+            // Apply mobile heights if needed
+            if (typeof applyMobileHeights === 'function') {
+                applyMobileHeights();
+            }
         }
 
         this.markDirty();
@@ -694,6 +704,11 @@ class MioBookCore {
                 await this.initializeBlock(newBlock, type);
                 this.initializeAnnotationSortable(newRow);
                 this.updateSeparatorIndices();
+                
+                // Apply mobile heights if needed
+                if (typeof applyMobileHeights === 'function') {
+                    applyMobileHeights();
+                }
             }
         }
 
@@ -1129,14 +1144,30 @@ class MioBookCore {
         const annotationData = this.createDefaultBlockData(type, `annotation-${Date.now()}`);
         annotationData.parentId = blockRow.dataset.blockId;
 
-        // Get or create tabs container and content wrapper
+        // Get or create tabs header, tabs container and content wrapper
+        let tabsHeader = wrapper.querySelector('.annotation-tabs-header');
         let tabsContainer = wrapper.querySelector('.annotation-tabs');
         let contentWrapper = wrapper.querySelector('.annotation-content-wrapper');
+        
+        if (!tabsHeader) {
+            tabsHeader = document.createElement('div');
+            tabsHeader.className = 'annotation-tabs-header';
+            tabsHeader.innerHTML = `
+                <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                    <i class="fas fa-plus"></i>
+                </button>
+            `;
+            wrapper.insertBefore(tabsHeader, wrapper.firstChild);
+        }
         
         if (!tabsContainer) {
             tabsContainer = document.createElement('div');
             tabsContainer.className = 'annotation-tabs';
-            wrapper.insertBefore(tabsContainer, wrapper.firstChild);
+            if (tabsHeader.nextSibling) {
+                wrapper.insertBefore(tabsContainer, tabsHeader.nextSibling);
+            } else {
+                wrapper.appendChild(tabsContainer);
+            }
         }
         
         if (!contentWrapper) {
@@ -1146,10 +1177,9 @@ class MioBookCore {
         }
 
         // Create tab
-        const tabCount = tabsContainer.querySelectorAll('.annotation-tab').length;
         const tabHTML = `
             <div class="annotation-tab active" data-annotation-id="${annotationData.id}" onclick="switchAnnotationTab(this)">
-                <span>${annotationData.title || 'Annotation ' + (tabCount + 1)}</span>
+                <span class="empty-title">annotation</span>
                 <i class="fas fa-times annotation-tab-close" onclick="event.stopPropagation(); removeAnnotationFromTab(this)" title="Remove"></i>
             </div>
         `;
@@ -1157,19 +1187,8 @@ class MioBookCore {
         // Deactivate all existing tabs
         tabsContainer.querySelectorAll('.annotation-tab').forEach(tab => tab.classList.remove('active'));
         
-        // Insert before the + button if it exists, otherwise append
-        const addBtn = tabsContainer.querySelector('.annotation-tab-add');
-        if (addBtn) {
-            addBtn.insertAdjacentHTML('beforebegin', tabHTML);
-        } else {
-            tabsContainer.insertAdjacentHTML('beforeend', tabHTML);
-            // Add the + button if it doesn't exist
-            tabsContainer.insertAdjacentHTML('beforeend', `
-                <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
-                    <i class="fas fa-plus"></i>
-                </button>
-            `);
-        }
+        // Insert the tab into the tabs container
+        tabsContainer.insertAdjacentHTML('beforeend', tabHTML);
 
         // Create content card
         contentWrapper.querySelectorAll('.annotation-card').forEach(card => card.classList.remove('active'));
@@ -1194,7 +1213,7 @@ class MioBookCore {
             annotationCol.classList.remove('hidden');
         }
 
-        this.positionResizeHandle(blockRow);
+        this.positionResizeZone(blockRow);
         this.markDirty();
         this.lastActiveBlockRow = blockRow;
 
@@ -1218,6 +1237,18 @@ class MioBookCore {
             icon.className = `fas ${isHidden ? 'fa-eye-slash' : 'fa-eye'}`;
         }
         button.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
+
+        // Show or hide the resize zone appropriately and reposition
+        const zone = blockRow.querySelector('.resize-zone');
+        if (zone) {
+            if (isHidden || blockRow.classList.contains('collapsed')) {
+                zone.style.display = 'none';
+            } else {
+                zone.style.display = zone.dataset.originalDisplay || '';
+                // ensure it's positioned after layout changes
+                requestAnimationFrame(() => this.positionResizeZone(blockRow));
+            }
+        }
 
         this.markDirty();
     }
@@ -1339,6 +1370,12 @@ class MioBookCore {
         button.title = `Cycle height (current: ${multiplier}x)`;
 
         this.markDirty();
+        
+        // Apply mobile heights if needed
+        if (typeof applyMobileHeights === 'function') {
+            applyMobileHeights();
+        }
+        
         console.log(`[MioBook] Block height set to ${multiplier}x (~${newHeight}px)`);
     }
 
@@ -1365,7 +1402,7 @@ class MioBookCore {
 
         this.updateAnnotationCount(blockRow);
         this.updateMainAnnotationButton(blockRow, remaining > 0);
-        this.positionResizeHandle(blockRow);
+        this.positionResizeZone(blockRow);
         this.markDirty();
     }
 
@@ -1458,7 +1495,7 @@ class MioBookCore {
 
             blockRow.dataset.splitRatio = Math.round(mainRatio);
 
-            const handleHTML = '<div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>';
+            const zoneHTML = '<div class="resize-zone" onmousedown="window.MioBook.startResize(event, this)"></div>';
             const columnHTML = `
                 <div class="annotation-column" style="width: ${annotationRatio}%" data-parent-id="${blockId}">
                     <div class="annotation-toolbar">
@@ -1480,12 +1517,18 @@ class MioBookCore {
                             </button>
                         </div>
                     </div>
-                    <div class="annotation-scroll-wrapper" data-parent-id="${blockId}"></div>
+                    <div class="annotation-scroll-wrapper" data-parent-id="${blockId}">
+                        <div class="annotation-tabs-header">
+                            <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             `;
 
             if (mainColumn) {
-                mainColumn.insertAdjacentHTML('afterend', handleHTML + columnHTML);
+                mainColumn.insertAdjacentHTML('afterend', zoneHTML + columnHTML);
             }
 
             annotationColumn = blockRow.querySelector('.annotation-column');
@@ -1498,7 +1541,7 @@ class MioBookCore {
 
     removeAnnotationContainer(blockRow) {
         const annotationColumn = blockRow.querySelector('.annotation-column');
-        const resizeHandle = blockRow.querySelector('.resize-handle');
+        const resizeZone = blockRow.querySelector('.resize-zone');
         const mainColumn = blockRow.querySelector('.main-block-column');
 
         if (annotationColumn) {
@@ -1507,8 +1550,8 @@ class MioBookCore {
             annotationColumn.remove();
         }
 
-        if (resizeHandle) {
-            resizeHandle.remove();
+        if (resizeZone) {
+            resizeZone.remove();
         }
 
         if (mainColumn) {
@@ -1609,7 +1652,7 @@ class MioBookCore {
             const hasAnnotations = !!row.querySelector('.annotation-card');
             if (hasAnnotations) {
                 this.initializeAnnotationSortable(row);
-                this.positionResizeHandle(row);
+                this.positionResizeZone(row);
                 row.dataset.annotationShow = row.dataset.annotationShow === 'false' ? 'false' : 'true';
             }
             this.updateAnnotationCount(row);
@@ -1628,25 +1671,25 @@ class MioBookCore {
         countEl.dataset.annotationCount = String(count);
     }
 
-    updateAllResizeHandles() {
+    updateAllResizeZones() {
         const blockRows = document.querySelectorAll('.block-row');
-        blockRows.forEach((row) => this.positionResizeHandle(row));
+        blockRows.forEach((row) => this.positionResizeZone(row));
     }
 
-    positionResizeHandle(blockRow) {
+    positionResizeZone(blockRow) {
         if (!blockRow) return;
-        const handle = blockRow.querySelector('.resize-handle');
+        const zone = blockRow.querySelector('.resize-zone');
         const mainColumn = blockRow.querySelector('.main-block-column');
         const containerWidth = blockRow.offsetWidth;
-        if (!handle || !mainColumn || !containerWidth) return;
+        if (!zone || !mainColumn || !containerWidth) return;
 
         const mainPercentage = (mainColumn.offsetWidth / containerWidth) * 100;
-        handle.style.left = `${mainPercentage}%`;
+        zone.style.left = `${mainPercentage}%`;
     }
     
-    startResize(event, handle) {
+    startResize(event, zone) {
         event.preventDefault();
-        const blockRow = handle.closest('.block-row');
+        const blockRow = zone.closest('.block-row');
         if (!blockRow) return;
         
         const mainColumn = blockRow.querySelector('.main-block-column');
@@ -1657,7 +1700,11 @@ class MioBookCore {
         const containerWidth = blockRow.offsetWidth;
         const startMainWidth = mainColumn.offsetWidth;
 
-        handle.style.left = `${(startMainWidth / containerWidth) * 100}%`;
+        // Add visual feedback classes
+        zone.classList.add('resizing');
+        document.body.classList.add('resizing-columns');
+
+        zone.style.left = `${(startMainWidth / containerWidth) * 100}%`;
 
         const onMouseMove = (e) => {
             const deltaX = e.clientX - startX;
@@ -1668,7 +1715,7 @@ class MioBookCore {
             mainColumn.style.width = `${mainPercentage}%`;
             annotationColumn.style.width = `${annotationPercentage}%`;
 
-            handle.style.left = `${mainPercentage}%`;
+            zone.style.left = `${mainPercentage}%`;
 
             blockRow.dataset.splitRatio = Math.round(mainPercentage);
         };
@@ -1676,6 +1723,11 @@ class MioBookCore {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            
+            // Remove visual feedback classes
+            zone.classList.remove('resizing');
+            document.body.classList.remove('resizing-columns');
+            
             this.markDirty();
         };
 

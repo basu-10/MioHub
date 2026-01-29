@@ -161,12 +161,12 @@
             transition: width 0.3s ease;
             display: flex;
             flex-direction: column;
-            background: rgba(15, 20, 28, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            box-shadow: none;
-            padding: 12px;
-            gap: 12px;
+            background: rgba(10, 14, 20, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            padding: 0;
+            gap: 0;
         }
         
         .annotation-column.hidden {
@@ -176,22 +176,62 @@
         .annotation-scroll-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding: 4px;
+            gap: 0;
+            padding: 0;
             flex: 1;
             overflow: hidden;
             position: relative;
         }
 
+        .annotation-tabs-wrapper {
+            display: flex;
+            align-items: flex-end;
+            background: linear-gradient(180deg, #1f232c 0%, #151821 100%);
+            border: 1px solid #2a2c31;
+            border-radius: 10px 10px 0 0;
+            box-shadow: inset 0 -1px 0 #1f2a35;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .annotation-tab-add {
+            background: rgba(20, 184, 166, 0.08);
+            border: none;
+            border-right: 1px solid #2a2c31;
+            color: #0af5d4;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 40px;
+            height: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        .annotation-tab-add:hover {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+        }
+
+        .annotation-tab-add i {
+            font-size: 16px;
+        }
+
         .annotation-tabs {
             display: flex;
-            gap: 0;
-            padding: 0;
-            background: #0d0e10;
-            border-bottom: 2px solid #1a1b1f;
+            align-items: flex-end;
+            gap: 6px;
+            padding: 8px 8px 0 8px;
             overflow-x: auto;
             overflow-y: hidden;
-            flex-shrink: 0;
+            flex: 1;
+            min-width: 0;
             scrollbar-width: thin;
             scrollbar-color: #14b8a6 #0d0e10;
             position: relative;
@@ -207,11 +247,10 @@
         }
 
         .annotation-tab {
-            background: #16181c;
-            border: 1px solid #2a2c31;
-            border-bottom: none;
-            color: #7a7f8a;
-            padding: 10px 16px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #a7adb7;
+            padding: 10px 14px;
             cursor: pointer;
             transition: all 0.15s ease;
             font-size: 12px;
@@ -222,25 +261,25 @@
             flex-shrink: 0;
             position: relative;
             border-radius: 8px 8px 0 0;
-            margin-right: -1px;
+            margin-bottom: -1px;
             min-width: 120px;
             max-width: 200px;
         }
 
         .annotation-tab:hover {
-            background: #1a1e24;
-            color: #c3c6cb;
-            z-index: 1;
+            background: rgba(42, 44, 49, 0.65);
+            border-color: #2c3847;
+            color: #e1e3e5;
+            z-index: 2;
         }
 
         .annotation-tab.active {
-            background: rgba(10, 14, 20, 0.65);
-            border-color: #14b8a6;
-            border-bottom: 2px solid rgba(10, 14, 20, 0.65);
+            background: #2a2f3a;
+            border-color: #2c3847;
             color: #0af5d4;
             font-weight: 600;
-            z-index: 2;
-            margin-bottom: -2px;
+            box-shadow: inset 0 -2px 0 #14b8a6, 0 6px 14px rgba(0, 0, 0, 0.25);
+            z-index: 3;
         }
 
         .annotation-tab span {
@@ -249,30 +288,10 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
-        .annotation-tab-add {
-            background: transparent;
-            border: none;
-            color: #7a7f8a;
-            padding: 10px 16px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            width: 40px;
-            position: relative;
-        }
-
-        .annotation-tab-add:hover {
-            background: rgba(20, 184, 166, 0.1);
-            color: #14b8a6;
-        }
-
-        .annotation-tab-add i {
-            font-size: 16px;
+        
+        .annotation-tab span.empty-title {
+            font-style: italic;
+            opacity: 0.6;
         }
 
         .annotation-tab-close {
@@ -306,6 +325,12 @@
             position: relative;
             display: flex;
             flex-direction: column;
+            background: rgba(10, 14, 20, 0.9);
+            border: 1px solid #2a2c31;
+            border-top: none;
+            border-radius: 0 10px 10px 10px;
+            padding: 0;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
         }
 
         .annotation-toolbar {
@@ -452,6 +477,15 @@
 
         .annotation-card .block-item {
             height: 100%;
+                border-radius: 0;
+        }
+
+        .annotation-card .block-item .block-header {
+            background: #2a2f3a;
+            border-bottom: 1px solid #2c3847;
+                border-radius: 0;
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
         }
 
         .annotation-menu {
@@ -534,33 +568,96 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Resizer Handle */
-        .resize-handle {
+        /* Resize Zone - the entire gap between columns */
+        .resize-zone {
             position: absolute;
-            left: 50%;
             top: 0;
             bottom: 0;
-            width: 16px;
+            width: 36px;
             cursor: ew-resize;
             z-index: 10;
             display: flex;
             align-items: center;
             justify-content: center;
             transform: translateX(-50%);
+            transition: background 0.15s ease, width 0.12s ease;
+            pointer-events: auto;
         }
-        
-        .resize-handle::before {
+
+        /* Thin glossy central bar */
+        .resize-zone::before {
             content: '';
-            width: 4px;
-            height: 40px;
-            background: #3d4047;
-            border-radius: 2px;
-            transition: all 0.2s ease;
+            width: 3px;
+            height: 48px;
+            border-radius: 3px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(20,184,166,0.95));
+            box-shadow: 0 0 10px rgba(20, 184, 166, 0.08);
+            transition: transform 0.12s ease, box-shadow 0.12s ease, height 0.12s ease, background 0.12s ease;
+            opacity: 0.9;
+        }
+
+        /* Soft oval outline to give a floating handle feel */
+        .resize-zone::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 80px;
+            border-radius: 999px;
+            border: 1px solid rgba(20,184,166,0.06);
+            box-shadow: 0 6px 24px rgba(10,14,20,0.35);
+            opacity: 0;
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            transform: translateY(0);
+        }
+
+        /* Hover state - more visible thin bar and faint outline */
+        .resize-zone:hover::before {
+            transform: scaleY(1.15);
+            box-shadow: 0 0 18px rgba(20, 184, 166, 0.18);
+        }
+
+        .resize-zone:hover::after {
+            opacity: 1;
+            transform: translateY(0);
+            border-color: rgba(20,184,166,0.12);
+        }
+
+        /* Pulse animation used while dragging */
+        @keyframes resizePulse {
+            0% { box-shadow: 0 0 8px rgba(20,184,166,0.18), 0 0 0 0 rgba(20,184,166,0.06); }
+            50% { box-shadow: 0 0 20px rgba(20,184,166,0.28), 0 0 10px 6px rgba(20,184,166,0.06); }
+            100% { box-shadow: 0 0 8px rgba(20,184,166,0.18), 0 0 0 0 rgba(20,184,166,0.06); }
+        }
+
+        /* Active dragging state - soft radial glow + animated pulse */
+        .resize-zone.resizing {
+            width: 44px;
+            background: radial-gradient(ellipse at center, rgba(20,184,166,0.08) 0%, rgba(20,184,166,0.03) 40%, transparent 60%);
+        }
+
+        .resize-zone.resizing::before {
+            background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(20,184,166,1));
+            height: 88%;
+            transform: scaleY(1.05);
+            box-shadow: 0 0 28px rgba(20, 184, 166, 0.32);
+            animation: resizePulse 1200ms ease-in-out infinite;
+        }
+
+        .resize-zone.resizing::after {
+            opacity: 1;
+            transform: translateY(0);
+            border-color: rgba(20,184,166,0.18);
+            box-shadow: 0 10px 40px rgba(20,184,166,0.08);
         }
         
-        .resize-handle:hover::before {
-            background: #14b8a6;
-            height: 60px;
+        /* Body state during resize - prevent text selection and show resize cursor everywhere */
+        body.resizing-columns {
+            cursor: ew-resize !important;
+            user-select: none;
+        }
+        
+        body.resizing-columns * {
+            cursor: ew-resize !important;
         }
         
         /* Block Styles */
@@ -1467,9 +1564,9 @@
             .block-row {
                 flex-direction: column;
                 gap: 12px;
-                /* Use fixed height by default on mobile */
-                min-height: 500px;
-                max-height: 500px;
+                /* Remove height constraints from block-row in mobile */
+                min-height: auto !important;
+                max-height: none !important;
                 padding: 10px;
                 margin-bottom: 16px;
                 /* Ensure proper stacking context */
@@ -1518,30 +1615,54 @@
             }
 
             .main-block-column,
-            .block-row .main-block-column,
+            .block-row .main-block-column {
+                width: 100% !important;
+                min-width: 0;
+                /* Main block respects height multiplier in mobile */
+                position: relative;
+                flex-shrink: 0;
+                /* Use fixed height by default on mobile */
+                min-height: 500px;
+                max-height: 500px;
+            }
+            
+            /* Override to dynamic height when explicitly toggled */
+            .block-row.dynamic-height .main-block-column {
+                min-height: auto;
+                max-height: none;
+            }
+            
             .block-row .annotation-column,
             .annotation-column {
                 width: 100% !important;
                 min-width: 0;
-                /* Ensure columns don't overlap in mobile */
+                /* Annotations have fixed height in mobile, independent of main block */
                 position: relative;
                 flex-shrink: 0;
+                min-height: 400px !important;
+                max-height: 400px !important;
+                margin-top: 12px;
             }
 
-            .block-item,
-            .annotation-block {
-                /* Use fixed height by default on mobile */
+            .main-block-column .block-item {
+                /* Main blocks use fixed height by default on mobile */
                 height: 100%;
                 min-height: 0;
-                /* Ensure blocks don't overlap */
                 position: relative;
                 margin-bottom: 0;
             }
             
             /* Override to dynamic height when explicitly toggled */
-            .block-row.dynamic-height .block-item,
-            .block-row.dynamic-height .annotation-block {
+            .block-row.dynamic-height .main-block-column .block-item {
                 height: auto;
+            }
+            
+            .annotation-column .annotation-block {
+                /* Annotation blocks have fixed height in mobile */
+                height: 100%;
+                min-height: 0;
+                position: relative;
+                margin-bottom: 0;
             }
 
             /* Keep editors from collapsing when parent height is auto */
@@ -1582,6 +1703,7 @@
             .annotation-scroll-wrapper {
                 flex-direction: column;
                 overflow: hidden;
+                height: 100%;
             }
 
             .annotation-tabs {
@@ -1591,6 +1713,12 @@
             .annotation-card {
                 flex: 1;
                 max-width: 100%;
+                height: 100%;
+            }
+            
+            .annotation-content-wrapper {
+                height: 100%;
+                flex: 1;
             }
             
             .annotation-column.mobile-hidden {
@@ -1607,7 +1735,7 @@
                 display: none !important;
             }
             
-            .resize-handle {
+            .resize-zone {
                 display: none;
             }
             
@@ -1976,24 +2104,26 @@
 
                             {% if has_annotations %}
                                 {% set block_main = block %}
-                                <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"{% if block.collapsed %} style="display: none;"{% endif %}></div>
+                                <div class="resize-zone" onmousedown="window.MioBook.startResize(event, this)"{% if block.collapsed %} style="display: none;"{% endif %}></div>
                                 <div class="annotation-column{% if show_annotations == false %} hidden{% endif %}" style="width: {{ annotation_width }}{% if block.collapsed %}; display: none;{% endif %}" data-parent-id="{{ block.id }}">
                                     <div class="annotation-scroll-wrapper" data-parent-id="{{ block.id }}">
-                                        <div class="annotation-tabs">
-                                            {% for annotation_block in block_annotations %}
-                                                {% set annotation_id = annotation_block.id if annotation_block.id else 'annotation-' ~ loop.index0 %}
-                                                <div class="annotation-tab{% if loop.first %} active{% endif %}" 
-                                                     data-annotation-id="{{ annotation_id }}"
-                                                     onclick="switchAnnotationTab(this)">
-                                                    <span>{{ annotation_block.title or 'Annotation ' ~ loop.index }}</span>
-                                                    <i class="fas fa-times annotation-tab-close" 
-                                                       onclick="event.stopPropagation(); removeAnnotationFromTab(this)"
-                                                       title="Remove"></i>
-                                                </div>
-                                            {% endfor %}
+                                        <div class="annotation-tabs-wrapper">
                                             <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
                                                 <i class="fas fa-plus"></i>
                                             </button>
+                                            <div class="annotation-tabs">
+                                                {% for annotation_block in block_annotations %}
+                                                    {% set annotation_id = annotation_block.id if annotation_block.id else 'annotation-' ~ loop.index0 %}
+                                                    <div class="annotation-tab{% if loop.first %} active{% endif %}" 
+                                                         data-annotation-id="{{ annotation_id }}"
+                                                         onclick="switchAnnotationTab(this)">
+                                                        <span>{{ annotation_block.title or 'Annotation ' ~ loop.index }}</span>
+                                                        <i class="fas fa-times annotation-tab-close" 
+                                                           onclick="event.stopPropagation(); removeAnnotationFromTab(this)"
+                                                           title="Remove"></i>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
                                         </div>
                                         <div class="annotation-content-wrapper">
                                             {% for annotation_block in block_annotations %}
@@ -2101,6 +2231,9 @@
             blockRow.style.minHeight = `${heightPx}px`;
             blockRow.style.maxHeight = `${heightPx}px`;
             blockRow.style.height = `${heightPx}px`;
+            
+            // Apply mobile heights if in mobile view
+            applyMobileHeights();
         }
         
         // Toggle Reading Mode
@@ -2209,11 +2342,15 @@
             // Initialize annotation containers (sortables + toggle states)
             window.MioBook.initializeAllAnnotationContainers();
             
+            // Apply mobile height adjustments
+            applyMobileHeights();
+            
             // Initialize layout-dependent UI
             const refreshLayoutUI = () => {
                 initializeOverflowMenus();
-                window.MioBook?.updateAllResizeHandles();
+                window.MioBook?.updateAllResizeZones();
                 window.MioBook?.initializeAllAnnotationContainers();
+                applyMobileHeights();
             };
 
             refreshLayoutUI();
@@ -2227,6 +2364,50 @@
             // Setup slash command detection for Notion-style quick insert
             setupSlashCommandDetection();
         });
+        
+        // Apply height multiplier to main-block-column in mobile view
+        function applyMobileHeights() {
+            // Only apply in mobile view (max-width: 1024px)
+            if (window.innerWidth > 1024) {
+                // In desktop view, clear any mobile-specific heights
+                document.querySelectorAll('.main-block-column').forEach(col => {
+                    col.style.removeProperty('min-height');
+                    col.style.removeProperty('max-height');
+                    col.style.removeProperty('height');
+                });
+                return;
+            }
+            
+            // In mobile view, transfer height from block-row to main-block-column
+            document.querySelectorAll('.block-row').forEach(blockRow => {
+                // Clear inline heights on the row so it grows with children
+                blockRow.style.minHeight = 'auto';
+                blockRow.style.maxHeight = 'none';
+                blockRow.style.height = 'auto';
+
+                const mainColumn = blockRow.querySelector('.main-block-column');
+                if (!mainColumn) return;
+                
+                // Get height from data attributes (more reliable than parsing inline styles)
+                const heightMode = blockRow.dataset.heightMode;
+                const heightMultiplier = parseFloat(blockRow.dataset.heightMultiplier) || 1;
+                const baseHeight = parseInt(blockRow.dataset.baseHeight) || 500;
+                
+                // Skip if dynamic height mode
+                if (heightMode === 'dynamic' || blockRow.classList.contains('dynamic-height')) {
+                    mainColumn.style.minHeight = 'auto';
+                    mainColumn.style.maxHeight = 'none';
+                    mainColumn.style.height = 'auto';
+                    return;
+                }
+                
+                // Calculate and apply height to main column
+                const mobileHeight = baseHeight * heightMultiplier;
+                mainColumn.style.minHeight = mobileHeight + 'px';
+                mainColumn.style.maxHeight = mobileHeight + 'px';
+                mainColumn.style.height = mobileHeight + 'px';
+            });
+        }
         
         async function initializeExistingBlocks() {
             const blocks = Array.from(document.querySelectorAll('#contentBlocks .block-item'));
@@ -2536,7 +2717,7 @@
             const blockRow = blockItem.closest('.block-row');
             if (blockRow && blockItem.dataset.container === 'main') {
                 const annotationColumn = blockRow.querySelector('.annotation-column');
-                const resizeHandle = blockRow.querySelector('.resize-handle');
+                const resizeZone = blockRow.querySelector('.resize-zone');
                 const annotationBlocks = annotationColumn ? Array.from(annotationColumn.querySelectorAll('.block-item')) : [];
                 
                 // Collapse the entire row
@@ -2550,9 +2731,9 @@
                     blockRow.style.minHeight = '';
                     blockRow.style.maxHeight = '';
                     blockRow.style.height = '';
-                    if (resizeHandle) {
-                        resizeHandle.dataset.originalDisplay = resizeHandle.style.display || '';
-                        resizeHandle.style.display = 'none';
+                    if (resizeZone) {
+                        resizeZone.dataset.originalDisplay = resizeZone.style.display || '';
+                        resizeZone.style.display = 'none';
                     }
                     // Also hide the annotation column when main block is collapsed
                     if (annotationColumn) {
@@ -2582,9 +2763,9 @@
                     if (!restoredMin && !restoredMax && !restoredHeight) {
                         applyFixedHeightFromDataset(blockRow);
                     }
-                    if (resizeHandle) {
-                        resizeHandle.style.display = resizeHandle.dataset.originalDisplay || '';
-                        delete resizeHandle.dataset.originalDisplay;
+                    if (resizeZone) {
+                        resizeZone.style.display = resizeZone.dataset.originalDisplay || '';
+                        delete resizeZone.dataset.originalDisplay;
                     }
                     // Restore annotation column visibility based on its hidden state
                     if (annotationColumn) {
@@ -3193,7 +3374,7 @@
             console.log('[MioBook] Removed annotation:', annotationId);
         }
         
-        // Update annotation title in both tab and block header
+        // Update annotation title in both tab and block header (real-time)
         function updateAnnotationTitle(input) {
             const annotationBlock = input.closest('[data-block-id]');
             if (!annotationBlock) return;
@@ -3208,7 +3389,13 @@
                 if (tab) {
                     const tabText = tab.querySelector('span');
                     if (tabText) {
-                        tabText.textContent = newTitle || 'Untitled Annotation';
+                        if (newTitle) {
+                            tabText.textContent = newTitle;
+                            tabText.classList.remove('empty-title');
+                        } else {
+                            tabText.textContent = 'annotation';
+                            tabText.classList.add('empty-title');
+                        }
                     }
                 }
             }
@@ -3232,6 +3419,20 @@
                 } else {
                     col.classList.add('mobile-hidden');
                 }
+
+                // Ensure resize zone visibility matches annotation column visibility
+                const blockRow = col.closest('.block-row');
+                const zone = blockRow ? blockRow.querySelector('.resize-zone') : null;
+                if (zone) {
+                    if (hasHidden) {
+                        // we showed annotations
+                        zone.style.display = zone.dataset.originalDisplay || '';
+                        requestAnimationFrame(() => window.MioBook?.positionResizeZone(blockRow));
+                    } else {
+                        // we hid annotations
+                        zone.style.display = 'none';
+                    }
+                }
             });
             
             // Update button icon
@@ -3243,6 +3444,9 @@
                     icon.className = 'fas fa-comment-slash';
                 }
             }
+
+            // Reposition all zones after the change completes
+            requestAnimationFrame(() => window.MioBook?.updateAllResizeZones());
         }
         
         // Overflow menu management
