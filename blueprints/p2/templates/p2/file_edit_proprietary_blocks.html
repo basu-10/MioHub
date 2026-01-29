@@ -2503,45 +2503,120 @@
         
         // Apply height multiplier to main-block-column in mobile view
         function applyMobileHeights() {
-            // Only apply in mobile view (max-width: 1024px)
-            if (window.innerWidth > 1024) {
-                // In desktop view, clear any mobile-specific heights
-                document.querySelectorAll('.main-block-column').forEach(col => {
-                    col.style.removeProperty('min-height');
-                    col.style.removeProperty('max-height');
-                    col.style.removeProperty('height');
+            const isMobile = window.innerWidth <= 1024;
+            const rows = document.querySelectorAll('.block-row');
+
+            // Clear all inline heights when returning to desktop
+            if (!isMobile) {
+                rows.forEach(blockRow => {
+                    blockRow.style.removeProperty('min-height');
+                    blockRow.style.removeProperty('max-height');
+                    blockRow.style.removeProperty('height');
+
+                    const mainColumn = blockRow.querySelector('.main-block-column');
+                    const blockItem = mainColumn?.querySelector('.block-item');
+                    const blockContent = blockItem?.querySelector('.block-content');
+
+                    [mainColumn, blockItem, blockContent].forEach(el => {
+                        if (!el) return;
+                        el.style.removeProperty('min-height');
+                        el.style.removeProperty('max-height');
+                        el.style.removeProperty('height');
+                    });
+
+                    // Reset editor shells so desktop sizing can take over
+                    const markdownUI = blockContent?.querySelector('.toastui-editor-defaultUI');
+                    if (markdownUI) {
+                        markdownUI.style.removeProperty('min-height');
+                        markdownUI.style.removeProperty('max-height');
+                        markdownUI.style.removeProperty('height');
+                        markdownUI.querySelector('.toastui-editor-main-container')?.style.removeProperty('height');
+                        markdownUI.querySelector('.toastui-editor-ww-container')?.style.removeProperty('height');
+                        markdownUI.querySelector('.toastui-editor-md-container')?.style.removeProperty('height');
+                        markdownUI.querySelector('.ProseMirror')?.style.removeProperty('height');
+                    }
+
+                    const codeWrapper = blockContent?.querySelector('.code-editor-wrapper');
+                    if (codeWrapper) {
+                        codeWrapper.style.removeProperty('min-height');
+                        codeWrapper.style.removeProperty('max-height');
+                        codeWrapper.style.removeProperty('height');
+                    }
                 });
                 return;
             }
             
-            // In mobile view, transfer height from block-row to main-block-column
-            document.querySelectorAll('.block-row').forEach(blockRow => {
-                // Clear inline heights on the row so it grows with children
+            // On mobile, stack blocks but keep internals sized to the multiplier
+            rows.forEach(blockRow => {
                 blockRow.style.minHeight = 'auto';
                 blockRow.style.maxHeight = 'none';
                 blockRow.style.height = 'auto';
 
                 const mainColumn = blockRow.querySelector('.main-block-column');
                 if (!mainColumn) return;
-                
-                // Get height from data attributes (more reliable than parsing inline styles)
+
+                const blockItem = mainColumn.querySelector('.block-item');
+                const blockContent = blockItem?.querySelector('.block-content');
+                const header = blockItem?.querySelector('.block-header');
+
                 const heightMode = blockRow.dataset.heightMode;
                 const heightMultiplier = parseFloat(blockRow.dataset.heightMultiplier) || 1;
                 const baseHeight = parseInt(blockRow.dataset.baseHeight) || 500;
-                
-                // Skip if dynamic height mode
+
+                // Dynamic mode should stay fluid
                 if (heightMode === 'dynamic' || blockRow.classList.contains('dynamic-height')) {
-                    mainColumn.style.minHeight = 'auto';
-                    mainColumn.style.maxHeight = 'none';
-                    mainColumn.style.height = 'auto';
+                    [mainColumn, blockItem, blockContent].forEach(el => {
+                        if (!el) return;
+                        el.style.minHeight = 'auto';
+                        el.style.maxHeight = 'none';
+                        el.style.height = 'auto';
+                    });
                     return;
                 }
-                
-                // Calculate and apply height to main column
-                const mobileHeight = baseHeight * heightMultiplier;
-                mainColumn.style.minHeight = mobileHeight + 'px';
-                mainColumn.style.maxHeight = mobileHeight + 'px';
-                mainColumn.style.height = mobileHeight + 'px';
+
+                const mobileHeight = Math.max(200, baseHeight * heightMultiplier);
+
+                // Apply height to the shell column and block wrapper
+                [mainColumn, blockItem].forEach(el => {
+                    if (!el) return;
+                    el.style.minHeight = `${mobileHeight}px`;
+                    el.style.maxHeight = `${mobileHeight}px`;
+                    el.style.height = `${mobileHeight}px`;
+                });
+
+                if (!blockContent) return;
+
+                const headerHeight = header?.offsetHeight || 0;
+                const contentHeight = Math.max(160, mobileHeight - headerHeight);
+
+                blockContent.style.minHeight = `${contentHeight}px`;
+                blockContent.style.maxHeight = `${contentHeight}px`;
+                blockContent.style.height = `${contentHeight}px`;
+
+                // Keep Markdown editor shells synced to the new height
+                const markdownUI = blockContent.querySelector('.toastui-editor-defaultUI');
+                if (markdownUI) {
+                    [markdownUI,
+                        markdownUI.querySelector('.toastui-editor-main-container'),
+                        markdownUI.querySelector('.toastui-editor-ww-container'),
+                        markdownUI.querySelector('.toastui-editor-md-container'),
+                        markdownUI.querySelector('.ProseMirror')
+                    ].forEach(el => {
+                        if (!el) return;
+                        el.style.minHeight = `${contentHeight}px`;
+                        el.style.maxHeight = `${contentHeight}px`;
+                        el.style.height = `${contentHeight}px`;
+                    });
+                }
+
+                // Keep Monaco/code blocks sized when stacked
+                const codeWrapper = blockContent.querySelector('.code-editor-wrapper');
+                if (codeWrapper) {
+                    codeWrapper.style.minHeight = `${contentHeight}px`;
+                    codeWrapper.style.maxHeight = `${contentHeight}px`;
+                    codeWrapper.style.height = `${contentHeight}px`;
+                    setTimeout(() => codeWrapper._monacoEditor?.layout?.(), 50);
+                }
             });
         }
         
@@ -3444,6 +3519,67 @@
             console.log('[MioBook] Switched to annotation:', annotationId);
         }
         
+        function extractContentFromDataset(node) {
+            if (!node || !node.dataset || !node.dataset.content) return '';
+            const raw = node.dataset.content;
+            try {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed === 'string') return parsed;
+                if (Array.isArray(parsed)) return parsed.filter(Boolean).join(' ');
+                if (parsed && typeof parsed === 'object') {
+                    if (typeof parsed.content === 'string') return parsed.content;
+                    if (Array.isArray(parsed.blocks)) {
+                        return parsed.blocks
+                            .map(b => {
+                                if (b?.data?.text) return b.data.text;
+                                if (Array.isArray(b?.data?.items)) return b.data.items.join(' ');
+                                if (typeof b?.data?.content === 'string') return b.data.content;
+                                return '';
+                            })
+                            .filter(Boolean)
+                            .join(' ');
+                    }
+                }
+            } catch (err) {
+                return raw;
+            }
+            return raw;
+        }
+
+        function getAnnotationPreview(card, tabTitle) {
+            const titleInput = card?.querySelector('.block-title-input');
+            const annotationTitle = (titleInput?.value || tabTitle || 'Annotation').trim();
+
+            // Prefer the serialized content attached to editors
+            let body = '';
+            const dataNodes = card?.querySelectorAll('[data-content]');
+            if (dataNodes) {
+                for (const node of dataNodes) {
+                    const text = extractContentFromDataset(node).trim();
+                    if (text) {
+                        body = text;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback to live editor DOM (trim toolbars by targeting content areas)
+            if (!body) {
+                const contentArea = card?.querySelector('.toastui-editor-contents')
+                    || card?.querySelector('.ce-block__content')
+                    || card?.querySelector('.block-content');
+                if (contentArea) {
+                    body = (contentArea.textContent || '').replace(/\s+/g, ' ').trim();
+                }
+            }
+
+            const preview = body
+                ? body.slice(0, 260) + (body.length > 260 ? '…' : '')
+                : 'No content available';
+
+            return { annotationTitle: annotationTitle || 'Annotation', preview };
+        }
+
         // Remove annotation from tab (confirmation gate)
         function removeAnnotationFromTab(closeBtn) {
             const tab = closeBtn.closest('.annotation-tab');
@@ -3455,18 +3591,10 @@
             const modal = document.getElementById('annotationDeleteModal');
             if (!modal) return;
 
-            const titleInput = card?.querySelector('.block-title-input');
             const tabTitle = tab.querySelector('span')?.textContent?.trim() || '';
-            const annotationTitle = (titleInput?.value || tabTitle || 'Annotation').trim();
+            const { annotationTitle, preview } = getAnnotationPreview(card, tabTitle);
 
-            let contentText = '';
-            const contentSource = card?.querySelector('.block-content') || card;
-            if (contentSource) {
-                contentText = (contentSource.textContent || '').replace(/\s+/g, ' ').trim();
-            }
-            const preview = contentText ? contentText.slice(0, 260) + (contentText.length > 260 ? '…' : '') : 'No content available';
-
-            modal.querySelector('#annotationDeleteTitle').textContent = annotationTitle || 'Annotation';
+            modal.querySelector('#annotationDeleteTitle').textContent = annotationTitle;
             modal.querySelector('.annotation-delete-body').textContent = preview;
 
             pendingAnnotationDeletion = { tab, annotationId };
