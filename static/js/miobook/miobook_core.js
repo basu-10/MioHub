@@ -575,7 +575,23 @@ class MioBookCore {
         const heightStyle = heightMode === 'dynamic' ? '' : ` style="min-height: ${rowHeight}px; max-height: ${rowHeight}px;"`;
         const heightDataAttrs = ` data-height-mode="${heightMode}" data-height-multiplier="${heightMultiplier}" data-height-index="${heightIndex}" data-base-height="${baseHeight}"`;
 
-        const annotationsHTML = hasAnnotations ? blockData.annotations.map((ann) => this.renderAnnotationCard(ann, blockData.id)).join('') : '';
+        // Generate tabs and annotation cards HTML
+        const annotationTabsHTML = hasAnnotations ? blockData.annotations.map((ann, idx) => `
+            <div class="annotation-tab${idx === 0 ? ' active' : ''}" data-annotation-id="${ann.id}" onclick="switchAnnotationTab(this)">
+                <span>${ann.title || 'Annotation ' + (idx + 1)}</span>
+                <i class="fas fa-times annotation-tab-close" onclick="event.stopPropagation(); removeAnnotationFromTab(this)" title="Remove"></i>
+            </div>
+        `).join('') + `
+            <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                <i class="fas fa-plus"></i>
+            </button>
+        ` : '';
+        
+        const annotationCardsHTML = hasAnnotations ? blockData.annotations.map((ann, idx) => `
+            <div class="annotation-card${idx === 0 ? ' active' : ''}" data-annotation-id="${ann.id}" data-parent-id="${blockData.id}">
+                ${this.renderBlock(ann, { containerType: 'annotation', parentId: blockData.id })}
+            </div>
+        `).join('') : '';
 
         return `
             <div class="block-row${dynamicHeightClass}" data-block-id="${blockData.id}" data-split-ratio="${splitRatio}"${heightDataAttrs}${hasAnnotations ? ` data-annotation-show="${annotationVisible ? 'true' : 'false'}"` : ''}${heightStyle}>
@@ -585,17 +601,13 @@ class MioBookCore {
                 ${hasAnnotations ? `
                     <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
                     <div class="annotation-column${annotationVisible ? '' : ' hidden'}"${annotationWidth} data-parent-id="${blockData.id}">
-                        <div class="annotation-toolbar">
-                            <div class="annotation-toolbar-title">
-                                <i class="fas fa-comment-alt text-teal-400"></i>
-                                <span>Annotations</span>
-                            </div>
-                            <button type="button" class="annotation-add-btn" onclick="window.MioBook.openAnnotationMenu(this)">
-                                <i class="fas fa-plus"></i> Add
-                            </button>
-                        </div>
                         <div class="annotation-scroll-wrapper" data-parent-id="${blockData.id}">
-                            ${annotationsHTML}
+                            <div class="annotation-tabs">
+                                ${annotationTabsHTML}
+                            </div>
+                            <div class="annotation-content-wrapper">
+                                ${annotationCardsHTML}
+                            </div>
                         </div>
                     </div>
                 ` : ''}
@@ -1117,11 +1129,59 @@ class MioBookCore {
         const annotationData = this.createDefaultBlockData(type, `annotation-${Date.now()}`);
         annotationData.parentId = blockRow.dataset.blockId;
 
-        wrapper.insertAdjacentHTML('beforeend', this.renderAnnotationCard(annotationData, annotationData.parentId));
+        // Get or create tabs container and content wrapper
+        let tabsContainer = wrapper.querySelector('.annotation-tabs');
+        let contentWrapper = wrapper.querySelector('.annotation-content-wrapper');
+        
+        if (!tabsContainer) {
+            tabsContainer = document.createElement('div');
+            tabsContainer.className = 'annotation-tabs';
+            wrapper.insertBefore(tabsContainer, wrapper.firstChild);
+        }
+        
+        if (!contentWrapper) {
+            contentWrapper = document.createElement('div');
+            contentWrapper.className = 'annotation-content-wrapper';
+            wrapper.appendChild(contentWrapper);
+        }
 
-        const newBlockEl = wrapper.querySelector(`.annotation-card[data-annotation-id="${annotationData.id}"] .block-item`);
-        if (newBlockEl) {
-            await this.initializeBlock(newBlockEl, annotationData.type);
+        // Create tab
+        const tabCount = tabsContainer.querySelectorAll('.annotation-tab').length;
+        const tabHTML = `
+            <div class="annotation-tab active" data-annotation-id="${annotationData.id}" onclick="switchAnnotationTab(this)">
+                <span>${annotationData.title || 'Annotation ' + (tabCount + 1)}</span>
+                <i class="fas fa-times annotation-tab-close" onclick="event.stopPropagation(); removeAnnotationFromTab(this)" title="Remove"></i>
+            </div>
+        `;
+        
+        // Deactivate all existing tabs
+        tabsContainer.querySelectorAll('.annotation-tab').forEach(tab => tab.classList.remove('active'));
+        
+        // Insert before the + button if it exists, otherwise append
+        const addBtn = tabsContainer.querySelector('.annotation-tab-add');
+        if (addBtn) {
+            addBtn.insertAdjacentHTML('beforebegin', tabHTML);
+        } else {
+            tabsContainer.insertAdjacentHTML('beforeend', tabHTML);
+            // Add the + button if it doesn't exist
+            tabsContainer.insertAdjacentHTML('beforeend', `
+                <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                    <i class="fas fa-plus"></i>
+                </button>
+            `);
+        }
+
+        // Create content card
+        contentWrapper.querySelectorAll('.annotation-card').forEach(card => card.classList.remove('active'));
+        contentWrapper.insertAdjacentHTML('beforeend', this.renderAnnotationCard(annotationData, annotationData.parentId));
+
+        const newCard = contentWrapper.querySelector(`.annotation-card[data-annotation-id="${annotationData.id}"]`);
+        if (newCard) {
+            newCard.classList.add('active');
+            const newBlockEl = newCard.querySelector('.block-item');
+            if (newBlockEl) {
+                await this.initializeBlock(newBlockEl, annotationData.type);
+            }
         }
 
         this.initializeAnnotationSortable(blockRow);
@@ -1138,13 +1198,7 @@ class MioBookCore {
         this.markDirty();
         this.lastActiveBlockRow = blockRow;
 
-        // Scroll to the newly added annotation card
-        const newCard = wrapper.querySelector(`.annotation-card[data-annotation-id="${annotationData.id}"]`);
-        if (newCard) {
-            this.scrollToAnnotationCard(wrapper, newCard);
-        }
-
-        const count = wrapper.querySelectorAll('.annotation-card').length;
+        const count = contentWrapper.querySelectorAll('.annotation-card').length;
         this.checkAnnotationSoftLimit(count);
         this.showToast('Annotation added.', 'success');
     }
@@ -1166,6 +1220,38 @@ class MioBookCore {
         button.setAttribute('title', isHidden ? 'Show Annotations' : 'Hide Annotations');
 
         this.markDirty();
+    }
+
+    removeAnnotationBlock(annotationId, parentBlockId) {
+        const blockRow = document.querySelector(`.block-row[data-block-id="${parentBlockId}"]`);
+        if (!blockRow) return;
+
+        const annotationColumn = blockRow.querySelector('.annotation-column');
+        if (!annotationColumn) return;
+
+        const contentWrapper = annotationColumn.querySelector('.annotation-content-wrapper');
+        const tabsContainer = annotationColumn.querySelector('.annotation-tabs');
+        
+        if (!contentWrapper || !tabsContainer) return;
+
+        // Remove the annotation card and tab
+        const card = contentWrapper.querySelector(`[data-annotation-id="${annotationId}"]`);
+        const tab = tabsContainer.querySelector(`[data-annotation-id="${annotationId}"]`);
+        
+        if (card) card.remove();
+        if (tab) tab.remove();
+
+        // Update counts and visibility
+        const remainingCards = contentWrapper.querySelectorAll('.annotation-card');
+        this.updateAnnotationCount(blockRow);
+        
+        if (remainingCards.length === 0) {
+            annotationColumn.classList.add('hidden');
+            this.updateMainAnnotationButton(blockRow, false);
+        }
+
+        this.markDirty();
+        console.log('[MioBook] Removed annotation:', annotationId);
     }
 
     toggleBlockHeight(button) {

@@ -175,15 +175,137 @@
 
         .annotation-scroll-wrapper {
             display: flex;
+            flex-direction: column;
             gap: 12px;
+            padding: 4px;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .annotation-tabs {
+            display: flex;
+            gap: 0;
+            padding: 0;
+            background: #0d0e10;
+            border-bottom: 2px solid #1a1b1f;
             overflow-x: auto;
             overflow-y: hidden;
-            padding: 4px 4px 10px;
-            flex: 1;
-            align-items: stretch;
-            scrollbar-gutter: stable both-edges;
-            scroll-behavior: smooth;
+            flex-shrink: 0;
+            scrollbar-width: thin;
+            scrollbar-color: #14b8a6 #0d0e10;
             position: relative;
+        }
+
+        .annotation-tabs::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .annotation-tabs::-webkit-scrollbar-thumb {
+            background: #14b8a6;
+            border-radius: 999px;
+        }
+
+        .annotation-tab {
+            background: #16181c;
+            border: 1px solid #2a2c31;
+            border-bottom: none;
+            color: #7a7f8a;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 12px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            position: relative;
+            border-radius: 8px 8px 0 0;
+            margin-right: -1px;
+            min-width: 120px;
+            max-width: 200px;
+        }
+
+        .annotation-tab:hover {
+            background: #1a1e24;
+            color: #c3c6cb;
+            z-index: 1;
+        }
+
+        .annotation-tab.active {
+            background: rgba(10, 14, 20, 0.65);
+            border-color: #14b8a6;
+            border-bottom: 2px solid rgba(10, 14, 20, 0.65);
+            color: #0af5d4;
+            font-weight: 600;
+            z-index: 2;
+            margin-bottom: -2px;
+        }
+
+        .annotation-tab span {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .annotation-tab-add {
+            background: transparent;
+            border: none;
+            color: #7a7f8a;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 40px;
+            position: relative;
+        }
+
+        .annotation-tab-add:hover {
+            background: rgba(20, 184, 166, 0.1);
+            color: #14b8a6;
+        }
+
+        .annotation-tab-add i {
+            font-size: 16px;
+        }
+
+        .annotation-tab-close {
+            margin-left: 4px;
+            padding: 4px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: all 0.15s ease;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .annotation-tab:hover .annotation-tab-close,
+        .annotation-tab.active .annotation-tab-close {
+            opacity: 0.6;
+        }
+
+        .annotation-tab-close:hover {
+            opacity: 1 !important;
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .annotation-content-wrapper {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         .annotation-toolbar {
@@ -318,9 +440,14 @@
         }
 
         .annotation-card {
-            flex: 0 0 360px;
-            max-width: 420px;
-            min-height: 100%;
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .annotation-card.active {
+            display: flex;
         }
 
         .annotation-card .block-item {
@@ -1454,13 +1581,15 @@
 
             .annotation-scroll-wrapper {
                 flex-direction: column;
-                overflow-x: hidden;
-                overflow-y: auto;
+                overflow: hidden;
+            }
+
+            .annotation-tabs {
+                overflow-x: auto;
             }
 
             .annotation-card {
-                flex: 1 1 auto;
-                width: 100%;
+                flex: 1;
                 max-width: 100%;
             }
             
@@ -1849,37 +1978,36 @@
                                 {% set block_main = block %}
                                 <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"{% if block.collapsed %} style="display: none;"{% endif %}></div>
                                 <div class="annotation-column{% if show_annotations == false %} hidden{% endif %}" style="width: {{ annotation_width }}{% if block.collapsed %}; display: none;{% endif %}" data-parent-id="{{ block.id }}">
-                                    <div class="annotation-toolbar">
-                                        <div class="annotation-toolbar-title">
-                                            <i class="fas fa-comment-alt text-teal-400"></i>
-                                            <span>Annotations</span>
-                                        </div>
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <div class="annotation-nav-controls">
-                                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'prev')" title="Previous Annotation">
-                                                    <i class="fas fa-angle-double-left"></i>
-                                                </button>
-                                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'next')" title="Next Annotation">
-                                                    <i class="fas fa-angle-double-right"></i>
-                                                </button>
-                                            </div>
-                                            <button type="button" class="annotation-add-btn" onclick="window.MioBook.openAnnotationMenu(this)">
-                                                <i class="fas fa-plus"></i> Add
+                                    <div class="annotation-scroll-wrapper" data-parent-id="{{ block.id }}">
+                                        <div class="annotation-tabs">
+                                            {% for annotation_block in block_annotations %}
+                                                {% set annotation_id = annotation_block.id if annotation_block.id else 'annotation-' ~ loop.index0 %}
+                                                <div class="annotation-tab{% if loop.first %} active{% endif %}" 
+                                                     data-annotation-id="{{ annotation_id }}"
+                                                     onclick="switchAnnotationTab(this)">
+                                                    <span>{{ annotation_block.title or 'Annotation ' ~ loop.index }}</span>
+                                                    <i class="fas fa-times annotation-tab-close" 
+                                                       onclick="event.stopPropagation(); removeAnnotationFromTab(this)"
+                                                       title="Remove"></i>
+                                                </div>
+                                            {% endfor %}
+                                            <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
+                                                <i class="fas fa-plus"></i>
                                             </button>
                                         </div>
-                                    </div>
-                                    <div class="annotation-scroll-wrapper" data-parent-id="{{ block.id }}">
-                                        {% for annotation_block in block_annotations %}
-                                            {% set annotation_id = annotation_block.id if annotation_block.id else 'annotation-' ~ loop.index0 %}
-                                            <div class="annotation-card" data-annotation-id="{{ annotation_id }}">
-                                                {% set container_type = 'annotation' %}
-                                                {% set parent_id = block_main.id %}
-                                                {% set has_annotations = false %}
-                                                {% set block = annotation_block %}
-                                                {% include 'p2/blocks/block_row_content.html' %}
-                                                {% set block = block_main %}
-                                            </div>
-                                        {% endfor %}
+                                        <div class="annotation-content-wrapper">
+                                            {% for annotation_block in block_annotations %}
+                                                {% set annotation_id = annotation_block.id if annotation_block.id else 'annotation-' ~ loop.index0 %}
+                                                <div class="annotation-card{% if loop.first %} active{% endif %}" data-annotation-id="{{ annotation_id }}">
+                                                    {% set container_type = 'annotation' %}
+                                                    {% set parent_id = block_main.id %}
+                                                    {% set has_annotations = false %}
+                                                    {% set block = annotation_block %}
+                                                    {% include 'p2/blocks/block_row_content.html' %}
+                                                    {% set block = block_main %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
                                     </div>
                                 </div>
                             {% endif %}
@@ -2974,6 +3102,123 @@
                 closeInsertMenu();
             }
         });
+        
+        // Switch annotation tab
+        function switchAnnotationTab(tabElement) {
+            const annotationId = tabElement.dataset.annotationId;
+            const tabsContainer = tabElement.closest('.annotation-tabs');
+            const contentWrapper = tabElement.closest('.annotation-scroll-wrapper').querySelector('.annotation-content-wrapper');
+            
+            // Update tab active states
+            tabsContainer.querySelectorAll('.annotation-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            tabElement.classList.add('active');
+            
+            // Update content active states
+            contentWrapper.querySelectorAll('.annotation-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            const activeCard = contentWrapper.querySelector(`[data-annotation-id="${annotationId}"]`);
+            if (activeCard) {
+                activeCard.classList.add('active');
+            }
+            
+            console.log('[MioBook] Switched to annotation:', annotationId);
+        }
+        
+        // Remove annotation from tab
+        function removeAnnotationFromTab(closeBtn) {
+            const tab = closeBtn.closest('.annotation-tab');
+            const annotationId = tab.dataset.annotationId;
+            const tabsContainer = tab.closest('.annotation-tabs');
+            const contentWrapper = tab.closest('.annotation-scroll-wrapper').querySelector('.annotation-content-wrapper');
+            const annotationColumn = tab.closest('.annotation-column');
+            
+            // If this is the active tab, switch to another tab first
+            if (tab.classList.contains('active')) {
+                const nextTab = tab.nextElementSibling || tab.previousElementSibling;
+                if (nextTab) {
+                    switchAnnotationTab(nextTab);
+                }
+            }
+            
+            // Remove tab
+            tab.remove();
+            
+            // Remove content
+            const card = contentWrapper.querySelector(`[data-annotation-id="${annotationId}"]`);
+            if (card) {
+                // Find and call the block's remove function through MioBook
+                if (window.MioBook) {
+                    const blockElement = card.querySelector('[data-block-id]');
+                    if (blockElement) {
+                        const blockId = blockElement.dataset.blockId;
+                        window.MioBook.removeAnnotationBlock(blockId, annotationColumn.dataset.parentId);
+                    }
+                }
+                card.remove();
+            }
+            
+            // Update annotation count
+            const remainingTabs = tabsContainer.querySelectorAll('.annotation-tab');
+            const count = remainingTabs.length;
+            
+            // Update count badge in toolbar
+            const toolbarTitle = annotationColumn.querySelector('.annotation-toolbar-title span');
+            if (toolbarTitle) {
+                toolbarTitle.textContent = `Annotations (${count})`;
+            }
+            
+            // Hide annotation column if no annotations left
+            if (count === 0) {
+                annotationColumn.classList.add('hidden');
+                
+                // Update the main block's annotation indicator
+                const blockRow = annotationColumn.closest('.block-row');
+                const mainBlock = blockRow?.querySelector('[data-container="main"]');
+                if (mainBlock) {
+                    const chip = mainBlock.querySelector('.annotation-visibility-chip');
+                    if (chip) {
+                        chip.classList.add('hidden');
+                    }
+                }
+                
+                // Mark document as dirty
+                if (window.MioBook) {
+                    window.MioBook.isDirty = true;
+                }
+            }
+            
+            console.log('[MioBook] Removed annotation:', annotationId);
+        }
+        
+        // Update annotation title in both tab and block header
+        function updateAnnotationTitle(input) {
+            const annotationBlock = input.closest('[data-block-id]');
+            if (!annotationBlock) return;
+            
+            const annotationId = annotationBlock.dataset.blockId;
+            const newTitle = input.value.trim();
+            
+            // Find the corresponding tab and update its text
+            const annotationColumn = annotationBlock.closest('.annotation-column');
+            if (annotationColumn) {
+                const tab = annotationColumn.querySelector(`.annotation-tab[data-annotation-id="${annotationId}"]`);
+                if (tab) {
+                    const tabText = tab.querySelector('span');
+                    if (tabText) {
+                        tabText.textContent = newTitle || 'Untitled Annotation';
+                    }
+                }
+            }
+            
+            // Mark document as dirty
+            if (window.MioBook) {
+                window.MioBook.isDirty = true;
+                console.log('[MioBook] Annotation title updated:', newTitle);
+            }
+        }
         
         // Mobile annotations toggle
         function toggleMobileAnnotations() {
