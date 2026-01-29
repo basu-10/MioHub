@@ -412,6 +412,7 @@ class MioBookCore {
                 const heightToggle = blockData.type !== 'whiteboard'
                     ? `<button type="button" class="control-btn hover-reveal height-toggle-btn" onclick="window.MioBook.toggleBlockHeight(this)" title="Cycle height (current: ${heightMultiplier}x)">
                             <i class="fas fa-ruler-vertical"></i>
+                            <span class="height-scale-label">${heightMultiplier}x</span>
                        </button>`
                     : '';
 
@@ -1366,6 +1367,10 @@ class MioBookCore {
         const icon = button.querySelector('i');
         if (icon) {
             icon.className = 'fas fa-ruler-vertical';
+        }
+        const scaleLabel = button.querySelector('.height-scale-label');
+        if (scaleLabel) {
+            scaleLabel.textContent = `${multiplier}x`;
         }
         button.title = `Cycle height (current: ${multiplier}x)`;
 

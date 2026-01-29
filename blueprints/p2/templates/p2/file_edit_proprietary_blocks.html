@@ -232,9 +232,16 @@
             overflow-y: hidden;
             flex: 1;
             min-width: 0;
+            -webkit-overflow-scrolling: touch;
+            cursor: grab;
+            user-select: none;
             scrollbar-width: thin;
             scrollbar-color: #14b8a6 #0d0e10;
             position: relative;
+        }
+
+        .annotation-tabs.drag-scrolling {
+            cursor: grabbing;
         }
 
         .annotation-tabs::-webkit-scrollbar {
@@ -566,6 +573,104 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-6px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Annotation Delete Modal */
+        .annotation-delete-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 9, 12, 0.72);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 32px 16px;
+            z-index: 4500;
+        }
+
+        .annotation-delete-modal.hidden {
+            display: none;
+        }
+
+        .annotation-delete-dialog {
+            width: min(540px, 96vw);
+            background: linear-gradient(180deg, #11141b 0%, #0b0d13 100%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            box-shadow: 0 26px 70px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(20, 184, 166, 0.14);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .annotation-delete-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .annotation-delete-btn {
+            background: #b91c1c;
+            color: #fef2f2;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .annotation-delete-btn:hover {
+            background: #dc2626;
+            border-color: rgba(239, 68, 68, 0.7);
+            box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12);
+        }
+
+        .annotation-cancel-btn {
+            background: #1a1d25;
+            color: #cbd5e1;
+            border: 1px solid #2c3847;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .annotation-cancel-btn:hover {
+            background: #242a35;
+            border-color: #3d4a5c;
+            color: #e2e8f0;
+        }
+
+        .annotation-delete-preview {
+            background: #0c1018;
+            border: 1px solid #1f2a35;
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .annotation-delete-label {
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #8ea0aa;
+        }
+
+        .annotation-delete-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .annotation-delete-body {
+            font-size: 13px;
+            color: #cdd4dc;
+            line-height: 1.5;
+            max-height: 180px;
+            overflow-y: auto;
         }
         
         /* Resize Zone - the entire gap between columns */
@@ -2165,6 +2270,21 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Delete Annotation Modal -->
+    <div id="annotationDeleteModal" class="annotation-delete-modal hidden" aria-hidden="true">
+        <div class="annotation-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="annotationDeleteTitle">
+            <div class="annotation-delete-actions">
+                <button class="annotation-delete-btn" onclick="confirmAnnotationDeletion()">Delete</button>
+                <button class="annotation-cancel-btn" onclick="closeAnnotationDeleteModal()">Cancel</button>
+            </div>
+            <div class="annotation-delete-preview">
+                <div class="annotation-delete-label">Annotation</div>
+                <div id="annotationDeleteTitle" class="annotation-delete-title">Annotation</div>
+                <div class="annotation-delete-body">Preview not available</div>
+            </div>
+        </div>
+    </div>
     
     <!-- Mobile Annotations Toggle Button -->
     <button class="mobile-annotations-toggle" onclick="toggleMobileAnnotations()" title="Toggle Annotations">
@@ -2321,6 +2441,7 @@
         
         // Initialize MioBlocks
         let MioBook;
+        let pendingAnnotationDeletion = null;
         
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('[MioBook] Initializing...');
@@ -2344,6 +2465,12 @@
             
             // Apply mobile height adjustments
             applyMobileHeights();
+
+            // Enable drag/swipe scrolling for annotation tabs on mobile
+            setupAnnotationTabDragScroll();
+
+            // Enable wheel-based scrolling for annotation tabs on desktop
+            setupAnnotationTabWheelScroll();
             
             // Initialize layout-dependent UI
             const refreshLayoutUI = () => {
@@ -2363,6 +2490,15 @@
             
             // Setup slash command detection for Notion-style quick insert
             setupSlashCommandDetection();
+
+            const deleteModal = document.getElementById('annotationDeleteModal');
+            if (deleteModal) {
+                deleteModal.addEventListener('click', (e) => {
+                    if (e.target === deleteModal) {
+                        closeAnnotationDeleteModal();
+                    }
+                });
+            }
         });
         
         // Apply height multiplier to main-block-column in mobile view
@@ -3308,14 +3444,57 @@
             console.log('[MioBook] Switched to annotation:', annotationId);
         }
         
-        // Remove annotation from tab
+        // Remove annotation from tab (confirmation gate)
         function removeAnnotationFromTab(closeBtn) {
             const tab = closeBtn.closest('.annotation-tab');
+            if (!tab) return;
+
             const annotationId = tab.dataset.annotationId;
-            const tabsContainer = tab.closest('.annotation-tabs');
-            const contentWrapper = tab.closest('.annotation-scroll-wrapper').querySelector('.annotation-content-wrapper');
-            const annotationColumn = tab.closest('.annotation-column');
-            
+            const contentWrapper = tab.closest('.annotation-scroll-wrapper')?.querySelector('.annotation-content-wrapper');
+            const card = contentWrapper?.querySelector(`[data-annotation-id="${annotationId}"]`);
+            const modal = document.getElementById('annotationDeleteModal');
+            if (!modal) return;
+
+            const titleInput = card?.querySelector('.block-title-input');
+            const tabTitle = tab.querySelector('span')?.textContent?.trim() || '';
+            const annotationTitle = (titleInput?.value || tabTitle || 'Annotation').trim();
+
+            let contentText = '';
+            const contentSource = card?.querySelector('.block-content') || card;
+            if (contentSource) {
+                contentText = (contentSource.textContent || '').replace(/\s+/g, ' ').trim();
+            }
+            const preview = contentText ? contentText.slice(0, 260) + (contentText.length > 260 ? '…' : '') : 'No content available';
+
+            modal.querySelector('#annotationDeleteTitle').textContent = annotationTitle || 'Annotation';
+            modal.querySelector('.annotation-delete-body').textContent = preview;
+
+            pendingAnnotationDeletion = { tab, annotationId };
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeAnnotationDeleteModal() {
+            const modal = document.getElementById('annotationDeleteModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            pendingAnnotationDeletion = null;
+        }
+
+        function confirmAnnotationDeletion() {
+            if (!pendingAnnotationDeletion) return;
+
+            const { tab, annotationId } = pendingAnnotationDeletion;
+            const tabsContainer = tab?.closest('.annotation-tabs');
+            const contentWrapper = tab?.closest('.annotation-scroll-wrapper')?.querySelector('.annotation-content-wrapper');
+            const annotationColumn = tab?.closest('.annotation-column');
+
+            if (!tabsContainer || !annotationColumn) {
+                closeAnnotationDeleteModal();
+                return;
+            }
+
             // If this is the active tab, switch to another tab first
             if (tab.classList.contains('active')) {
                 const nextTab = tab.nextElementSibling || tab.previousElementSibling;
@@ -3323,12 +3502,12 @@
                     switchAnnotationTab(nextTab);
                 }
             }
-            
+
             // Remove tab
             tab.remove();
-            
+
             // Remove content
-            const card = contentWrapper.querySelector(`[data-annotation-id="${annotationId}"]`);
+            const card = contentWrapper?.querySelector(`[data-annotation-id="${annotationId}"]`);
             if (card) {
                 // Find and call the block's remove function through MioBook
                 if (window.MioBook) {
@@ -3340,17 +3519,17 @@
                 }
                 card.remove();
             }
-            
+
             // Update annotation count
             const remainingTabs = tabsContainer.querySelectorAll('.annotation-tab');
             const count = remainingTabs.length;
-            
+
             // Update count badge in toolbar
             const toolbarTitle = annotationColumn.querySelector('.annotation-toolbar-title span');
             if (toolbarTitle) {
                 toolbarTitle.textContent = `Annotations (${count})`;
             }
-            
+
             // Hide annotation column if no annotations left
             if (count === 0) {
                 annotationColumn.classList.add('hidden');
@@ -3370,7 +3549,9 @@
                     window.MioBook.isDirty = true;
                 }
             }
-            
+
+            pendingAnnotationDeletion = null;
+            closeAnnotationDeleteModal();
             console.log('[MioBook] Removed annotation:', annotationId);
         }
         
@@ -3447,6 +3628,103 @@
 
             // Reposition all zones after the change completes
             requestAnimationFrame(() => window.MioBook?.updateAllResizeZones());
+        }
+
+        // Enable drag/swipe scrolling for annotation tabs on mobile
+        let annotationTabDragBound = false;
+        function setupAnnotationTabDragScroll() {
+            if (annotationTabDragBound) return;
+            annotationTabDragBound = true;
+
+            let activeDrag = null;
+
+            const endDrag = () => {
+                if (!activeDrag) return;
+                const { container, moved } = activeDrag;
+                container.classList.remove('drag-scrolling');
+                if (moved) {
+                    container.dataset.suppressTabClick = 'true';
+                    setTimeout(() => {
+                        delete container.dataset.suppressTabClick;
+                    }, 0);
+                }
+                activeDrag = null;
+            };
+
+            document.addEventListener('pointerdown', (e) => {
+                if (window.innerWidth > 1024) return;
+                const container = e.target.closest('.annotation-tabs');
+                if (!container) return;
+
+                activeDrag = {
+                    container,
+                    pointerId: e.pointerId,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    scrollLeft: container.scrollLeft,
+                    moved: false
+                };
+
+                container.classList.add('drag-scrolling');
+                try {
+                    container.setPointerCapture?.(e.pointerId);
+                } catch (err) {}
+            });
+
+            document.addEventListener('pointermove', (e) => {
+                if (!activeDrag || activeDrag.pointerId !== e.pointerId) return;
+                const dx = e.clientX - activeDrag.startX;
+                const dy = e.clientY - activeDrag.startY;
+
+                if (!activeDrag.moved) {
+                    if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+                    if (Math.abs(dy) > Math.abs(dx)) {
+                        endDrag();
+                        return;
+                    }
+                }
+
+                activeDrag.moved = true;
+                e.preventDefault();
+                activeDrag.container.scrollLeft = activeDrag.scrollLeft - dx;
+            }, { passive: false });
+
+            const handlePointerEnd = (e) => {
+                if (!activeDrag || activeDrag.pointerId !== e.pointerId) return;
+                endDrag();
+            };
+
+            document.addEventListener('pointerup', handlePointerEnd);
+            document.addEventListener('pointercancel', handlePointerEnd);
+            document.addEventListener('pointerleave', handlePointerEnd);
+
+            document.addEventListener('click', (e) => {
+                const container = e.target.closest('.annotation-tabs');
+                if (container && container.dataset.suppressTabClick === 'true') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    delete container.dataset.suppressTabClick;
+                }
+            }, true);
+        }
+
+        // Enable wheel scrolling for annotation tabs on desktop hover
+        let annotationTabWheelBound = false;
+        function setupAnnotationTabWheelScroll() {
+            if (annotationTabWheelBound) return;
+            annotationTabWheelBound = true;
+
+            document.addEventListener('wheel', (e) => {
+                if (window.innerWidth <= 1024) return;
+                const container = e.target.closest('.annotation-tabs');
+                if (!container) return;
+
+                const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
+                if (delta === 0) return;
+
+                e.preventDefault();
+                container.scrollLeft += delta;
+            }, { passive: false });
         }
         
         // Overflow menu management
