@@ -14,6 +14,9 @@ class MioBookCore {
         this.activeAnnotationMenuRow = null;
         this.menuOutsideHandler = null;
         this.menuKeydownHandler = null;
+
+        this.heightMultipliers = [1, 2, 2.5, 3];
+        this.baseBlockHeight = 500;
         
         this.init();
     }
@@ -170,6 +173,15 @@ class MioBookCore {
             mainBlock.order = i;
             mainBlock.splitRatio = parseInt(blockRow.dataset.splitRatio, 10) || 50;
             mainBlock.heightMode = blockRow.dataset.heightMode || 'fixed';
+            mainBlock.heightMultiplier = parseFloat(blockRow.dataset.heightMultiplier || '1');
+            const baseHeight = parseFloat(blockRow.dataset.baseHeight || '');
+            if (!Number.isNaN(baseHeight)) {
+                mainBlock.baseHeight = baseHeight;
+            }
+            const heightIndex = parseInt(blockRow.dataset.heightIndex || '', 10);
+            if (!Number.isNaN(heightIndex)) {
+                mainBlock.heightIndex = heightIndex;
+            }
             mainBlock.collapsed = blockEl.dataset.collapsed === 'true';
 
             const annotations = [];
@@ -366,7 +378,8 @@ class MioBookCore {
             annotations: [],
             splitRatio: 50,
             annotationShow: true,
-            heightMode: 'fixed'
+            heightMode: 'fixed',
+            heightMultiplier: 1
         };
     }
 
@@ -395,6 +408,13 @@ class MioBookCore {
 
         const renderControls = () => {
             if (containerType === 'main') {
+                const heightMultiplier = parseFloat(blockData.heightMultiplier || 1) || 1;
+                const heightToggle = blockData.type !== 'whiteboard'
+                    ? `<button type="button" class="control-btn hover-reveal height-toggle-btn" onclick="window.MioBook.toggleBlockHeight(this)" title="Cycle height (current: ${heightMultiplier}x)">
+                            <i class="fas fa-ruler-vertical"></i>
+                       </button>`
+                    : '';
+
                 const visibilityChip = `<button type="button" class="annotation-visibility-chip${hasAnnotations ? '' : ' hidden'}" onclick="window.MioBook.toggleAnnotation(this)" title="${blockData.annotationShow === false ? 'Show Annotations' : 'Hide Annotations'}">
                             <i class="fas ${blockData.annotationShow === false ? 'fa-eye-slash' : 'fa-eye'}"></i>
                             <span class="annotation-count" aria-label="Annotation count" data-annotation-count="${annotationCount}">${annotationCount}</span>
@@ -410,7 +430,7 @@ class MioBookCore {
                        </button>`
                     : '';
 
-                return `${visibilityChip}${addAnnotationBtn}${whiteboardEdit}
+                return `${heightToggle}${visibilityChip}${addAnnotationBtn}${whiteboardEdit}
                         <button type="button" class="control-btn" onclick="window.MioBook.moveBlockUp(this)" title="Move Up">
                             <i class="fas fa-chevron-up"></i>
                         </button>
@@ -542,15 +562,23 @@ class MioBookCore {
         const splitRatioRaw = blockData.splitRatio || 50;
         const splitRatio = Math.min(70, Math.max(30, splitRatioRaw));
         const annotationVisible = blockData.annotationShow !== false;
-        const heightMode = blockData.heightMode || 'fixed';
+        const heightMode = blockData.heightMode === 'dynamic' ? 'dynamic' : 'fixed';
+        const baseHeight = Math.max(1, parseFloat(blockData.baseHeight || this.baseBlockHeight || 500));
+        const requestedMultiplier = parseFloat(blockData.heightMultiplier || 1);
+        const requestedIndex = this.heightMultipliers.indexOf(requestedMultiplier);
+        const heightIndex = requestedIndex >= 0 ? requestedIndex : 0;
+        const heightMultiplier = this.heightMultipliers[heightIndex] || 1;
+        const rowHeight = Math.round(baseHeight * heightMultiplier);
         const mainWidth = hasAnnotations ? ` style="width: ${splitRatio}%"` : '';
         const annotationWidth = hasAnnotations ? ` style="width: ${100 - splitRatio}%"` : '';
         const dynamicHeightClass = heightMode === 'dynamic' ? ' dynamic-height' : '';
+        const heightStyle = heightMode === 'dynamic' ? '' : ` style="min-height: ${rowHeight}px; max-height: ${rowHeight}px;"`;
+        const heightDataAttrs = ` data-height-mode="${heightMode}" data-height-multiplier="${heightMultiplier}" data-height-index="${heightIndex}" data-base-height="${baseHeight}"`;
 
         const annotationsHTML = hasAnnotations ? blockData.annotations.map((ann) => this.renderAnnotationCard(ann, blockData.id)).join('') : '';
 
         return `
-            <div class="block-row${dynamicHeightClass}" data-block-id="${blockData.id}" data-split-ratio="${splitRatio}" data-height-mode="${heightMode}"${hasAnnotations ? ` data-annotation-show="${annotationVisible ? 'true' : 'false'}"` : ''}>
+            <div class="block-row${dynamicHeightClass}" data-block-id="${blockData.id}" data-split-ratio="${splitRatio}"${heightDataAttrs}${hasAnnotations ? ` data-annotation-show="${annotationVisible ? 'true' : 'false'}"` : ''}${heightStyle}>
                 <div class="main-block-column"${mainWidth}>
                     ${this.renderBlock(blockData, { containerType: 'main', hasAnnotations, parentId: null })}
                 </div>
@@ -1144,43 +1172,88 @@ class MioBookCore {
         const blockRow = button.closest('.block-row');
         if (!blockRow) return;
 
-        const currentMode = blockRow.dataset.heightMode || 'fixed';
-        const newMode = currentMode === 'fixed' ? 'dynamic' : 'fixed';
+        const computedMinHeight = parseFloat(getComputedStyle(blockRow).minHeight) || this.baseBlockHeight;
+        const baseHeight = Math.max(1, parseFloat(blockRow.dataset.baseHeight || this.baseBlockHeight || computedMinHeight || 500));
+        const currentIndex = parseInt(blockRow.dataset.heightIndex || '0', 10);
+        const nextIndex = Number.isNaN(currentIndex) ? 1 : (currentIndex + 1) % this.heightMultipliers.length;
+        const multiplier = this.heightMultipliers[nextIndex] || 1;
+        const newHeight = Math.round(baseHeight * multiplier);
 
-        // Update data attribute and CSS class
-        blockRow.dataset.heightMode = newMode;
+        blockRow.dataset.heightMode = 'fixed';
+        blockRow.dataset.heightIndex = String(nextIndex);
+        blockRow.dataset.heightMultiplier = String(multiplier);
+        blockRow.dataset.baseHeight = baseHeight;
+        blockRow.classList.remove('dynamic-height');
 
-        if (newMode === 'dynamic') {
-            blockRow.classList.add('dynamic-height');
-        } else {
-            blockRow.classList.remove('dynamic-height');
-        }
+        blockRow.style.minHeight = `${newHeight}px`;
+        blockRow.style.maxHeight = `${newHeight}px`;
+        blockRow.style.height = `${newHeight}px`;
 
-        // Resize code editor when toggling height mode
         const mainBlock = blockRow.querySelector('.block-item[data-container="main"]');
         const blockType = mainBlock?.dataset?.type;
+
         if (blockType === 'code') {
-            if (newMode === 'dynamic') {
-                window.CodeHandler?.resizeEditorToContent?.(mainBlock);
+            const codeWrapper = mainBlock.querySelector('.code-editor-wrapper');
+            if (codeWrapper) {
+                codeWrapper.style.height = '';
+                codeWrapper.style.minHeight = '';
+                codeWrapper.style.maxHeight = '';
+                setTimeout(() => codeWrapper._monacoEditor?.layout(), 50);
             } else {
                 window.CodeHandler?.resetEditorHeight?.(mainBlock);
             }
-        }
+        } else if (blockType === 'markdown') {
+            const markdownWrapper = mainBlock.querySelector('.markdown-editor-wrapper');
+            if (markdownWrapper) {
+                markdownWrapper.style.height = '';
+                markdownWrapper.style.minHeight = '';
+                markdownWrapper.style.maxHeight = '';
 
-        // Update button icon and title
-        const icon = button.querySelector('i');
-        if (icon) {
-            if (newMode === 'dynamic') {
-                icon.className = 'fas fa-arrows-alt-v';
-                button.title = 'Toggle height: dynamic';
-            } else {
-                icon.className = 'fas fa-lock';
-                button.title = 'Toggle height: fixed';
+                const editorUI = markdownWrapper.querySelector('.toastui-editor-defaultUI');
+                if (editorUI) {
+                    editorUI.style.height = '';
+                    editorUI.style.minHeight = '';
+                    editorUI.style.maxHeight = '';
+
+                    const mainContainer = editorUI.querySelector('.toastui-editor-main-container');
+                    if (mainContainer) {
+                        mainContainer.style.height = '';
+                        mainContainer.style.minHeight = '';
+                        mainContainer.style.maxHeight = '';
+                    }
+
+                    const wwContainer = editorUI.querySelector('.toastui-editor-ww-container');
+                    if (wwContainer) {
+                        wwContainer.style.height = '';
+                        wwContainer.style.minHeight = '';
+                        wwContainer.style.maxHeight = '';
+                    }
+
+                    const proseMirror = editorUI.querySelector('.ProseMirror');
+                    if (proseMirror) {
+                        proseMirror.style.height = '';
+                        proseMirror.style.minHeight = '';
+                        proseMirror.style.maxHeight = '';
+                        proseMirror.style.overflowY = '';
+                    }
+                }
+            }
+        } else if (blockType === 'editorjs') {
+            const editorjsWrapper = mainBlock.querySelector('.editorjs-wrapper');
+            if (editorjsWrapper) {
+                editorjsWrapper.style.height = '';
+                editorjsWrapper.style.minHeight = '';
             }
         }
 
+        const icon = button.querySelector('i');
+        if (icon) {
+            icon.className = 'fas fa-ruler-vertical';
+        }
+        button.title = `Cycle height (current: ${multiplier}x)`;
+
         this.markDirty();
-        console.log(`[MioBook] Block height mode changed to: ${newMode}`);
+        console.log(`[MioBook] Block height set to ${multiplier}x (~${newHeight}px)`);
     }
 
     deleteAnnotationBlock(button) {

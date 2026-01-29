@@ -39,8 +39,9 @@
         <div class="block-controls">
             {% if container_type == 'main' %}
                 {% if block.type != 'whiteboard' %}
-                    <button type="button" class="control-btn hover-reveal height-toggle-btn" onclick="window.MioBook.toggleBlockHeight(this)" title="Toggle height: {{ height_mode if height_mode is defined else 'fixed' }}">
-                        <i class="fas {% if height_mode is defined and height_mode == 'dynamic' %}fa-arrows-alt-v{% else %}fa-lock{% endif %}"></i>
+                    {% set current_height_multiplier = height_multiplier if height_multiplier is defined else 1 %}
+                    <button type="button" class="control-btn hover-reveal height-toggle-btn" onclick="window.MioBook.toggleBlockHeight(this)" title="Cycle height (current: {{ current_height_multiplier }}x)">
+                        <i class="fas fa-ruler-vertical"></i>
                     </button>
                 {% endif %}
                 {% set annotation_count = block_annotations | length if block_annotations is defined else (block.annotations | length if block.annotations is defined else 0) %}

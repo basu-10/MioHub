@@ -1340,10 +1340,20 @@
             .block-row {
                 flex-direction: column;
                 gap: 12px;
+                /* Use fixed height by default on mobile */
+                min-height: 500px;
+                max-height: 500px;
+                padding: 10px;
+                margin-bottom: 16px;
+                /* Ensure proper stacking context */
+                position: relative;
+                z-index: 1;
+            }
+            
+            /* Override to dynamic height when explicitly toggled */
+            .block-row.dynamic-height {
                 min-height: auto;
                 max-height: none;
-                padding: 10px;
-                margin-bottom: 8px;
             }
             
             .page-shell {
@@ -1386,17 +1396,41 @@
             .annotation-column {
                 width: 100% !important;
                 min-width: 0;
+                /* Ensure columns don't overlap in mobile */
+                position: relative;
+                flex-shrink: 0;
             }
 
             .block-item,
             .annotation-block {
-                height: auto;
+                /* Use fixed height by default on mobile */
+                height: 100%;
                 min-height: 0;
+                /* Ensure blocks don't overlap */
+                position: relative;
+                margin-bottom: 0;
+            }
+            
+            /* Override to dynamic height when explicitly toggled */
+            .block-row.dynamic-height .block-item,
+            .block-row.dynamic-height .annotation-block {
+                height: auto;
             }
 
             /* Keep editors from collapsing when parent height is auto */
             .block-content {
                 min-height: 260px;
+                height: 100%;
+                /* Ensure content doesn't escape container */
+                position: relative;
+                overflow: hidden;
+            }
+            
+            /* In dynamic height mode, allow content to expand */
+            .block-row.dynamic-height .block-content {
+                height: auto;
+                min-height: auto;
+                overflow: visible;
             }
 
             .toastui-editor-defaultUI,
@@ -1405,6 +1439,17 @@
             .code-editor-wrapper,
             .markdown-editor-wrapper {
                 min-height: 260px;
+                height: 100%;
+            }
+            
+            /* In dynamic height mode, editors expand with content */
+            .block-row.dynamic-height .toastui-editor-defaultUI,
+            .block-row.dynamic-height .markdown-editor,
+            .block-row.dynamic-height .editorjs-editor,
+            .block-row.dynamic-height .code-editor-wrapper,
+            .block-row.dynamic-height .markdown-editor-wrapper {
+                height: auto;
+                min-height: auto;
             }
 
             .annotation-scroll-wrapper {
@@ -1774,9 +1819,24 @@
                         {% set annotation_width = has_annotations and ((100 - split_ratio) ~ '%') or '' %}
                         {% set show_annotations = block.annotationShow if block.annotationShow is defined else has_annotations %}
                         {% set height_mode = block.heightMode if block.heightMode is defined else 'fixed' %}
+                        {% set height_multiplier = block.heightMultiplier if block.heightMultiplier is defined else 1 %}
+                        {% set base_height = block.baseHeight if block.baseHeight is defined else 500 %}
+                        {% set height_index = 0 %}
+                        {% if height_multiplier == 2 %}
+                            {% set height_index = 1 %}
+                        {% elif height_multiplier == 2.5 %}
+                            {% set height_index = 2 %}
+                        {% elif height_multiplier == 3 %}
+                            {% set height_index = 3 %}
+                        {% endif %}
+                        {% set row_height = (base_height * height_multiplier) | round(0, 'common') | int %}
+                        {% set height_style = '' %}
+                        {% if height_mode != 'dynamic' and not block.collapsed %}
+                            {% set height_style = 'min-height: ' ~ row_height ~ 'px; max-height: ' ~ row_height ~ 'px;' %}
+                        {% endif %}
 
                         <!-- Block Row -->
-                        <div class="block-row{% if height_mode == 'dynamic' %} dynamic-height{% endif %}" data-block-id="{{ block.id }}" data-split-ratio="{{ split_ratio }}" data-height-mode="{{ height_mode }}"{% if has_annotations %} data-annotation-show="{{ 'false' if show_annotations == false else 'true' }}"{% endif %}>
+                        <div class="block-row{% if height_mode == 'dynamic' %} dynamic-height{% endif %}{% if block.collapsed %} collapsed{% endif %}" data-block-id="{{ block.id }}" data-split-ratio="{{ split_ratio }}" data-height-mode="{{ height_mode }}" data-height-multiplier="{{ height_multiplier }}" data-height-index="{{ height_index }}" data-base-height="{{ base_height }}"{% if has_annotations %} data-annotation-show="{{ 'false' if show_annotations == false else 'true' }}"{% endif %}{% if height_style %} style="{{ height_style }}"{% endif %}>
                             <div class="main-block-column" style="{{ 'width: ' ~ main_width if has_annotations else '' }}">
                                 {% set container_type = 'main' %}
                                 {% set has_annotations = has_annotations %}
@@ -1787,8 +1847,8 @@
 
                             {% if has_annotations %}
                                 {% set block_main = block %}
-                                <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"></div>
-                                <div class="annotation-column{% if show_annotations == false %} hidden{% endif %}" style="width: {{ annotation_width }}" data-parent-id="{{ block.id }}">
+                                <div class="resize-handle" onmousedown="window.MioBook.startResize(event, this)"{% if block.collapsed %} style="display: none;"{% endif %}></div>
+                                <div class="annotation-column{% if show_annotations == false %} hidden{% endif %}" style="width: {{ annotation_width }}{% if block.collapsed %}; display: none;{% endif %}" data-parent-id="{{ block.id }}">
                                     <div class="annotation-toolbar">
                                         <div class="annotation-toolbar-title">
                                             <i class="fas fa-comment-alt text-teal-400"></i>
@@ -1900,6 +1960,20 @@
         
         // Reading Mode State
         let isReadingMode = false;
+
+        function applyFixedHeightFromDataset(blockRow) {
+            if (!blockRow) return;
+
+            const baseHeight = Math.max(1, parseFloat(blockRow.dataset.baseHeight || window.MioBook?.baseBlockHeight || 500));
+            const multiplier = parseFloat(blockRow.dataset.heightMultiplier || '1') || 1;
+            const heightPx = Math.round(baseHeight * multiplier);
+
+            blockRow.classList.remove('dynamic-height');
+            blockRow.dataset.heightMode = 'fixed';
+            blockRow.style.minHeight = `${heightPx}px`;
+            blockRow.style.maxHeight = `${heightPx}px`;
+            blockRow.style.height = `${heightPx}px`;
+        }
         
         // Toggle Reading Mode
         function toggleReadingMode() {
@@ -1910,26 +1984,31 @@
             const blockRows = document.querySelectorAll('.block-row');
             blockRows.forEach(blockRow => {
                 if (isReadingMode) {
-                    // Save original height mode before changing
-                    const currentMode = blockRow.dataset.heightMode || 'fixed';
-                    blockRow.dataset.originalHeightMode = currentMode;
-                    
-                    // Switch to dynamic height for reading
-                    blockRow.dataset.heightMode = 'dynamic';
+                    blockRow.dataset.originalMinHeight = blockRow.style.minHeight || '';
+                    blockRow.dataset.originalMaxHeight = blockRow.style.maxHeight || '';
+                    blockRow.dataset.originalHeightValue = blockRow.style.height || '';
+
                     blockRow.classList.add('dynamic-height');
+                    blockRow.style.minHeight = 'auto';
+                    blockRow.style.maxHeight = 'none';
+                    blockRow.style.height = 'auto';
                 } else {
-                    // Restore original height mode
-                    const originalMode = blockRow.dataset.originalHeightMode || 'fixed';
-                    blockRow.dataset.heightMode = originalMode;
-                    
-                    if (originalMode === 'dynamic') {
-                        blockRow.classList.add('dynamic-height');
-                    } else {
-                        blockRow.classList.remove('dynamic-height');
+                    const restoredMin = blockRow.dataset.originalMinHeight || '';
+                    const restoredMax = blockRow.dataset.originalMaxHeight || '';
+                    const restoredHeight = blockRow.dataset.originalHeightValue || '';
+
+                    blockRow.classList.remove('dynamic-height');
+                    blockRow.style.minHeight = restoredMin;
+                    blockRow.style.maxHeight = restoredMax;
+                    blockRow.style.height = restoredHeight;
+
+                    delete blockRow.dataset.originalMinHeight;
+                    delete blockRow.dataset.originalMaxHeight;
+                    delete blockRow.dataset.originalHeightValue;
+
+                    if (!restoredMin && !restoredMax && !restoredHeight) {
+                        applyFixedHeightFromDataset(blockRow);
                     }
-                    
-                    // Clean up temporary attribute
-                    delete blockRow.dataset.originalHeightMode;
                 }
             });
             
@@ -2329,20 +2408,66 @@
             const blockRow = blockItem.closest('.block-row');
             if (blockRow && blockItem.dataset.container === 'main') {
                 const annotationColumn = blockRow.querySelector('.annotation-column');
+                const resizeHandle = blockRow.querySelector('.resize-handle');
+                const annotationBlocks = annotationColumn ? Array.from(annotationColumn.querySelectorAll('.block-item')) : [];
                 
                 // Collapse the entire row
                 if (isCollapsed) {
+                    // Save current height styles and clear them so the row can shrink
+                    blockRow.dataset.originalMinHeight = blockRow.style.minHeight || '';
+                    blockRow.dataset.originalMaxHeight = blockRow.style.maxHeight || '';
+                    blockRow.dataset.originalHeightValue = blockRow.style.height || '';
+
                     blockRow.classList.add('collapsed');
+                    blockRow.style.minHeight = '';
+                    blockRow.style.maxHeight = '';
+                    blockRow.style.height = '';
+                    if (resizeHandle) {
+                        resizeHandle.dataset.originalDisplay = resizeHandle.style.display || '';
+                        resizeHandle.style.display = 'none';
+                    }
                     // Also hide the annotation column when main block is collapsed
                     if (annotationColumn) {
                         annotationColumn.style.display = 'none';
                     }
+
+                    // Force all annotation blocks into collapsed state and persist flag
+                    annotationBlocks.forEach((ann) => {
+                        ann.classList.add('collapsed');
+                        ann.dataset.collapsed = 'true';
+                    });
                 } else {
                     blockRow.classList.remove('collapsed');
+                    // Restore previously saved heights; if none, reapply fixed height from dataset
+                    const restoredMin = blockRow.dataset.originalMinHeight || '';
+                    const restoredMax = blockRow.dataset.originalMaxHeight || '';
+                    const restoredHeight = blockRow.dataset.originalHeightValue || '';
+
+                    blockRow.style.minHeight = restoredMin;
+                    blockRow.style.maxHeight = restoredMax;
+                    blockRow.style.height = restoredHeight;
+
+                    delete blockRow.dataset.originalMinHeight;
+                    delete blockRow.dataset.originalMaxHeight;
+                    delete blockRow.dataset.originalHeightValue;
+
+                    if (!restoredMin && !restoredMax && !restoredHeight) {
+                        applyFixedHeightFromDataset(blockRow);
+                    }
+                    if (resizeHandle) {
+                        resizeHandle.style.display = resizeHandle.dataset.originalDisplay || '';
+                        delete resizeHandle.dataset.originalDisplay;
+                    }
                     // Restore annotation column visibility based on its hidden state
                     if (annotationColumn) {
                         annotationColumn.style.display = annotationColumn.classList.contains('hidden') ? 'none' : '';
                     }
+
+                    // Expand annotation blocks alongside main block
+                    annotationBlocks.forEach((ann) => {
+                        ann.classList.remove('collapsed');
+                        ann.dataset.collapsed = 'false';
+                    });
                 }
             }
             
@@ -2359,192 +2484,9 @@
         
         // Toggle block height mode
         function toggleBlockHeight(button) {
-            const blockRow = button.closest('.block-row');
-            if (!blockRow) return;
-            
-            const currentMode = blockRow.dataset.heightMode || 'fixed';
-            const newMode = currentMode === 'fixed' ? 'dynamic' : 'fixed';
-            
-            console.log(`[ToggleHeight] Switching from ${currentMode} to ${newMode}`);
-            
-            // Update data attribute and CSS class
-            blockRow.dataset.heightMode = newMode;
-            
-            if (newMode === 'dynamic') {
-                blockRow.classList.add('dynamic-height');
-            } else {
-                blockRow.classList.remove('dynamic-height');
+            if (window.MioBook?.toggleBlockHeight) {
+                window.MioBook.toggleBlockHeight(button);
             }
-
-            // Handle editor-specific resizing based on block type
-            const mainBlock = blockRow.querySelector('.block-item[data-container="main"]');
-            const blockType = mainBlock?.dataset?.type;
-            
-            console.log(`[ToggleHeight] Block type: ${blockType}`);
-            
-            if (blockType === 'code') {
-                // Monaco editor needs explicit resize
-                const codeWrapper = mainBlock.querySelector('.code-editor-wrapper');
-                console.log(`[ToggleHeight] Code wrapper found:`, !!codeWrapper, 'Editor instance:', !!codeWrapper?._monacoEditor);
-                
-                if (codeWrapper) {
-                    setTimeout(() => {
-                        if (newMode === 'dynamic') {
-                            // Set wrapper to auto height
-                            codeWrapper.style.height = 'auto';
-                            codeWrapper.style.minHeight = '400px';
-                            codeWrapper.style.maxHeight = 'none';
-                            
-                            if (codeWrapper._monacoEditor) {
-                                const editor = codeWrapper._monacoEditor;
-                                const model = editor.getModel();
-                                if (model) {
-                                    const lineCount = model.getLineCount();
-                                    const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
-                                    const contentHeight = Math.max(400, (lineCount * lineHeight) + 80);
-                                    console.log(`[ToggleHeight] Code - Lines: ${lineCount}, Height: ${contentHeight}px`);
-                                    codeWrapper.style.height = contentHeight + 'px';
-                                }
-                                editor.layout();
-                            }
-                        } else {
-                            // Reset to default fixed height
-                            codeWrapper.style.height = '';
-                            codeWrapper.style.minHeight = '';
-                            codeWrapper.style.maxHeight = '';
-                            
-                            if (codeWrapper._monacoEditor) {
-                                codeWrapper._monacoEditor.layout();
-                            }
-                        }
-                    }, 50);
-                } else if (window.CodeHandler?.resizeEditorToContent) {
-                    // Fallback to CodeHandler if available
-                    if (newMode === 'dynamic') {
-                        window.CodeHandler.resizeEditorToContent(mainBlock);
-                    } else {
-                        window.CodeHandler.resetEditorHeight?.(mainBlock);
-                    }
-                }
-            } else if (blockType === 'markdown') {
-                // Toast UI editor needs refresh to expand properly
-                const markdownWrapper = mainBlock.querySelector('.markdown-editor-wrapper');
-                console.log(`[ToggleHeight] Markdown wrapper found:`, !!markdownWrapper, 'Editor instance:', !!markdownWrapper?._toastEditor);
-                
-                if (markdownWrapper) {
-                    setTimeout(() => {
-                        if (newMode === 'dynamic') {
-                            // Set wrapper to auto height
-                            markdownWrapper.style.height = 'auto';
-                            markdownWrapper.style.minHeight = '400px';
-                            markdownWrapper.style.maxHeight = 'none';
-                            
-                            // Force all Toast UI containers to expand
-                            const editorUI = markdownWrapper.querySelector('.toastui-editor-defaultUI');
-                            if (editorUI) {
-                                editorUI.style.height = 'auto';
-                                editorUI.style.minHeight = '400px';
-                                editorUI.style.maxHeight = 'none';
-                                
-                                const mainContainer = editorUI.querySelector('.toastui-editor-main-container');
-                                if (mainContainer) {
-                                    mainContainer.style.height = 'auto';
-                                    mainContainer.style.minHeight = '400px';
-                                    mainContainer.style.maxHeight = 'none';
-                                }
-                                
-                                const wwContainer = editorUI.querySelector('.toastui-editor-ww-container');
-                                if (wwContainer) {
-                                    wwContainer.style.height = 'auto';
-                                    wwContainer.style.minHeight = '400px';
-                                    wwContainer.style.maxHeight = 'none';
-                                }
-                                
-                                const proseMirror = editorUI.querySelector('.ProseMirror');
-                                if (proseMirror) {
-                                    proseMirror.style.height = 'auto';
-                                    proseMirror.style.minHeight = '200px';
-                                    proseMirror.style.maxHeight = 'none';
-                                    proseMirror.style.overflowY = 'visible';
-                                }
-                            }
-                            
-                            // Trigger a refresh if editor exists
-                            if (markdownWrapper._toastEditor) {
-                                const editor = markdownWrapper._toastEditor;
-                                const currentMarkdown = editor.getMarkdown();
-                                editor.setMarkdown(currentMarkdown);
-                                console.log(`[ToggleHeight] Markdown refreshed, content length: ${currentMarkdown.length}`);
-                            }
-                        } else {
-                            // Reset to fixed height
-                            markdownWrapper.style.height = '';
-                            markdownWrapper.style.minHeight = '';
-                            markdownWrapper.style.maxHeight = '';
-                            
-                            const editorUI = markdownWrapper.querySelector('.toastui-editor-defaultUI');
-                            if (editorUI) {
-                                editorUI.style.height = '';
-                                editorUI.style.minHeight = '';
-                                editorUI.style.maxHeight = '';
-                                
-                                const mainContainer = editorUI.querySelector('.toastui-editor-main-container');
-                                if (mainContainer) {
-                                    mainContainer.style.height = '';
-                                    mainContainer.style.minHeight = '';
-                                    mainContainer.style.maxHeight = '';
-                                }
-                                
-                                const wwContainer = editorUI.querySelector('.toastui-editor-ww-container');
-                                if (wwContainer) {
-                                    wwContainer.style.height = '';
-                                    wwContainer.style.minHeight = '';
-                                    wwContainer.style.maxHeight = '';
-                                }
-                                
-                                const proseMirror = editorUI.querySelector('.ProseMirror');
-                                if (proseMirror) {
-                                    proseMirror.style.height = '';
-                                    proseMirror.style.minHeight = '';
-                                    proseMirror.style.maxHeight = '';
-                                    proseMirror.style.overflowY = '';
-                                }
-                            }
-                        }
-                    }, 50);
-                }
-            } else if (blockType === 'editorjs') {
-                // Editor.js should expand naturally with CSS
-                const editorjsWrapper = mainBlock.querySelector('.editorjs-wrapper');
-                if (editorjsWrapper) {
-                    if (newMode === 'dynamic') {
-                        editorjsWrapper.style.height = 'auto';
-                        editorjsWrapper.style.minHeight = '400px';
-                    } else {
-                        editorjsWrapper.style.height = '';
-                        editorjsWrapper.style.minHeight = '';
-                    }
-                }
-            }
-            
-            // Update button icon and title
-            const icon = button.querySelector('i');
-            if (icon) {
-                if (newMode === 'dynamic') {
-                    icon.className = 'fas fa-arrows-alt-v';
-                    button.title = 'Toggle height mode: dynamic';
-                } else {
-                    icon.className = 'fas fa-lock';
-                    button.title = 'Toggle height mode: fixed';
-                }
-            }
-            
-            // Mark document as dirty
-            if (window.MioBook) {
-                window.MioBook.markDirty();
-            }
-            
-            console.log(`[MioBook] Block ${blockType} height mode changed to: ${newMode}`);
         }
         
         // Insert Main Block menu handling
