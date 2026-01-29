@@ -11,20 +11,12 @@
             <i class="fas fa-chevron-down"></i>
         </button>
         {% if block.type == 'markdown' %}
-            <div class="flex items-center gap-2">
-                <i class="fas fa-markdown text-teal-400"></i>
-                <span class="block-type-label">Markdown</span>
-            </div>
+            <i class="fas fa-file-lines text-teal-400"></i>
         {% elif block.type == 'todo' %}
-            <div class="flex items-center gap-2">
-                <i class="fas fa-tasks text-dirty-yellow-400"></i>
-                <span class="block-type-label">Todo List</span>
-            </div>
+            <i class="fas fa-list-check text-dirty-yellow-400"></i>
         {% elif block.type == 'code' %}
-            <div class="flex items-center gap-2">
-                <i class="fas fa-code text-teal-400"></i>
-                <span class="block-type-label">Code</span>
-                <select class="language-selector" onchange="window.CodeHandler.changeLanguage(this)">
+            <i class="fas fa-file-code text-teal-400"></i>
+            <select class="language-selector" onchange="window.CodeHandler.changeLanguage(this)">
                     <option value="python" {% if block.metadata and block.metadata.language == 'python' %}selected{% endif %}>Python</option>
                     <option value="javascript" {% if block.metadata and block.metadata.language == 'javascript' %}selected{% endif %}>JavaScript</option>
                     <option value="typescript" {% if block.metadata and block.metadata.language == 'typescript' %}selected{% endif %}>TypeScript</option>
@@ -36,21 +28,12 @@
                     <option value="yaml" {% if block.metadata and block.metadata.language == 'yaml' %}selected{% endif %}>YAML</option>
                     <option value="bash" {% if block.metadata and block.metadata.language == 'bash' %}selected{% endif %}>Bash</option>
                 </select>
-            </div>
         {% elif block.type == 'blocks' %}
-            <div class="flex items-center gap-2">
-                <i class="fas fa-th-large text-dirty-yellow-400"></i>
-                <span class="block-type-label">Rich Blocks</span>
-            </div>
+            <i class="fas fa-cubes text-dirty-yellow-400"></i>
         {% elif block.type == 'whiteboard' %}
-            <div class="flex items-center gap-2">
-                <i class="fas fa-draw-polygon text-dirty-yellow-400"></i>
-                <span class="block-type-label">Whiteboard</span>
-            </div>
+            <i class="fas fa-paintbrush text-dirty-yellow-400"></i>
         {% elif block.type == 'annotation' %}
-            <div class="flex items-center gap-2">
-                <i class="fas fa-comment-alt text-teal-400"></i>
-            </div>
+            <i class="fas fa-comment-alt text-teal-400"></i>
         {% endif %}
         <input type="text" class="block-title-input" placeholder="Block Title" value="{{ block.title if block.title else '' }}">
         <div class="block-controls">

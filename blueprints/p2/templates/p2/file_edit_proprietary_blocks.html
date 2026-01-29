@@ -528,6 +528,7 @@
             flex-shrink: 0;
             min-width: fit-content;
             position: relative;
+            flex-wrap: nowrap;
         }
         
         .control-btn {
@@ -1435,6 +1436,27 @@
             
             .resize-handle {
                 display: none;
+            }
+            
+            /* On mobile, hide all controls except annotation-related buttons and overflow menu */
+            .block-controls .control-btn:not(.overflow-menu-btn):not(.add-annotation-btn) {
+                display: none !important;
+            }
+            
+            /* Always show annotation visibility chip on mobile when not hidden */
+            .block-controls .annotation-visibility-chip:not(.hidden) {
+                display: inline-flex !important;
+            }
+            
+            /* Show add-annotation button on mobile when no annotations exist */
+            .block-controls .add-annotation-btn:not(.hidden) {
+                display: inline-flex !important;
+            }
+            
+            /* Always show overflow menu on mobile */
+            .block-controls .overflow-menu-btn {
+                display: block !important;
+                visibility: visible !important;
             }
         }
         
@@ -2550,39 +2572,29 @@
             menu.className = 'insert-block-menu';
             menu.innerHTML = `
                 <div class="block-type-option" onclick="insertBlockHere('markdown')">
-                    <i class="fas fa-markdown text-teal-400"></i>
-                    <div>
-                        <div class="font-medium">Markdown</div>
-                        <div class="text-xs text-graphite-400">Rich text with markdown</div>
-                    </div>
+                    <i class="fas fa-file-lines text-teal-400"></i>
+                    <span>Markdown</span>
+                    <span class="shortcut-hint">Ctrl+M</span>
                 </div>
                 <div class="block-type-option" onclick="insertBlockHere('todo')">
-                    <i class="fas fa-tasks text-dirty-yellow-400"></i>
-                    <div>
-                        <div class="font-medium">Todo List</div>
-                        <div class="text-xs text-graphite-400">Checkable task list</div>
-                    </div>
+                    <i class="fas fa-list-check text-dirty-yellow-400"></i>
+                    <span>Todo List</span>
+                    <span class="shortcut-hint">Ctrl+T</span>
                 </div>
                 <div class="block-type-option" onclick="insertBlockHere('code')">
-                    <i class="fas fa-code text-teal-400"></i>
-                    <div>
-                        <div class="font-medium">Code</div>
-                        <div class="text-xs text-graphite-400">Syntax highlighted code</div>
-                    </div>
+                    <i class="fas fa-file-code text-teal-400"></i>
+                    <span>Code</span>
+                    <span class="shortcut-hint">Ctrl+C</span>
                 </div>
                 <div class="block-type-option" onclick="insertBlockHere('blocks')">
-                    <i class="fas fa-th-large text-dirty-yellow-400"></i>
-                    <div>
-                        <div class="font-medium">Rich Blocks</div>
-                        <div class="text-xs text-graphite-400">Editor.js block editor</div>
-                    </div>
+                    <i class="fas fa-cubes text-dirty-yellow-400"></i>
+                    <span>Rich Blocks</span>
+                    <span class="shortcut-hint">Ctrl+B</span>
                 </div>
                 <div class="block-type-option" onclick="insertBlockHere('whiteboard')">
-                    <i class="fas fa-draw-polygon text-teal-400"></i>
-                    <div>
-                        <div class="font-medium">Whiteboard</div>
-                        <div class="text-xs text-graphite-400">Freehand drawing canvas</div>
-                    </div>
+                    <i class="fas fa-paintbrush text-teal-400"></i>
+                    <span>Whiteboard</span>
+                    <span class="shortcut-hint">Ctrl+W</span>
                 </div>
             `;
             return menu;
@@ -2623,11 +2635,11 @@
         };
         
         const blockTypeDefinitions = [
-            { type: 'markdown', name: 'Markdown', shortcut: 'md', icon: 'fas fa-markdown', color: 'text-teal-400', description: 'Rich text with markdown' },
-            { type: 'todo', name: 'Todo List', shortcut: 'td', icon: 'fas fa-tasks', color: 'text-dirty-yellow-400', description: 'Checkable task list' },
-            { type: 'code', name: 'Code', shortcut: 'c', icon: 'fas fa-code', color: 'text-teal-400', description: 'Syntax highlighted code' },
-            { type: 'blocks', name: 'Rich Blocks', shortcut: 'rb', icon: 'fas fa-th-large', color: 'text-dirty-yellow-400', description: 'Editor.js block editor' },
-            { type: 'whiteboard', name: 'Whiteboard', shortcut: 'wb', icon: 'fas fa-draw-polygon', color: 'text-teal-400', description: 'Freehand drawing canvas' }
+            { type: 'markdown', name: 'Markdown', shortcut: 'md', icon: 'fas fa-file-lines', color: 'text-teal-400', description: 'Rich text with markdown' },
+            { type: 'todo', name: 'Todo List', shortcut: 'td', icon: 'fas fa-list-check', color: 'text-dirty-yellow-400', description: 'Checkable task list' },
+            { type: 'code', name: 'Code', shortcut: 'c', icon: 'fas fa-file-code', color: 'text-teal-400', description: 'Syntax highlighted code' },
+            { type: 'blocks', name: 'Rich Blocks', shortcut: 'rb', icon: 'fas fa-cubes', color: 'text-dirty-yellow-400', description: 'Editor.js block editor' },
+            { type: 'whiteboard', name: 'Whiteboard', shortcut: 'wb', icon: 'fas fa-paintbrush', color: 'text-teal-400', description: 'Freehand drawing canvas' }
         ];
 
         function setInsertPosition(position) {
@@ -3010,14 +3022,15 @@
         
         // Overflow menu management
         function initializeOverflowMenus() {
+            const isMobile = window.innerWidth <= 1024;
             const blockHeaders = document.querySelectorAll('.block-header');
             
             blockHeaders.forEach(header => {
                 const controls = header.querySelector('.block-controls');
                 if (!controls) return;
                 
-                // Get all control buttons (excluding overflow menu button)
-                const buttons = Array.from(controls.querySelectorAll('.control-btn:not(.overflow-menu-btn)'));
+                // Get all control buttons (excluding overflow menu button, annotation visibility chip, and add-annotation button)
+                const buttons = Array.from(controls.querySelectorAll('.control-btn:not(.overflow-menu-btn):not(.annotation-visibility-chip):not(.add-annotation-btn)'));
                 if (buttons.length === 0) return;
                 
                 // Check if overflow menu already exists
@@ -3053,50 +3066,21 @@
                     });
                 }
 
-                // Ensure hover reveal class is present even if the button already existed
-                overflowBtn.classList.add('hover-reveal');
-                
-                // Ensure overflow button participates in layout measurements
-                overflowBtn.style.display = 'block';
-                overflowBtn.style.visibility = 'visible';
-
-                // Measure available space
-                const headerWidth = header.offsetWidth;
-                const controlsLeft = controls.offsetLeft;
-                const overflowBtnWidth = overflowBtn.offsetWidth || 32;
-                const paddingBuffer = 16; // small padding on the right
-                const availableWidth = Math.max(0, headerWidth - controlsLeft - overflowBtnWidth - paddingBuffer);
-                
-                // Show all buttons initially to measure
-                buttons.forEach(btn => {
-                    btn.style.display = '';
-                });
-                
-                // Calculate which buttons fit
-                let currentWidth = 0;
-                const overflowButtons = [];
-                
-                buttons.forEach((btn, index) => {
-                    const btnWidth = btn.offsetWidth + 4; // gap
-                    if (currentWidth + btnWidth <= availableWidth) {
-                        currentWidth += btnWidth;
-                    } else {
-                        overflowButtons.push(btn);
-                    }
-                });
-                
-                // Hide overflowing buttons
-                overflowButtons.forEach(btn => {
-                    btn.style.display = 'none';
-                });
-                
-                // Populate overflow dropdown
-                overflowDropdown.innerHTML = '';
-                if (overflowButtons.length > 0) {
-                    overflowBtn.classList.add('active');
+                // On mobile, always show overflow menu and put all buttons in it
+                if (isMobile) {
+                    overflowBtn.style.display = 'block';
                     overflowBtn.style.visibility = 'visible';
-
-                    overflowButtons.forEach(btn => {
+                    overflowBtn.classList.add('active');
+                    overflowBtn.classList.remove('hover-reveal');
+                    
+                    // Hide all control buttons on mobile (CSS will handle annotation chip)
+                    buttons.forEach(btn => {
+                        btn.style.display = 'none';
+                    });
+                    
+                    // Populate overflow dropdown with ALL buttons on mobile
+                    overflowDropdown.innerHTML = '';
+                    buttons.forEach(btn => {
                         const menuItem = document.createElement('div');
                         menuItem.className = 'overflow-menu-item';
                         menuItem.innerHTML = btn.innerHTML;
@@ -3112,9 +3096,71 @@
                         overflowDropdown.appendChild(menuItem);
                     });
                 } else {
-                    overflowBtn.classList.remove('active');
-                    overflowDropdown.classList.remove('active');
-                    overflowBtn.style.visibility = 'hidden';
+                    // Desktop: use smart overflow logic
+                    overflowBtn.classList.add('hover-reveal');
+                    
+                    // Ensure overflow button participates in layout measurements
+                    overflowBtn.style.display = 'block';
+                    overflowBtn.style.visibility = 'visible';
+
+                    // Measure available space
+                    const headerWidth = header.offsetWidth;
+                    const controlsLeft = controls.offsetLeft;
+                    const overflowBtnWidth = overflowBtn.offsetWidth || 32;
+                    const annotationChip = controls.querySelector('.annotation-visibility-chip');
+                    const chipWidth = annotationChip && !annotationChip.classList.contains('hidden') ? (annotationChip.offsetWidth + 4) : 0;
+                    const paddingBuffer = 16; // small padding on the right
+                    const availableWidth = Math.max(0, headerWidth - controlsLeft - overflowBtnWidth - chipWidth - paddingBuffer);
+                    
+                    // Show all buttons initially to measure
+                    buttons.forEach(btn => {
+                        btn.style.display = '';
+                    });
+                    
+                    // Calculate which buttons fit
+                    let currentWidth = 0;
+                    const overflowButtons = [];
+                    
+                    buttons.forEach((btn, index) => {
+                        const btnWidth = btn.offsetWidth + 4; // gap
+                        if (currentWidth + btnWidth <= availableWidth) {
+                            currentWidth += btnWidth;
+                        } else {
+                            overflowButtons.push(btn);
+                        }
+                    });
+                    
+                    // Hide overflowing buttons
+                    overflowButtons.forEach(btn => {
+                        btn.style.display = 'none';
+                    });
+                    
+                    // Populate overflow dropdown
+                    overflowDropdown.innerHTML = '';
+                    if (overflowButtons.length > 0) {
+                        overflowBtn.classList.add('active');
+                        overflowBtn.style.visibility = 'visible';
+
+                        overflowButtons.forEach(btn => {
+                            const menuItem = document.createElement('div');
+                            menuItem.className = 'overflow-menu-item';
+                            menuItem.innerHTML = btn.innerHTML;
+                            menuItem.title = btn.title || '';
+
+                            // Clone button functionality
+                            menuItem.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                btn.click();
+                                overflowDropdown.classList.remove('active');
+                            });
+
+                            overflowDropdown.appendChild(menuItem);
+                        });
+                    } else {
+                        overflowBtn.classList.remove('active');
+                        overflowDropdown.classList.remove('active');
+                        overflowBtn.style.visibility = 'hidden';
+                    }
                 }
             });
         }
