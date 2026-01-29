@@ -3765,6 +3765,7 @@
             annotationTabDragBound = true;
 
             let activeDrag = null;
+            const moveThreshold = 8;
 
             const endDrag = () => {
                 if (!activeDrag) return;
@@ -3783,6 +3784,9 @@
                 if (window.innerWidth > 1024) return;
                 const container = e.target.closest('.annotation-tabs');
                 if (!container) return;
+
+                // Clear any stale suppression so a fresh tap can activate
+                delete container.dataset.suppressTabClick;
 
                 activeDrag = {
                     container,
@@ -3805,7 +3809,7 @@
                 const dy = e.clientY - activeDrag.startY;
 
                 if (!activeDrag.moved) {
-                    if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+                    if (Math.abs(dx) < moveThreshold && Math.abs(dy) < moveThreshold) return;
                     if (Math.abs(dy) > Math.abs(dx)) {
                         endDrag();
                         return;
@@ -3832,6 +3836,7 @@
                     e.preventDefault();
                     e.stopPropagation();
                     delete container.dataset.suppressTabClick;
+                    return;
                 }
             }, true);
         }
