@@ -2,6 +2,7 @@
 
 <head>
   <title>{{ board.title or '(untitled)' }} - Public MioPages - MioSpace</title>
+  {% include 'core/partials/favicons.html' %}
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/theme_colors_carbon_teal.css') }}">
