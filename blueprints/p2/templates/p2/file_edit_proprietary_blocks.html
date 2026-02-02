@@ -236,6 +236,69 @@
         {% endif %}
     </div>
 
+    <!-- Insert Main Block Modal -->
+    <div id="insertBlockModal" class="insert-block-modal hidden" aria-hidden="true" onclick="closeInsertBlockModalOnBackdrop(event)">
+        <div class="insert-block-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="insertBlockModalTitle" onclick="event.stopPropagation()">
+            <div class="insert-block-modal-header">
+                <h3 id="insertBlockModalTitle">Insert Main Block</h3>
+                <button class="insert-block-modal-close" onclick="closeInsertBlockModal()" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="insert-block-modal-body">
+                <div class="insert-block-count-section">
+                    <label for="blockCountInput">Number of blocks:</label>
+                    <input type="number" id="blockCountInput" class="block-count-input" min="1" max="50" value="1">
+                </div>
+                <div class="insert-block-options">
+                    <div class="block-type-option-modal" onclick="insertBlockFromModal('markdown')">
+                        <i class="fas fa-file-lines text-teal-400"></i>
+                        <div class="block-type-info">
+                            <span class="block-type-name">Markdown</span>
+                            <span class="block-type-desc">Rich text with markdown</span>
+                        </div>
+                        <span class="shortcut-hint">Ctrl+M</span>
+                    </div>
+                    <div class="block-type-option-modal" onclick="insertBlockFromModal('todo')">
+                        <i class="fas fa-list-check text-dirty-yellow-400"></i>
+                        <div class="block-type-info">
+                            <span class="block-type-name">Todo List</span>
+                            <span class="block-type-desc">Checkable task list</span>
+                        </div>
+                        <span class="shortcut-hint">Ctrl+T</span>
+                    </div>
+                    <div class="block-type-option-modal" onclick="insertBlockFromModal('code')">
+                        <i class="fas fa-file-code text-teal-400"></i>
+                        <div class="block-type-info">
+                            <span class="block-type-name">Code</span>
+                            <span class="block-type-desc">Syntax highlighted code</span>
+                        </div>
+                        <span class="shortcut-hint">Ctrl+C</span>
+                    </div>
+                    <div class="block-type-option-modal" onclick="insertBlockFromModal('blocks')">
+                        <i class="fas fa-cubes text-dirty-yellow-400"></i>
+                        <div class="block-type-info">
+                            <span class="block-type-name">Rich Blocks</span>
+                            <span class="block-type-desc">Editor.js block editor</span>
+                        </div>
+                        <span class="shortcut-hint">Ctrl+B</span>
+                    </div>
+                    <div class="block-type-option-modal" onclick="insertBlockFromModal('whiteboard')">
+                        <i class="fas fa-paintbrush text-teal-400"></i>
+                        <div class="block-type-info">
+                            <span class="block-type-name">Whiteboard</span>
+                            <span class="block-type-desc">Freehand drawing canvas</span>
+                        </div>
+                        <span class="shortcut-hint">Ctrl+W</span>
+                    </div>
+                </div>
+            </div>
+            <div class="insert-block-modal-footer">
+                <button class="insert-block-cancel-btn" onclick="closeInsertBlockModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Delete Annotation Modal -->
     <div id="annotationDeleteModal" class="annotation-delete-modal hidden" aria-hidden="true">
         <div class="annotation-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="annotationDeleteTitle">
@@ -997,55 +1060,33 @@
             }
         }
         
-        // Insert Main Block menu handling
-        let currentInsertMenu = null;
+        // Insert Main Block modal handling
         let currentInsertPosition = null;
-        let currentInsertReference = null;
-        
+
         function showInsertMenuAtSeparator(event, blockIndex) {
             event.stopPropagation();
-            
-            // Close existing menu
-            closeInsertMenu();
-            closeAddBlockMenu();
             
             // Store the block index for insertion
             currentInsertPosition = blockIndex;
             
-            // Create menu if not exists
-            let menu = document.getElementById('insertBlockMenu');
-            if (!menu) {
-                menu = createInsertBlockMenu();
-                document.body.appendChild(menu);
+            // Show the modal
+            const modal = document.getElementById('insertBlockModal');
+            const countInput = document.getElementById('blockCountInput');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.setAttribute('aria-hidden', 'false');
+                // Reset count to 1
+                if (countInput) {
+                    countInput.value = 1;
+                }
+                // Focus the first option or count input
+                setTimeout(() => {
+                    if (countInput) {
+                        countInput.focus();
+                        countInput.select();
+                    }
+                }, 100);
             }
-            
-            // Position menu near the separator
-            const separator = event.currentTarget;
-            const rect = separator.getBoundingClientRect();
-            menu.style.position = 'fixed';
-            
-            // Make menu visible temporarily to get its height
-            menu.style.visibility = 'hidden';
-            menu.classList.add('active');
-            const menuHeight = menu.offsetHeight;
-            menu.style.visibility = 'visible';
-            
-            // Calculate available space below and above
-            const spaceBelow = window.innerHeight - rect.bottom;
-            const spaceAbove = rect.top;
-            
-            // Position menu above if not enough space below
-            if (spaceBelow < menuHeight + 10 && spaceAbove > menuHeight + 10) {
-                // Position above
-                menu.style.top = `${rect.top - menuHeight - 5}px`;
-            } else {
-                // Position below (default)
-                menu.style.top = `${rect.bottom + 5}px`;
-            }
-            
-            menu.style.left = `${rect.left + rect.width / 2 - 100}px`; // Center the menu
-            
-            currentInsertMenu = menu;
         }
         
         function showInsertMenu(event, position, referenceBlockId) {
@@ -1054,52 +1095,40 @@
             showInsertMenuAtSeparator(event, position === 'before' ? 0 : 1);
         }
         
-        function createInsertBlockMenu() {
-            const menu = document.createElement('div');
-            menu.id = 'insertBlockMenu';
-            menu.className = 'insert-block-menu';
-            menu.innerHTML = `
-                <div class="block-type-option" onclick="insertBlockHere('markdown')">
-                    <i class="fas fa-file-lines text-teal-400"></i>
-                    <span>Markdown</span>
-                    <span class="shortcut-hint">Ctrl+M</span>
-                </div>
-                <div class="block-type-option" onclick="insertBlockHere('todo')">
-                    <i class="fas fa-list-check text-dirty-yellow-400"></i>
-                    <span>Todo List</span>
-                    <span class="shortcut-hint">Ctrl+T</span>
-                </div>
-                <div class="block-type-option" onclick="insertBlockHere('code')">
-                    <i class="fas fa-file-code text-teal-400"></i>
-                    <span>Code</span>
-                    <span class="shortcut-hint">Ctrl+C</span>
-                </div>
-                <div class="block-type-option" onclick="insertBlockHere('blocks')">
-                    <i class="fas fa-cubes text-dirty-yellow-400"></i>
-                    <span>Rich Blocks</span>
-                    <span class="shortcut-hint">Ctrl+B</span>
-                </div>
-                <div class="block-type-option" onclick="insertBlockHere('whiteboard')">
-                    <i class="fas fa-paintbrush text-teal-400"></i>
-                    <span>Whiteboard</span>
-                    <span class="shortcut-hint">Ctrl+W</span>
-                </div>
-            `;
-            return menu;
-        }
-        
-        function insertBlockHere(type) {
-            window.MioBook.addBlockAtIndex(type, currentInsertPosition);
-            closeInsertMenu();
-        }
-        
-        function closeInsertMenu() {
-            if (currentInsertMenu) {
-                currentInsertMenu.classList.remove('active');
-                currentInsertMenu = null;
-                currentInsertPosition = null;
-                currentInsertReference = null;
+        function insertBlockFromModal(type) {
+            const countInput = document.getElementById('blockCountInput');
+            const count = countInput ? parseInt(countInput.value) || 1 : 1;
+            
+            // Validate count
+            const validCount = Math.max(1, Math.min(50, count));
+            
+            // Insert multiple blocks
+            for (let i = 0; i < validCount; i++) {
+                window.MioBook.addBlockAtIndex(type, currentInsertPosition + i);
             }
+            
+            closeInsertBlockModal();
+        }
+        
+        function closeInsertBlockModal() {
+            const modal = document.getElementById('insertBlockModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+            currentInsertPosition = null;
+        }
+        
+        function closeInsertBlockModalOnBackdrop(event) {
+            // Only close if clicking directly on the backdrop (not the dialog)
+            if (event.target.id === 'insertBlockModal') {
+                closeInsertBlockModal();
+            }
+        }
+        
+        // Legacy function for compatibility
+        function closeInsertMenu() {
+            closeInsertBlockModal();
         }
         
         function closeAddBlockMenu() {
@@ -1732,7 +1761,11 @@
                 if (!container) return;
 
                 // Don't start drag if clicking the close button
-                if (e.target.closest('.annotation-tab-close')) {
+                const closeBtn = e.target.closest('.annotation-tab-close');
+                if (closeBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeAnnotationFromTab(closeBtn);
                     return;
                 }
 

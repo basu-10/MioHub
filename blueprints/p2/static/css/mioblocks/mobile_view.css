@@ -488,4 +488,107 @@
     .insert-separator:hover .insert-separator-trigger {
         opacity: 1;
     }
+
+    /* Insert Main Block Modal - Mobile */
+    .insert-block-modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        /* Make backdrop fully opaque on mobile */
+        background: rgba(0, 0, 0, 1) !important;
+        backdrop-filter: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 9999 !important;
+        padding: 12px;
+    }
+
+    .insert-block-modal.hidden {
+        display: none !important;
+    }
+
+    .insert-block-modal-dialog {
+        max-width: 100%;
+        width: 100%;
+        max-height: 85vh;
+        margin: 0 auto;
+        position: relative;
+        z-index: 10000;
+        /* Ensure the dialog itself is opaque and matches desktop style */
+        background: #1a1b1f;
+        border: 1px solid #14b8a6;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(20, 184, 166, 0.3);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        animation: modalSlideIn 0.2s ease-out;
+    }
+
+    .insert-block-modal-header {
+        padding: 16px;
+    }
+
+    .insert-block-modal-header h3 {
+        font-size: 16px;
+    }
+
+    .insert-block-modal-body {
+        padding: 16px;
+        max-height: calc(85vh - 140px);
+    }
+
+    .insert-block-count-section {
+        padding: 12px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .insert-block-count-section label {
+        font-size: 13px;
+    }
+
+    .block-count-input {
+        width: 100%;
+        font-size: 16px;
+        padding: 10px 12px;
+    }
+
+    .insert-block-options {
+        gap: 10px;
+    }
+
+    .block-type-option-modal {
+        padding: 12px 14px;
+    }
+
+    .block-type-option-modal i {
+        font-size: 16px;
+    }
+
+    .block-type-name {
+        font-size: 13px;
+    }
+
+    .block-type-desc {
+        font-size: 11px;
+    }
+
+    .block-type-option-modal .shortcut-hint {
+        display: none;
+    }
+
+    .insert-block-modal-footer {
+        padding: 12px 16px;
+    }
+
+    .insert-block-cancel-btn {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 15px;
+    }
 }
