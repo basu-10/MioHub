@@ -14,3 +14,5 @@ static/ui inspiration/
 generate_extension_icons.py
 *.zip
 wsgi_*.py
+plans/
+miohub_android_app/

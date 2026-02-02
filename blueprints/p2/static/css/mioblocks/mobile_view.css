@@ -1,0 +1,242 @@
+/* Mobile/Tablet Responsive */
+@media (max-width: 1024px) {
+    .block-row {
+        flex-direction: column;
+        gap: 12px;
+        /* Remove height constraints from block-row in mobile */
+        min-height: auto !important;
+        max-height: none !important;
+        padding: 10px;
+        margin-bottom: 16px;
+        /* Ensure proper stacking context */
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Override to dynamic height when explicitly toggled */
+    .block-row.dynamic-height {
+        min-height: auto;
+        max-height: none;
+    }
+
+    .page-shell {
+        width: 100%;
+        padding: 0 12px 28px;
+    }
+
+    .sticky-header {
+        padding: 14px 14px;
+        margin: 0 0 14px;
+        border-radius: 0 0 14px 14px;
+    }
+
+    .sticky-header > .flex {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .sticky-header button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .reading-mode-toggle,
+    .save-document-btn,
+    .back-btn {
+        padding: 10px 12px;
+        font-size: 13px;
+        min-height: 44px;
+    }
+
+    .reading-mode-toggle .shortcut-hint {
+        display: none;
+    }
+
+    .main-block-column,
+    .block-row .main-block-column {
+        width: 100% !important;
+        min-width: 0;
+        /* Main block respects height multiplier in mobile */
+        position: relative;
+        flex-shrink: 0;
+        /* Use fixed height by default on mobile */
+        min-height: 500px;
+        max-height: 500px;
+    }
+
+    /* Override to dynamic height when explicitly toggled */
+    .block-row.dynamic-height .main-block-column {
+        min-height: auto;
+        max-height: none;
+    }
+
+    .block-row .annotation-column,
+    .annotation-column {
+        width: 100% !important;
+        min-width: 0;
+        /* Annotations have fixed height in mobile, independent of main block */
+        position: relative;
+        flex-shrink: 0;
+        min-height: 400px !important;
+        max-height: 400px !important;
+        margin-top: 12px;
+    }
+
+    .main-block-column .block-item {
+        /* Main blocks use fixed height by default on mobile */
+        height: 100%;
+        min-height: 0;
+        position: relative;
+        margin-bottom: 0;
+    }
+
+    /* Override to dynamic height when explicitly toggled */
+    .block-row.dynamic-height .main-block-column .block-item {
+        height: auto;
+    }
+
+    .annotation-column .annotation-block {
+        /* Annotation blocks have fixed height in mobile */
+        height: 100%;
+        min-height: 0;
+        position: relative;
+        margin-bottom: 0;
+    }
+
+    /* Keep editors from collapsing when parent height is auto */
+    .block-content {
+        min-height: 260px;
+        height: 100%;
+        /* Ensure content doesn't escape container */
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* In dynamic height mode, allow content to expand */
+    .block-row.dynamic-height .block-content {
+        height: auto;
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .toastui-editor-defaultUI,
+    .markdown-editor,
+    .editorjs-editor,
+    .code-editor-wrapper,
+    .markdown-editor-wrapper {
+        min-height: 260px;
+        height: 100%;
+    }
+
+    /* In dynamic height mode, editors expand with content */
+    .block-row.dynamic-height .toastui-editor-defaultUI,
+    .block-row.dynamic-height .markdown-editor,
+    .block-row.dynamic-height .editorjs-editor,
+    .block-row.dynamic-height .code-editor-wrapper,
+    .block-row.dynamic-height .markdown-editor-wrapper {
+        height: auto;
+        min-height: auto;
+    }
+
+    .annotation-scroll-wrapper {
+        flex-direction: column;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .annotation-tabs {
+        overflow-x: auto;
+    }
+
+    .annotation-card {
+        flex: 1;
+        max-width: 100%;
+        height: 100%;
+    }
+
+    .annotation-content-wrapper {
+        height: 100%;
+        flex: 1;
+    }
+
+    .annotation-column.mobile-hidden {
+        display: none;
+    }
+
+    .mobile-annotations-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-teal-500);
+        color: #fff;
+    }
+
+    .annotation-nav-controls {
+        display: none !important;
+    }
+
+    .resize-zone {
+        display: none;
+    }
+
+    /* Multi-line header: Row 1 = icons & controls, Row 2 = title */
+    .block-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    /* Row 1 left side: drag handle, collapse, block type */
+    .drag-handle {
+        order: 1;
+    }
+
+    .collapse-btn {
+        order: 2;
+    }
+
+    .block-type-label {
+        order: 3;
+    }
+
+    .language-selector {
+        order: 4;
+        flex-shrink: 0;
+    }
+
+    /* Row 1 right side: controls pushed to the right */
+    .block-controls {
+        order: 5;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    /* Row 2: title takes full width */
+    .block-title-input {
+        order: 6;
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 100%;
+    }
+
+    /* On mobile, hide all controls except annotation-related buttons and overflow menu */
+    .block-controls .control-btn:not(.overflow-menu-btn):not(.add-annotation-btn) {
+        display: none !important;
+    }
+
+    /* Always show annotation visibility chip on mobile when not hidden */
+    .block-controls .annotation-visibility-chip:not(.hidden) {
+        display: inline-flex !important;
+    }
+
+    /* Show add-annotation button on mobile when no annotations exist */
+    .block-controls .add-annotation-btn:not(.hidden) {
+        display: inline-flex !important;
+    }
+
+    /* Always show overflow menu on mobile */
+    .block-controls .overflow-menu-btn {
+        display: block !important;
+        visibility: visible !important;
+    }
+}
