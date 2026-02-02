@@ -1,6 +1,6 @@
 // Background service worker for context menus
 
-let serverUrl = 'http://localhost:5555';
+const serverUrl = 'https://basu001.pythonanywhere.com';
 let apiToken = null;
 let settingsLoaded = false;
 
@@ -20,20 +20,19 @@ loadSettings();
 
 // Listen for storage changes
 chrome.storage.onChanged.addListener(async (changes) => {
-  if (changes.serverUrl || changes.apiToken) {
+  if (changes.apiToken) {
     await loadSettings();
   }
 });
 
 async function loadSettings() {
-  const result = await chrome.storage.local.get(['serverUrl', 'apiToken']);
-  if (result.serverUrl) serverUrl = result.serverUrl;
+  const result = await chrome.storage.local.get(['apiToken']);
   if (result.apiToken) apiToken = result.apiToken;
   settingsLoaded = true;
 }
 
 async function ensureSettingsLoaded() {
-  if (settingsLoaded && serverUrl && apiToken) return;
+  if (settingsLoaded && apiToken) return;
   await loadSettings();
 }
 

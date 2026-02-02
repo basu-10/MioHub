@@ -1,6 +1,6 @@
 // MioHub Chrome Extension - Popup Script
 
-let serverUrl = 'http://localhost:5555';
+const serverUrl = 'https://basu001.pythonanywhere.com';
 let apiToken = null;
 let currentUser = null;
 
@@ -13,20 +13,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Load saved settings
 async function loadSettings() {
-  const result = await chrome.storage.local.get(['serverUrl', 'apiToken', 'currentUser']);
-  
-  if (result.serverUrl) {
-    serverUrl = result.serverUrl;
-    document.getElementById('server-url').value = serverUrl;
-  }
-  
+  const result = await chrome.storage.local.get(['apiToken', 'currentUser', 'serverUrl']);
+
   if (result.apiToken) {
     apiToken = result.apiToken;
     document.getElementById('api-token').value = apiToken;
   }
-  
+
   if (result.currentUser) {
     currentUser = result.currentUser;
+  }
+
+  // Cleanup legacy server URL storage
+  if (result.serverUrl) {
+    await chrome.storage.local.remove('serverUrl');
   }
 }
 
@@ -59,7 +59,7 @@ async function checkAuthentication() {
   } catch (error) {
     console.error('Auth check failed:', error);
     showAuthSection();
-    showMessage('Cannot connect to server. Check server URL.', 'error');
+    showMessage('Cannot connect to server.', 'error');
   }
 }
 
@@ -70,17 +70,8 @@ function setupEventListeners() {
   document.getElementById('save-page-btn').addEventListener('click', () => saveContent('url'));
   document.getElementById('save-selection-btn').addEventListener('click', () => saveContent('text'));
   document.getElementById('save-clean-page-btn').addEventListener('click', () => saveContent('clean-page'));
-  
-  // Save server URL and API token as user types
-  document.getElementById('server-url').addEventListener('input', handleServerUrlInput);
-  document.getElementById('api-token').addEventListener('input', handleApiTokenInput);
-}
 
-// Save server URL when user types
-async function handleServerUrlInput(event) {
-  const value = event.target.value.trim();
-  await chrome.storage.local.set({ serverUrl: value });
-  serverUrl = value;
+  document.getElementById('api-token').addEventListener('input', handleApiTokenInput);
 }
 
 // Save API token when user types
@@ -92,17 +83,15 @@ async function handleApiTokenInput(event) {
 
 // Handle connect
 async function handleConnect() {
-  const urlInput = document.getElementById('server-url').value.trim();
   const tokenInput = document.getElementById('api-token').value.trim();
   
-  if (!urlInput || !tokenInput) {
-    showMessage('Please enter both server URL and API token', 'error');
+  if (!tokenInput) {
+    showMessage('Please enter your API token', 'error');
     return;
   }
-  
-  serverUrl = urlInput.replace(/\/$/, ''); // Remove trailing slash
+
   apiToken = tokenInput;
-  
+
   showLoading('Connecting to MioHub...');
   
   try {
@@ -121,7 +110,6 @@ async function handleConnect() {
       
       // Save settings
       await chrome.storage.local.set({
-        serverUrl,
         apiToken,
         currentUser
       });
@@ -136,7 +124,7 @@ async function handleConnect() {
   } catch (error) {
     console.error('Connection failed:', error);
     hideLoading();
-    showMessage('Connection failed. Check server URL and try again.', 'error');
+    showMessage('Connection failed. Please try again.', 'error');
   }
 }
 
