@@ -762,7 +762,8 @@ body.resizing-columns * {
 }
 
 .block-header {
-    background: #2a2c31;
+    background: linear-gradient(180deg, #2b313b 0%, #21262f 100%);
+    border: 1px solid rgba(44, 56, 71, 0.9);
     border-bottom: 1px solid #1f2a35;
     padding: 8px 12px;
     display: flex;
@@ -773,6 +774,7 @@ body.resizing-columns * {
     overflow: visible;
     position: relative;
     flex-shrink: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .block-type-label {
