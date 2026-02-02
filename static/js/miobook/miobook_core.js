@@ -603,13 +603,13 @@ class MioBookCore {
                     <div class="resize-zone" onmousedown="window.MioBook.startResize(event, this)"></div>
                     <div class="annotation-column${annotationVisible ? '' : ' hidden'}"${annotationWidth} data-parent-id="${blockData.id}">
                         <div class="annotation-scroll-wrapper" data-parent-id="${blockData.id}">
-                            <div class="annotation-tabs-header">
+                            <div class="annotation-tabs-wrapper">
                                 <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
                                     <i class="fas fa-plus"></i>
                                 </button>
-                            </div>
-                            <div class="annotation-tabs">
-                                ${annotationTabsHTML}
+                                <div class="annotation-tabs">
+                                    ${annotationTabsHTML}
+                                </div>
                             </div>
                             <div class="annotation-content-wrapper">
                                 ${annotationCardsHTML}
@@ -1146,31 +1146,29 @@ class MioBookCore {
         annotationData.parentId = blockRow.dataset.blockId;
 
         // Get or create tabs header, tabs container and content wrapper
-        let tabsHeader = wrapper.querySelector('.annotation-tabs-header');
+        let tabsWrapper = wrapper.querySelector('.annotation-tabs-wrapper');
         let tabsContainer = wrapper.querySelector('.annotation-tabs');
         let contentWrapper = wrapper.querySelector('.annotation-content-wrapper');
-        
-        if (!tabsHeader) {
-            tabsHeader = document.createElement('div');
-            tabsHeader.className = 'annotation-tabs-header';
-            tabsHeader.innerHTML = `
+
+        if (!tabsWrapper) {
+            tabsWrapper = document.createElement('div');
+            tabsWrapper.className = 'annotation-tabs-wrapper';
+            tabsWrapper.innerHTML = `
                 <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
                     <i class="fas fa-plus"></i>
                 </button>
+                <div class="annotation-tabs"></div>
             `;
-            wrapper.insertBefore(tabsHeader, wrapper.firstChild);
+            wrapper.insertBefore(tabsWrapper, wrapper.firstChild);
+            tabsContainer = tabsWrapper.querySelector('.annotation-tabs');
         }
-        
+
         if (!tabsContainer) {
             tabsContainer = document.createElement('div');
             tabsContainer.className = 'annotation-tabs';
-            if (tabsHeader.nextSibling) {
-                wrapper.insertBefore(tabsContainer, tabsHeader.nextSibling);
-            } else {
-                wrapper.appendChild(tabsContainer);
-            }
+            tabsWrapper.appendChild(tabsContainer);
         }
-        
+
         if (!contentWrapper) {
             contentWrapper = document.createElement('div');
             contentWrapper.className = 'annotation-content-wrapper';
@@ -1504,31 +1502,14 @@ class MioBookCore {
             const zoneHTML = '<div class="resize-zone" onmousedown="window.MioBook.startResize(event, this)"></div>';
             const columnHTML = `
                 <div class="annotation-column" style="width: ${annotationRatio}%" data-parent-id="${blockId}">
-                    <div class="annotation-toolbar">
-                        <div class="annotation-toolbar-title">
-                            <i class="fas fa-comment-alt text-teal-400"></i>
-                            <span>Annotations</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div class="annotation-nav-controls">
-                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'prev')" title="Previous Annotation">
-                                    <i class="fas fa-angle-double-left"></i>
-                                </button>
-                                <button type="button" class="annotation-nav-btn" onclick="window.MioBook.navigateAnnotation(this, 'next')" title="Next Annotation">
-                                    <i class="fas fa-angle-double-right"></i>
-                                </button>
-                            </div>
-                            <button type="button" class="annotation-add-btn" onclick="window.MioBook.openAnnotationMenu(this)">
-                                <i class="fas fa-plus"></i> Add
-                            </button>
-                        </div>
-                    </div>
                     <div class="annotation-scroll-wrapper" data-parent-id="${blockId}">
-                        <div class="annotation-tabs-header">
+                        <div class="annotation-tabs-wrapper">
                             <button class="annotation-tab-add" onclick="window.MioBook.addAnnotation(this)" title="Add Annotation">
                                 <i class="fas fa-plus"></i>
                             </button>
+                            <div class="annotation-tabs"></div>
                         </div>
+                        <div class="annotation-content-wrapper"></div>
                     </div>
                 </div>
             `;

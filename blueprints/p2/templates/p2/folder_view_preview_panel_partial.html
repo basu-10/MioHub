@@ -1423,6 +1423,7 @@ function showDownloadModal(item, itemName) {
   }
   
   const isInfiniteWhiteboard = displayType === 'proprietary_infinite_whiteboard';
+  const isMioBlocks = displayType === 'proprietary_blocks' || displayType === 'book';
   
   let downloadOptionsHTML = '';
   
@@ -1444,6 +1445,16 @@ function showDownloadModal(item, itemName) {
       </button>
     `;
   } else {
+    const wordOptionHTML = isMioBlocks ? `
+      <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'docx')">
+        <i class="material-icons">description</i>
+        <div>
+          <strong>Word (.docx)</strong>
+          <small>Export MioBlocks to Microsoft Word</small>
+        </div>
+      </button>
+    ` : '';
+
     downloadOptionsHTML = `
       <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'native')">
         <i class="material-icons">insert_drive_file</i>
@@ -1459,6 +1470,7 @@ function showDownloadModal(item, itemName) {
           <small>Formatted PDF for printing/sharing</small>
         </div>
       </button>
+      ${wordOptionHTML}
       <button class="download-format-btn" onclick="downloadInFormat('${displayType}', ${item.id}, '${itemName}', 'jsonl')">
         <i class="material-icons">data_object</i>
         <div>
@@ -1778,6 +1790,46 @@ function downloadInFormat(type, id, itemName, format) {
           }
           alert('Failed to prepare PDF export. Please try again.');
         });
+    }
+  } else if (format === 'docx') {
+    // Word export - currently supported for MioBlocks only
+    if (type === 'proprietary_blocks' || type === 'book') {
+      const docxUrl = `/combined/download_docx/${id}`;
+      fetch(docxUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(data.error || 'Export failed');
+            }).catch(() => {
+              throw new Error(`Export failed with status ${response.status}`);
+            });
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${safeName}.docx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Downloaded ${safeName}.docx`);
+          }
+        })
+        .catch(error => {
+          console.error('DOCX export failed:', error);
+          if (window.TelemetryPanel) {
+            window.TelemetryPanel.setIdle(`Export failed: ${error.message}`);
+          }
+          alert(`Failed to export as Word: ${error.message}`);
+        });
+    } else {
+      if (window.TelemetryPanel) {
+        window.TelemetryPanel.setIdle('Word export not available for this item');
+      }
     }
   } else if (format === 'jsonl') {
     // Special case for MioInfinite - trigger browser-side export
