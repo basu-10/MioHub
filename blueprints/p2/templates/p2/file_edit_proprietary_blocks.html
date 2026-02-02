@@ -251,11 +251,6 @@
         </div>
     </div>
     
-    <!-- Mobile Annotations Toggle Button -->
-    <button class="mobile-annotations-toggle" onclick="toggleMobileAnnotations()" title="Toggle Annotations">
-        <i class="fas fa-comment-alt"></i>
-    </button>
-
     <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
@@ -303,8 +298,9 @@
         
         // Reading Mode State
         let isReadingMode = false;
+        let lastIsMobile = window.innerWidth <= 1024;
 
-        function applyFixedHeightFromDataset(blockRow) {
+        function applyFixedHeightFromDataset(blockRow, { syncMobile = true } = {}) {
             if (!blockRow) return;
 
             const baseHeight = Math.max(1, parseFloat(blockRow.dataset.baseHeight || window.MioBook?.baseBlockHeight || 500));
@@ -318,7 +314,9 @@
             blockRow.style.height = `${heightPx}px`;
             
             // Apply mobile heights if in mobile view
-            applyMobileHeights();
+            if (syncMobile && window.innerWidth <= 1024) {
+                applyMobileHeights();
+            }
         }
         
         // Toggle Reading Mode
@@ -471,8 +469,12 @@
             const isMobile = window.innerWidth <= 1024;
             const rows = document.querySelectorAll('.block-row');
 
-            // Clear all inline heights when returning to desktop
+            // Only clear inline overrides when returning from mobile
             if (!isMobile) {
+                if (!lastIsMobile) {
+                    return;
+                }
+
                 rows.forEach(blockRow => {
                     blockRow.style.removeProperty('min-height');
                     blockRow.style.removeProperty('max-height');
@@ -507,9 +509,19 @@
                         codeWrapper.style.removeProperty('max-height');
                         codeWrapper.style.removeProperty('height');
                     }
+
+                    // Reapply the fixed height from dataset so desktop sizing remains intact
+                    if (blockRow.dataset.heightMode !== 'dynamic' && !blockRow.classList.contains('dynamic-height')) {
+                        applyFixedHeightFromDataset(blockRow, { syncMobile: false });
+                    }
                 });
+                lastIsMobile = false;
                 return;
             }
+
+            lastIsMobile = true;
+            
+            console.log('[MioBook] Applying mobile heights to', rows.length, 'rows');
             
             // On mobile, stack blocks but keep internals sized to the multiplier
             rows.forEach(blockRow => {
@@ -518,15 +530,25 @@
                 blockRow.style.height = 'auto';
 
                 const mainColumn = blockRow.querySelector('.main-block-column');
-                if (!mainColumn) return;
+                if (!mainColumn) {
+                    console.warn('[MioBook] No main column found for block row:', blockRow);
+                    return;
+                }
 
                 const blockItem = mainColumn.querySelector('.block-item');
                 const blockContent = blockItem?.querySelector('.block-content');
                 const header = blockItem?.querySelector('.block-header');
 
-                const heightMode = blockRow.dataset.heightMode;
+                const heightMode = blockRow.dataset.heightMode || 'fixed';
                 const heightMultiplier = parseFloat(blockRow.dataset.heightMultiplier) || 1;
-                const baseHeight = parseInt(blockRow.dataset.baseHeight) || 500;
+                const baseHeight = parseFloat(blockRow.dataset.baseHeight) || 500;
+
+                console.log('[MioBook] Mobile height for block:', {
+                    blockId: blockRow.dataset.blockId,
+                    heightMode,
+                    heightMultiplier,
+                    baseHeight
+                });
 
                 // Dynamic mode should stay fluid
                 if (heightMode === 'dynamic' || blockRow.classList.contains('dynamic-height')) {
@@ -540,6 +562,7 @@
                 }
 
                 const mobileHeight = Math.max(200, baseHeight * heightMultiplier);
+                console.log('[MioBook] Applying mobile height:', mobileHeight);
 
                 // Apply height to the shell column and block wrapper
                 [mainColumn, blockItem].forEach(el => {
@@ -1681,46 +1704,10 @@
             }
         }
         
-        // Mobile annotations toggle
+        // Mobile annotations - No special toggle needed, using desktop tabbed interface
         function toggleMobileAnnotations() {
-            const annotationColumns = document.querySelectorAll('.annotation-column');
-            const toggleBtn = document.querySelector('.mobile-annotations-toggle');
-            const hasHidden = Array.from(annotationColumns).some(col => col.classList.contains('mobile-hidden'));
-            
-            annotationColumns.forEach(col => {
-                if (hasHidden) {
-                    col.classList.remove('mobile-hidden');
-                } else {
-                    col.classList.add('mobile-hidden');
-                }
-
-                // Ensure resize zone visibility matches annotation column visibility
-                const blockRow = col.closest('.block-row');
-                const zone = blockRow ? blockRow.querySelector('.resize-zone') : null;
-                if (zone) {
-                    if (hasHidden) {
-                        // we showed annotations
-                        zone.style.display = zone.dataset.originalDisplay || '';
-                        requestAnimationFrame(() => window.MioBook?.positionResizeZone(blockRow));
-                    } else {
-                        // we hid annotations
-                        zone.style.display = 'none';
-                    }
-                }
-            });
-            
-            // Update button icon
-            if (toggleBtn) {
-                const icon = toggleBtn.querySelector('i');
-                if (hasHidden) {
-                    icon.className = 'fas fa-comment-alt';
-                } else {
-                    icon.className = 'fas fa-comment-slash';
-                }
-            }
-
-            // Reposition all zones after the change completes
-            requestAnimationFrame(() => window.MioBook?.updateAllResizeZones());
+            // Deprecated: Mobile now uses same tabbed interface as desktop
+            console.log('[MioBook] Mobile annotations use tabbed interface - no toggle needed');
         }
 
         // Enable drag/swipe scrolling for annotation tabs on mobile
@@ -1730,18 +1717,12 @@
             annotationTabDragBound = true;
 
             let activeDrag = null;
-            const moveThreshold = 8;
+            const moveThreshold = 10;
 
             const endDrag = () => {
                 if (!activeDrag) return;
-                const { container, moved } = activeDrag;
+                const { container } = activeDrag;
                 container.classList.remove('drag-scrolling');
-                if (moved) {
-                    container.dataset.suppressTabClick = 'true';
-                    setTimeout(() => {
-                        delete container.dataset.suppressTabClick;
-                    }, 0);
-                }
                 activeDrag = null;
             };
 
@@ -1750,8 +1731,10 @@
                 const container = e.target.closest('.annotation-tabs');
                 if (!container) return;
 
-                // Clear any stale suppression so a fresh tap can activate
-                delete container.dataset.suppressTabClick;
+                // Don't start drag if clicking the close button
+                if (e.target.closest('.annotation-tab-close')) {
+                    return;
+                }
 
                 activeDrag = {
                     container,
@@ -1759,7 +1742,9 @@
                     startX: e.clientX,
                     startY: e.clientY,
                     scrollLeft: container.scrollLeft,
-                    moved: false
+                    moved: false,
+                    startTarget: e.target,
+                    tab: e.target.closest('.annotation-tab')
                 };
 
                 container.classList.add('drag-scrolling');
@@ -1774,7 +1759,9 @@
                 const dy = e.clientY - activeDrag.startY;
 
                 if (!activeDrag.moved) {
+                    // Check if movement exceeds threshold
                     if (Math.abs(dx) < moveThreshold && Math.abs(dy) < moveThreshold) return;
+                    // If vertical movement is dominant, cancel drag
                     if (Math.abs(dy) > Math.abs(dx)) {
                         endDrag();
                         return;
@@ -1788,6 +1775,13 @@
 
             const handlePointerEnd = (e) => {
                 if (!activeDrag || activeDrag.pointerId !== e.pointerId) return;
+                if (!activeDrag.moved) {
+                    const rawTarget = e.target || activeDrag.startTarget;
+                    const tab = activeDrag.tab || rawTarget?.closest?.('.annotation-tab');
+                    if (tab && !rawTarget?.closest?.('.annotation-tab-close')) {
+                        switchAnnotationTab(tab);
+                    }
+                }
                 endDrag();
             };
 
@@ -1795,15 +1789,7 @@
             document.addEventListener('pointercancel', handlePointerEnd);
             document.addEventListener('pointerleave', handlePointerEnd);
 
-            document.addEventListener('click', (e) => {
-                const container = e.target.closest('.annotation-tabs');
-                if (container && container.dataset.suppressTabClick === 'true') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    delete container.dataset.suppressTabClick;
-                    return;
-                }
-            }, true);
+            // Let native click handler on tabs work; taps are handled on pointerup above
         }
 
         // Enable wheel scrolling for annotation tabs on desktop hover

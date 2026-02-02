@@ -1376,8 +1376,9 @@ class MioBookCore {
 
         this.markDirty();
         
-        // Apply mobile heights if needed
-        if (typeof applyMobileHeights === 'function') {
+        // Apply mobile heights only when in mobile layout
+        const shouldSyncMobileHeights = typeof window !== 'undefined' && window.innerWidth <= 1024;
+        if (shouldSyncMobileHeights && typeof applyMobileHeights === 'function') {
             applyMobileHeights();
         }
         
