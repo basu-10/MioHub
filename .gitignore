@@ -14,3 +14,6 @@ config.py
 static/ui inspiration/
 generate_extension_icons.py
 *.zip
+*.env
+.dev
+basu001_pythonanywhere_com_wsgi.py
