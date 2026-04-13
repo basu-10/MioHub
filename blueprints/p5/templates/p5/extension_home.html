@@ -391,7 +391,7 @@
         background: rgba(11, 12, 13, 0.95);
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         padding: 0.45rem 0.6rem;
         z-index: 30;
         box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
@@ -456,10 +456,147 @@
       .mobile-more-backdrop.is-open { opacity: 1; pointer-events: all; }
     }
   </style>
+
+  <style>
+    /* ── LaterGram Folder Sidebar (desktop) ────────────────────────── */
+    .latergram-layout { display: flex; min-height: 100vh; }
+
+    .folder-sidebar {
+      width: 230px;
+      min-width: 230px;
+      background: rgba(11, 12, 14, 0.98);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 1.25rem 0.5rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      padding: 0.25rem 0.75rem 0.55rem;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+      color: var(--white);
+    }
+
+    .sidebar-divider {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      margin: 0.35rem 0.25rem;
+    }
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted-strong);
+      font-weight: 600;
+      font-size: 0.87rem;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+
+    .folder-item:hover { background: rgba(255, 255, 255, 0.04); color: var(--white); }
+    .folder-item.active { background: rgba(20, 184, 166, 0.14); color: var(--accent); border-color: rgba(20, 184, 166, 0.22); }
+    .folder-item .fi-icon { font-size: 15px; flex-shrink: 0; }
+    .folder-item .fi-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+
+    .folder-count {
+      ml: auto; flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 999px;
+      padding: 0.08rem 0.48rem;
+      font-size: 0.77rem;
+    }
+    .folder-item.active .folder-count { background: rgba(20, 184, 166, 0.2); }
+
+    .sidebar-spacer { flex: 1; }
+
+    .latergram-main-content { flex: 1; min-width: 0; padding: 2rem 1.75rem; }
+
+    /* ── Mobile Folder Panel ────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .mobile-folder-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: rgba(18, 21, 24, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 0.85rem 1rem;
+        color: var(--muted-strong);
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+        transition: background 0.12s;
+      }
+      .mobile-folder-item:hover, .mobile-folder-item.active {
+        background: rgba(20, 184, 166, 0.12);
+        color: var(--accent);
+        border-color: rgba(20, 184, 166, 0.25);
+      }
+      .mobile-folder-item .mf-count {
+        margin-left: auto;
+        background: rgba(255,255,255,0.07);
+        border-radius: 999px;
+        padding: 0.1rem 0.55rem;
+        font-size: 0.82rem;
+      }
+    }
+  </style>
 </head>
 <body>
-<div class="container py-5 desktop-shell d-none d-md-block">
+<div class="desktop-shell d-none d-md-block">
+<div class="latergram-layout">
 
+  <!-- ── Folder Sidebar ────────────────────────────────────────────── -->
+  <div class="folder-sidebar" id="lgFolderSidebar">
+    <div class="sidebar-heading">LaterGram</div>
+    <div class="sidebar-divider"></div>
+
+    <!-- All Saves -->
+    <button class="folder-item{% if not selected_folder_id %} active{% endif %}"
+            data-filter-folder="all" type="button">
+      <span class="material-icons fi-icon">bookmarks</span>
+      <span class="fi-label">All Saves</span>
+      <span class="folder-count">{{ stats.total_articles }}</span>
+    </button>
+
+    <!-- Folder tree (flat, depth-indented) -->
+    {% for f in folder_list_flat %}
+    <button class="folder-item{% if selected_folder_id == f.id %} active{% endif %}"
+            data-filter-folder="{{ f.id }}"
+            data-folder-name="{{ f.name|e }}"
+            style="padding-left: {{ 0.75 + ([f.depth - 1, 0]|max) * 0.9 }}rem;"
+            type="button">
+      <span class="material-icons fi-icon">{% if f.depth == 0 %}folder_special{% else %}folder{% endif %}</span>
+      <span class="fi-label">{{ f.name }}</span>
+      <span class="folder-count">{{ f.total_count }}</span>
+    </button>
+    {% endfor %}
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-divider"></div>
+    <button class="folder-item" id="lgNewFolderBtn" type="button">
+      <span class="material-icons fi-icon">create_new_folder</span>
+      <span class="fi-label">New Folder</span>
+    </button>
+  </div>
+
+  <!-- ── Main Content ──────────────────────────────────────────────── -->
+  <div class="latergram-main-content">
 
   <div class="hero-card mb-4">
     <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
@@ -468,6 +605,13 @@
         <h1 class="mt-3 mb-2" style="font-weight: 700; font-size: 2.4rem; letter-spacing: -0.02em;">
           LaterGram — Read Later
         </h1>
+        {% if current_folder %}
+        <div class="mb-2" style="display: flex; align-items: center; gap: 0.4rem; color: var(--muted-strong); font-size: 0.95rem;">
+          <span class="material-icons" style="font-size: 16px;">folder_open</span>
+          <span>Showing: <strong style="color: var(--accent);">{{ current_folder.name }}</strong></span>
+          <a href="{{ url_for('p5_bp.extension_home') }}" class="pill" style="margin-left: 0.5rem; font-size: 0.82rem; text-decoration: none; color: var(--muted-strong);">× Clear filter</a>
+        </div>
+        {% endif %}
         <p class="mb-0" style="max-width: 720px; color: var(--muted-strong); font-size: 1.05rem;">
           A focused, read-later view of everything you've saved through the MioHub Chrome extension. Scan highlights, jump back to sources, or open the clip in MioHub with one tap.
         </p>
@@ -564,7 +708,9 @@
           data-text-raw="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
           data-tts-text="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
          data-date="{{ ts }}"
-         data-clips="{{ clip.clip_count }}">
+         data-clips="{{ clip.clip_count }}"
+         data-folder-id="{{ clip.folder_id }}"
+         data-folder-name="{{ clip.folder_name|e }}">
       <article class="clip-card h-100"
                data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
                data-source-url="{{ clip.source_url }}">
@@ -576,7 +722,7 @@
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
-            <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
+            <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}" data-note-folder-id="{{ clip.folder_id }}">Move to folder</button></li>
             <li><button class="dropdown-item text-danger" type="button" data-action="delete" data-note-id="{{ clip.id }}">Delete</button></li>
           </ul>
         </div>
@@ -591,6 +737,7 @@
           <div class="d-flex flex-wrap gap-2 align-items-center">
             <span class="badge-soft">{{ clip.domain }}</span>
             <span class="pill">{{ clip.clip_count }} clip{{ 's' if clip.clip_count != 1 else '' }}</span>
+            {% if clip.folder_name %}<span class="pill" style="color: rgba(160,220,220,0.75);">📁 {{ clip.folder_name }}</span>{% endif %}
             {% if clip.is_public %}<span class="pill" style="color: var(--accent);">Public</span>{% endif %}
           </div>
 
@@ -634,7 +781,10 @@
     </div>
   </div>
   {% endif %}
-</div>
+
+  </div><!-- /latergram-main-content -->
+</div><!-- /latergram-layout -->
+</div><!-- /desktop-shell -->
 
 <!-- Mobile: LaterGram layout -->
 <div class="mobile-shell d-md-none">
@@ -692,7 +842,9 @@
                data-text-raw="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
                data-tts-text="{{ (clip.preview_text or '')|striptags|replace('\n', ' ')|e }}"
                data-date="{{ ts }}"
-               data-clips="{{ clip.clip_count }}">
+               data-clips="{{ clip.clip_count }}"
+               data-folder-id="{{ clip.folder_id }}"
+               data-folder-name="{{ clip.folder_name|e }}">
         <div class="card-menu dropdown">
           <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="material-icons" style="font-size: 20px;">more_vert</span>
@@ -701,7 +853,7 @@
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
-            <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
+            <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}" data-note-folder-id="{{ clip.folder_id }}">Move to folder</button></li>
             <li><button class="dropdown-item text-danger" type="button" data-action="delete" data-note-id="{{ clip.id }}">Delete</button></li>
           </ul>
         </div>
@@ -773,6 +925,36 @@
     {% endif %}
   </div>
 
+  <!-- Mobile: Folders panel -->
+  <div class="mobile-section" id="mobileFolders" style="display:none; flex-direction:column; gap:0.5rem;">
+    <div style="padding: 0.2rem 0 0.5rem; font-weight: 800; color: var(--white);">Your Folders</div>
+
+    <!-- All Saves -->
+    <button class="mobile-folder-item" data-mobile-filter-folder="all" type="button">
+      <span class="material-icons" style="font-size: 20px;">bookmarks</span>
+      All Saves
+      <span class="mf-count">{{ stats.total_articles }}</span>
+    </button>
+
+    {% for f in folder_list_flat %}
+    <button class="mobile-folder-item{% if selected_folder_id == f.id %} active{% endif %}"
+            data-mobile-filter-folder="{{ f.id }}"
+            style="padding-left: {{ 1 + ([f.depth - 1, 0]|max) }}rem;"
+            type="button">
+      <span class="material-icons" style="font-size: 18px;">{% if f.depth == 0 %}folder_special{% else %}folder{% endif %}</span>
+      {{ f.name }}
+      <span class="mf-count">{{ f.total_count }}</span>
+    </button>
+    {% endfor %}
+
+    <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem; margin-top: 0.5rem;">
+      <button class="mobile-folder-item" id="mobileNewFolderBtn" type="button" style="color: var(--accent); border-color: rgba(20,184,166,0.25);">
+        <span class="material-icons" style="font-size: 18px;">create_new_folder</span>
+        New Folder
+      </button>
+    </div>
+  </div>
+
   <div class="mobile-more-backdrop" id="mobileMoreBackdrop"></div>
   <div class="mobile-more-sheet" id="mobileMoreSheet">
     <div class="sheet-handle"></div>
@@ -795,6 +977,10 @@
       <span class="material-icons">home</span>
       Saves
     </button>
+    <button data-nav="folders">
+      <span class="material-icons">folder</span>
+      Folders
+    </button>
     <button data-nav="explore">
       <span class="material-icons">travel_explore</span>
       Explore
@@ -809,6 +995,70 @@
 <button class="floating-add d-none d-md-inline-flex" id="desktopAddTrigger" aria-label="Save clean page" type="button">
   <span class="material-icons" style="font-size: 26px;">add</span>
 </button>
+
+<!-- ── Move to Folder Modal ──────────────────────────────────────── -->
+<div class="modal fade" id="moveToFolderModal" tabindex="-1" aria-labelledby="moveToFolderLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: #0f1114; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+      <div class="modal-header" style="border-bottom-color: rgba(255,255,255,0.08);">
+        <h5 class="modal-title" id="moveToFolderLabel">Move to folder</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body d-flex flex-column gap-3">
+        <input type="hidden" id="moveNoteId" value="">
+        <div>
+          <label for="moveFolderSelect" class="form-label" style="color: var(--muted-strong);">Select destination folder</label>
+          <select id="moveFolderSelect" class="form-select" style="background:#1a1c20; color:var(--white); border-color: rgba(255,255,255,0.12);">
+            {% for f in folder_list_flat %}
+            <option value="{{ f.id }}" style="padding-left: {{ f.depth * 12 }}px;">
+              {{ '  ' * f.depth }}{% if f.depth == 0 %}📦{% else %}📁{% endif %} {{ f.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div id="moveFolderStatus" class="small" style="color: var(--muted-strong);"></div>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmMoveBtn">Move</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Create Folder Modal ───────────────────────────────────────── -->
+<div class="modal fade" id="createFolderModal" tabindex="-1" aria-labelledby="createFolderLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: #0f1114; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+      <div class="modal-header" style="border-bottom-color: rgba(255,255,255,0.08);">
+        <h5 class="modal-title" id="createFolderLabel">New folder</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body d-flex flex-column gap-3">
+        <div>
+          <label for="newFolderName" class="form-label" style="color: var(--muted-strong);">Folder name</label>
+          <input type="text" id="newFolderName" class="form-control" placeholder="e.g. Society" maxlength="100"
+                 style="background:#1a1c20; color:var(--white); border-color: rgba(255,255,255,0.12);">
+        </div>
+        <div>
+          <label for="newFolderParent" class="form-label" style="color: var(--muted-strong);">Create inside</label>
+          <select id="newFolderParent" class="form-select" style="background:#1a1c20; color:var(--white); border-color: rgba(255,255,255,0.12);">
+            {% for f in folder_list_flat %}
+            <option value="{{ f.id }}" {% if f.depth == 0 %}selected{% endif %}>
+              {{ '  ' * f.depth }}{% if f.depth == 0 %}📦{% else %}📁{% endif %} {{ f.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div id="createFolderStatus" class="small" style="color: var(--muted-strong);"></div>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmCreateFolderBtn">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="cleanSaveModal" tabindex="-1" aria-labelledby="cleanSaveLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -868,11 +1118,16 @@
     const term = (searchInput?.value || '').toLowerCase();
     const domain = domainFilter?.value || 'all';
 
+    // Read currently-active folder filter from sidebar
+    const activeSidebarBtn = document.querySelector('#lgFolderSidebar .folder-item.active');
+    const activeFolder = activeSidebarBtn?.dataset?.filterFolder || 'all';
+
     wrappers.forEach(card => {
       const matchesDomain = domain === 'all' || card.dataset.domain === domain;
       const textHaystack = `${card.dataset.title} ${card.dataset.text}`;
       const matchesSearch = term === '' || textHaystack.includes(term);
-      card.style.display = matchesDomain && matchesSearch ? '' : 'none';
+      const matchesFolder = activeFolder === 'all' || card.dataset.folderId === String(activeFolder);
+      card.style.display = matchesDomain && matchesSearch && matchesFolder ? '' : 'none';
     });
 
     applySort();
@@ -1144,7 +1399,17 @@
     } else if (action === 'make-public') {
       alert('Make public feature coming soon');
     } else if (action === 'move') {
-      alert('Move to folder feature coming soon');
+      // Open Move to Folder modal
+      const moveModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('moveToFolderModal'));
+      document.getElementById('moveNoteId').value = noteId;
+      document.getElementById('moveFolderStatus').textContent = '';
+      // Pre-select current folder
+      const currentFolderId = btn.dataset.noteFolderId;
+      if (currentFolderId) {
+        const sel = document.getElementById('moveFolderSelect');
+        if (sel) sel.value = currentFolderId;
+      }
+      moveModal.show();
     }
   });
 })();
@@ -1154,6 +1419,7 @@
   const sections = {
     saves: document.getElementById('mobileSaves'),
     explore: document.getElementById('mobileExplore'),
+    folders: document.getElementById('mobileFolders'),
   };
   const navButtons = Array.from(document.querySelectorAll('.mobile-nav [data-nav]'));
   const moreSheet = document.getElementById('mobileMoreSheet');
@@ -1163,7 +1429,12 @@
   function setActive(tab) {
     Object.entries(sections).forEach(([key, el]) => {
       if (!el) return;
-      el.classList.toggle('is-active', key === tab);
+      if (key === 'folders') {
+        // folders uses inline flex
+        el.style.display = (key === tab) ? 'flex' : 'none';
+      } else {
+        el.classList.toggle('is-active', key === tab);
+      }
     });
     tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
     navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.nav === tab));
@@ -1194,6 +1465,27 @@
 
   if (moreBackdrop) {
     moreBackdrop.addEventListener('click', closeMore);
+  }
+
+  // Mobile folder filter buttons
+  document.querySelectorAll('[data-mobile-filter-folder]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const folderId = btn.dataset.mobileFilterFolder;
+      applyFolderFilter(folderId);
+      // Switch to saves view
+      setActive('saves');
+      // Update active state
+      document.querySelectorAll('[data-mobile-filter-folder]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Mobile "New Folder" button → open shared create modal
+  const mobileNewFolderBtn = document.getElementById('mobileNewFolderBtn');
+  if (mobileNewFolderBtn) {
+    mobileNewFolderBtn.addEventListener('click', () => {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('createFolderModal')).show();
+    });
   }
 
   const cleanSaveModalEl = document.getElementById('cleanSaveModal');
@@ -1231,6 +1523,169 @@
       if (cleanSaveStatus) cleanSaveStatus.textContent = '';
     });
   }
+})();
+
+// ── Folder Sidebar (Desktop) ────────────────────────────────────────
+(function() {
+  // Track active folder filter ('all' or a numeric folder id string)
+  let activeFolderFilter = 'all';
+
+  const sidebarBtns = Array.from(document.querySelectorAll('#lgFolderSidebar [data-filter-folder]'));
+
+  sidebarBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const folderId = btn.dataset.filterFolder;
+      activeFolderFilter = folderId;
+      sidebarBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFolderFilter(folderId);
+    });
+  });
+
+  // New Folder button (desktop sidebar)
+  const lgNewFolderBtn = document.getElementById('lgNewFolderBtn');
+  if (lgNewFolderBtn) {
+    lgNewFolderBtn.addEventListener('click', () => {
+      document.getElementById('newFolderName').value = '';
+      document.getElementById('createFolderStatus').textContent = '';
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('createFolderModal')).show();
+    });
+  }
+})();
+
+// ── Shared folder filtering logic ────────────────────────────────────
+function applyFolderFilter(folderId) {
+  // Desktop wrappers
+  const wrappers = Array.from(document.querySelectorAll('.clip-wrapper'));
+  wrappers.forEach(card => {
+    const show = folderId === 'all' || card.dataset.folderId === String(folderId);
+    card.style.display = show ? '' : 'none';
+  });
+
+  // Mobile saves cards
+  const mobileCards = Array.from(document.querySelectorAll('#mobileSaves .mobile-card[data-folder-id]'));
+  mobileCards.forEach(card => {
+    const show = folderId === 'all' || card.dataset.folderId === String(folderId);
+    card.style.display = show ? '' : 'none';
+  });
+}
+
+// ── Move to Folder Modal ─────────────────────────────────────────────
+(function() {
+  const confirmMoveBtn = document.getElementById('confirmMoveBtn');
+  const moveNoteIdInput = document.getElementById('moveNoteId');
+  const moveFolderSelect = document.getElementById('moveFolderSelect');
+  const moveFolderStatus = document.getElementById('moveFolderStatus');
+
+  if (!confirmMoveBtn) return;
+
+  confirmMoveBtn.addEventListener('click', async () => {
+    const noteId = moveNoteIdInput?.value;
+    const folderId = moveFolderSelect?.value;
+
+    if (!noteId || !folderId) return;
+
+    confirmMoveBtn.disabled = true;
+    moveFolderStatus.textContent = 'Moving…';
+
+    try {
+      const resp = await fetch('{{ url_for("p5_bp.latergram_move_clip") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({note_id: parseInt(noteId), folder_id: parseInt(folderId)}),
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        moveFolderStatus.style.color = 'var(--accent)';
+        moveFolderStatus.textContent = data.message || 'Moved!';
+        // Update data-folder-id on the card in DOM
+        const folderName = moveFolderSelect.options[moveFolderSelect.selectedIndex]?.text?.trim().replace(/^[\s📁📦]+/, '') || '';
+        ['#clippingGrid .clip-wrapper', '#mobileSaves .mobile-card'].forEach(sel => {
+          document.querySelectorAll(sel).forEach(card => {
+            const id = card.querySelector('[data-note-id]')?.dataset?.noteId || card.querySelector('[data-action]')?.dataset?.noteId;
+            if (id === noteId) {
+              card.dataset.folderId = folderId;
+              card.dataset.folderName = folderName;
+              // Update visible badge if present
+              const badge = card.querySelector('.pill[data-folder-badge]');
+              if (badge) badge.textContent = '📁 ' + folderName;
+            }
+          });
+        });
+        setTimeout(() => {
+          bootstrap.Modal.getInstance(document.getElementById('moveToFolderModal'))?.hide();
+          moveFolderStatus.textContent = '';
+          confirmMoveBtn.disabled = false;
+        }, 800);
+      } else {
+        moveFolderStatus.style.color = '#f87171';
+        moveFolderStatus.textContent = data.error || 'Failed to move clip';
+        confirmMoveBtn.disabled = false;
+      }
+    } catch (err) {
+      moveFolderStatus.style.color = '#f87171';
+      moveFolderStatus.textContent = 'Network error';
+      confirmMoveBtn.disabled = false;
+    }
+  });
+})();
+
+// ── Create Folder Modal ──────────────────────────────────────────────
+(function() {
+  const confirmCreateBtn = document.getElementById('confirmCreateFolderBtn');
+  const newFolderNameInput = document.getElementById('newFolderName');
+  const newFolderParentSelect = document.getElementById('newFolderParent');
+  const createFolderStatus = document.getElementById('createFolderStatus');
+
+  if (!confirmCreateBtn) return;
+
+  // Submit on Enter key in the name input
+  newFolderNameInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmCreateBtn.click(); }
+  });
+
+  confirmCreateBtn.addEventListener('click', async () => {
+    const name = (newFolderNameInput?.value || '').trim();
+    const parentId = newFolderParentSelect?.value;
+
+    if (!name) {
+      createFolderStatus.style.color = '#f87171';
+      createFolderStatus.textContent = 'Please enter a folder name';
+      return;
+    }
+
+    confirmCreateBtn.disabled = true;
+    createFolderStatus.textContent = 'Creating…';
+    createFolderStatus.style.color = 'var(--muted-strong)';
+
+    try {
+      const resp = await fetch('{{ url_for("p5_bp.latergram_create_folder") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name, parent_id: parentId ? parseInt(parentId) : null}),
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        createFolderStatus.style.color = 'var(--accent)';
+        createFolderStatus.textContent = data.already_existed ? 'Folder already exists!' : 'Folder created! Reload to see it in the sidebar.';
+        setTimeout(() => {
+          bootstrap.Modal.getInstance(document.getElementById('createFolderModal'))?.hide();
+          // Reload to refresh folder tree
+          window.location.reload();
+        }, 900);
+      } else {
+        createFolderStatus.style.color = '#f87171';
+        createFolderStatus.textContent = data.error || 'Failed to create folder';
+        confirmCreateBtn.disabled = false;
+      }
+    } catch (err) {
+      createFolderStatus.style.color = '#f87171';
+      createFolderStatus.textContent = 'Network error';
+      confirmCreateBtn.disabled = false;
+    }
+  });
 })();
 </script>
 </body>

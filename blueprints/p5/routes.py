@@ -15,7 +15,8 @@ from flask_login import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
 
-from blueprints.p2.models import File
+from sqlalchemy import func
+from blueprints.p2.models import File, Folder
 from blueprints.p2.utils import save_data_uri_images_for_user
 from extensions import db
 from utilities_main import check_guest_limit, update_user_data_size
@@ -81,6 +82,48 @@ def extract_domain(url):
         return 'Saved via extension'
 
 
+def get_all_subfolder_ids(folder):
+    """Return flat list of IDs for a folder and all its descendants."""
+    ids = [folder.id]
+    for child in folder.children:
+        if child.user_id == folder.user_id:
+            ids.extend(get_all_subfolder_ids(child))
+    return ids
+
+
+def build_latergram_folder_tree(folder, clip_counts, web_clippings_id):
+    """Recursively build folder tree with per-folder clip counts."""
+    direct_count = clip_counts.get(folder.id, 0)
+    children_data = []
+    for child in sorted(folder.children, key=lambda f: f.name.lower()):
+        if child.user_id == folder.user_id:
+            children_data.append(build_latergram_folder_tree(child, clip_counts, web_clippings_id))
+    total_count = direct_count + sum(c['total_count'] for c in children_data)
+    return {
+        'id': folder.id,
+        'name': folder.name,
+        'direct_count': direct_count,
+        'total_count': total_count,
+        'is_web_clippings': folder.id == web_clippings_id,
+        'children': children_data,
+    }
+
+
+def flatten_folder_tree(tree, depth=0):
+    """Flatten folder tree into a list for select dropdowns and sidebar rendering."""
+    result = [{
+        'id': tree['id'],
+        'name': tree['name'],
+        'depth': depth,
+        'total_count': tree['total_count'],
+        'direct_count': tree['direct_count'],
+        'is_web_clippings': tree.get('is_web_clippings', False),
+    }]
+    for child in tree.get('children', []):
+        result.extend(flatten_folder_tree(child, depth + 1))
+    return result
+
+
 @p5_blueprint.route('/extension-settings')
 @login_required
 def extension_settings():
@@ -137,22 +180,60 @@ def extension_home():
             'owner_id': clip.owner_id,
         }
 
-    # Ensure folder exists and fetch clippings
-    folder = get_or_create_web_clippings_folder(current_user)
+    # Ensure Web Clippings root folder exists
+    web_clippings = get_or_create_web_clippings_folder(current_user)
     db.session.commit()
 
-    clippings = File.query.filter_by(
-        owner_id=current_user.id,
-        folder_id=folder.id,
-        type='proprietary_note'
+    # Collect all folder IDs under Web Clippings (inclusive)
+    all_folder_ids = get_all_subfolder_ids(web_clippings)
+
+    # Per-folder clip counts for sidebar tree
+    count_rows = (
+        db.session.query(File.folder_id, func.count(File.id))
+        .filter(
+            File.owner_id == current_user.id,
+            File.type == 'proprietary_note',
+            File.folder_id.in_(all_folder_ids),
+        )
+        .group_by(File.folder_id)
+        .all()
+    )
+    clip_counts = dict(count_rows)
+
+    # Build sidebar folder tree
+    folder_tree = build_latergram_folder_tree(web_clippings, clip_counts, web_clippings.id)
+    folder_list_flat = flatten_folder_tree(folder_tree)  # For move-to-folder dropdown
+
+    # Determine which folder(s) to display clips for
+    selected_folder_id = request.args.get('folder_id', type=int)
+    if selected_folder_id and selected_folder_id in all_folder_ids:
+        query_folder_ids = [selected_folder_id]
+        current_folder = Folder.query.get(selected_folder_id)
+    else:
+        query_folder_ids = all_folder_ids
+        current_folder = None
+
+    # Build folder id→name lookup for clip badges
+    folder_names = {
+        f.id: f.name
+        for f in Folder.query.filter(Folder.id.in_(all_folder_ids)).all()
+    }
+
+    clippings_q = File.query.filter(
+        File.owner_id == current_user.id,
+        File.folder_id.in_(query_folder_ids),
+        File.type == 'proprietary_note',
     ).order_by(File.last_modified.desc()).all()
 
     items = []
     total_clips = 0
     latest_ts = None
 
-    for clip in clippings:
+    for clip in clippings_q:
         serialized = serialize_clip(clip)
+        # Attach folder context
+        serialized['folder_id'] = clip.folder_id
+        serialized['folder_name'] = folder_names.get(clip.folder_id, '')
         items.append(serialized)
         total_clips += serialized['clip_count']
 
@@ -182,7 +263,11 @@ def extension_home():
 
     return render_template(
         'p5/extension_home.html',
-        folder=folder,
+        folder=web_clippings,
+        folder_tree=folder_tree,
+        folder_list_flat=folder_list_flat,
+        selected_folder_id=selected_folder_id,
+        current_folder=current_folder,
         clippings=items,
         explore_clippings=explore_items,
         domains=domains,
@@ -484,3 +569,157 @@ def download_chrome_extension():
         print(f"Error generating extension ZIP: {e}")
         flash('Failed to download extension. Please try again.', 'error')
         return redirect(url_for('p5_bp.extension_settings'))
+
+
+# ========================
+# LaterGram Folder Management (server-side session routes)
+# ========================
+
+@p5_blueprint.route('/latergram/folder/create', methods=['POST'])
+@login_required
+def latergram_create_folder():
+    """Create a subfolder inside the LaterGram (Web Clippings) hierarchy."""
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    parent_id = data.get('parent_id')
+
+    if not name:
+        return jsonify({'success': False, 'error': 'Folder name is required'}), 400
+
+    web_clippings = get_or_create_web_clippings_folder(current_user)
+    db.session.commit()
+
+    all_ids = get_all_subfolder_ids(web_clippings)
+
+    if parent_id:
+        try:
+            parent_id = int(parent_id)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Invalid parent_id'}), 400
+        if parent_id not in all_ids:
+            return jsonify({'success': False, 'error': 'Invalid parent folder'}), 400
+        parent = Folder.query.get(parent_id)
+    else:
+        parent = web_clippings
+
+    # Idempotent: return existing folder if name matches
+    existing = Folder.query.filter_by(
+        user_id=current_user.id,
+        parent_id=parent.id,
+        name=name
+    ).first()
+    if existing:
+        return jsonify({
+            'success': True,
+            'folder': {'id': existing.id, 'name': existing.name, 'parent_id': existing.parent_id},
+            'already_existed': True,
+        })
+
+    new_folder = Folder(
+        name=name,
+        user_id=current_user.id,
+        parent_id=parent.id,
+        is_root=False,
+    )
+    db.session.add(new_folder)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    return jsonify({
+        'success': True,
+        'folder': {'id': new_folder.id, 'name': new_folder.name, 'parent_id': new_folder.parent_id},
+    })
+
+
+@p5_blueprint.route('/latergram/folder/<int:folder_id>/delete', methods=['POST'])
+@login_required
+def latergram_delete_folder(folder_id):
+    """
+    Delete a LaterGram subfolder.
+
+    Clips inside the folder are moved to its parent.
+    Child subfolders are re-parented to the deleted folder's parent.
+    The Web Clippings root cannot be deleted.
+    """
+    web_clippings = get_or_create_web_clippings_folder(current_user)
+    db.session.commit()
+
+    if folder_id == web_clippings.id:
+        return jsonify({'success': False, 'error': 'Cannot delete the Web Clippings root folder'}), 400
+
+    all_ids = get_all_subfolder_ids(web_clippings)
+    if folder_id not in all_ids:
+        return jsonify({'success': False, 'error': 'Folder not found in LaterGram'}), 404
+
+    folder = Folder.query.filter_by(id=folder_id, user_id=current_user.id).first()
+    if not folder:
+        return jsonify({'success': False, 'error': 'Folder not found'}), 404
+
+    fallback_parent_id = folder.parent_id or web_clippings.id
+
+    # Move clips to parent
+    File.query.filter_by(
+        folder_id=folder_id,
+        owner_id=current_user.id,
+    ).update({'folder_id': fallback_parent_id})
+
+    # Re-parent child folders
+    Folder.query.filter_by(
+        parent_id=folder_id,
+        user_id=current_user.id,
+    ).update({'parent_id': fallback_parent_id})
+
+    db.session.delete(folder)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    return jsonify({'success': True, 'message': f'Folder "{folder.name}" deleted'})
+
+
+@p5_blueprint.route('/latergram/clip/move', methods=['POST'])
+@login_required
+def latergram_move_clip():
+    """Move a clip (File) to a different LaterGram folder."""
+    data = request.get_json(silent=True) or {}
+    note_id = data.get('note_id')
+    target_folder_id = data.get('folder_id')
+
+    if not note_id or target_folder_id is None:
+        return jsonify({'success': False, 'error': 'Missing note_id or folder_id'}), 400
+
+    try:
+        note_id = int(note_id)
+        target_folder_id = int(target_folder_id)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Invalid note_id or folder_id'}), 400
+
+    clip = File.query.filter_by(id=note_id, owner_id=current_user.id).first()
+    if not clip:
+        return jsonify({'success': False, 'error': 'Clip not found'}), 404
+
+    web_clippings = get_or_create_web_clippings_folder(current_user)
+    db.session.commit()
+
+    all_ids = get_all_subfolder_ids(web_clippings)
+    if target_folder_id not in all_ids:
+        return jsonify({'success': False, 'error': 'Target folder not in LaterGram'}), 400
+
+    target_folder = Folder.query.filter_by(id=target_folder_id, user_id=current_user.id).first()
+    if not target_folder:
+        return jsonify({'success': False, 'error': 'Target folder not found'}), 404
+
+    clip.folder_id = target_folder_id
+    clip.last_modified = datetime.utcnow()
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    return jsonify({'success': True, 'message': f'Clip moved to "{target_folder.name}"'})

@@ -493,6 +493,49 @@ def set_default_folder():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
 
+@extension_api_bp.route('/latergram/folders', methods=['GET'])
+def get_latergram_folders():
+    """
+    Return the LaterGram folder tree (Web Clippings hierarchy) for extension use.
+
+    GET /api/extension/latergram/folders
+    Headers: Authorization: Bearer <token>
+    Returns: { "success": true, "web_clippings_id": 5, "folders": { nested tree } }
+    """
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Missing Authorization header'}), 401
+
+    token = auth_header.replace('Bearer ', '')
+    user = verify_api_token(token)
+    if not user:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+
+    try:
+        web_clippings = get_or_create_web_clippings_folder(user)
+        db.session.commit()
+
+        def _build(folder):
+            children = Folder.query.filter_by(
+                user_id=user.id,
+                parent_id=folder.id,
+            ).order_by(Folder.name).all()
+            return {
+                'id': folder.id,
+                'name': folder.name,
+                'children': [_build(c) for c in children],
+            }
+
+        return jsonify({
+            'success': True,
+            'web_clippings_id': web_clippings.id,
+            'folders': _build(web_clippings),
+        })
+
+    except SQLAlchemyError:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+
 # ========================
 # Content Saving Endpoints
 # ========================
@@ -543,6 +586,24 @@ def save_content():
         
         # Get folder
         folder = get_or_create_web_clippings_folder(user)
+
+        # If caller specifies a folder within the LaterGram hierarchy, use it
+        latergram_folder_id = data.get('latergram_folder_id')
+        if latergram_folder_id:
+            try:
+                latergram_folder_id = int(latergram_folder_id)
+            except (TypeError, ValueError):
+                latergram_folder_id = None
+
+        if latergram_folder_id:
+            from blueprints.p5.routes import get_all_subfolder_ids
+            all_latergram_ids = get_all_subfolder_ids(folder)
+            if latergram_folder_id in all_latergram_ids:
+                target_folder_obj = Folder.query.filter_by(
+                    id=latergram_folder_id, user_id=user.id
+                ).first()
+                if target_folder_obj:
+                    folder = target_folder_obj
         
         # Build the new HTML content
         new_html_content = ''
