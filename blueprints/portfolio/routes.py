@@ -15,7 +15,7 @@ def _find_product(product_id):
     for section in SECTIONS:
         for p in section["products"]:
             if p["id"] == product_id:
-                return p
+                return p.copy()
     return None
 
 
@@ -54,5 +54,7 @@ def product(product_id):
     p = _find_product(product_id)
     if p is None:
         return render_template('portfolio/404.html', **_ctx()), 404
+
+    p["show_launch_button"] = p.get("category") != "desktop"
     return render_template('portfolio/product.html', product=p, **_ctx())
 

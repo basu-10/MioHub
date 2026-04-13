@@ -3,8 +3,8 @@
 
 AUTHOR = {
     "name":   "Asesh Basu",
-    "email":  "you@example.com",
-    "github": "https://github.com/yourusername",
+    "email":  "asesh.basu.dev@gmail.com",
+    "github": "https://github.com/basu-10",
     "bio":    "Developer and maker. I build tools that solve real problems.",
 }
 
@@ -26,35 +26,35 @@ SECTIONS = [
                     "file management, and an AI-powered graph workspace."
                 ),
                 "features": [
-                    "Rich-text notes with autosave",
-                    "Infinite canvas whiteboard",
-                    "File & folder management",
-                    "AI graph workspace",
-                    "Chrome extension for quick capture",
+                    "Hierarchical folders with breadcrumbs and batch actions",
+                    "MioWord rich documents with markdown, HTML, and autosave",
+                    "MioBoard canvas whiteboards saved as structured JSON",
+                    "Per-item sharing, public links, and quota-aware permissions",
                 ],
-                "url":      None,
+                "url":      "/dashboard",
                 "download": None,
-                "github":   None,
+                "github":   "https://github.com/basu-10/MioHub",
                 "tech":     ["Flask", "Python", "MySQL", "Tailwind CSS"],
                 "status":   "beta",
                 "category": "web",
             },
             {
                 "id":          "read-later",
-                "name":        "Read Later",
-                "tagline":     "Save articles to your personal account — Pocket clone",
+                "name":        "LaterGram",
+                "tagline":     "Read later with smart web clipping and folder integration",
                 "icon":        "bookmark",
                 "description": (
-                    "A self-hosted read-later service. Use the browser extension to save "
-                    "any article or page to your personal account, then read it anytime."
+                    "LaterGram brings read-later power to MioHub. Save text, images, "
+                    "links, and full pages from the browser extension into your folder-based workspace."
                 ),
                 "features": [
-                    "Browser extension for one-click saving",
-                    "Personal account with private article library",
-                    "Article reader view",
-                    "Tag & folder organisation",
+                    "One-click web clipping for text, images, links, and pages",
+                    "Smart URL grouping keeps content from the same site together",
+                    "Choose destination folders from your MioSpace hierarchy",
+                    "Right-click context menu actions for fast capture",
+                    "Secure API token authentication with revocable access",
                 ],
-                "url":      None,
+                "url":      "/extension-home",
                 "download": None,
                 "github":   None,
                 "tech":     ["Flask", "Python", "JavaScript"],
@@ -202,26 +202,33 @@ SECTIONS = [
                 "category": "desktop",
             },
             {
-                "id":          "clipboard-history",
-                "name":        "Clipboard History",
-                "tagline":     "Secure offline clipboard manager protected by password",
+                "id":          "cliplogger",
+                "name":        "ClipLogger",
+                "tagline":     "Windows clipboard history manager with text and image support",
                 "icon":        "content_paste",
                 "description": (
-                    "An offline clipboard manager that keeps a searchable history of "
-                    "everything you copy, protected by a local password. "
-                    "No cloud, no telemetry."
+                    "ClipLogger is a Windows clipboard history manager built with Python "
+                    "and PySide6. It captures text and image clipboard data, stores it "
+                    "locally in SQLite, and provides a desktop UI for browsing, pinning, "
+                    "editing, deleting, and exporting clipboard items."
                 ),
                 "features": [
-                    "Persistent clipboard history",
-                    "Password-protected access",
-                    "Full offline — no cloud sync",
-                    "Fast search across history",
-                    "Windows & sysvinit Linux",
+                    "Clipboard history capture for text and image data",
+                    "Persistent SQLite storage under %LOCALAPPDATA%\\ABasu_apps\\ClipLogger\\",
+                    "Main history list with multi-select support",
+                    "Image gallery view for clipboard image entries",
+                    "Preview panel with text editing and image viewing",
+                    "Pin/unpin favorites to prevent auto-pruning",
+                    "Delete selected clipboard history safely",
+                    "Export selected items to Microsoft Word (.docx)",
+                    "Light/dark theme support",
+                    "Optional Windows auto-start setting",
+                    "System tray integration with hide/minimize behavior",
                 ],
                 "url":      None,
-                "download": None,
-                "github":   None,
-                "tech":     ["Python", "PyQt"],
+                "download": "https://github.com/basu-10/ClipLogger/releases/download/stable/ClipLogger-Setup-1.6.3.exe",
+                "github":   "https://github.com/basu-10/ClipLogger",
+                "tech":     ["Python", "PySide6"],
                 "status":   "stable",
                 "category": "desktop",
             },
@@ -249,26 +256,27 @@ SECTIONS = [
                 "category": "desktop",
             },
             {
-                "id":          "notekeeper",
-                "name":        "NoteKeeper",
-                "tagline":     "Notes, folders, tags and fast full-content search",
-                "icon":        "edit_note",
+                "id":          "notestack",
+                "name":        "NoteStack",
+                "tagline":     "Smart desktop notes with folders, tags, search and filters",
+                "icon":        "sticky_note_2",
                 "description": (
-                    "Create note files, organise them into folders and tag them. "
-                    "A fast search indexes file content, folder names, file names, "
-                    "and tags all at once."
+                    "A desktop note manager with folders, tags, favourites, full-text search, "
+                    "and a responsive PyQt6 interface that stores data per-user on each OS."
                 ),
                 "features": [
-                    "Note files with rich editing",
-                    "Folder & tag organisation",
-                    "Fast full-content search",
-                    "Search across names, folders, tags",
-                    "Windows & sysvinit Linux",
+                    "Folders — create, rename, and delete folders; assign notes to folders; filter the sidebar by folder",
+                    "Tags — add arbitrary tags with autocomplete, counts, and click-to-filter support",
+                    "Favorites — star or un-star notes from any view, plus a dedicated favorites section",
+                    "Quick search and advanced search modal with keyword input, multi-tag selection, and clear-all",
+                    "Sort by newest first, oldest first, A→Z, or Z→A; switch between grid and list views",
+                    "Note detail modal shows full content, folder/date metadata, copy-to-clipboard and edit buttons",
+                    "Responsive high-DPI PyQt6 UI with per-user OS-specific application data storage",
                 ],
                 "url":      None,
-                "download": None,
-                "github":   None,
-                "tech":     ["Python", "PyQt"],
+                "download": "https://github.com/basu-10/NoteStack/blob/main/.releases/NoteStack-Setup-1.6.4.exe",
+                "github":   "https://github.com/basu-10/NoteStack",
+                "tech":     ["Python", "PyQt6"],
                 "status":   "stable",
                 "category": "desktop",
             },

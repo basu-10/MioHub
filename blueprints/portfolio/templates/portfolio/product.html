@@ -74,12 +74,14 @@
         <div class="sidebar-label">Links</div>
         <div class="actions">
 
-          {% if product.url %}
-          <a href="{{ product.url }}" class="btn btn-primary" target="_blank" rel="noopener">
-            Launch ↗
-          </a>
-          {% else %}
-          <span class="btn btn-primary btn-disabled">Launch — not hosted yet</span>
+          {% if product.show_launch_button %}
+            {% if product.url %}
+            <a href="{{ product.url }}" class="btn btn-primary" target="_blank" rel="noopener">
+              Launch ↗
+            </a>
+            {% else %}
+            <span class="btn btn-primary btn-disabled">Launch — not hosted yet</span>
+            {% endif %}
           {% endif %}
 
           {% if product.download %}
