@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — {{ author.name }}</title>
+  <meta name="description" content="About {{ author.name }} — developer and maker." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container-lowest":  "#ffffff",
+            "surface-container-low":     "#eff4f7",
+            "surface-container":         "#e7eff3",
+            "surface-container-high":    "#dfeaef",
+            "surface-container-highest": "#d7e5eb",
+            "surface-bright":            "#f7fafc",
+            "surface-dim":               "#ccdde4",
+            "surface-variant":           "#d7e5eb",
+            "surface":                   "#f7fafc",
+            "on-surface":                "#283439",
+            "on-surface-variant":        "#546166",
+            "primary":                   "#455f88",
+            "primary-fixed":             "#d6e3ff",
+            "on-primary":                "#f6f7ff",
+            "on-primary-container":      "#38527b",
+            "secondary":                 "#546073",
+            "outline":                   "#707d82",
+            "outline-variant":           "#a7b4ba",
+            "background":                "#f7fafc",
+            "on-background":             "#283439",
+          },
+          borderRadius: {
+            DEFAULT: "0.125rem",
+            lg:      "0.25rem",
+            xl:      "0.5rem",
+            full:    "0.75rem",
+          },
+          fontFamily: {
+            headline: ["Manrope"],
+            body:     ["Inter"],
+            label:    ["Inter"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+    .scale-up-hover:hover {
+      transform: scale(1.02);
+      transition: transform 0.3s ease;
+    }
+    .bg-shift {
+      transition: background-color 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-container">
+
+  <!-- Top Nav -->
+  <nav class="fixed top-0 w-full z-50 bg-[#f7fafc]/80 backdrop-blur-md bg-shift">
+    <div class="flex justify-between items-center px-8 py-6 max-w-screen-2xl mx-auto">
+      <a href="{{ url_for('portfolio_bp.portfolio') }}"
+         class="text-xl font-black text-[#283439] uppercase tracking-tighter font-headline no-underline">
+        {{ author.name }}
+      </a>
+      <div class="hidden md:flex items-center space-x-10 font-headline font-bold tracking-tight">
+        <a href="{{ url_for('portfolio_bp.portfolio') }}"
+           class="text-[#283439]/60 hover:text-[#455f88] transition-colors duration-300">
+          Portfolio
+        </a>
+        <a href="{{ url_for('portfolio_bp.about') }}"
+           class="text-[#455f88] border-b-2 border-[#455f88] pb-1 transition-colors duration-300">
+          About
+        </a>
+        <a href="{{ url_for('portfolio_bp.contact') }}"
+           class="text-[#283439]/60 hover:text-[#455f88] transition-colors duration-300">
+          Contact
+        </a>
+      </div>
+      <a href="{{ url_for('portfolio_bp.contact') }}"
+         class="bg-primary text-on-primary px-6 py-2 rounded-lg font-headline font-bold scale-up-hover inline-block">
+        Get in touch
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="pt-32 pb-20 px-8 max-w-screen-2xl mx-auto">
+
+    <!-- Hero -->
+    <header class="mb-16">
+      <h1 class="text-7xl font-headline font-extrabold tracking-tighter text-on-surface mb-6">
+        About.
+      </h1>
+      <p class="text-xl text-on-surface-variant max-w-2xl font-body leading-relaxed">
+        Developer and maker. I build tools that solve real problems — mostly starting
+        as personal itches that wouldn't go away.
+      </p>
+    </header>
+
+    <!-- Body: 3-col grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+
+      <!-- Left: identity sidebar -->
+      <div class="space-y-6">
+
+        <!-- Identity card -->
+        <div class="p-8 bg-surface-container rounded-xl space-y-6">
+          <div class="w-20 h-20 rounded-xl bg-primary flex items-center justify-center">
+            <span class="text-3xl font-headline font-black text-on-primary">
+              {{ author.name[0] | upper }}
+            </span>
+          </div>
+          <div>
+            <h2 class="text-2xl font-headline font-bold text-on-surface">{{ author.name }}</h2>
+            <p class="text-primary text-xs font-label font-bold uppercase tracking-widest mt-1">
+              Developer &amp; Maker
+            </p>
+          </div>
+          <div class="space-y-3 border-t border-outline-variant/20 pt-6">
+            <a href="{{ author.github }}" target="_blank" rel="noopener"
+               class="group flex items-center gap-3 text-on-surface-variant hover:text-primary
+                      transition-colors text-sm font-body no-underline">
+              <span class="material-symbols-outlined text-base text-outline-variant
+                           group-hover:text-primary transition-colors">code</span>
+              GitHub ↗
+            </a>
+            <a href="mailto:{{ author.email }}"
+               class="group flex items-center gap-3 text-on-surface-variant hover:text-primary
+                      transition-colors text-sm font-body no-underline">
+              <span class="material-symbols-outlined text-base text-outline-variant
+                           group-hover:text-primary transition-colors">mail</span>
+              {{ author.email }}
+            </a>
+            <a href="{{ url_for('portfolio_bp.contact') }}"
+               class="group flex items-center gap-3 text-on-surface-variant hover:text-primary
+                      transition-colors text-sm font-body no-underline">
+              <span class="material-symbols-outlined text-base text-outline-variant
+                           group-hover:text-primary transition-colors">arrow_forward</span>
+              Send a message
+            </a>
+          </div>
+        </div>
+
+        <!-- Location -->
+        <div class="p-6 bg-surface-container rounded-xl flex items-center gap-4">
+          <span class="material-symbols-outlined text-primary text-xl">location_on</span>
+          <span class="text-on-surface-variant text-sm font-body">{{ author.location }}</span>
+        </div>
+
+        <!-- Portfolio CTA -->
+        <a href="{{ url_for('portfolio_bp.portfolio') }}"
+           class="group flex items-center justify-between p-6 bg-surface-container rounded-xl
+                  hover:bg-surface-container-high transition-colors no-underline">
+          <span class="font-headline font-bold text-on-surface text-sm">View all projects</span>
+          <span class="material-symbols-outlined text-primary text-xl
+                       group-hover:translate-x-1 transition-transform">arrow_forward</span>
+        </a>
+
+      </div>
+
+      <!-- Right: bio + craft (spans 2 cols) -->
+      <div class="lg:col-span-2 space-y-16">
+
+        <!-- Bio -->
+        <div>
+          <div class="flex items-center justify-between border-b border-outline-variant/20 pb-4 mb-8">
+            <h3 class="text-xs font-label font-bold uppercase tracking-[0.2em] text-primary">About</h3>
+          </div>
+          <p class="text-on-surface font-body leading-relaxed text-lg mb-5">{{ author.bio }}</p>
+          <p class="text-on-surface-variant font-body leading-relaxed">
+            Most of what you see here started as a personal itch — something I needed that didn't
+            exist in quite the right form. Some tools are polished enough to hand to a friend;
+            others are still rough edges. Either way, they ship.
+          </p>
+          <p class="text-on-surface-variant font-body leading-relaxed mt-4">
+            If something is useful to you — or you found a bug, want to collaborate,
+            or just say hi — the <a href="{{ url_for('portfolio_bp.contact') }}"
+              class="text-primary underline underline-offset-4 decoration-primary/40
+                     hover:decoration-primary transition-colors">contact page</a> is right there.
+          </p>
+        </div>
+
+        <!-- Craft / Skills -->
+        <div>
+          <div class="flex items-center justify-between border-b border-outline-variant/20 pb-4 mb-8">
+            <h3 class="text-xs font-label font-bold uppercase tracking-[0.2em] text-primary">Craft</h3>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+
+            <div class="space-y-3">
+              <h4 class="font-headline font-bold text-sm text-on-surface">Languages</h4>
+              <div class="flex flex-wrap gap-2">
+                {% for tag in ["Python", "JavaScript", "TypeScript", "HTML / CSS"] %}
+                <span class="px-3 py-1.5 bg-surface-container rounded-lg text-xs font-label
+                             font-bold text-on-surface-variant">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <h4 class="font-headline font-bold text-sm text-on-surface">Web</h4>
+              <div class="flex flex-wrap gap-2">
+                {% for tag in ["React", "Flask", "Node.js", "WebSockets"] %}
+                <span class="px-3 py-1.5 bg-surface-container rounded-lg text-xs font-label
+                             font-bold text-on-surface-variant">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <h4 class="font-headline font-bold text-sm text-on-surface">Desktop</h4>
+              <div class="flex flex-wrap gap-2">
+                {% for tag in ["PyQt", "Tkinter", "Electron"] %}
+                <span class="px-3 py-1.5 bg-surface-container rounded-lg text-xs font-label
+                             font-bold text-on-surface-variant">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <h4 class="font-headline font-bold text-sm text-on-surface">Data / Infra</h4>
+              <div class="flex flex-wrap gap-2">
+                {% for tag in ["PostgreSQL", "SQLite", "Docker", "Linux"] %}
+                <span class="px-3 py-1.5 bg-surface-container rounded-lg text-xs font-label
+                             font-bold text-on-surface-variant">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full mt-auto bg-[#eff4f7]">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-12 px-12 py-20 max-w-screen-2xl mx-auto">
+      <div class="col-span-1 md:col-span-2">
+        <div class="text-lg font-bold text-[#283439] font-headline mb-6">{{ author.name }}</div>
+        <p class="text-[#455f88] font-body text-sm tracking-wide max-w-xs leading-relaxed">
+          {{ author.bio }}
+        </p>
+      </div>
+      <div class="flex flex-col space-y-4">
+        <span class="text-xs font-label font-bold uppercase tracking-widest text-[#283439]/40">Connect</span>
+        <a href="{{ author.github }}" target="_blank" rel="noopener"
+           class="text-[#283439]/50 hover:underline decoration-[#455f88] underline-offset-4 text-sm font-body">
+          GitHub
+        </a>
+        <a href="mailto:{{ author.email }}"
+           class="text-[#283439]/50 hover:underline decoration-[#455f88] underline-offset-4 text-sm font-body">
+          Email
+        </a>
+      </div>
+      <div class="flex flex-col space-y-4">
+        <span class="text-xs font-label font-bold uppercase tracking-widest text-[#283439]/40">Site</span>
+        <a href="{{ url_for('portfolio_bp.about') }}"
+           class="text-[#283439]/50 hover:underline decoration-[#455f88] underline-offset-4 text-sm font-body">
+          About
+        </a>
+        <a href="{{ url_for('portfolio_bp.contact') }}"
+           class="text-[#283439]/50 hover:underline decoration-[#455f88] underline-offset-4 text-sm font-body">
+          Contact
+        </a>
+      </div>
+    </div>
+    <div class="px-12 pb-12 max-w-screen-2xl mx-auto border-t border-outline-variant/10 pt-8">
+      <p class="text-[#283439]/40 font-body text-[10px] uppercase tracking-[0.2em]">
+        &copy; {{ now.year }} {{ author.name }}. All rights reserved.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

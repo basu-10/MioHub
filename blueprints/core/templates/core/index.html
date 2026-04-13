@@ -181,6 +181,13 @@
       flex-wrap: wrap;
     }
 
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
     .features-wrapper {
       max-width: 1280px;
       margin: 0 auto;
@@ -304,7 +311,7 @@
       .hero-title { font-size: 34px; letter-spacing: -0.6px; }
       .hero-description { font-size: 16px; }
       .cards-grid { grid-template-columns: 1fr; }
-      .cta-row { flex-direction: column; }
+      .cta-row, .hero-actions { flex-direction: column; }
       .btn-ghost, .btn-primary { width: 100%; justify-content: center; }
     }
   </style>
@@ -312,12 +319,16 @@
 <body>
   <div class="topbar">
     <a class="logo" href="{{ url_for('core_blueprint.landing') }}">Mio<span>Hub</span></a>
-    {% if not current_user or not current_user.is_authenticated %}
-      <div class="nav-links">
+    <div class="nav-links">
+      <a class="btn-ghost" href="{{ url_for('portfolio_bp.portfolio') }}">Portfolio</a>
+      <a class="btn-ghost" href="{{ url_for('core_blueprint.about') }}">About</a>
+      {% if current_user and current_user.is_authenticated %}
+        <a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.dashboard') }}">Open MioSpace</a>
+      {% else %}
         <a class="btn-ghost" href="{{ url_for('p2_bp.login') }}">Sign in</a>
         <a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.register') }}">Sign up</a>
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
   </div>
 
   <div class="main-content">
@@ -331,6 +342,10 @@
         <h1 class="hero-title">All of your work, one home</h1>
         <p class="hero-description">MioHub blends documents, infinite boards, and conversational AI into a single space. Sign in to plan, create, and chat without losing context.</p>
       {% endif %}
+      <div class="hero-actions">
+        <a class="btn-ghost btn-primary" href="{{ url_for('portfolio_bp.portfolio') }}">Browse Portfolio</a>
+        <a class="btn-ghost" href="{{ url_for('core_blueprint.about') }}">Learn More</a>
+      </div>
     </div>
   </div>
 

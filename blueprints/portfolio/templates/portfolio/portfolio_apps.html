@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio | {{ author.name }}</title>
+  <meta name="description" content="A curated index of tools and apps built by {{ author.name }}." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            headline: ["Manrope"],
+            body:     ["Inter"],
+            label:    ["Inter"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+    :root { color-scheme: dark; }
+    body.theme-light { color-scheme: light; }
+
+    body.theme-light {
+      background: #f5f8fc;
+      color: #0f172a;
+    }
+
+    body.theme-light nav {
+      background: rgba(245, 248, 252, 0.95) !important;
+      border-bottom-color: rgba(15, 23, 42, 0.10) !important;
+    }
+
+    body.theme-light .text-white,
+    body.theme-light .text-white\/55,
+    body.theme-light .text-white\/50,
+    body.theme-light .text-white\/45,
+    body.theme-light .text-white\/40,
+    body.theme-light .text-white\/35,
+    body.theme-light .text-white\/30,
+    body.theme-light .text-white\/25,
+    body.theme-light .text-white\/20 {
+      color: #0f172a !important;
+    }
+
+    body.theme-light .bg-\[\#2f2f2f\] {
+      background-color: #e4ecf5 !important;
+      border-color: #c3d0e3 !important;
+      color: #3d5068 !important;
+    }
+
+    body.theme-light .bg-white.text-\[\#1a1a1a\] {
+      background-color: #1b3a6e !important;
+      color: #ffffff !important;
+    }
+
+    body.theme-light #appGrid {
+      border-color: rgba(15, 23, 42, 0.10) !important;
+    }
+
+    body.theme-light .app-row {
+      border-color: rgba(15, 23, 42, 0.07) !important;
+    }
+
+    body.theme-light .app-row:hover {
+      background: rgba(27, 58, 110, 0.06) !important;
+    }
+
+    body.theme-light .app-row + .app-row {
+      border-top: 1px solid rgba(15, 23, 42, 0.07);
+    }
+
+    body.theme-light footer {
+      border-top-color: rgba(15, 23, 42, 0.10) !important;
+      background: #eaeff8;
+    }
+
+    body.theme-light .icon-bg-0 { background-color: #d6e4f7; }
+    body.theme-light .icon-bg-1 { background-color: #d4ede3; }
+    body.theme-light .icon-bg-2 { background-color: #f5e3d0; }
+    body.theme-light .icon-bg-3 { background-color: #e5d9f5; }
+    body.theme-light .icon-bg-4 { background-color: #d0e4f5; }
+    body.theme-light .icon-bg-5 { background-color: #f5d6e4; }
+    body.theme-light .icon-bg-6 { background-color: #c8ede4; }
+    body.theme-light .icon-bg-7 { background-color: #f5edd0; }
+    body.theme-light .icon-bg-8 { background-color: #d8d8f5; }
+    body.theme-light .icon-bg-9 { background-color: #dff0c8; }
+
+    #themeToggle .material-symbols-outlined {
+      transition: transform 0.2s ease;
+    }
+
+    #themeToggle:hover .material-symbols-outlined {
+      transform: rotate(18deg);
+    }
+    /* Hide scrollbar on filter tabs row */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Divider between list rows */
+    .app-row + .app-row { border-top: 1px solid rgba(255,255,255,0.06); }
+
+    /* Icon colour palette — cycles across products */
+    .icon-bg-0 { background-color: #1d3a5e; }
+    .icon-bg-1 { background-color: #1e3d31; }
+    .icon-bg-2 { background-color: #3d2a1e; }
+    .icon-bg-3 { background-color: #2e1e3d; }
+    .icon-bg-4 { background-color: #1e2e3d; }
+    .icon-bg-5 { background-color: #3d1e2a; }
+    .icon-bg-6 { background-color: #1e3a2a; }
+    .icon-bg-7 { background-color: #3a2e1e; }
+    .icon-bg-8 { background-color: #1e1e3d; }
+    .icon-bg-9 { background-color: #2e3d1e; }
+
+    .icon-color-0 { color: #7eb8f7; }
+    .icon-color-1 { color: #6fd4a3; }
+    .icon-color-2 { color: #f7b86f; }
+    .icon-color-3 { color: #c17ef7; }
+    .icon-color-4 { color: #7ec6f7; }
+    .icon-color-5 { color: #f77eaa; }
+    .icon-color-6 { color: #6fd4b8; }
+    .icon-color-7 { color: #f7d06f; }
+    .icon-color-8 { color: #9b9bf7; }
+    .icon-color-9 { color: #a8d46f; }
+  </style>
+</head>
+<body class="bg-[#212121] text-white font-body min-h-screen">
+
+  <!-- ── Top Nav ──────────────────────────────────────────────────────────── -->
+  <nav class="fixed top-0 w-full z-50 bg-[#212121]/90 backdrop-blur-md border-b border-white/5">
+    <div class="flex items-center justify-between gap-4 px-6 md:px-10 py-3 max-w-screen-xl mx-auto">
+
+      <!-- Logo -->
+      <a href="{{ url_for('portfolio_bp.portfolio') }}"
+         class="text-base font-black text-white uppercase tracking-tighter font-headline whitespace-nowrap no-underline">
+        {{ author.name }}
+      </a>
+
+      <!-- Search bar -->
+      <div class="relative flex-1 max-w-xs">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-[18px]">
+          search
+        </span>
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Search apps"
+          autocomplete="off"
+          class="w-full bg-[#2f2f2f] text-white placeholder-white/40 text-sm rounded-full
+                 py-2 pl-9 pr-4 border border-white/10
+                 focus:outline-none focus:border-white/30 transition-colors"
+        />
+      </div>
+
+      <!-- Nav links (hidden on mobile) -->
+      <button
+        id="themeToggle"
+        type="button"
+        aria-label="Toggle theme"
+        title="Toggle light/dark theme"
+        class="w-10 h-10 rounded-full border border-white/15 text-white/70 hover:text-white hover:border-white/40 transition-colors flex items-center justify-center"
+      >
+        <span class="material-symbols-outlined text-[20px]">settings</span>
+      </button>
+
+      <!-- CTA -->
+      <a href="{{ url_for('portfolio_bp.contact') }}"
+         class="bg-white text-[#212121] px-5 py-2 rounded-full font-headline font-bold
+                text-sm whitespace-nowrap hover:bg-white/90 transition-colors no-underline">
+        Get in touch
+      </a>
+    </div>
+  </nav>
+
+  <!-- ── Main ─────────────────────────────────────────────────────────────── -->
+  <main class="pt-20 pb-24 max-w-screen-xl mx-auto">
+
+    <!-- Page heading -->
+    <header class="px-6 md:px-10 pt-10 pb-7">
+      <div class="flex items-center gap-2.5 mb-1">
+        <h1 class="text-2xl font-headline font-extrabold text-white tracking-tight">Apps</h1>
+        <span class="text-[9px] font-label font-bold bg-white/10 text-white/50
+                     px-2 py-0.5 rounded tracking-[0.15em] uppercase">BETA</span>
+      </div>
+      <p class="text-white/40 text-sm font-body">
+        A curated index of tools and apps built by {{ author.name }}.
+      </p>
+    </header>
+
+    <!-- Feature banner -->
+    {% for section in sections %}{% if section.layout == "featured" %}{% set hero = section.products[0] %}
+    <div class="px-6 md:px-10 mb-8">
+      <a href="{{ url_for('portfolio_bp.product', product_id=hero.id) }}" class="no-underline block">
+        <div class="relative rounded-2xl overflow-hidden h-56 cursor-pointer group
+                    bg-gradient-to-br from-[#0e4a3b] via-[#1a3a5c] to-[#6b4a0a]">
+
+          <!-- Subtle noise / shimmer overlay -->
+          <div class="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/10"></div>
+
+          <!-- Decorative circle shapes -->
+          <div class="absolute -right-12 -top-12 w-56 h-56 rounded-full bg-white/5 blur-2xl"></div>
+          <div class="absolute right-24 bottom-0 w-32 h-32 rounded-full bg-white/5 blur-xl"></div>
+
+          <!-- Mock content preview (right side) -->
+          <div class="absolute right-8 top-6 bottom-6 w-48 hidden sm:flex flex-col gap-2 opacity-30
+                      group-hover:opacity-45 transition-opacity">
+            <div class="h-4 rounded bg-white/40 w-3/4"></div>
+            <div class="h-3 rounded bg-white/30 w-full"></div>
+            <div class="h-3 rounded bg-white/30 w-5/6"></div>
+            <div class="mt-2 h-16 rounded-lg bg-white/20"></div>
+            <div class="h-3 rounded bg-white/20 w-2/3"></div>
+          </div>
+
+          <!-- Content (left side) -->
+          <div class="relative p-7 flex flex-col h-full justify-between">
+            <!-- Icon + name -->
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-white text-[22px]">
+                  {{ hero.icon or 'dashboard' }}
+                </span>
+              </div>
+              <div>
+                <p class="font-headline font-bold text-white text-base leading-tight">{{ hero.name }}</p>
+                <p class="text-white/55 text-xs mt-0.5 font-body">{{ hero.tagline }}</p>
+              </div>
+            </div>
+
+            <!-- View button -->
+            <div>
+              <span class="inline-flex items-center bg-white text-[#1a1a1a] px-5 py-1.5
+                           rounded-full text-sm font-bold font-headline
+                           group-hover:bg-white/90 transition-colors">
+                View
+              </span>
+            </div>
+          </div>
+
+          <!-- Dot indicators -->
+          <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-white/30"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-white/30"></span>
+          </div>
+        </div>
+      </a>
+    </div>
+    {% endif %}{% endfor %}
+
+    <!-- Filter tabs -->
+    <div class="flex items-center gap-2 px-6 md:px-10 mb-6 overflow-x-auto no-scrollbar">
+      <button
+        onclick="setFilter('all', this)"
+        class="filter-tab active-tab flex-shrink-0 px-4 py-1.5 rounded-full text-sm
+               font-label font-semibold bg-white text-[#1a1a1a] cursor-pointer
+               border border-transparent transition-all">
+        All
+      </button>
+      {% for section in sections %}
+      <button
+        onclick="setFilter('{{ loop.index0 }}', this)"
+        data-index="{{ loop.index0 }}"
+        class="filter-tab flex-shrink-0 px-4 py-1.5 rounded-full text-sm
+               font-label font-semibold bg-[#2f2f2f] text-white/55 hover:text-white
+               cursor-pointer border border-white/10 transition-all">
+        {{ section.label }}
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- App list — 2-col grid -->
+    <div class="px-6 md:px-10">
+      <div id="appGrid" class="grid grid-cols-1 md:grid-cols-2 rounded-2xl overflow-hidden
+                               border border-white/5 divide-y divide-white/5 md:divide-y-0">
+        {% set ns = namespace(count=0) %}
+        {% for section in sections %}
+          {% set section_index = loop.index0 %}
+          {% for item in section.products %}
+          {% set col_idx = ns.count % 10 %}
+          <a
+            href="{{ url_for('portfolio_bp.product', product_id=item.id) }}"
+            class="app-row flex items-center gap-4 px-5 py-4
+                   hover:bg-white/[0.04] transition-colors no-underline group
+                   border-b border-white/5 md:border-b-0
+                   {% if ns.count % 2 == 0 %}md:border-r md:border-white/5{% endif %}"
+            data-section-index="{{ section_index }}"
+            data-name="{{ item.name | lower }}"
+            data-tagline="{{ item.tagline | lower }}"
+          >
+            <!-- Icon circle -->
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0
+                        icon-bg-{{ col_idx }} transition-transform group-hover:scale-105">
+              <span class="material-symbols-outlined text-[22px] icon-color-{{ col_idx }}">
+                {{ item.icon or 'apps' }}
+              </span>
+            </div>
+
+            <!-- Text -->
+            <div class="flex-1 min-w-0">
+              <p class="font-headline font-bold text-white text-sm leading-snug">{{ item.name }}</p>
+              <p class="text-white/45 text-xs font-body mt-0.5 truncate">{{ item.tagline }}</p>
+            </div>
+
+            <!-- Chevron -->
+            <span class="material-symbols-outlined text-white/25 group-hover:text-white/55
+                         transition-colors text-lg">
+              chevron_right
+            </span>
+          </a>
+          {% set ns.count = ns.count + 1 %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <!-- Empty state (shown when search returns nothing) -->
+      <div id="emptyState" class="hidden py-20 text-center">
+        <span class="material-symbols-outlined text-white/20 text-5xl">search_off</span>
+        <p class="text-white/30 mt-3 font-body text-sm">No apps match your search.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ───────────────────────────────────────────────────────────── -->
+  <footer class="border-t border-white/5">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-10 px-6 md:px-10 py-16 max-w-screen-xl mx-auto">
+      <div class="col-span-1 md:col-span-2">
+        <p class="text-base font-bold text-white font-headline mb-3">{{ author.name }}</p>
+        <p class="text-white/35 font-body text-sm leading-relaxed max-w-xs">{{ author.bio }}</p>
+      </div>
+      <div class="flex flex-col gap-3">
+        <span class="text-[9px] font-label font-bold uppercase tracking-[0.18em] text-white/25">Connect</span>
+        <a href="{{ author.github }}" target="_blank" rel="noopener"
+           class="text-white/40 hover:text-white text-sm font-body transition-colors no-underline">
+          GitHub
+        </a>
+        <a href="mailto:{{ author.email }}"
+           class="text-white/40 hover:text-white text-sm font-body transition-colors no-underline">
+          Email
+        </a>
+      </div>
+      <div class="flex flex-col gap-3">
+        <span class="text-[9px] font-label font-bold uppercase tracking-[0.18em] text-white/25">Site</span>
+        <a href="{{ url_for('portfolio_bp.about') }}"
+           class="text-white/40 hover:text-white text-sm font-body transition-colors no-underline">
+          About
+        </a>
+      </div>
+    </div>
+    <div class="px-6 md:px-10 pb-10 max-w-screen-xl mx-auto border-t border-white/5 pt-6">
+      <p class="text-white/20 font-body text-[10px] uppercase tracking-[0.18em]">
+        &copy; {{ now.year }} {{ author.name }}. All rights reserved.
+      </p>
+    </div>
+  </footer>
+
+  <!-- ── Scripts ─────────────────────────────────────────────────────────── -->
+  <script>
+    (function() {
+      var body = document.body;
+      var toggle = document.getElementById('themeToggle');
+      var key = 'portfolio_theme';
+
+      function applyTheme(theme) {
+        var isLight = theme === 'light';
+        body.classList.toggle('theme-light', isLight);
+        if (toggle) {
+          toggle.title = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+          toggle.setAttribute('aria-label', isLight ? 'Switch to dark theme' : 'Switch to light theme');
+        }
+      }
+
+      var saved = localStorage.getItem(key);
+      if (saved !== 'light' && saved !== 'dark') {
+        saved = 'dark';
+      }
+      applyTheme(saved);
+
+      if (toggle) {
+        toggle.addEventListener('click', function() {
+          var next = body.classList.contains('theme-light') ? 'dark' : 'light';
+          localStorage.setItem(key, next);
+          applyTheme(next);
+        });
+      }
+    })();
+
+    var activeFilter = 'all';
+
+    function setFilter(value, btn) {
+      activeFilter = value;
+
+      // Update tab styles
+      document.querySelectorAll('.filter-tab').forEach(function(t) {
+        t.classList.remove('bg-white', 'text-[#1a1a1a]');
+        t.classList.add('bg-[#2f2f2f]', 'text-white/55');
+      });
+      btn.classList.remove('bg-[#2f2f2f]', 'text-white/55');
+      btn.classList.add('bg-white', 'text-[#1a1a1a]');
+
+      applyFilters();
+    }
+
+    function applyFilters() {
+      var query = document.getElementById('searchInput').value.toLowerCase().trim();
+      var rows = document.querySelectorAll('.app-row');
+      var visible = 0;
+
+      rows.forEach(function(row) {
+        var sectionMatch = (activeFilter === 'all') ||
+                           (row.dataset.sectionIndex === activeFilter);
+        var searchMatch  = !query ||
+                           row.dataset.name.includes(query) ||
+                           row.dataset.tagline.includes(query);
+
+        if (sectionMatch && searchMatch) {
+          row.style.display = '';
+          visible++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+  </script>
+
+</body>
+</html>

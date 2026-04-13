@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ author.name }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}Tools and apps built by {{ author.name }}.{% endblock %}" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="{{ url_for('portfolio_bp.static', filename='css/style.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- ── Navigation ────────────────────────────────────────────── -->
+  <nav>
+    <div class="nav-inner">
+      <a href="{{ url_for('portfolio_bp.portfolio') }}" class="nav-logo">
+        {{ author.name }}<span>.</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="{{ url_for('portfolio_bp.portfolio') }}">Products</a></li>
+        <li><a href="{{ url_for('portfolio_bp.about') }}">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Flash messages ────────────────────────────────────────── -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container">
+        <div class="flash-wrap">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ── Page content ──────────────────────────────────────────── -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ── Footer ────────────────────────────────────────────────── -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-copy">&copy; {{ now.year }} {{ author.name }}</span>
+        <div class="footer-links">
+          <a href="{{ author.github }}" target="_blank" rel="noopener">GitHub</a>
+          <a href="{{ url_for('portfolio_bp.about') }}">About</a>
+          <a href="{{ url_for('portfolio_bp.contact') }}">Contact</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('portfolio_bp.static', filename='js/main.js') }}"></script>
+</body>
+</html>

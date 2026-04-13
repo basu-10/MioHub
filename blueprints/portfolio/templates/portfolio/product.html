@@ -1,0 +1,141 @@
+{% extends "portfolio/base.html" %}
+
+{% block title %}{{ product.name }} — {{ author.name }}{% endblock %}
+{% block description %}{{ product.tagline }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <!-- ── Page hero ───────────────────────────────────────────── -->
+  <div class="page-hero">
+    <div class="breadcrumb">
+      <a href="{{ url_for('portfolio_bp.portfolio') }}">products</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>{{ product.id }}</span>
+    </div>
+
+    <div class="page-hero-badges">
+      <span class="badge badge-{{ product.status }}">{{ product.status }}</span>
+      <span class="badge-cat" style="--cat-color: var(--c-{{ product.category }})">{{ product.category }}</span>
+    </div>
+
+    <h1>{{ product.name }}</h1>
+    <p class="page-hero-tagline">{{ product.tagline }}</p>
+  </div>
+
+  <!-- ── Body: main + sidebar ────────────────────────────────── -->
+  <div class="product-body">
+
+    <!-- Main column -->
+    <div>
+
+      <div class="product-section">
+        <p class="section-title">About</p>
+        <p class="product-description">{{ product.description }}</p>
+      </div>
+
+      {% if product.features %}
+      <div class="product-section">
+        <p class="section-title">Features</p>
+        <ul class="feature-list">
+          {% for f in product.features %}
+          <li>{{ f }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {# ── Placeholder for screenshots ── #}
+      <div class="product-section">
+        <p class="section-title">Screenshots</p>
+        <div style="
+          background: var(--surface);
+          border: 1px dashed var(--border);
+          border-radius: var(--radius-lg);
+          height: 220px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--text-3);
+          font-size: 13px;
+          font-family: 'JetBrains Mono', monospace;
+        ">
+          screenshots coming soon
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="product-sidebar">
+
+      <!-- Actions -->
+      <div class="sidebar-card">
+        <div class="sidebar-label">Links</div>
+        <div class="actions">
+
+          {% if product.url %}
+          <a href="{{ product.url }}" class="btn btn-primary" target="_blank" rel="noopener">
+            Launch ↗
+          </a>
+          {% else %}
+          <span class="btn btn-primary btn-disabled">Launch — not hosted yet</span>
+          {% endif %}
+
+          {% if product.download %}
+          <a href="{{ product.download }}" class="btn btn-outline" target="_blank" rel="noopener noreferrer">
+            Download
+          </a>
+          {% elif product.category == 'desktop' %}
+          <span class="btn btn-outline btn-disabled">Download — coming soon</span>
+          {% endif %}
+
+          {% if product.github %}
+          <a href="{{ product.github }}" class="btn btn-outline" target="_blank" rel="noopener">
+            GitHub ↗
+          </a>
+          {% else %}
+          <span class="btn btn-outline btn-disabled">GitHub — private</span>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- Tech stack -->
+      {% if product.tech %}
+      <div class="sidebar-card">
+        <div class="sidebar-label">Tech Stack</div>
+        <div class="tech-list">
+          {% for t in product.tech %}
+          <span class="tech-tag">{{ t }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Status -->
+      <div class="sidebar-card">
+        <div class="sidebar-label">Status</div>
+        <span class="badge badge-{{ product.status }}" style="margin-bottom:8px; display:inline-block;">
+          {{ product.status }}
+        </span>
+        <p class="status-note">
+          {% if product.status == 'stable' %}
+            Ready for everyday use. Cross-platform tested.
+          {% elif product.status == 'beta' %}
+            Functional, but may have rough edges or missing features.
+          {% elif product.status == 'alpha' %}
+            Core feature works. Not production-ready.
+          {% elif product.status == 'preview' %}
+            UI is done; packaging and testing are pending.
+          {% elif product.status == 'planned' %}
+            Not started yet. Architecture is decided.
+          {% endif %}
+        </p>
+      </div>
+
+    </aside>
+  </div>
+
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@ from .p4 import p4_blueprint
 from .p5 import p5_blueprint, extension_api_bp as p5_extension_api_bp
 from .auth import auth_blueprint
 from .health import health_bp
+from .portfolio import portfolio_blueprint
 
-bps=[core_blueprint, p1_blueprint, p2_blueprint, notes_bp, whiteboard_bp, folder_bp, combined_bp, file_bp, infinite_whiteboard_bp, graph_bp, p5_blueprint, p5_extension_api_bp, p3_blueprint, p4_blueprint, auth_blueprint, health_bp]    
+bps=[core_blueprint, p1_blueprint, p2_blueprint, notes_bp, whiteboard_bp, folder_bp, combined_bp, file_bp, infinite_whiteboard_bp, graph_bp, p5_blueprint, p5_extension_api_bp, p3_blueprint, p4_blueprint, auth_blueprint, health_bp, portfolio_blueprint]    
 
