@@ -520,6 +520,88 @@
     }
     .folder-item.active .folder-count { background: rgba(20, 184, 166, 0.2); }
 
+    /* ── Drag-and-drop states ───────────────────────────────────────── */
+    .clip-wrapper[draggable="true"] { cursor: grab; }
+    .clip-wrapper[draggable="true"]:active { cursor: grabbing; }
+    .clip-wrapper.lg-dragging { opacity: 0.38; outline: 2px dashed rgba(20, 184, 166, 0.5); border-radius: 16px; }
+
+    .folder-item.drop-available { outline: 1px dashed rgba(20,184,166,0.35); }
+    .folder-item.drop-target-over {
+      background: rgba(20, 184, 166, 0.22) !important;
+      border-color: var(--accent) !important;
+      color: var(--white) !important;
+      box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.45);
+      transform: scale(1.015);
+    }
+
+    #lgDragToast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: rgba(15, 17, 20, 0.97);
+      border: 1px solid rgba(20, 184, 166, 0.35);
+      color: var(--accent);
+      padding: 0.6rem 1.1rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 9999;
+      white-space: nowrap;
+    }
+    #lgDragToast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Mobile: long-press folder picker ──────────────────────────── */
+    @media (max-width: 768px) {
+      .mobile-card.move-mode {
+        outline: 2px solid var(--accent);
+        opacity: 0.75;
+      }
+
+      #mobileFolderPicker {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: rgba(14, 15, 17, 0.99);
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        padding: 1rem 1rem 2rem;
+        transform: translateY(100%);
+        transition: transform 0.22s ease;
+        z-index: 250;
+        max-height: 65vh;
+        overflow-y: auto;
+      }
+      #mobileFolderPicker.is-open { transform: translateY(0); }
+      #mobileFolderPickerBackdrop {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.55);
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 240;
+      }
+      #mobileFolderPickerBackdrop.is-open { opacity: 1; pointer-events: all; }
+
+      .fps-item {
+        display: flex; align-items: center; gap: 0.7rem;
+        padding: 0.8rem 0.6rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        color: var(--muted-strong);
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border-radius: 10px;
+      }
+      .fps-item:hover { background: rgba(20,184,166,0.1); color: var(--accent); }
+      .fps-item.fps-active { color: var(--accent); }
+    }
+
     .sidebar-spacer { flex: 1; }
 
     .latergram-main-content { flex: 1; min-width: 0; padding: 2rem 1.75rem; }
@@ -568,7 +650,9 @@
 
     <!-- All Saves -->
     <button class="folder-item{% if not selected_folder_id %} active{% endif %}"
-            data-filter-folder="all" type="button">
+            data-filter-folder="all"
+            data-drop-folder-id="{{ folder.id }}"
+            type="button">
       <span class="material-icons fi-icon">bookmarks</span>
       <span class="fi-label">All Saves</span>
       <span class="folder-count">{{ stats.total_articles }}</span>
@@ -578,6 +662,7 @@
     {% for f in folder_list_flat %}
     <button class="folder-item{% if selected_folder_id == f.id %} active{% endif %}"
             data-filter-folder="{{ f.id }}"
+            data-drop-folder-id="{{ f.id }}"
             data-folder-name="{{ f.name|e }}"
             style="padding-left: {{ 0.75 + ([f.depth - 1, 0]|max) * 0.9 }}rem;"
             type="button">
@@ -701,6 +786,8 @@
     {% for clip in clippings %}
     {% set ts = (clip.last_modified or clip.created_at).timestamp() if clip.last_modified or clip.created_at else 0 %}
     <div class="col-12 col-md-6 col-lg-4 clip-wrapper"
+         draggable="true"
+         data-note-id="{{ clip.id }}"
          data-domain="{{ clip.domain|lower }}"
          data-title="{{ clip.title|lower }}"
           data-title-raw="{{ clip.title|default('')|e }}"
@@ -833,6 +920,7 @@
       {% for clip in clippings %}
       {% set ts = (clip.last_modified or clip.created_at).timestamp() if clip.last_modified or clip.created_at else 0 %}
       <article class="mobile-card"
+               data-note-id="{{ clip.id }}"
                data-open-url="{{ url_for('notes.edit_note', note_id=clip.id) }}"
                data-source-url="{{ clip.source_url }}"
                data-domain="{{ clip.domain|lower }}"
@@ -991,6 +1079,30 @@
     </button>
   </nav>
 </div>
+
+<!-- Mobile: folder picker bottom sheet (for long-press drag-to-move) -->
+<div id="mobileFolderPickerBackdrop"></div>
+<div id="mobileFolderPicker">
+  <div class="sheet-handle" style="width:46px;height:5px;border-radius:99px;background:rgba(255,255,255,0.2);margin:0 auto 0.8rem;"></div>
+  <div style="font-weight:800;color:var(--white);margin-bottom:0.6rem;font-size:0.95rem;">Move to&hellip;</div>
+  <div id="mobileFolderPickerList">
+    <div class="fps-item" data-fps-folder-id="{{ folder.id }}">
+      <span class="material-icons" style="font-size:18px;">bookmarks</span>
+      Web Clippings (root)
+    </div>
+    {% for f in folder_list_flat %}
+    {% if not f.is_web_clippings %}
+    <div class="fps-item" data-fps-folder-id="{{ f.id }}" style="padding-left:{{ 0.6 + ([f.depth - 1, 0]|max) * 0.8 }}rem;">
+      <span class="material-icons" style="font-size:17px;">{% if f.depth == 0 %}folder_special{% else %}folder{% endif %}</span>
+      {{ f.name }}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Drag-drop toast notification -->
+<div id="lgDragToast"></div>
 
 <button class="floating-add d-none d-md-inline-flex" id="desktopAddTrigger" aria-label="Save clean page" type="button">
   <span class="material-icons" style="font-size: 26px;">add</span>
@@ -1686,6 +1798,238 @@ function applyFolderFilter(folderId) {
       confirmCreateBtn.disabled = false;
     }
   });
+})();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// LaterGram Drag-and-Drop  (desktop HTML5 DnD + mobile long-press)
+// ════════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  const MOVE_URL = '{{ url_for("p5_bp.latergram_move_clip") }}';
+
+  // ── Toast helper ────────────────────────────────────────────────
+  const toast = document.getElementById('lgDragToast');
+  let toastTimer = null;
+
+  function showToast(msg, isError) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.style.borderColor = isError ? 'rgba(248,113,113,0.4)' : 'rgba(20,184,166,0.35)';
+    toast.style.color = isError ? '#f87171' : 'var(--accent)';
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), 2600);
+  }
+
+  // ── Core move API call ───────────────────────────────────────────
+  async function moveClipToFolder(noteId, targetFolderId, targetFolderName, cardEl) {
+    try {
+      const resp = await fetch(MOVE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note_id: parseInt(noteId), folder_id: parseInt(targetFolderId) }),
+      });
+      const data = await resp.json();
+
+      if (!data.success) {
+        showToast(data.error || 'Move failed', true);
+        return false;
+      }
+
+      // Update DOM data attributes on all matching cards
+      updateCardFolderData(noteId, targetFolderId, targetFolderName);
+      showToast(`Moved to "${targetFolderName}" ✓`);
+
+      // If a folder filter is active and the card no longer belongs, hide it
+      refilterCard(noteId, targetFolderId);
+      return true;
+    } catch {
+      showToast('Network error', true);
+      return false;
+    }
+  }
+
+  function updateCardFolderData(noteId, folderId, folderName) {
+    const cleanName = (folderName || '').replace(/^[\s📁📦📌✦]+/, '').trim();
+    document.querySelectorAll(
+      `.clip-wrapper[data-note-id="${noteId}"], .mobile-card[data-note-id="${noteId}"]`
+    ).forEach(card => {
+      card.dataset.folderId = String(folderId);
+      card.dataset.folderName = cleanName;
+    });
+  }
+
+  function refilterCard(noteId, newFolderId) {
+    // Check what the sidebar currently has active
+    const activeBtn = document.querySelector('#lgFolderSidebar .folder-item.active');
+    const activeFilter = activeBtn?.dataset?.filterFolder || 'all';
+    if (activeFilter === 'all') return; // show everything
+    document.querySelectorAll(`.clip-wrapper[data-note-id="${noteId}"]`).forEach(card => {
+      if (card.dataset.folderId !== String(activeFilter)) {
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => { card.style.display = 'none'; }, 320);
+      }
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // DESKTOP — HTML5 Drag-and-Drop
+  // ════════════════════════════════════════════════════════════════
+  const dropZones = document.querySelectorAll('#lgFolderSidebar [data-drop-folder-id]');
+
+  // Make clip wrappers draggable
+  document.querySelectorAll('.clip-wrapper[draggable]').forEach(wrapper => {
+    wrapper.addEventListener('dragstart', (e) => {
+      const noteId = wrapper.dataset.noteId;
+      const folderId = wrapper.dataset.folderId;
+      if (!noteId) { e.preventDefault(); return; }
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', JSON.stringify({ noteId, folderId }));
+      // Slight delay so the opacity change is picked up after the drag snapshot
+      setTimeout(() => wrapper.classList.add('lg-dragging'), 0);
+
+      // Highlight all sidebar drop zones as available
+      dropZones.forEach(z => z.classList.add('drop-available'));
+    });
+
+    wrapper.addEventListener('dragend', () => {
+      wrapper.classList.remove('lg-dragging');
+      dropZones.forEach(z => {
+        z.classList.remove('drop-available', 'drop-target-over');
+      });
+    });
+  });
+
+  // Wire up sidebar folders as drop zones
+  dropZones.forEach(zone => {
+    zone.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      zone.classList.add('drop-target-over');
+    });
+
+    zone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+
+    zone.addEventListener('dragleave', (e) => {
+      // Only remove if we're actually leaving the button, not entering a child span
+      if (!zone.contains(e.relatedTarget)) {
+        zone.classList.remove('drop-target-over');
+      }
+    });
+
+    zone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      zone.classList.remove('drop-target-over');
+
+      let payload;
+      try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); }
+      catch { return; }
+
+      const { noteId, folderId: currentFolderId } = payload;
+      const targetFolderId = zone.dataset.dropFolderId;
+      const targetFolderName = zone.querySelector('.fi-label')?.textContent?.trim() || zone.textContent.trim();
+
+      // Skip if already in this folder
+      if (String(currentFolderId) === String(targetFolderId)) {
+        showToast('Already in this folder');
+        return;
+      }
+
+      await moveClipToFolder(noteId, targetFolderId, targetFolderName);
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════════
+  // MOBILE — Long-press to move (folder picker bottom sheet)
+  // ════════════════════════════════════════════════════════════════
+  const LONGPRESS_MS = 500;
+  const pickerEl = document.getElementById('mobileFolderPicker');
+  const pickerBackdrop = document.getElementById('mobileFolderPickerBackdrop');
+
+  if (!pickerEl) return;  // mobile elements not present (e.g. desktop-only render)
+
+  let lpTimer = null;
+  let lpCard = null;    // the mobile-card element being moved
+  let lpNoteId = null;
+  let lpMoved = false;
+
+  function openPicker(card) {
+    lpCard = card;
+    lpNoteId = card.dataset.noteId;
+
+    // Mark current folder in picker
+    const currentFolderId = card.dataset.folderId;
+    pickerEl.querySelectorAll('.fps-item').forEach(item => {
+      item.classList.toggle('fps-active', item.dataset.fpsFolderId === currentFolderId);
+    });
+
+    card.classList.add('move-mode');
+    pickerEl.classList.add('is-open');
+    pickerBackdrop.classList.add('is-open');
+  }
+
+  function closePicker(restoreCard) {
+    if (restoreCard && lpCard) lpCard.classList.remove('move-mode');
+    lpCard = null;
+    lpNoteId = null;
+    pickerEl.classList.remove('is-open');
+    pickerBackdrop.classList.remove('is-open');
+  }
+
+  pickerBackdrop.addEventListener('click', () => closePicker(true));
+
+  pickerEl.querySelectorAll('.fps-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const targetFolderId = item.dataset.fpsFolderId;
+      const targetFolderName = item.textContent.trim().replace(/^[^\s]+\s+/, '');
+
+      if (!lpNoteId) { closePicker(true); return; }
+      if (lpCard && String(lpCard.dataset.folderId) === String(targetFolderId)) {
+        showToast('Already in this folder');
+        closePicker(true);
+        return;
+      }
+
+      const cardRef = lpCard;
+      closePicker(false);  // Don't restore — we'll fade it out on success if needed
+
+      const ok = await moveClipToFolder(lpNoteId, targetFolderId, targetFolderName, cardRef);
+      if (ok && cardRef) cardRef.classList.remove('move-mode');
+      else if (cardRef) cardRef.classList.remove('move-mode');
+    });
+  });
+
+  // Attach long-press to mobile save cards
+  function attachLongPress(card) {
+    card.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      lpMoved = false;
+      lpTimer = setTimeout(() => {
+        if (!lpMoved) {
+          openPicker(card);
+          // Haptic feedback if available
+          if (navigator.vibrate) navigator.vibrate(40);
+        }
+      }, LONGPRESS_MS);
+    }, { passive: true });
+
+    card.addEventListener('touchmove', () => {
+      lpMoved = true;
+      clearTimeout(lpTimer);
+    }, { passive: true });
+
+    card.addEventListener('touchend', () => clearTimeout(lpTimer), { passive: true });
+    card.addEventListener('touchcancel', () => clearTimeout(lpTimer), { passive: true });
+  }
+
+  document.querySelectorAll('#mobileSaves .mobile-card[data-note-id]').forEach(attachLongPress);
+
 })();
 </script>
 </body>
