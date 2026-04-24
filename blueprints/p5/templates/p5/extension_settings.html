@@ -77,11 +77,6 @@
       position: relative;
       z-index: 1;
     }
-
-    .hero-section .cta-row {
-      position: relative;
-      z-index: 1;
-    }
     
     .token-card {
       background: linear-gradient(145deg, #0d0d0e 0%, #121516 100%);
@@ -335,7 +330,7 @@
         <p class="subtitle">
           Connect the MioHub Chrome Extension to seamlessly capture images, text, and URLs from any webpage directly into your workspace.
         </p>
-        <div class="d-flex flex-wrap gap-3 mt-3 cta-row">
+        <div class="d-flex flex-wrap gap-3 mt-3" style="position: relative; z-index: 1;">
           <a href="{{ url_for('p5_bp.extension_home') }}" class="btn-professional btn-primary-pro">
             <i class="material-icons" style="font-size: 20px;">library_books</i>
             <span>Open Web Clippings</span>

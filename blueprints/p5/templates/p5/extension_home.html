@@ -234,19 +234,6 @@
       color: var(--white);
     }
 
-    .filter-help {
-      display: block;
-      margin-top: 0.35rem;
-      color: var(--muted-strong);
-      font-size: 0.82rem;
-    }
-
-    select[multiple].form-select {
-      min-height: 7.5rem;
-      padding-top: 0.55rem;
-      padding-bottom: 0.55rem;
-    }
-
     .btn-ghost {
       background: rgba(255, 255, 255, 0.06);
       color: var(--muted-strong);
@@ -547,6 +534,79 @@
       transform: scale(1.015);
     }
 
+    /* Prevent mobile overlay elements from appearing as block elements on desktop */
+    #mobileFolderPicker,
+    #mobileFolderPickerBackdrop {
+      display: none;
+    }
+    #mobileFolderPicker.is-open {
+      display: block;
+    }
+    #mobileFolderPickerBackdrop.is-open {
+      display: block;
+    }
+
+    /* Custom multi-select domain dropdown */
+    .domain-multiselect { position: relative; }
+    .domain-ms-dropdown {
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 0;
+      right: 0;
+      z-index: 300;
+      background: #0f1114;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 0.3rem 0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    }
+    .domain-ms-item {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.45rem 0.8rem;
+      cursor: pointer;
+      color: var(--muted-strong);
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.1s;
+    }
+    .domain-ms-item:hover { background: rgba(20,184,166,0.1); color: var(--white); }
+    .domain-ms-item input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* Context menu */
+    #lgContextMenu {
+      position: fixed;
+      z-index: 9000;
+      background: #0f1114;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 12px;
+      min-width: 180px;
+      padding: 0.4rem 0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: none;
+    }
+    #lgContextMenu.visible { display: block; }
+    #lgContextMenu button, #lgContextMenu a {
+      display: block;
+      width: 100%;
+      padding: 0.55rem 0.9rem;
+      color: var(--muted-strong);
+      font-weight: 600;
+      font-size: 0.9rem;
+      background: transparent;
+      border: none;
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+    }
+    #lgContextMenu button:hover, #lgContextMenu a:hover { background: rgba(20,184,166,0.12); color: var(--white); }
+    #lgContextMenu .ctx-danger { color: #f87171 !important; }
+    #lgContextMenu .ctx-danger:hover { background: rgba(248,113,113,0.1) !important; }
+
     #lgDragToast {
       position: fixed;
       bottom: 20px;
@@ -570,15 +630,36 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* ── Mobile: long-press folder picker ──────────────────────────── */
     @media (max-width: 768px) {
-      .mobile-card.menu-pressing {
+      .mobile-card.move-mode {
         outline: 2px solid var(--accent);
-        opacity: 0.82;
+        opacity: 0.75;
       }
 
-      select[multiple].form-select {
-        min-height: 6.75rem;
+      #mobileFolderPicker {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: rgba(14, 15, 17, 0.99);
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        padding: 1rem 1rem 2rem;
+        transform: translateY(100%);
+        transition: transform 0.22s ease;
+        z-index: 250;
+        max-height: 65vh;
+        overflow-y: auto;
       }
+      #mobileFolderPicker.is-open { transform: translateY(0); }
+      #mobileFolderPickerBackdrop {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.55);
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 240;
+      }
+      #mobileFolderPickerBackdrop.is-open { opacity: 1; pointer-events: all; }
 
       .fps-item {
         display: flex; align-items: center; gap: 0.7rem;
@@ -651,12 +732,14 @@
     </button>
 
     <!-- Folder tree (flat, depth-indented) -->
-    {% for f in folder_list_flat if not f.is_web_clippings %}
+    <div class="sidebar-divider" style="margin-top:0.3rem;"></div>
+    <div style="padding: 0.3rem 0.75rem 0.15rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);">Folders</div>
+    {% for f in folder_list_flat %}
     <button class="folder-item{% if selected_folder_id == f.id %} active{% endif %}"
             data-filter-folder="{{ f.id }}"
             data-drop-folder-id="{{ f.id }}"
             data-folder-name="{{ f.name|e }}"
-            style="padding-left: {{ 0.75 + ([f.depth - 1, 0]|max) * 0.9 }}rem;"
+            style="padding-left: {{ 0.75 + f.depth * 0.85 }}rem;"
             type="button">
       <span class="material-icons fi-icon">{% if f.depth == 0 %}folder_special{% else %}folder{% endif %}</span>
       <span class="fi-label">{{ f.name }}</span>
@@ -709,7 +792,7 @@
     </div>
 
     <div class="row g-3">
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-6">
         <div class="stat-chip d-flex align-items-center justify-content-between">
           <div>
             <div class="text-uppercase small text-muted">Articles</div>
@@ -718,7 +801,7 @@
           <span class="badge-soft">Saved</span>
         </div>
       </div>
-      <div class="col-12 col-md-8">
+      <div class="col-12 col-md-6">
         <div class="stat-chip d-flex align-items-center justify-content-between">
           <div>
             <div class="text-uppercase small text-muted">Last Updated</div>
@@ -738,7 +821,7 @@
 
   <div class="filter-bar mb-4">
     <div class="row g-3 align-items-center">
-      <div class="col-12 {% if current_folder %}col-md-8{% else %}col-md-5{% endif %}">
+      <div class="col-12 col-md-6">
         <div class="input-group">
           <span class="input-group-text bg-transparent border-secondary text-muted">
             <span class="material-icons" style="font-size: 20px;">search</span>
@@ -746,17 +829,24 @@
           <input type="search" id="searchInput" class="form-control bg-transparent text-white border-secondary" placeholder="Search titles and snippets">
         </div>
       </div>
-      {% if not current_folder %}
-      <div class="col-12 col-md-4">
-        <select id="domainFilter" class="form-select bg-transparent text-white border-secondary" multiple size="4" aria-label="Filter by sources">
-          {% for domain in domains %}
-          <option value="{{ domain|lower }}">{{ domain }}</option>
-          {% endfor %}
-        </select>
-        <small class="filter-help">Filter by one or more sources. Leave empty to show all.</small>
+      <div class="col-6 col-md-3{% if selected_folder_id %} d-none{% endif %}" id="domainFilterCol">
+        <div class="domain-multiselect">
+          <button id="domainFilterBtn" type="button" class="form-select bg-transparent text-white border-secondary text-start w-100" style="cursor:pointer;">
+            <span id="domainFilterLabel">All sources</span>
+          </button>
+          <div id="domainFilterDropdown" class="domain-ms-dropdown" style="display:none;">
+            <label class="domain-ms-item">
+              <input type="checkbox" id="domainAll" value="all" checked> <span>All sources</span>
+            </label>
+            {% for domain in domains %}
+            <label class="domain-ms-item">
+              <input type="checkbox" class="domain-check-d" value="{{ domain|lower }}"> <span>{{ domain }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
       </div>
-      {% endif %}
-      <div class="col-12 {% if current_folder %}col-md-4{% else %}col-md-3{% endif %}">
+      <div class="col-6 col-md-3">
         <select id="sortOrder" class="form-select bg-transparent text-white border-secondary">
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
@@ -792,7 +882,6 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
-            <li><button class="dropdown-item" type="button" data-action="copy-link" data-note-id="{{ clip.id }}">Copy source link</button></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
             <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}" data-note-folder-id="{{ clip.folder_id }}">Move to folder</button></li>
@@ -885,15 +974,25 @@
         </span>
         <input type="search" id="searchInputMobile" class="form-control bg-transparent text-white border-secondary" placeholder="Search titles and snippets">
       </div>
-      <div class="d-flex flex-column gap-2">
-        {% if not current_folder %}
-        <select id="domainFilterMobile" class="form-select bg-transparent text-white border-secondary" multiple size="4" aria-label="Filter by sources">
-          {% for domain in domains %}
-          <option value="{{ domain|lower }}">{{ domain }}</option>
-          {% endfor %}
-        </select>
+      <div class="d-flex gap-2">
+        {% if not selected_folder_id %}
+        <div class="domain-multiselect" style="flex:1;">
+          <button id="domainFilterBtnM" type="button" class="form-select bg-transparent text-white border-secondary text-start w-100" style="cursor:pointer;">
+            <span id="domainFilterLabelM">All sources</span>
+          </button>
+          <div id="domainFilterDropdownM" class="domain-ms-dropdown" style="display:none;">
+            <label class="domain-ms-item">
+              <input type="checkbox" id="domainAllM" value="all" checked> <span>All sources</span>
+            </label>
+            {% for domain in domains %}
+            <label class="domain-ms-item">
+              <input type="checkbox" class="domain-check-m" value="{{ domain|lower }}"> <span>{{ domain }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
         {% endif %}
-        <select id="sortOrderMobile" class="form-select bg-transparent text-white border-secondary">
+        <select id="sortOrderMobile" class="form-select bg-transparent text-white border-secondary" style="flex:1;">
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
           <option value="clips">Most clips</option>
@@ -926,7 +1025,6 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
-            <li><button class="dropdown-item" type="button" data-action="copy-link" data-note-id="{{ clip.id }}">Copy source link</button></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
             <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}" data-note-folder-id="{{ clip.folder_id }}">Move to folder</button></li>
@@ -973,7 +1071,6 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
-            <li><button class="dropdown-item" type="button" data-action="copy-link" data-note-id="{{ clip.id }}">Copy source link</button></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
             <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
@@ -1013,10 +1110,10 @@
       <span class="mf-count">{{ stats.total_articles }}</span>
     </button>
 
-    {% for f in folder_list_flat if not f.is_web_clippings %}
+    {% for f in folder_list_flat %}
     <button class="mobile-folder-item{% if selected_folder_id == f.id %} active{% endif %}"
             data-mobile-filter-folder="{{ f.id }}"
-            style="padding-left: {{ 1 + ([f.depth - 1, 0]|max) }}rem;"
+            style="padding-left: {{ 1 + f.depth * 0.9 }}rem;"
             type="button">
       <span class="material-icons" style="font-size: 18px;">{% if f.depth == 0 %}folder_special{% else %}folder{% endif %}</span>
       {{ f.name }}
@@ -1069,8 +1166,38 @@
   </nav>
 </div>
 
+<!-- Mobile: folder picker bottom sheet (for long-press drag-to-move) -->
+<div id="mobileFolderPickerBackdrop"></div>
+<div id="mobileFolderPicker">
+  <div class="sheet-handle" style="width:46px;height:5px;border-radius:99px;background:rgba(255,255,255,0.2);margin:0 auto 0.8rem;"></div>
+  <div style="font-weight:800;color:var(--white);margin-bottom:0.6rem;font-size:0.95rem;">Move to&hellip;</div>
+  <div id="mobileFolderPickerList">
+    <div class="fps-item" data-fps-folder-id="{{ folder.id }}">
+      <span class="material-icons" style="font-size:18px;">bookmarks</span>
+      Web Clippings (root)
+    </div>
+    {% for f in folder_list_flat %}
+    {% if not f.is_web_clippings %}
+    <div class="fps-item" data-fps-folder-id="{{ f.id }}" style="padding-left:{{ 0.6 + ([f.depth - 1, 0]|max) * 0.8 }}rem;">
+      <span class="material-icons" style="font-size:17px;">{% if f.depth == 0 %}folder_special{% else %}folder{% endif %}</span>
+      {{ f.name }}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
 <!-- Drag-drop toast notification -->
 <div id="lgDragToast"></div>
+
+<!-- Right-click context menu -->
+<div id="lgContextMenu">
+  <a id="ctx-open-source" href="#">Open source</a>
+  <button id="ctx-tts" data-action="tts" type="button">TTS</button>
+  <button id="ctx-make-public" data-action="make-public" type="button">Make public</button>
+  <button id="ctx-move" data-action="move" type="button">Move to folder</button>
+  <button id="ctx-delete" data-action="delete" type="button" class="ctx-danger">Delete</button>
+</div>
 
 <button class="floating-add d-none d-md-inline-flex" id="desktopAddTrigger" aria-label="Save clean page" type="button">
   <span class="material-icons" style="font-size: 26px;">add</span>
@@ -1125,7 +1252,7 @@
           <select id="newFolderParent" class="form-select" style="background:#1a1c20; color:var(--white); border-color: rgba(255,255,255,0.12);">
             {% for f in folder_list_flat %}
             <option value="{{ f.id }}" {% if f.depth == 0 %}selected{% endif %}>
-              {{ '  ' * f.depth }}{% if f.depth == 0 %}📦{% else %}📁{% endif %} {% if f.is_web_clippings %}Web Clippings (root){% else %}{{ f.name }}{% endif %}
+              {{ '  ' * f.depth }}{% if f.depth == 0 %}📦{% else %}📁{% endif %} {{ f.name }}
             </option>
             {% endfor %}
           </select>
@@ -1184,33 +1311,139 @@
 (function() {
   // Desktop filters
   const searchInput = document.getElementById('searchInput');
-  const domainFilter = document.getElementById('domainFilter');
   const sortOrder = document.getElementById('sortOrder');
   const wrappers = Array.from(document.querySelectorAll('.clip-wrapper'));
 
   // Mobile filters
   const searchInputMobile = document.getElementById('searchInputMobile');
-  const domainFilterMobile = document.getElementById('domainFilterMobile');
   const sortOrderMobile = document.getElementById('sortOrderMobile');
   const mobileCards = Array.from(document.querySelectorAll('.mobile-card[data-domain]'));
 
-  function getSelectedDomains(selectEl) {
-    if (!selectEl) return [];
-    return Array.from(selectEl.selectedOptions || [])
-      .map(option => option.value)
-      .filter(Boolean);
+  // ── Desktop multi-select domain filter ──────────────────────────
+  const domainFilterBtn = document.getElementById('domainFilterBtn');
+  const domainFilterDrop = document.getElementById('domainFilterDropdown');
+  const domainAllCheck = document.getElementById('domainAll');
+  const domainLabel = document.getElementById('domainFilterLabel');
+
+  function getSelectedDomainsDesktop() {
+    if (!domainAllCheck || domainAllCheck.checked) return [];
+    return Array.from(document.querySelectorAll('.domain-check-d:checked')).map(cb => cb.value);
   }
+
+  function updateDomainLabel() {
+    const checked = Array.from(document.querySelectorAll('.domain-check-d:checked'));
+    if (!domainLabel) return;
+    if (checked.length === 0) {
+      domainLabel.textContent = 'All sources';
+    } else if (checked.length === 1) {
+      domainLabel.textContent = checked[0].value;
+    } else {
+      domainLabel.textContent = checked.length + ' sources';
+    }
+  }
+
+  if (domainFilterBtn) {
+    domainFilterBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = domainFilterDrop.style.display === 'block';
+      domainFilterDrop.style.display = open ? 'none' : 'block';
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.domain-multiselect')) {
+      if (domainFilterDrop) domainFilterDrop.style.display = 'none';
+      if (domainFilterDropM) domainFilterDropM.style.display = 'none';
+    }
+  });
+
+  if (domainAllCheck) {
+    domainAllCheck.addEventListener('change', () => {
+      if (domainAllCheck.checked) {
+        document.querySelectorAll('.domain-check-d').forEach(cb => cb.checked = false);
+      } else if (!document.querySelector('.domain-check-d:checked')) {
+        domainAllCheck.checked = true;
+      }
+      updateDomainLabel();
+      applyFilters();
+    });
+  }
+  document.querySelectorAll('.domain-check-d').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const anyChecked = document.querySelector('.domain-check-d:checked');
+      if (anyChecked) {
+        if (domainAllCheck) domainAllCheck.checked = false;
+      } else {
+        if (domainAllCheck) domainAllCheck.checked = true;
+      }
+      updateDomainLabel();
+      applyFilters();
+    });
+  });
+
+  // ── Mobile multi-select domain filter ───────────────────────────
+  const domainFilterBtnM = document.getElementById('domainFilterBtnM');
+  const domainFilterDropM = document.getElementById('domainFilterDropdownM');
+  const domainAllCheckM = document.getElementById('domainAllM');
+  const domainLabelM = document.getElementById('domainFilterLabelM');
+
+  function getSelectedDomainsMobile() {
+    if (!domainAllCheckM || domainAllCheckM.checked) return [];
+    return Array.from(document.querySelectorAll('.domain-check-m:checked')).map(cb => cb.value);
+  }
+
+  function updateDomainLabelM() {
+    const checked = Array.from(document.querySelectorAll('.domain-check-m:checked'));
+    if (!domainLabelM) return;
+    if (checked.length === 0) {
+      domainLabelM.textContent = 'All sources';
+    } else if (checked.length === 1) {
+      domainLabelM.textContent = checked[0].value;
+    } else {
+      domainLabelM.textContent = checked.length + ' sources';
+    }
+  }
+
+  if (domainFilterBtnM) {
+    domainFilterBtnM.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = domainFilterDropM.style.display === 'block';
+      domainFilterDropM.style.display = open ? 'none' : 'block';
+    });
+  }
+  if (domainAllCheckM) {
+    domainAllCheckM.addEventListener('change', () => {
+      if (domainAllCheckM.checked) {
+        document.querySelectorAll('.domain-check-m').forEach(cb => cb.checked = false);
+      } else if (!document.querySelector('.domain-check-m:checked')) {
+        domainAllCheckM.checked = true;
+      }
+      updateDomainLabelM();
+      applyFiltersMobile();
+    });
+  }
+  document.querySelectorAll('.domain-check-m').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const anyChecked = document.querySelector('.domain-check-m:checked');
+      if (anyChecked) {
+        if (domainAllCheckM) domainAllCheckM.checked = false;
+      } else {
+        if (domainAllCheckM) domainAllCheckM.checked = true;
+      }
+      updateDomainLabelM();
+      applyFiltersMobile();
+    });
+  });
 
   function applyFilters() {
     const term = (searchInput?.value || '').toLowerCase();
-    const domains = getSelectedDomains(domainFilter);
+    const selectedDomains = getSelectedDomainsDesktop();
 
     // Read currently-active folder filter from sidebar
     const activeSidebarBtn = document.querySelector('#lgFolderSidebar .folder-item.active');
     const activeFolder = activeSidebarBtn?.dataset?.filterFolder || 'all';
 
     wrappers.forEach(card => {
-      const matchesDomain = domains.length === 0 || domains.includes(card.dataset.domain);
+      const matchesDomain = selectedDomains.length === 0 || selectedDomains.includes(card.dataset.domain);
       const textHaystack = `${card.dataset.title} ${card.dataset.text}`;
       const matchesSearch = term === '' || textHaystack.includes(term);
       const matchesFolder = activeFolder === 'all' || card.dataset.folderId === String(activeFolder);
@@ -1222,16 +1455,13 @@
 
   function applyFiltersMobile() {
     const term = (searchInputMobile?.value || '').toLowerCase();
-    const domains = getSelectedDomains(domainFilterMobile);
-    const activeMobileBtn = document.querySelector('#mobileFolders .mobile-folder-item.active');
-    const activeFolder = activeMobileBtn?.dataset?.mobileFilterFolder || 'all';
+    const selectedDomains = getSelectedDomainsMobile();
 
     mobileCards.forEach(card => {
-      const matchesDomain = domains.length === 0 || domains.includes(card.dataset.domain);
+      const matchesDomain = selectedDomains.length === 0 || selectedDomains.includes(card.dataset.domain);
       const textHaystack = `${card.dataset.title} ${card.dataset.text}`;
       const matchesSearch = term === '' || textHaystack.includes(term);
-      const matchesFolder = activeFolder === 'all' || card.dataset.folderId === String(activeFolder);
-      card.style.display = matchesDomain && matchesSearch && matchesFolder ? '' : 'none';
+      card.style.display = matchesDomain && matchesSearch ? '' : 'none';
     });
 
     applySortMobile();
@@ -1279,13 +1509,13 @@
     visible.forEach(card => container.appendChild(card));
   }
 
-  [searchInput, domainFilter, sortOrder].forEach(el => {
+  [searchInput, sortOrder].forEach(el => {
     if (!el) return;
     el.addEventListener('input', applyFilters);
     el.addEventListener('change', applyFilters);
   });
 
-  [searchInputMobile, domainFilterMobile, sortOrderMobile].forEach(el => {
+  [searchInputMobile, sortOrderMobile].forEach(el => {
     if (!el) return;
     el.addEventListener('input', applyFiltersMobile);
     el.addEventListener('change', applyFiltersMobile);
@@ -1299,7 +1529,6 @@
       card.addEventListener('click', (e) => {
         // Ignore clicks on dropdown buttons/menus
         if (e.target.closest('.card-menu')) return;
-        if ((window.latergramSuppressCardClickUntil || 0) > Date.now()) return;
         window.location.href = openUrl;
       });
     });
@@ -1457,34 +1686,6 @@
 
     const action = btn.dataset.action;
     const noteId = btn.dataset.noteId;
-    const card = btn.closest('.clip-card, .mobile-card');
-
-    async function copyToClipboard(text) {
-      if (!text) return false;
-
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        }
-      } catch (error) {
-        console.warn('Clipboard API failed', error);
-      }
-
-      const temp = document.createElement('textarea');
-      temp.value = text;
-      temp.setAttribute('readonly', '');
-      temp.style.position = 'absolute';
-      temp.style.left = '-9999px';
-      document.body.appendChild(temp);
-      temp.select();
-
-      try {
-        return document.execCommand('copy');
-      } finally {
-        temp.remove();
-      }
-    }
 
     if (action === 'delete') {
       if (!confirm('Delete this article? This cannot be undone.')) return;
@@ -1515,12 +1716,6 @@
     } else if (action === 'tts') {
       e.preventDefault();
       handleTts(btn, noteId);
-    } else if (action === 'copy-link') {
-      e.preventDefault();
-      const ok = await copyToClipboard(card?.dataset?.sourceUrl || '');
-      if (!ok) {
-        alert('Failed to copy source link.');
-      }
     } else if (action === 'make-public') {
       alert('Make public feature coming soon');
     } else if (action === 'move') {
@@ -1596,12 +1791,12 @@
   document.querySelectorAll('[data-mobile-filter-folder]').forEach(btn => {
     btn.addEventListener('click', () => {
       const folderId = btn.dataset.mobileFilterFolder;
+      applyFolderFilter(folderId);
       // Switch to saves view
       setActive('saves');
       // Update active state
       document.querySelectorAll('[data-mobile-filter-folder]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      applyFiltersMobile();
     });
   });
 
@@ -1663,7 +1858,7 @@
       activeFolderFilter = folderId;
       sidebarBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      applyFilters();
+      applyFolderFilter(folderId);
     });
   });
 
@@ -1958,65 +2153,168 @@ function applyFolderFilter(folderId) {
     });
   });
 
-})();
-</script>
-<script>
-(function() {
+  // ════════════════════════════════════════════════════════════════
+  // MOBILE — Long-press to move (folder picker bottom sheet)
+  // ════════════════════════════════════════════════════════════════
   const LONGPRESS_MS = 500;
-  let pressTimer = null;
-  let moved = false;
+  const pickerEl = document.getElementById('mobileFolderPicker');
+  const pickerBackdrop = document.getElementById('mobileFolderPickerBackdrop');
 
-  function hideAllMenus(exceptToggle) {
-    document.querySelectorAll('.card-menu [data-bs-toggle="dropdown"]').forEach(toggle => {
-      if (toggle === exceptToggle) return;
-      bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
-    });
-  }
+  if (!pickerEl) return;  // mobile elements not present (e.g. desktop-only render)
 
-  function openCardMenu(card) {
-    const toggle = card?.querySelector('.card-menu [data-bs-toggle="dropdown"]');
-    if (!toggle) return;
-    hideAllMenus(toggle);
-    window.latergramSuppressCardClickUntil = Date.now() + 800;
-    bootstrap.Dropdown.getOrCreateInstance(toggle).show();
-  }
+  let lpTimer = null;
+  let lpCard = null;    // the mobile-card element being moved
+  let lpNoteId = null;
+  let lpMoved = false;
 
-  document.querySelectorAll('.clip-card, .mobile-card').forEach(card => {
-    card.addEventListener('contextmenu', (e) => {
-      if (e.target.closest('.card-menu, .dropdown-menu, a, button, input, select, textarea')) return;
-      e.preventDefault();
-      openCardMenu(card);
+  function openPicker(card) {
+    lpCard = card;
+    lpNoteId = card.dataset.noteId;
+
+    // Mark current folder in picker
+    const currentFolderId = card.dataset.folderId;
+    pickerEl.querySelectorAll('.fps-item').forEach(item => {
+      item.classList.toggle('fps-active', item.dataset.fpsFolderId === currentFolderId);
     });
 
+    card.classList.add('move-mode');
+    pickerEl.classList.add('is-open');
+    pickerBackdrop.classList.add('is-open');
+  }
+
+  function closePicker(restoreCard) {
+    if (restoreCard && lpCard) lpCard.classList.remove('move-mode');
+    lpCard = null;
+    lpNoteId = null;
+    pickerEl.classList.remove('is-open');
+    pickerBackdrop.classList.remove('is-open');
+  }
+
+  pickerBackdrop.addEventListener('click', () => closePicker(true));
+
+  pickerEl.querySelectorAll('.fps-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const targetFolderId = item.dataset.fpsFolderId;
+      const targetFolderName = item.textContent.trim().replace(/^[^\s]+\s+/, '');
+
+      if (!lpNoteId) { closePicker(true); return; }
+      if (lpCard && String(lpCard.dataset.folderId) === String(targetFolderId)) {
+        showToast('Already in this folder');
+        closePicker(true);
+        return;
+      }
+
+      const cardRef = lpCard;
+      closePicker(false);  // Don't restore — we'll fade it out on success if needed
+
+      const ok = await moveClipToFolder(lpNoteId, targetFolderId, targetFolderName, cardRef);
+      if (ok && cardRef) cardRef.classList.remove('move-mode');
+      else if (cardRef) cardRef.classList.remove('move-mode');
+    });
+  });
+
+  // Attach long-press to mobile save cards
+  function attachLongPress(card) {
     card.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;
-      if (e.target.closest('.card-menu, .dropdown-menu, a, button, input, select, textarea')) return;
-      moved = false;
-      card.classList.add('menu-pressing');
-      pressTimer = setTimeout(() => {
-        if (moved) return;
-        openCardMenu(card);
-        if (navigator.vibrate) navigator.vibrate(35);
-        card.classList.remove('menu-pressing');
+      lpMoved = false;
+      lpTimer = setTimeout(() => {
+        if (!lpMoved) {
+          openPicker(card);
+          // Haptic feedback if available
+          if (navigator.vibrate) navigator.vibrate(40);
+        }
       }, LONGPRESS_MS);
     }, { passive: true });
 
     card.addEventListener('touchmove', () => {
-      moved = true;
-      card.classList.remove('menu-pressing');
-      clearTimeout(pressTimer);
+      lpMoved = true;
+      clearTimeout(lpTimer);
     }, { passive: true });
 
-    card.addEventListener('touchend', () => {
-      card.classList.remove('menu-pressing');
-      clearTimeout(pressTimer);
-    }, { passive: true });
+    card.addEventListener('touchend', () => clearTimeout(lpTimer), { passive: true });
+    card.addEventListener('touchcancel', () => clearTimeout(lpTimer), { passive: true });
+  }
 
-    card.addEventListener('touchcancel', () => {
-      card.classList.remove('menu-pressing');
-      clearTimeout(pressTimer);
-    }, { passive: true });
+  document.querySelectorAll('#mobileSaves .mobile-card[data-note-id]').forEach(attachLongPress);
+
+})();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// Right-click context menu for clip cards
+// ════════════════════════════════════════════════════════════════════
+(function () {
+  const ctxMenu = document.getElementById('lgContextMenu');
+  if (!ctxMenu) return;
+
+  let ctxNoteId = null;
+  let ctxFolderId = null;
+  let ctxSourceUrl = null;
+
+  function showCtxMenu(x, y, noteId, folderId, sourceUrl) {
+    ctxNoteId = noteId;
+    ctxFolderId = folderId;
+    ctxSourceUrl = sourceUrl;
+
+    // Update "Open source" link
+    const openLink = document.getElementById('ctx-open-source');
+    if (openLink) {
+      openLink.href = sourceUrl || '#';
+      openLink.target = '_blank';
+      openLink.rel = 'noopener';
+    }
+
+    // Update data-note-id on action buttons
+    ctxMenu.querySelectorAll('[data-action]').forEach(btn => {
+      btn.dataset.noteId = noteId;
+      if (btn.dataset.action === 'move') btn.dataset.noteFolderId = folderId;
+    });
+
+    // Position within viewport
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    ctxMenu.style.display = 'block';
+    const mw = ctxMenu.offsetWidth;
+    const mh = ctxMenu.offsetHeight;
+    ctxMenu.style.left = (x + mw > vw ? vw - mw - 8 : x) + 'px';
+    ctxMenu.style.top  = (y + mh > vh ? vh - mh - 8 : y) + 'px';
+    ctxMenu.classList.add('visible');
+  }
+
+  function hideCtxMenu() {
+    ctxMenu.classList.remove('visible');
+    ctxMenu.style.display = 'none';
+    ctxNoteId = null;
+  }
+
+  // Wire contextmenu on clip cards (desktop + mobile-card)
+  document.querySelectorAll('.clip-card, .mobile-card[data-note-id]').forEach(card => {
+    card.addEventListener('contextmenu', (e) => {
+      // Don't override if clicking on the 3-dot area
+      if (e.target.closest('.card-menu')) return;
+      e.preventDefault();
+      const wrapper = card.closest('.clip-wrapper') || card;
+      const noteId   = wrapper.dataset.noteId || card.dataset.noteId;
+      const folderId = wrapper.dataset.folderId || card.dataset.folderId;
+      const sourceUrl = card.dataset.sourceUrl;
+      if (!noteId) return;
+      showCtxMenu(e.clientX, e.clientY, noteId, folderId, sourceUrl);
+    });
   });
+
+  // Hide on outside click or Escape
+  document.addEventListener('click', (e) => {
+    if (!ctxMenu.contains(e.target)) hideCtxMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideCtxMenu();
+  });
+  document.addEventListener('scroll', hideCtxMenu, true);
+
+  // Context menu item clicks are handled by the existing [data-action] handler
+  // The ctx-open-source link works as a regular link
 })();
 </script>
 </body>
