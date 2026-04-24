@@ -234,6 +234,19 @@
       color: var(--white);
     }
 
+    .filter-help {
+      display: block;
+      margin-top: 0.35rem;
+      color: var(--muted-strong);
+      font-size: 0.82rem;
+    }
+
+    select[multiple].form-select {
+      min-height: 7.5rem;
+      padding-top: 0.55rem;
+      padding-bottom: 0.55rem;
+    }
+
     .btn-ghost {
       background: rgba(255, 255, 255, 0.06);
       color: var(--muted-strong);
@@ -557,36 +570,15 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* ── Mobile: long-press folder picker ──────────────────────────── */
     @media (max-width: 768px) {
-      .mobile-card.move-mode {
+      .mobile-card.menu-pressing {
         outline: 2px solid var(--accent);
-        opacity: 0.75;
+        opacity: 0.82;
       }
 
-      #mobileFolderPicker {
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
-        background: rgba(14, 15, 17, 0.99);
-        border-top-left-radius: 20px;
-        border-top-right-radius: 20px;
-        border-top: 1px solid rgba(255,255,255,0.08);
-        padding: 1rem 1rem 2rem;
-        transform: translateY(100%);
-        transition: transform 0.22s ease;
-        z-index: 250;
-        max-height: 65vh;
-        overflow-y: auto;
+      select[multiple].form-select {
+        min-height: 6.75rem;
       }
-      #mobileFolderPicker.is-open { transform: translateY(0); }
-      #mobileFolderPickerBackdrop {
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,0.55);
-        opacity: 0; pointer-events: none;
-        transition: opacity 0.2s ease;
-        z-index: 240;
-      }
-      #mobileFolderPickerBackdrop.is-open { opacity: 1; pointer-events: all; }
 
       .fps-item {
         display: flex; align-items: center; gap: 0.7rem;
@@ -659,7 +651,7 @@
     </button>
 
     <!-- Folder tree (flat, depth-indented) -->
-    {% for f in folder_list_flat %}
+    {% for f in folder_list_flat if not f.is_web_clippings %}
     <button class="folder-item{% if selected_folder_id == f.id %} active{% endif %}"
             data-filter-folder="{{ f.id }}"
             data-drop-folder-id="{{ f.id }}"
@@ -726,16 +718,7 @@
           <span class="badge-soft">Saved</span>
         </div>
       </div>
-      <div class="col-12 col-md-4">
-        <div class="stat-chip d-flex align-items-center justify-content-between">
-          <div>
-            <div class="text-uppercase small text-muted">Total Clips</div>
-            <div class="fw-bold" style="font-size: 1.6rem;">{{ stats.total_clips }}</div>
-          </div>
-          <span class="badge-soft">Merged by URL</span>
-        </div>
-      </div>
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-8">
         <div class="stat-chip d-flex align-items-center justify-content-between">
           <div>
             <div class="text-uppercase small text-muted">Last Updated</div>
@@ -755,7 +738,7 @@
 
   <div class="filter-bar mb-4">
     <div class="row g-3 align-items-center">
-      <div class="col-12 col-md-6">
+      <div class="col-12 {% if current_folder %}col-md-8{% else %}col-md-5{% endif %}">
         <div class="input-group">
           <span class="input-group-text bg-transparent border-secondary text-muted">
             <span class="material-icons" style="font-size: 20px;">search</span>
@@ -763,15 +746,17 @@
           <input type="search" id="searchInput" class="form-control bg-transparent text-white border-secondary" placeholder="Search titles and snippets">
         </div>
       </div>
-      <div class="col-6 col-md-3">
-        <select id="domainFilter" class="form-select bg-transparent text-white border-secondary">
-          <option value="all">All sources</option>
+      {% if not current_folder %}
+      <div class="col-12 col-md-4">
+        <select id="domainFilter" class="form-select bg-transparent text-white border-secondary" multiple size="4" aria-label="Filter by sources">
           {% for domain in domains %}
           <option value="{{ domain|lower }}">{{ domain }}</option>
           {% endfor %}
         </select>
+        <small class="filter-help">Filter by one or more sources. Leave empty to show all.</small>
       </div>
-      <div class="col-6 col-md-3">
+      {% endif %}
+      <div class="col-12 {% if current_folder %}col-md-4{% else %}col-md-3{% endif %}">
         <select id="sortOrder" class="form-select bg-transparent text-white border-secondary">
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
@@ -807,6 +792,7 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+            <li><button class="dropdown-item" type="button" data-action="copy-link" data-note-id="{{ clip.id }}">Copy source link</button></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
             <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}" data-note-folder-id="{{ clip.folder_id }}">Move to folder</button></li>
@@ -899,13 +885,14 @@
         </span>
         <input type="search" id="searchInputMobile" class="form-control bg-transparent text-white border-secondary" placeholder="Search titles and snippets">
       </div>
-      <div class="d-flex gap-2">
-        <select id="domainFilterMobile" class="form-select bg-transparent text-white border-secondary">
-          <option value="all">All sources</option>
+      <div class="d-flex flex-column gap-2">
+        {% if not current_folder %}
+        <select id="domainFilterMobile" class="form-select bg-transparent text-white border-secondary" multiple size="4" aria-label="Filter by sources">
           {% for domain in domains %}
           <option value="{{ domain|lower }}">{{ domain }}</option>
           {% endfor %}
         </select>
+        {% endif %}
         <select id="sortOrderMobile" class="form-select bg-transparent text-white border-secondary">
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
@@ -939,6 +926,7 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+            <li><button class="dropdown-item" type="button" data-action="copy-link" data-note-id="{{ clip.id }}">Copy source link</button></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
             <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}" data-note-folder-id="{{ clip.folder_id }}">Move to folder</button></li>
@@ -985,6 +973,7 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-dark">
             <li><a class="dropdown-item" href="{{ clip.source_url or '#' }}" target="_blank" rel="noopener">Open source</a></li>
+            <li><button class="dropdown-item" type="button" data-action="copy-link" data-note-id="{{ clip.id }}">Copy source link</button></li>
             <li><button class="dropdown-item" type="button" data-action="tts" data-note-id="{{ clip.id }}">TTS</button></li>
             <li><button class="dropdown-item" type="button" data-action="make-public" data-note-id="{{ clip.id }}">Make public</button></li>
             <li><button class="dropdown-item" type="button" data-action="move" data-note-id="{{ clip.id }}">Move to folder</button></li>
@@ -1024,7 +1013,7 @@
       <span class="mf-count">{{ stats.total_articles }}</span>
     </button>
 
-    {% for f in folder_list_flat %}
+    {% for f in folder_list_flat if not f.is_web_clippings %}
     <button class="mobile-folder-item{% if selected_folder_id == f.id %} active{% endif %}"
             data-mobile-filter-folder="{{ f.id }}"
             style="padding-left: {{ 1 + ([f.depth - 1, 0]|max) }}rem;"
@@ -1078,27 +1067,6 @@
       More
     </button>
   </nav>
-</div>
-
-<!-- Mobile: folder picker bottom sheet (for long-press drag-to-move) -->
-<div id="mobileFolderPickerBackdrop"></div>
-<div id="mobileFolderPicker">
-  <div class="sheet-handle" style="width:46px;height:5px;border-radius:99px;background:rgba(255,255,255,0.2);margin:0 auto 0.8rem;"></div>
-  <div style="font-weight:800;color:var(--white);margin-bottom:0.6rem;font-size:0.95rem;">Move to&hellip;</div>
-  <div id="mobileFolderPickerList">
-    <div class="fps-item" data-fps-folder-id="{{ folder.id }}">
-      <span class="material-icons" style="font-size:18px;">bookmarks</span>
-      Web Clippings (root)
-    </div>
-    {% for f in folder_list_flat %}
-    {% if not f.is_web_clippings %}
-    <div class="fps-item" data-fps-folder-id="{{ f.id }}" style="padding-left:{{ 0.6 + ([f.depth - 1, 0]|max) * 0.8 }}rem;">
-      <span class="material-icons" style="font-size:17px;">{% if f.depth == 0 %}folder_special{% else %}folder{% endif %}</span>
-      {{ f.name }}
-    </div>
-    {% endif %}
-    {% endfor %}
-  </div>
 </div>
 
 <!-- Drag-drop toast notification -->
@@ -1157,7 +1125,7 @@
           <select id="newFolderParent" class="form-select" style="background:#1a1c20; color:var(--white); border-color: rgba(255,255,255,0.12);">
             {% for f in folder_list_flat %}
             <option value="{{ f.id }}" {% if f.depth == 0 %}selected{% endif %}>
-              {{ '  ' * f.depth }}{% if f.depth == 0 %}📦{% else %}📁{% endif %} {{ f.name }}
+              {{ '  ' * f.depth }}{% if f.depth == 0 %}📦{% else %}📁{% endif %} {% if f.is_web_clippings %}Web Clippings (root){% else %}{{ f.name }}{% endif %}
             </option>
             {% endfor %}
           </select>
@@ -1226,16 +1194,23 @@
   const sortOrderMobile = document.getElementById('sortOrderMobile');
   const mobileCards = Array.from(document.querySelectorAll('.mobile-card[data-domain]'));
 
+  function getSelectedDomains(selectEl) {
+    if (!selectEl) return [];
+    return Array.from(selectEl.selectedOptions || [])
+      .map(option => option.value)
+      .filter(Boolean);
+  }
+
   function applyFilters() {
     const term = (searchInput?.value || '').toLowerCase();
-    const domain = domainFilter?.value || 'all';
+    const domains = getSelectedDomains(domainFilter);
 
     // Read currently-active folder filter from sidebar
     const activeSidebarBtn = document.querySelector('#lgFolderSidebar .folder-item.active');
     const activeFolder = activeSidebarBtn?.dataset?.filterFolder || 'all';
 
     wrappers.forEach(card => {
-      const matchesDomain = domain === 'all' || card.dataset.domain === domain;
+      const matchesDomain = domains.length === 0 || domains.includes(card.dataset.domain);
       const textHaystack = `${card.dataset.title} ${card.dataset.text}`;
       const matchesSearch = term === '' || textHaystack.includes(term);
       const matchesFolder = activeFolder === 'all' || card.dataset.folderId === String(activeFolder);
@@ -1247,13 +1222,16 @@
 
   function applyFiltersMobile() {
     const term = (searchInputMobile?.value || '').toLowerCase();
-    const domain = domainFilterMobile?.value || 'all';
+    const domains = getSelectedDomains(domainFilterMobile);
+    const activeMobileBtn = document.querySelector('#mobileFolders .mobile-folder-item.active');
+    const activeFolder = activeMobileBtn?.dataset?.mobileFilterFolder || 'all';
 
     mobileCards.forEach(card => {
-      const matchesDomain = domain === 'all' || card.dataset.domain === domain;
+      const matchesDomain = domains.length === 0 || domains.includes(card.dataset.domain);
       const textHaystack = `${card.dataset.title} ${card.dataset.text}`;
       const matchesSearch = term === '' || textHaystack.includes(term);
-      card.style.display = matchesDomain && matchesSearch ? '' : 'none';
+      const matchesFolder = activeFolder === 'all' || card.dataset.folderId === String(activeFolder);
+      card.style.display = matchesDomain && matchesSearch && matchesFolder ? '' : 'none';
     });
 
     applySortMobile();
@@ -1321,6 +1299,7 @@
       card.addEventListener('click', (e) => {
         // Ignore clicks on dropdown buttons/menus
         if (e.target.closest('.card-menu')) return;
+        if ((window.latergramSuppressCardClickUntil || 0) > Date.now()) return;
         window.location.href = openUrl;
       });
     });
@@ -1478,6 +1457,34 @@
 
     const action = btn.dataset.action;
     const noteId = btn.dataset.noteId;
+    const card = btn.closest('.clip-card, .mobile-card');
+
+    async function copyToClipboard(text) {
+      if (!text) return false;
+
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (error) {
+        console.warn('Clipboard API failed', error);
+      }
+
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      temp.setAttribute('readonly', '');
+      temp.style.position = 'absolute';
+      temp.style.left = '-9999px';
+      document.body.appendChild(temp);
+      temp.select();
+
+      try {
+        return document.execCommand('copy');
+      } finally {
+        temp.remove();
+      }
+    }
 
     if (action === 'delete') {
       if (!confirm('Delete this article? This cannot be undone.')) return;
@@ -1508,6 +1515,12 @@
     } else if (action === 'tts') {
       e.preventDefault();
       handleTts(btn, noteId);
+    } else if (action === 'copy-link') {
+      e.preventDefault();
+      const ok = await copyToClipboard(card?.dataset?.sourceUrl || '');
+      if (!ok) {
+        alert('Failed to copy source link.');
+      }
     } else if (action === 'make-public') {
       alert('Make public feature coming soon');
     } else if (action === 'move') {
@@ -1583,12 +1596,12 @@
   document.querySelectorAll('[data-mobile-filter-folder]').forEach(btn => {
     btn.addEventListener('click', () => {
       const folderId = btn.dataset.mobileFilterFolder;
-      applyFolderFilter(folderId);
       // Switch to saves view
       setActive('saves');
       // Update active state
       document.querySelectorAll('[data-mobile-filter-folder]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      applyFiltersMobile();
     });
   });
 
@@ -1650,7 +1663,7 @@
       activeFolderFilter = folderId;
       sidebarBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      applyFolderFilter(folderId);
+      applyFilters();
     });
   });
 
@@ -1945,91 +1958,65 @@ function applyFolderFilter(folderId) {
     });
   });
 
-  // ════════════════════════════════════════════════════════════════
-  // MOBILE — Long-press to move (folder picker bottom sheet)
-  // ════════════════════════════════════════════════════════════════
+})();
+</script>
+<script>
+(function() {
   const LONGPRESS_MS = 500;
-  const pickerEl = document.getElementById('mobileFolderPicker');
-  const pickerBackdrop = document.getElementById('mobileFolderPickerBackdrop');
+  let pressTimer = null;
+  let moved = false;
 
-  if (!pickerEl) return;  // mobile elements not present (e.g. desktop-only render)
-
-  let lpTimer = null;
-  let lpCard = null;    // the mobile-card element being moved
-  let lpNoteId = null;
-  let lpMoved = false;
-
-  function openPicker(card) {
-    lpCard = card;
-    lpNoteId = card.dataset.noteId;
-
-    // Mark current folder in picker
-    const currentFolderId = card.dataset.folderId;
-    pickerEl.querySelectorAll('.fps-item').forEach(item => {
-      item.classList.toggle('fps-active', item.dataset.fpsFolderId === currentFolderId);
+  function hideAllMenus(exceptToggle) {
+    document.querySelectorAll('.card-menu [data-bs-toggle="dropdown"]').forEach(toggle => {
+      if (toggle === exceptToggle) return;
+      bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
     });
-
-    card.classList.add('move-mode');
-    pickerEl.classList.add('is-open');
-    pickerBackdrop.classList.add('is-open');
   }
 
-  function closePicker(restoreCard) {
-    if (restoreCard && lpCard) lpCard.classList.remove('move-mode');
-    lpCard = null;
-    lpNoteId = null;
-    pickerEl.classList.remove('is-open');
-    pickerBackdrop.classList.remove('is-open');
+  function openCardMenu(card) {
+    const toggle = card?.querySelector('.card-menu [data-bs-toggle="dropdown"]');
+    if (!toggle) return;
+    hideAllMenus(toggle);
+    window.latergramSuppressCardClickUntil = Date.now() + 800;
+    bootstrap.Dropdown.getOrCreateInstance(toggle).show();
   }
 
-  pickerBackdrop.addEventListener('click', () => closePicker(true));
-
-  pickerEl.querySelectorAll('.fps-item').forEach(item => {
-    item.addEventListener('click', async () => {
-      const targetFolderId = item.dataset.fpsFolderId;
-      const targetFolderName = item.textContent.trim().replace(/^[^\s]+\s+/, '');
-
-      if (!lpNoteId) { closePicker(true); return; }
-      if (lpCard && String(lpCard.dataset.folderId) === String(targetFolderId)) {
-        showToast('Already in this folder');
-        closePicker(true);
-        return;
-      }
-
-      const cardRef = lpCard;
-      closePicker(false);  // Don't restore — we'll fade it out on success if needed
-
-      const ok = await moveClipToFolder(lpNoteId, targetFolderId, targetFolderName, cardRef);
-      if (ok && cardRef) cardRef.classList.remove('move-mode');
-      else if (cardRef) cardRef.classList.remove('move-mode');
+  document.querySelectorAll('.clip-card, .mobile-card').forEach(card => {
+    card.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.card-menu, .dropdown-menu, a, button, input, select, textarea')) return;
+      e.preventDefault();
+      openCardMenu(card);
     });
-  });
 
-  // Attach long-press to mobile save cards
-  function attachLongPress(card) {
     card.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;
-      lpMoved = false;
-      lpTimer = setTimeout(() => {
-        if (!lpMoved) {
-          openPicker(card);
-          // Haptic feedback if available
-          if (navigator.vibrate) navigator.vibrate(40);
-        }
+      if (e.target.closest('.card-menu, .dropdown-menu, a, button, input, select, textarea')) return;
+      moved = false;
+      card.classList.add('menu-pressing');
+      pressTimer = setTimeout(() => {
+        if (moved) return;
+        openCardMenu(card);
+        if (navigator.vibrate) navigator.vibrate(35);
+        card.classList.remove('menu-pressing');
       }, LONGPRESS_MS);
     }, { passive: true });
 
     card.addEventListener('touchmove', () => {
-      lpMoved = true;
-      clearTimeout(lpTimer);
+      moved = true;
+      card.classList.remove('menu-pressing');
+      clearTimeout(pressTimer);
     }, { passive: true });
 
-    card.addEventListener('touchend', () => clearTimeout(lpTimer), { passive: true });
-    card.addEventListener('touchcancel', () => clearTimeout(lpTimer), { passive: true });
-  }
+    card.addEventListener('touchend', () => {
+      card.classList.remove('menu-pressing');
+      clearTimeout(pressTimer);
+    }, { passive: true });
 
-  document.querySelectorAll('#mobileSaves .mobile-card[data-note-id]').forEach(attachLongPress);
-
+    card.addEventListener('touchcancel', () => {
+      card.classList.remove('menu-pressing');
+      clearTimeout(pressTimer);
+    }, { passive: true });
+  });
 })();
 </script>
 </body>

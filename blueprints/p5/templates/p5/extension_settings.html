@@ -50,6 +50,7 @@
       height: 200%;
       background: radial-gradient(circle, rgba(20, 184, 166, 0.1) 0%, transparent 70%);
       animation: pulse 8s ease-in-out infinite;
+      pointer-events: none;
     }
     
     @keyframes pulse {
@@ -73,6 +74,11 @@
       font-size: 1.125rem;
       color: rgba(236, 255, 255, 0.7);
       max-width: 600px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-section .cta-row {
       position: relative;
       z-index: 1;
     }
@@ -329,7 +335,7 @@
         <p class="subtitle">
           Connect the MioHub Chrome Extension to seamlessly capture images, text, and URLs from any webpage directly into your workspace.
         </p>
-        <div class="d-flex flex-wrap gap-3 mt-3">
+        <div class="d-flex flex-wrap gap-3 mt-3 cta-row">
           <a href="{{ url_for('p5_bp.extension_home') }}" class="btn-professional btn-primary-pro">
             <i class="material-icons" style="font-size: 20px;">library_books</i>
             <span>Open Web Clippings</span>

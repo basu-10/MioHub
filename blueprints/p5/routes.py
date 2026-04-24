@@ -527,7 +527,7 @@ def download_chrome_extension():
         zip_buffer = io.BytesIO()
 
         # Path to chrome_extension folder
-        extension_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'chrome_extension')
+        extension_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'miohub_chrome_extension')
 
         # Create ZIP with all extension files
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
