@@ -13,11 +13,6 @@ def landing():
 
 
 
-@core_blueprint.route('/about')
-def about():
-    return render_template('core/about.html')
-
-
 @core_blueprint.route('/features/p1')
 def features_p1():
     return render_template('core/features_p1.html')

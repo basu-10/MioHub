@@ -5,7 +5,7 @@ from blueprints.p2.models import Folder, File, db, User
 from blueprints.p3.models import ChatSession
 from . import folder_bp  # Import the blueprint instance
 from datetime import datetime
-from sqlalchemy.orm import load_only
+from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy import or_, func, desc
 
 
@@ -52,7 +52,12 @@ def get_recent_items_for_user(owner_id, limit=RECENT_PAGE_SIZE, offset=0):
     safe_offset = max(0, offset or 0)
 
     last_modified_expr = func.coalesce(File.last_modified, File.created_at)
-    query = File.query.filter_by(owner_id=owner_id).order_by(desc(last_modified_expr))
+    query = (
+        File.query
+        .options(joinedload(File.folder).load_only(Folder.id, Folder.name))
+        .filter_by(owner_id=owner_id)
+        .order_by(desc(last_modified_expr))
+    )
 
     total_count = query.count()
     files = query.offset(safe_offset).limit(safe_limit).all()
@@ -64,7 +69,8 @@ def get_recent_items_for_user(owner_id, limit=RECENT_PAGE_SIZE, offset=0):
             'file_type': file_obj.type,
             'last_modified': file_obj.last_modified or file_obj.created_at,
             'title': file_obj.title,
-            'folder_id': file_obj.folder_id
+            'folder_id': file_obj.folder_id,
+            'folder_name': file_obj.folder.name if file_obj.folder else None
         }
         for file_obj in files
     ]

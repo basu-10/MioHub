@@ -1,5 +1,6 @@
 {% for recent in recent_items %}
   <div class="recent-item">
+    {% set folder_href = url_for('folders.view_folder', folder_id=recent.folder_id) if recent.folder_id else None %}
     {% if recent.type == 'note' %}
       {# Legacy Note #}
       <div class="card shadow-sm item-card recently-modified-card"
@@ -25,6 +26,16 @@
           <div class="file-description content-preview mb-2">
             <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
             <span>{{ recent_description }}</span>
+          </div>
+          {% endif %}
+          {% if folder_href and recent.folder_name %}
+          <div class="mb-2">
+            <a href="{{ folder_href }}"
+               class="badge rounded-pill text-decoration-none"
+               style="background: rgba(20, 184, 166, 0.16); color: var(--accent); border: 1px solid rgba(20, 184, 166, 0.35); padding: 0.42rem 0.7rem; font-weight: 600;">
+              <i class="material-icons" style="font-size: 13px; vertical-align: text-bottom; margin-right: 0.2rem;">folder</i>
+              {{ recent.folder_name }}
+            </a>
           </div>
           {% endif %}
           <div class="text-muted small">
@@ -58,6 +69,16 @@
           <div class="file-description content-preview mb-2">
             <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
             <span>{{ recent_description }}</span>
+          </div>
+          {% endif %}
+          {% if folder_href and recent.folder_name %}
+          <div class="mb-2">
+            <a href="{{ folder_href }}"
+               class="badge rounded-pill text-decoration-none"
+               style="background: rgba(20, 184, 166, 0.16); color: var(--accent); border: 1px solid rgba(20, 184, 166, 0.35); padding: 0.42rem 0.7rem; font-weight: 600;">
+              <i class="material-icons" style="font-size: 13px; vertical-align: text-bottom; margin-right: 0.2rem;">folder</i>
+              {{ recent.folder_name }}
+            </a>
           </div>
           {% endif %}
           <div class="text-muted small">
@@ -127,6 +148,16 @@
           <div class="file-description content-preview mb-2">
             <i class="fas fa-info-circle me-1" style="color: var(--accent-green); font-size: 0.875rem;"></i>
             <span>{{ recent_description }}</span>
+          </div>
+          {% endif %}
+          {% if folder_href and recent.folder_name %}
+          <div class="mb-2">
+            <a href="{{ folder_href }}"
+               class="badge rounded-pill text-decoration-none"
+               style="background: rgba(20, 184, 166, 0.16); color: var(--accent); border: 1px solid rgba(20, 184, 166, 0.35); padding: 0.42rem 0.7rem; font-weight: 600;">
+              <i class="material-icons" style="font-size: 13px; vertical-align: text-bottom; margin-right: 0.2rem;">folder</i>
+              {{ recent.folder_name }}
+            </a>
           </div>
           {% endif %}
           <div class="text-muted small">

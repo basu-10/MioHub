@@ -321,7 +321,6 @@
     <a class="logo" href="{{ url_for('core_blueprint.landing') }}">Mio<span>Hub</span></a>
     <div class="nav-links">
       <a class="btn-ghost" href="{{ url_for('portfolio_bp.portfolio') }}">Portfolio</a>
-      <a class="btn-ghost" href="{{ url_for('core_blueprint.about') }}">About</a>
       {% if current_user and current_user.is_authenticated %}
         <a class="btn-ghost btn-primary" href="{{ url_for('p2_bp.dashboard') }}">Open MioSpace</a>
       {% else %}
@@ -343,8 +342,7 @@
         <p class="hero-description">MioHub blends documents, infinite boards, and conversational AI into a single space. Sign in to plan, create, and chat without losing context.</p>
       {% endif %}
       <div class="hero-actions">
-        <a class="btn-ghost btn-primary" href="{{ url_for('portfolio_bp.portfolio') }}">Browse Portfolio</a>
-        <a class="btn-ghost" href="{{ url_for('core_blueprint.about') }}">Learn More</a>
+        <a class="btn-ghost" href="{{ url_for('portfolio_bp.about') }}">Learn More</a>
       </div>
     </div>
   </div>
